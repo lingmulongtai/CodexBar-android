@@ -41,29 +41,25 @@ Provider credentials are stored in `codexbar_secure_prefs`, an encrypted on-devi
 1. Install [OpenJDK 17](https://formulae.brew.sh/formula/openjdk@17) (or any JDK 17+)
 2. Clone and open in Android Studio
 3. Build and install the debug APK
-4. Open the app and go to **Settings** to enter your API tokens
+4. Open the app and go to **Settings** to connect accounts or enter fallback tokens
 
-## Getting Your Tokens
+## Connecting Accounts
 
 ### Claude (Anthropic)
 
-Claude uses OAuth tokens from Claude Code CLI. Extract both tokens from macOS Keychain:
+Claude does not expose a supported Android device-code flow for third-party apps. Use Claude Code's long-lived setup token instead:
 
 ```bash
-security find-generic-password -s "Claude Code-credentials" -w \
-  | python3 -c "
-import sys, json
-d = json.loads(sys.stdin.read())['claudeAiOauth']
-print('Access Token:', d['accessToken'])
-print('Refresh Token:', d['refreshToken'])
-"
+claude setup-token
 ```
 
-Paste **both** tokens into the Claude fields in Settings. The refresh token is required — access tokens expire every 8 hours, and the app uses the refresh token to renew them automatically in the background.
+Paste the generated OAuth token into the Claude **Access Token** field in Settings. Avoid copying raw Keychain exports into logs, notes, or issue reports.
 
 ### Codex (OpenAI / ChatGPT)
 
-If you have the [Codex CLI](https://github.com/openai/codex) installed and logged in, extract tokens from `~/.codex/auth.json`:
+Use **Connect account** in Settings. The app uses Codex's device-code login: it shows a one-time code, opens the OpenAI sign-in page, polls for completion, and saves the returned tokens only after validation.
+
+Manual fallback, if needed:
 
 ```bash
 # Access token
@@ -73,23 +69,13 @@ cat ~/.codex/auth.json | python3 -c "import sys,json; print(json.loads(sys.stdin
 cat ~/.codex/auth.json | python3 -c "import sys,json; print(json.loads(sys.stdin.read())['tokens']['refresh_token'])"
 ```
 
-Paste both into the Codex fields in Settings.
-
-<details>
-<summary>Alternative: Extract from browser (if CLI is not installed)</summary>
-
-1. Open [chatgpt.com](https://chatgpt.com) in your browser
-2. Open DevTools (F12) > Network tab
-3. Look for requests to `https://chatgpt.com/backend-api/`
-4. Copy the `Authorization: Bearer ...` token from request headers
-
-</details>
+Do not extract bearer tokens from browser DevTools unless you are debugging locally and understand the exposure risk.
 
 ### Gemini (Google)
 
-Gemini requires **4 values**: access token, refresh token, OAuth client ID, and OAuth client secret. The client ID/secret are needed because Gemini uses Google OAuth for token refresh.
+Use **Connect account** in Settings after entering a Google OAuth Client ID. The app uses Google's device authorization grant with the `https://www.googleapis.com/auth/cloud-platform` scope, then stores the access token, refresh token, client ID, and optional client secret encrypted on-device.
 
-If you have the [Gemini CLI](https://github.com/google-gemini/gemini-cli) installed and logged in:
+Manual fallback, if needed:
 
 ```bash
 # 1. Access token
@@ -97,20 +83,13 @@ python3 -c "import json; print(json.load(open('$HOME/.gemini/oauth_creds.json'))
 
 # 2. Refresh token
 python3 -c "import json; print(json.load(open('$HOME/.gemini/oauth_creds.json'))['refresh_token'])"
-
-# 3. OAuth Client ID & Secret (from Gemini CLI source)
-oauth_js="$(dirname "$(which gemini)")/../lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/code_assist/oauth2.js"
-python3 -c "
-import re, sys
-text = open('$oauth_js').read()
-cid = re.search(r\"OAUTH_CLIENT_ID\s*=\s*'([^']+)'\", text)
-sec = re.search(r\"OAUTH_CLIENT_SECRET\s*=\s*'([^']+)'\", text)
-print('Client ID:', cid.group(1) if cid else 'not found')
-print('Client Secret:', sec.group(1) if sec else 'not found')
-"
 ```
 
-Paste all four values into the Gemini fields in Settings.
+Paste the access token, refresh token, and OAuth Client ID into Settings. The client secret is optional for public/native OAuth clients.
+
+### GitHub Copilot
+
+Use **Connect account** in Settings. The app uses GitHub's device flow and then fetches Copilot quota data from GitHub's Copilot user endpoint.
 
 ## Build
 
