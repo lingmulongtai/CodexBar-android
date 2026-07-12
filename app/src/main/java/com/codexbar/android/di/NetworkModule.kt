@@ -59,21 +59,28 @@ object NetworkModule {
         isLenient = true
     }
 
-    private fun baseOkHttpBuilder(): OkHttpClient.Builder {
+    private fun baseOkHttpBuilder(includeDebugLogging: Boolean): OkHttpClient.Builder {
         val builder = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .addInterceptor(RetryInterceptor())
 
-        if (BuildConfig.IS_DEBUG) {
-            val logging = HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
-            }
-            builder.addInterceptor(logging)
+        if (BuildConfig.IS_DEBUG && includeDebugLogging) {
+            builder.addInterceptor(createMetadataLoggingInterceptor())
         }
 
         return builder
+    }
+
+    internal fun createMetadataLoggingInterceptor(
+        logger: HttpLoggingInterceptor.Logger = HttpLoggingInterceptor.Logger.DEFAULT
+    ): HttpLoggingInterceptor = HttpLoggingInterceptor(logger).apply {
+        redactHeader("Authorization")
+        redactHeader("Cookie")
+        redactHeader("Set-Cookie")
+        redactHeader("X-Api-Key")
+        level = HttpLoggingInterceptor.Level.BASIC
     }
 
     // --- Claude ---
@@ -81,7 +88,7 @@ object NetworkModule {
     @Provides
     @Singleton
     @ClaudeClient
-    fun provideClaudeOkHttpClient(): OkHttpClient = baseOkHttpBuilder().build()
+    fun provideClaudeOkHttpClient(): OkHttpClient = baseOkHttpBuilder(includeDebugLogging = true).build()
 
     @Provides
     @Singleton
@@ -100,7 +107,7 @@ object NetworkModule {
     @Provides
     @Singleton
     @ClaudeTokenClient
-    fun provideClaudeTokenOkHttpClient(): OkHttpClient = baseOkHttpBuilder().build()
+    fun provideClaudeTokenOkHttpClient(): OkHttpClient = baseOkHttpBuilder(includeDebugLogging = false).build()
 
     @Provides
     @Singleton
@@ -121,7 +128,7 @@ object NetworkModule {
     @Provides
     @Singleton
     @CodexClient
-    fun provideCodexOkHttpClient(): OkHttpClient = baseOkHttpBuilder().build()
+    fun provideCodexOkHttpClient(): OkHttpClient = baseOkHttpBuilder(includeDebugLogging = true).build()
 
     @Provides
     @Singleton
@@ -140,7 +147,7 @@ object NetworkModule {
     @Provides
     @Singleton
     @CodexTokenClient
-    fun provideCodexTokenOkHttpClient(): OkHttpClient = baseOkHttpBuilder().build()
+    fun provideCodexTokenOkHttpClient(): OkHttpClient = baseOkHttpBuilder(includeDebugLogging = false).build()
 
     @Provides
     @Singleton
@@ -161,7 +168,7 @@ object NetworkModule {
     @Provides
     @Singleton
     @GeminiClient
-    fun provideGeminiOkHttpClient(): OkHttpClient = baseOkHttpBuilder().build()
+    fun provideGeminiOkHttpClient(): OkHttpClient = baseOkHttpBuilder(includeDebugLogging = true).build()
 
     @Provides
     @Singleton
@@ -180,7 +187,7 @@ object NetworkModule {
     @Provides
     @Singleton
     @GeminiTokenClient
-    fun provideGeminiTokenOkHttpClient(): OkHttpClient = baseOkHttpBuilder().build()
+    fun provideGeminiTokenOkHttpClient(): OkHttpClient = baseOkHttpBuilder(includeDebugLogging = false).build()
 
     @Provides
     @Singleton

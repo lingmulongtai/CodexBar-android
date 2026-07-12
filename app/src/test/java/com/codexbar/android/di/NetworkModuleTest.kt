@@ -1,0 +1,87 @@
+package com.codexbar.android.di
+
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.logging.HttpLoggingInterceptor
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import org.junit.After
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+class NetworkModuleTest {
+
+    private lateinit var server: MockWebServer
+
+    @Before
+    fun setUp() {
+        server = MockWebServer()
+        server.start()
+    }
+
+    @After
+    fun tearDown() {
+        server.shutdown()
+    }
+
+    @Test
+    fun `debug metadata logger never records credential headers or bodies`() {
+        val logs = mutableListOf<String>()
+        val client = OkHttpClient.Builder()
+            .addInterceptor(NetworkModule.createMetadataLoggingInterceptor { message ->
+                logs += message
+            })
+            .build()
+
+        val accessToken = "sentinel-access-token"
+        val refreshToken = "sentinel-refresh-token"
+        val clientSecret = "sentinel-client-secret"
+
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setBody("""{"access_token":"$accessToken","refresh_token":"$refreshToken"}""")
+        )
+
+        val requestBody = """
+            {
+              "refresh_token": "$refreshToken",
+              "client_secret": "$clientSecret"
+            }
+        """.trimIndent().toRequestBody("application/json".toMediaType())
+
+        val request = Request.Builder()
+            .url(server.url("/token"))
+            .header("Authorization", "Bearer $accessToken")
+            .header("Cookie", "session=$refreshToken")
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            assertTrue(response.isSuccessful)
+            response.body?.string()
+        }
+
+        val joinedLogs = logs.joinToString("\n")
+        assertFalse(joinedLogs.contains(accessToken))
+        assertFalse(joinedLogs.contains(refreshToken))
+        assertFalse(joinedLogs.contains(clientSecret))
+    }
+
+    @Test
+    fun `token exchange clients do not install HTTP logging interceptors`() {
+        val tokenClients = listOf(
+            NetworkModule.provideClaudeTokenOkHttpClient(),
+            NetworkModule.provideCodexTokenOkHttpClient(),
+            NetworkModule.provideGeminiTokenOkHttpClient()
+        )
+
+        tokenClients.forEach { client ->
+            assertTrue(client.interceptors.none { it is HttpLoggingInterceptor })
+        }
+    }
+}
