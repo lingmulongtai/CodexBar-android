@@ -8,6 +8,7 @@ import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.security.EncryptedPrefsManager
+import com.codexbar.android.core.security.TokenRefreshCoordinator
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -20,7 +21,9 @@ import org.junit.Before
 import org.junit.Test
 import kotlinx.coroutines.test.runTest
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
 import org.mockito.Mockito.`when`
+import org.mockito.Mockito.verify
 import retrofit2.Retrofit
 
 class CodexRepositoryImplTest {
@@ -63,7 +66,7 @@ class CodexRepositoryImplTest {
         prefsManager = mock(EncryptedPrefsManager::class.java)
         `when`(prefsManager.loadCredential(AiService.CODEX)).thenReturn(testCredential)
 
-        repository = CodexRepositoryImpl(apiService, tokenRefreshService, prefsManager)
+        repository = CodexRepositoryImpl(apiService, tokenRefreshService, prefsManager, TokenRefreshCoordinator())
     }
 
     @After
@@ -121,6 +124,46 @@ class CodexRepositoryImplTest {
         assertTrue(result is Result.Failure)
         val error = (result as Result.Failure).error
         assertTrue(error is AppError.AuthError)
+    }
+
+    @Test
+    fun `stale refresh does not delete or overwrite newer credential`() = runTest {
+        val newerCredential = Credential.CodexCredential(
+            accessToken = "new-access-token",
+            refreshToken = "new-refresh-token",
+            accountId = "test-account-id"
+        )
+        `when`(prefsManager.loadCredential(AiService.CODEX))
+            .thenReturn(testCredential)
+            .thenReturn(newerCredential)
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(401))
+        mockWebServer.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """
+                {
+                    "plan_type": "pro",
+                    "rate_limit": {
+                        "primary_window": {
+                            "used_percent": 10,
+                            "reset_at": 1234567890,
+                            "limit_window_seconds": 18000
+                        }
+                    }
+                }
+                """.trimIndent()
+            )
+        )
+
+        val result = repository.fetchQuota()
+
+        assertTrue(result is Result.Success)
+        val firstUsageRequest = mockWebServer.takeRequest()
+        val retryUsageRequest = mockWebServer.takeRequest()
+        assertEquals("Bearer test-access-token", firstUsageRequest.getHeader("Authorization"))
+        assertEquals("Bearer new-access-token", retryUsageRequest.getHeader("Authorization"))
+        verify(prefsManager, never()).deleteCredential(AiService.CODEX)
+        verify(prefsManager, never()).saveCredential(AiService.CODEX, newerCredential)
     }
 
     @Test

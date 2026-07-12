@@ -12,6 +12,7 @@ import com.codexbar.android.core.network.codex.CodexDto
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.RetryAfter
 import com.codexbar.android.core.security.EncryptedPrefsManager
+import com.codexbar.android.core.security.TokenRefreshCoordinator
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
 import java.io.IOException
@@ -21,7 +22,8 @@ import javax.inject.Inject
 class CodexRepositoryImpl @Inject constructor(
     private val apiService: CodexApiService,
     private val tokenRefreshService: CodexTokenRefreshService,
-    private val prefsManager: EncryptedPrefsManager
+    private val prefsManager: EncryptedPrefsManager,
+    private val tokenRefreshCoordinator: TokenRefreshCoordinator
 ) : QuotaRepository {
 
     override suspend fun fetchQuota(): Result<QuotaInfo, AppError> {
@@ -79,30 +81,56 @@ class CodexRepositoryImpl @Inject constructor(
     }
 
     private suspend fun refreshToken(credential: Credential.CodexCredential): Credential.CodexCredential? {
-        return try {
-            val request = CodexDto.TokenRefreshRequest(refreshToken = credential.refreshToken)
-            val response = tokenRefreshService.refreshToken(request)
+        return tokenRefreshCoordinator.withRefreshLock(AiService.CODEX) {
+            val activeCredential = prefsManager.loadCredential(AiService.CODEX)
+                as? Credential.CodexCredential
+                ?: return@withRefreshLock null
 
-            if (response.isSuccessful) {
-                val body = response.body() ?: return null
-                val newCredential = Credential.CodexCredential(
-                    accessToken = body.accessToken,
-                    refreshToken = body.refreshToken ?: credential.refreshToken,
-                    accountId = credential.accountId
-                )
-                prefsManager.saveCredential(AiService.CODEX, newCredential)
-                newCredential
-            } else {
-                val errorBody = response.errorBody()?.string() ?: ""
-                val isTerminal = CodexDto.TERMINAL_ERROR_CODES.any { errorBody.contains(it) }
-                if (isTerminal) {
-                    prefsManager.deleteCredential(AiService.CODEX)
+            if (!activeCredential.matchesRefreshSubject(credential)) {
+                return@withRefreshLock activeCredential
+            }
+
+            try {
+                val request = CodexDto.TokenRefreshRequest(refreshToken = activeCredential.refreshToken)
+                val response = tokenRefreshService.refreshToken(request)
+
+                if (response.isSuccessful) {
+                    val body = response.body() ?: return@withRefreshLock null
+                    val newCredential = Credential.CodexCredential(
+                        accessToken = body.accessToken,
+                        refreshToken = body.refreshToken ?: activeCredential.refreshToken,
+                        accountId = activeCredential.accountId
+                    )
+                    val currentCredential = prefsManager.loadCredential(AiService.CODEX)
+                        as? Credential.CodexCredential
+                    if (currentCredential?.matchesRefreshSubject(activeCredential) == true) {
+                        prefsManager.saveCredential(AiService.CODEX, newCredential)
+                        newCredential
+                    } else {
+                        currentCredential
+                    }
+                } else {
+                    val errorBody = response.errorBody()?.string() ?: ""
+                    val isTerminal = CodexDto.TERMINAL_ERROR_CODES.any { errorBody.contains(it) }
+                    if (isTerminal) {
+                        val currentCredential = prefsManager.loadCredential(AiService.CODEX)
+                            as? Credential.CodexCredential
+                        if (currentCredential?.matchesRefreshSubject(activeCredential) == true) {
+                            prefsManager.deleteCredential(AiService.CODEX)
+                        }
+                    }
+                    null
                 }
+            } catch (_: Exception) {
                 null
             }
-        } catch (_: Exception) {
-            null
         }
+    }
+
+    private fun Credential.CodexCredential.matchesRefreshSubject(
+        other: Credential.CodexCredential
+    ): Boolean {
+        return refreshToken == other.refreshToken && accountId == other.accountId
     }
 
     private fun mapToQuotaInfo(response: CodexDto.UsageResponse): QuotaInfo {

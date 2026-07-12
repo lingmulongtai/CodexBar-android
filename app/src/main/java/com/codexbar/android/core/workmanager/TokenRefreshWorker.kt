@@ -12,6 +12,7 @@ import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.gemini.GeminiDto
 import com.codexbar.android.core.network.gemini.GeminiTokenRefreshService
 import com.codexbar.android.core.security.EncryptedPrefsManager
+import com.codexbar.android.core.security.TokenRefreshCoordinator
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.async
@@ -26,7 +27,8 @@ class TokenRefreshWorker @AssistedInject constructor(
     private val claudeTokenRefreshService: ClaudeTokenRefreshService,
     private val codexTokenRefreshService: CodexTokenRefreshService,
     private val geminiTokenRefreshService: GeminiTokenRefreshService,
-    private val prefsManager: EncryptedPrefsManager
+    private val prefsManager: EncryptedPrefsManager,
+    private val tokenRefreshCoordinator: TokenRefreshCoordinator
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -86,31 +88,53 @@ class TokenRefreshWorker @AssistedInject constructor(
 
     private suspend fun refreshCodex(credential: Credential.CodexCredential): Boolean {
         // Codex has no expiry field — always attempt a proactive refresh
-        return try {
-            val request = CodexDto.TokenRefreshRequest(refreshToken = credential.refreshToken)
-            val response = codexTokenRefreshService.refreshToken(request)
-            if (response.isSuccessful) {
-                val body = response.body() ?: return false
-                prefsManager.saveCredential(
-                    AiService.CODEX,
-                    Credential.CodexCredential(
+        return tokenRefreshCoordinator.withRefreshLock(AiService.CODEX) {
+            val activeCredential = prefsManager.loadCredential(AiService.CODEX)
+                as? Credential.CodexCredential
+                ?: return@withRefreshLock true
+
+            if (!activeCredential.matchesRefreshSubject(credential)) {
+                return@withRefreshLock true
+            }
+
+            try {
+                val request = CodexDto.TokenRefreshRequest(refreshToken = activeCredential.refreshToken)
+                val response = codexTokenRefreshService.refreshToken(request)
+                if (response.isSuccessful) {
+                    val body = response.body() ?: return@withRefreshLock false
+                    val newCredential = Credential.CodexCredential(
                         accessToken = body.accessToken,
-                        refreshToken = body.refreshToken ?: credential.refreshToken,
-                        accountId = credential.accountId
+                        refreshToken = body.refreshToken ?: activeCredential.refreshToken,
+                        accountId = activeCredential.accountId
                     )
-                )
-                true
-            } else {
-                val errorBody = response.errorBody()?.string() ?: ""
-                val isTerminal = CodexDto.TERMINAL_ERROR_CODES.any { errorBody.contains(it) }
-                if (isTerminal) {
-                    prefsManager.deleteCredential(AiService.CODEX)
+                    val currentCredential = prefsManager.loadCredential(AiService.CODEX)
+                        as? Credential.CodexCredential
+                    if (currentCredential?.matchesRefreshSubject(activeCredential) == true) {
+                        prefsManager.saveCredential(AiService.CODEX, newCredential)
+                    }
+                    true
+                } else {
+                    val errorBody = response.errorBody()?.string() ?: ""
+                    val isTerminal = CodexDto.TERMINAL_ERROR_CODES.any { errorBody.contains(it) }
+                    if (isTerminal) {
+                        val currentCredential = prefsManager.loadCredential(AiService.CODEX)
+                            as? Credential.CodexCredential
+                        if (currentCredential?.matchesRefreshSubject(activeCredential) == true) {
+                            prefsManager.deleteCredential(AiService.CODEX)
+                        }
+                    }
+                    false
                 }
+            } catch (_: Exception) {
                 false
             }
-        } catch (_: Exception) {
-            false
         }
+    }
+
+    private fun Credential.CodexCredential.matchesRefreshSubject(
+        other: Credential.CodexCredential
+    ): Boolean {
+        return refreshToken == other.refreshToken && accountId == other.accountId
     }
 
     private suspend fun refreshGemini(credential: Credential.GeminiCredential): Boolean {

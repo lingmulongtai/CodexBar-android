@@ -11,6 +11,7 @@ import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.gemini.GeminiApiService
 import com.codexbar.android.core.network.gemini.GeminiTokenRefreshService
 import com.codexbar.android.core.security.EncryptedPrefsManager
+import com.codexbar.android.core.security.TokenRefreshCoordinator
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -49,8 +50,9 @@ object RepositoryModule {
     fun provideCodexRepository(
         apiService: CodexApiService,
         tokenRefreshService: CodexTokenRefreshService,
-        prefsManager: EncryptedPrefsManager
-    ): QuotaRepository = CodexRepositoryImpl(apiService, tokenRefreshService, prefsManager)
+        prefsManager: EncryptedPrefsManager,
+        tokenRefreshCoordinator: TokenRefreshCoordinator
+    ): QuotaRepository = CodexRepositoryImpl(apiService, tokenRefreshService, prefsManager, tokenRefreshCoordinator)
 
     @Provides
     @Singleton
