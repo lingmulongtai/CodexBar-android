@@ -120,6 +120,16 @@ Paste all four values into the Gemini fields in Settings.
 
 APK output: `app/build/outputs/apk/debug/app-debug.apk`
 
+## Dependency Verification
+
+Gradle Wrapper distribution checksums and dependency verification metadata are committed. When intentionally changing Gradle, plugins, or libraries, regenerate verification metadata with:
+
+```bash
+./gradlew --write-verification-metadata sha256 lint testDebugUnitTest assembleDebug
+```
+
+Review and commit `gradle/verification-metadata.xml` together with the dependency change. CI runs with `--dependency-verification=strict` and validates the Gradle Wrapper before compilation.
+
 ## Tech Stack
 
 - Kotlin 2.1.0, Jetpack Compose, Material 3
