@@ -6,6 +6,7 @@ import com.codexbar.android.core.network.codex.CodexDto
 import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
 import com.codexbar.android.core.network.oauth.DeviceAuthDto
 import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
+import com.codexbar.android.core.network.oauth.GoogleDeviceAuthService
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -14,15 +15,20 @@ import kotlinx.coroutines.delay
 @Singleton
 class AccountLinkManager @Inject constructor(
     private val codexDeviceAuthService: CodexDeviceAuthService,
-    private val gitHubDeviceAuthService: GitHubDeviceAuthService
+    private val gitHubDeviceAuthService: GitHubDeviceAuthService,
+    private val googleDeviceAuthService: GoogleDeviceAuthService
 ) {
 
-    suspend fun requestDeviceCode(service: AiService): DeviceAuthSession {
+    suspend fun requestDeviceCode(
+        service: AiService,
+        oauthClientId: String? = null,
+        oauthClientSecret: String? = null
+    ): DeviceAuthSession {
         return when (service) {
             AiService.CODEX -> requestCodexDeviceCode()
             AiService.COPILOT -> requestCopilotDeviceCode()
-            AiService.CLAUDE,
-            AiService.GEMINI -> throw UnsupportedOperationException(
+            AiService.GEMINI -> requestGeminiDeviceCode(oauthClientId, oauthClientSecret)
+            AiService.CLAUDE -> throw UnsupportedOperationException(
                 "${service.displayName} does not expose a supported Android device-code flow."
             )
         }
@@ -32,8 +38,8 @@ class AccountLinkManager @Inject constructor(
         return when (session.service) {
             AiService.CODEX -> completeCodexDeviceCode(session)
             AiService.COPILOT -> completeCopilotDeviceCode(session)
-            AiService.CLAUDE,
-            AiService.GEMINI -> throw UnsupportedOperationException(
+            AiService.GEMINI -> completeGeminiDeviceCode(session)
+            AiService.CLAUDE -> throw UnsupportedOperationException(
                 "${session.service.displayName} does not expose a supported Android device-code flow."
             )
         }
@@ -117,6 +123,31 @@ class AccountLinkManager @Inject constructor(
         )
     }
 
+    private suspend fun requestGeminiDeviceCode(
+        oauthClientId: String?,
+        oauthClientSecret: String?
+    ): DeviceAuthSession {
+        val clientId = oauthClientId?.trim().takeUnless { it.isNullOrBlank() }
+            ?: throw IllegalArgumentException("Gemini OAuth Client ID is required")
+
+        val response = googleDeviceAuthService.requestDeviceCode(clientId = clientId)
+        if (!response.isSuccessful) {
+            throw IOException("Google device-code request failed with HTTP ${response.code()}")
+        }
+
+        val body = response.body() ?: throw IOException("Google device-code response was empty")
+        return DeviceAuthSession(
+            service = AiService.GEMINI,
+            verificationUrl = body.effectiveVerificationUrl,
+            userCode = body.userCode,
+            deviceCode = body.deviceCode,
+            intervalSeconds = body.interval.toLong().coerceAtLeast(MIN_POLL_INTERVAL_SECONDS),
+            expiresAtEpochMs = System.currentTimeMillis() + body.expiresIn * 1000L,
+            oauthClientId = clientId,
+            oauthClientSecret = oauthClientSecret?.trim()?.takeIf { it.isNotBlank() }
+        )
+    }
+
     private suspend fun completeCopilotDeviceCode(session: DeviceAuthSession): Credential.CopilotCredential {
         var intervalSeconds = session.intervalSeconds
         while (System.currentTimeMillis() < session.expiresAtEpochMs) {
@@ -143,10 +174,53 @@ class AccountLinkManager @Inject constructor(
         throw IOException("GitHub device-code login timed out")
     }
 
+    private suspend fun completeGeminiDeviceCode(session: DeviceAuthSession): Credential.GeminiCredential {
+        val clientId = session.oauthClientId
+            ?: throw IllegalArgumentException("Gemini OAuth Client ID is required")
+        var intervalSeconds = session.intervalSeconds
+
+        while (System.currentTimeMillis() < session.expiresAtEpochMs) {
+            delay(intervalSeconds * 1000L)
+            val response = googleDeviceAuthService.pollForToken(
+                clientId = clientId,
+                deviceCode = session.deviceCode
+            )
+            if (!response.isSuccessful) {
+                throw IOException("Google token polling failed with HTTP ${response.code()}")
+            }
+
+            val body = response.body() ?: throw IOException("Google token response was empty")
+            when (body.error) {
+                null -> {
+                    val accessToken = body.accessToken
+                        ?: throw IOException("Google token response did not contain an access token")
+                    val refreshToken = body.refreshToken
+                        ?: throw IOException("Google token response did not contain a refresh token")
+                    val expiresIn = body.expiresIn ?: DEFAULT_GOOGLE_TOKEN_EXPIRY_SECONDS
+                    return Credential.GeminiCredential(
+                        accessToken = accessToken,
+                        refreshToken = refreshToken,
+                        expiresAtMs = System.currentTimeMillis() + expiresIn * 1000L,
+                        oauthClientId = clientId,
+                        oauthClientSecret = session.oauthClientSecret
+                    )
+                }
+                "authorization_pending" -> Unit
+                "slow_down" -> intervalSeconds += SLOW_DOWN_INCREMENT_SECONDS
+                "expired_token" -> throw IOException("Google device-code login expired")
+                "access_denied" -> throw IOException("Google device-code login was denied")
+                else -> throw IOException(body.errorDescription ?: "Google device-code login failed: ${body.error}")
+            }
+        }
+
+        throw IOException("Google device-code login timed out")
+    }
+
     companion object {
         const val CODEX_DEVICE_EXPIRY_MS = 15 * 60 * 1000L
         private const val MIN_POLL_INTERVAL_SECONDS = 5L
         private const val SLOW_DOWN_INCREMENT_SECONDS = 5L
+        private const val DEFAULT_GOOGLE_TOKEN_EXPIRY_SECONDS = 3600
     }
 }
 
@@ -156,5 +230,7 @@ data class DeviceAuthSession(
     val userCode: String,
     val deviceCode: String,
     val intervalSeconds: Long,
-    val expiresAtEpochMs: Long
+    val expiresAtEpochMs: Long,
+    val oauthClientId: String? = null,
+    val oauthClientSecret: String? = null
 )

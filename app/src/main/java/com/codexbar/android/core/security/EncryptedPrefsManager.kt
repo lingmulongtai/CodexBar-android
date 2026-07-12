@@ -95,7 +95,9 @@ class EncryptedPrefsManager @Inject constructor(
                 is Credential.GeminiCredential -> {
                     prefs[longPreferencesKey("${prefix}_expires_at_ms")] = credential.expiresAtMs
                     prefs.putEncryptedString("${prefix}_oauth_client_id", credential.oauthClientId)
-                    prefs.putEncryptedString("${prefix}_oauth_client_secret", credential.oauthClientSecret)
+                    credential.oauthClientSecret?.takeIf { it.isNotBlank() }?.let {
+                        prefs.putEncryptedString("${prefix}_oauth_client_secret", it)
+                    }
                 }
 
                 is Credential.CopilotCredential -> {
@@ -278,7 +280,7 @@ class EncryptedPrefsManager @Inject constructor(
                 val expiresAtMs = prefs[longPreferencesKey("${prefix}_expires_at_ms")]
                     ?.takeIf { it > 0 } ?: return null
                 val clientId = prefs.getEncryptedString("${prefix}_oauth_client_id") ?: return null
-                val clientSecret = prefs.getEncryptedString("${prefix}_oauth_client_secret") ?: return null
+                val clientSecret = prefs.getEncryptedString("${prefix}_oauth_client_secret")
                 Credential.GeminiCredential(
                     accessToken = accessToken,
                     refreshToken = refreshToken,

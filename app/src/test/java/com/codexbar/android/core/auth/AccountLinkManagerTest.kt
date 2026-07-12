@@ -5,6 +5,7 @@ import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
 import com.codexbar.android.core.network.oauth.DeviceAuthDto
 import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
+import com.codexbar.android.core.network.oauth.GoogleDeviceAuthService
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
@@ -19,13 +20,15 @@ class AccountLinkManagerTest {
 
     private lateinit var codexDeviceAuthService: CodexDeviceAuthService
     private lateinit var gitHubDeviceAuthService: GitHubDeviceAuthService
+    private lateinit var googleDeviceAuthService: GoogleDeviceAuthService
     private lateinit var manager: AccountLinkManager
 
     @Before
     fun setUp() {
         codexDeviceAuthService = mock(CodexDeviceAuthService::class.java)
         gitHubDeviceAuthService = mock(GitHubDeviceAuthService::class.java)
-        manager = AccountLinkManager(codexDeviceAuthService, gitHubDeviceAuthService)
+        googleDeviceAuthService = mock(GoogleDeviceAuthService::class.java)
+        manager = AccountLinkManager(codexDeviceAuthService, gitHubDeviceAuthService, googleDeviceAuthService)
     }
 
     @Test
@@ -107,6 +110,48 @@ class AccountLinkManagerTest {
 
         assertTrue(credential is Credential.CopilotCredential)
         assertEquals("github-token", credential.accessToken)
+    }
+
+    @Test
+    fun `gemini device-code flow returns refreshable credential`() = runTest {
+        `when`(googleDeviceAuthService.requestDeviceCode(clientId = "gemini-client-id"))
+            .thenReturn(
+                Response.success(
+                    DeviceAuthDto.GeminiDeviceCodeResponse(
+                        deviceCode = "google-device-code",
+                        userCode = "GEMI-NI12",
+                        verificationUrl = "https://www.google.com/device",
+                        expiresIn = 900,
+                        interval = 5
+                    )
+                )
+            )
+        `when`(
+            googleDeviceAuthService.pollForToken(
+                clientId = "gemini-client-id",
+                deviceCode = "google-device-code"
+            )
+        ).thenReturn(
+            Response.success(
+                DeviceAuthDto.GeminiDeviceTokenResponse(
+                    accessToken = "google-access-token",
+                    refreshToken = "google-refresh-token",
+                    expiresIn = 3600
+                )
+            )
+        )
+
+        val session = manager.requestDeviceCode(
+            service = AiService.GEMINI,
+            oauthClientId = "gemini-client-id"
+        )
+        val credential = manager.completeDeviceCode(session)
+
+        assertTrue(credential is Credential.GeminiCredential)
+        credential as Credential.GeminiCredential
+        assertEquals("google-access-token", credential.accessToken)
+        assertEquals("google-refresh-token", credential.refreshToken)
+        assertEquals("gemini-client-id", credential.oauthClientId)
     }
 
     private companion object {

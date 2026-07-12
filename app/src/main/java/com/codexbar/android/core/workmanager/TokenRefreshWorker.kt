@@ -9,7 +9,6 @@ import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.network.claude.ClaudeTokenRefreshService
 import com.codexbar.android.core.network.codex.CodexDto
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
-import com.codexbar.android.core.network.gemini.GeminiDto
 import com.codexbar.android.core.network.gemini.GeminiTokenRefreshService
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.TokenRefreshCoordinator
@@ -143,12 +142,11 @@ class TokenRefreshWorker @AssistedInject constructor(
         if (System.currentTimeMillis() < credential.expiresAtMs - REFRESH_BUFFER_SECONDS * 1000) return true
 
         return try {
-            val request = GeminiDto.TokenRefreshRequest(
+            val response = geminiTokenRefreshService.refreshToken(
                 refreshToken = credential.refreshToken,
                 clientId = credential.oauthClientId,
                 clientSecret = credential.oauthClientSecret
             )
-            val response = geminiTokenRefreshService.refreshToken(request)
             if (response.isSuccessful) {
                 val body = response.body() ?: return false
                 val expiresIn = body.expiresIn ?: 3600

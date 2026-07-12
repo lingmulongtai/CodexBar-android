@@ -194,17 +194,6 @@ private fun ServiceCredentialSection(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            if (service.supportsAccountLink()) {
-                AccountLinkControls(
-                    service = service,
-                    state = state,
-                    onStartAccountLink = onStartAccountLink,
-                    onOpenAccountLink = onOpenAccountLink
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
             OutlinedTextField(
                 value = state.accessToken,
                 onValueChange = { onFieldChange("accessToken", it) },
@@ -259,7 +248,8 @@ private fun ServiceCredentialSection(
                     OutlinedTextField(
                         value = state.oauthClientSecret,
                         onValueChange = { onFieldChange("oauthClientSecret", it) },
-                        label = { Text("OAuth Client Secret") },
+                        label = { Text("OAuth Client Secret (optional)") },
+                        supportingText = { Text("Only needed for confidential/web OAuth clients.") },
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = secretKeyboardOptions(),
                         modifier = Modifier.fillMaxWidth(),
@@ -279,6 +269,17 @@ private fun ServiceCredentialSection(
                     }
                 }
                 else -> {} // Claude has no extra fields
+            }
+
+            if (service.supportsAccountLink()) {
+                Spacer(modifier = Modifier.height(12.dp))
+
+                AccountLinkControls(
+                    service = service,
+                    state = state,
+                    onStartAccountLink = onStartAccountLink,
+                    onOpenAccountLink = onOpenAccountLink
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -367,6 +368,7 @@ private fun AccountLinkControls(
         Text(
             text = when (service) {
                 AiService.CODEX -> "Sign in with ChatGPT using OpenAI's device-code flow. Tokens are saved only after validation."
+                AiService.GEMINI -> "Sign in with Google using device-code OAuth. Enter your OAuth Client ID above first."
                 AiService.COPILOT -> "Sign in with GitHub's device flow. The app stores the OAuth token only after validation."
                 else -> ""
             },
@@ -377,7 +379,9 @@ private fun AccountLinkControls(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Button(
                 onClick = onStartAccountLink,
-                enabled = !state.isAccountLinking && !state.isValidating
+                enabled = !state.isAccountLinking &&
+                    !state.isValidating &&
+                    (service != AiService.GEMINI || state.oauthClientId.isNotBlank())
             ) {
                 if (state.isAccountLinking && state.accountLinkPrompt == null) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -422,7 +426,7 @@ private fun AccountLinkControls(
 }
 
 private fun AiService.supportsAccountLink(): Boolean {
-    return this == AiService.CODEX || this == AiService.COPILOT
+    return this == AiService.CODEX || this == AiService.GEMINI || this == AiService.COPILOT
 }
 
 private fun openAuthUrl(context: Context, url: String) {

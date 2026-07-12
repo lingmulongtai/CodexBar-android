@@ -161,12 +161,11 @@ class GeminiRepositoryImpl @Inject constructor(
 
     private suspend fun refreshToken(credential: Credential.GeminiCredential): Credential.GeminiCredential? {
         return try {
-            val request = GeminiDto.TokenRefreshRequest(
+            val response = tokenRefreshService.refreshToken(
                 refreshToken = credential.refreshToken,
                 clientId = credential.oauthClientId,
                 clientSecret = credential.oauthClientSecret
             )
-            val response = tokenRefreshService.refreshToken(request)
             if (response.isSuccessful) {
                 val body = response.body() ?: return null
                 val expiresIn = body.expiresIn ?: 3600

@@ -48,14 +48,6 @@ object GeminiDto {
     )
 
     @Serializable
-    data class TokenRefreshRequest(
-        @SerialName("grant_type") val grantType: String = "refresh_token",
-        @SerialName("refresh_token") val refreshToken: String,
-        @SerialName("client_id") val clientId: String,
-        @SerialName("client_secret") val clientSecret: String
-    )
-
-    @Serializable
     data class TokenRefreshResponse(
         @SerialName("access_token") val accessToken: String,
         @SerialName("refresh_token") val refreshToken: String? = null,
