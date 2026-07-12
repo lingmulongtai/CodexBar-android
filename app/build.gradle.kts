@@ -1,3 +1,5 @@
+import java.util.UUID
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -21,6 +23,22 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        val releaseStoreFile = System.getenv("ANDROID_KEYSTORE_PATH")
+        if (!releaseStoreFile.isNullOrBlank()) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+                enableV1Signing = false
+                enableV2Signing = true
+                enableV3Signing = true
+                enableV4Signing = true
+            }
+        }
+    }
+
     buildTypes {
         debug {
             isMinifyEnabled = false
@@ -34,6 +52,9 @@ android {
                 "proguard-rules.pro"
             )
             buildConfigField("Boolean", "IS_DEBUG", "false")
+            signingConfigs.findByName("release")?.let {
+                signingConfig = it
+            }
         }
     }
 
@@ -61,6 +82,72 @@ android {
     bundle {
         storeArchive {
             enable = true
+        }
+    }
+}
+
+tasks.register("generateReleaseSbom") {
+    group = "reporting"
+    description = "Generates a minimal CycloneDX SBOM for release runtime dependencies."
+
+    val outputFile = layout.buildDirectory.file("reports/sbom/release-sbom.cdx.json")
+    outputs.file(outputFile)
+
+    doLast {
+        val configuration = configurations.getByName("releaseRuntimeClasspath")
+        val components = configuration.resolvedConfiguration.resolvedArtifacts
+            .map { artifact ->
+                val id = artifact.moduleVersion.id
+                Triple(id.group, id.name, id.version)
+            }
+            .distinct()
+            .sortedWith(compareBy({ it.first }, { it.second }, { it.third }))
+
+        val json = buildString {
+            appendLine("{")
+            appendLine("  \"bomFormat\": \"CycloneDX\",")
+            appendLine("  \"specVersion\": \"1.5\",")
+            appendLine("  \"serialNumber\": \"urn:uuid:${UUID.randomUUID()}\",")
+            appendLine("  \"version\": 1,")
+            appendLine("  \"metadata\": {")
+            appendLine("    \"component\": {")
+            appendLine("      \"type\": \"application\",")
+            appendLine("      \"name\": \"CodexBar Android\",")
+            appendLine("      \"version\": \"${android.defaultConfig.versionName}\"")
+            appendLine("    }")
+            appendLine("  },")
+            appendLine("  \"components\": [")
+            components.forEachIndexed { index, (group, name, version) ->
+                appendLine("    {")
+                appendLine("      \"type\": \"library\",")
+                appendLine("      \"group\": \"${group.jsonEscaped()}\",")
+                appendLine("      \"name\": \"${name.jsonEscaped()}\",")
+                appendLine("      \"version\": \"${version.jsonEscaped()}\",")
+                appendLine("      \"purl\": \"pkg:maven/${group.jsonEscaped()}/${name.jsonEscaped()}@${version.jsonEscaped()}\"")
+                append("    }")
+                if (index < components.lastIndex) appendLine(",") else appendLine()
+            }
+            appendLine("  ]")
+            appendLine("}")
+        }
+
+        val file = outputFile.get().asFile
+        file.parentFile.mkdirs()
+        file.writeText(json)
+    }
+}
+
+fun String.jsonEscaped(): String {
+    return buildString {
+        for (char in this@jsonEscaped) {
+            when (char) {
+                '\\' -> append("\\\\")
+                '"' -> append("\\\"")
+                '\n' -> append("\\n")
+                '\r' -> append("\\r")
+                '\t' -> append("\\t")
+                else -> append(char)
+            }
         }
     }
 }

@@ -130,6 +130,17 @@ Gradle Wrapper distribution checksums and dependency verification metadata are c
 
 Review and commit `gradle/verification-metadata.xml` together with the dependency change. CI runs with `--dependency-verification=strict` and validates the Gradle Wrapper before compilation.
 
+## Release Builds
+
+Public releases are built only from `v*` Git tags by the protected release workflow. Signing material must stay in GitHub environment secrets:
+
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+The release workflow publishes signed APK/AAB artifacts, `SHA256SUMS`, a CycloneDX dependency SBOM, a build provenance JSON file, and GitHub artifact attestations. Debug APKs from CI are short-lived test artifacts only.
+
 ## Tech Stack
 
 - Kotlin 2.1.0, Jetpack Compose, Material 3
