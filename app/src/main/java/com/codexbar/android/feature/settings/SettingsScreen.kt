@@ -97,7 +97,8 @@ fun SettingsScreen(
                     service = service,
                     state = state,
                     onFieldChange = { field, value -> viewModel.updateField(service, field, value) },
-                    onValidate = { viewModel.validateCredential(service) }
+                    onValidate = { viewModel.validateCredential(service) },
+                    onDisconnect = { viewModel.showDisconnectConfirmDialog(service) }
                 )
             }
 
@@ -126,6 +127,14 @@ fun SettingsScreen(
             onDismiss = { viewModel.dismissDeleteConfirmDialog() }
         )
     }
+
+    uiState.disconnectConfirmService?.let { service ->
+        DisconnectConfirmDialog(
+            service = service,
+            onConfirm = { viewModel.disconnectService(service) },
+            onDismiss = { viewModel.dismissDisconnectConfirmDialog() }
+        )
+    }
 }
 
 @Composable
@@ -133,7 +142,8 @@ private fun ServiceCredentialSection(
     service: AiService,
     state: ServiceCredentialState,
     onFieldChange: (String, String) -> Unit,
-    onValidate: () -> Unit
+    onValidate: () -> Unit,
+    onDisconnect: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -152,6 +162,12 @@ private fun ServiceCredentialSection(
                 Text(
                     text = service.displayName,
                     style = MaterialTheme.typography.titleMedium
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = if (state.isConnected) "Connected" else "Not connected",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (state.isConnected) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -239,10 +255,26 @@ private fun ServiceCredentialSection(
                         CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Text("Validate")
+                    Text("Validate and Connect")
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
+
+                if (state.isConnected) {
+                    OutlinedButton(
+                        onClick = onDisconnect,
+                        enabled = !state.isValidating,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Icon(Icons.Default.DeleteForever, contentDescription = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Disconnect")
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
 
                 when (state.validationResult) {
                     is ValidationResult.Success -> {
@@ -272,6 +304,15 @@ private fun ServiceCredentialSection(
                     }
                     null -> {}
                 }
+            }
+
+            if (state.hasUnsavedChanges) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Changes are not active until validation succeeds.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -409,6 +450,29 @@ private fun DeleteConfirmDialog(
                 enabled = confirmText == "DELETE"
             ) {
                 Text("Delete", color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun DisconnectConfirmDialog(
+    service: AiService,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Disconnect ${service.displayName}") },
+        text = { Text("This deletes saved credentials and cached reset data for ${service.displayName}.") },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Disconnect", color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {

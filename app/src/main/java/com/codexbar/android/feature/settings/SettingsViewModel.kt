@@ -12,12 +12,9 @@ import com.codexbar.android.di.ClaudeRepository
 import com.codexbar.android.di.CodexRepository
 import com.codexbar.android.di.GeminiRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -36,9 +33,6 @@ class SettingsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
-    private val saveJobs = mutableMapOf<AiService, Job>()
-    private val pendingChanges = MutableStateFlow<Pair<AiService, String>?>(null)
-
     init {
         loadSavedCredentials()
         _uiState.update {
@@ -47,7 +41,6 @@ class SettingsViewModel @Inject constructor(
                 notificationsEnabled = prefsManager.isNotificationsEnabled()
             )
         }
-        observePendingChanges()
     }
 
     private fun loadSavedCredentials() {
@@ -56,19 +49,22 @@ class SettingsViewModel @Inject constructor(
             val state = when (credential) {
                 is Credential.ClaudeCredential -> ServiceCredentialState(
                     accessToken = credential.accessToken,
-                    refreshToken = credential.refreshToken ?: ""
+                    refreshToken = credential.refreshToken ?: "",
+                    isConnected = true
                 )
                 is Credential.CodexCredential -> ServiceCredentialState(
                     accessToken = credential.accessToken,
                     refreshToken = credential.refreshToken,
-                    accountId = credential.accountId ?: ""
+                    accountId = credential.accountId ?: "",
+                    isConnected = true
                 )
                 is Credential.GeminiCredential -> ServiceCredentialState(
                     accessToken = credential.accessToken,
                     refreshToken = credential.refreshToken,
                     oauthClientId = credential.oauthClientId,
                     oauthClientSecret = credential.oauthClientSecret,
-                    expiresAtDisplay = formatExpiryMs(credential.expiresAtMs)
+                    expiresAtDisplay = formatExpiryMs(credential.expiresAtMs),
+                    isConnected = true
                 )
             }
             _uiState.update {
@@ -81,46 +77,27 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { state ->
             val current = state.serviceStates[service] ?: ServiceCredentialState()
             val updated = when (field) {
-                "accessToken" -> current.copy(accessToken = value, validationResult = null)
-                "refreshToken" -> current.copy(refreshToken = value, validationResult = null)
-                "accountId" -> current.copy(accountId = value, validationResult = null)
-                "oauthClientId" -> current.copy(oauthClientId = value, validationResult = null)
-                "oauthClientSecret" -> current.copy(oauthClientSecret = value, validationResult = null)
+                "accessToken" -> current.copy(accessToken = value, validationResult = null, hasUnsavedChanges = true)
+                "refreshToken" -> current.copy(refreshToken = value, validationResult = null, hasUnsavedChanges = true)
+                "accountId" -> current.copy(accountId = value, validationResult = null, hasUnsavedChanges = true)
+                "oauthClientId" -> current.copy(oauthClientId = value, validationResult = null, hasUnsavedChanges = true)
+                "oauthClientSecret" -> current.copy(oauthClientSecret = value, validationResult = null, hasUnsavedChanges = true)
                 else -> current
             }
             state.copy(serviceStates = state.serviceStates + (service to updated))
         }
-
-        // Debounced save
-        scheduleSave(service)
     }
 
-    @OptIn(FlowPreview::class)
-    private fun observePendingChanges() {
-        viewModelScope.launch {
-            pendingChanges
-                .debounce(500)
-                .collect { pair ->
-                    pair?.let { (service, _) -> saveCredential(service) }
-                }
-        }
-    }
+    private fun buildCredential(service: AiService, state: ServiceCredentialState): Credential? {
+        if (state.accessToken.isBlank()) return null
 
-    private fun scheduleSave(service: AiService) {
-        pendingChanges.value = service to System.currentTimeMillis().toString()
-    }
-
-    private fun saveCredential(service: AiService) {
-        val state = _uiState.value.serviceStates[service] ?: return
-        if (state.accessToken.isBlank()) return
-
-        val credential = when (service) {
+        return when (service) {
             AiService.CLAUDE -> Credential.ClaudeCredential(
                 accessToken = state.accessToken,
                 refreshToken = state.refreshToken.ifBlank { null }
             )
             AiService.CODEX -> {
-                if (state.refreshToken.isBlank()) return
+                if (state.refreshToken.isBlank()) return null
                 Credential.CodexCredential(
                     accessToken = state.accessToken,
                     refreshToken = state.refreshToken,
@@ -128,7 +105,9 @@ class SettingsViewModel @Inject constructor(
                 )
             }
             AiService.GEMINI -> {
-                if (state.refreshToken.isBlank() || state.oauthClientId.isBlank() || state.oauthClientSecret.isBlank()) return
+                if (state.refreshToken.isBlank() || state.oauthClientId.isBlank() || state.oauthClientSecret.isBlank()) {
+                    return null
+                }
                 Credential.GeminiCredential(
                     accessToken = state.accessToken,
                     refreshToken = state.refreshToken,
@@ -138,8 +117,6 @@ class SettingsViewModel @Inject constructor(
                 )
             }
         }
-
-        prefsManager.saveCredential(service, credential)
     }
 
     fun validateCredential(service: AiService) {
@@ -149,8 +126,22 @@ class SettingsViewModel @Inject constructor(
             AiService.GEMINI -> geminiRepository
         }
 
-        // Ensure saved before validation
-        saveCredential(service)
+        val state = _uiState.value.serviceStates[service] ?: return
+        val credential = buildCredential(service, state)
+        if (credential == null) {
+            _uiState.update { currentState ->
+                val current = currentState.serviceStates[service] ?: ServiceCredentialState()
+                currentState.copy(
+                    serviceStates = currentState.serviceStates + (service to current.copy(
+                        validationResult = ValidationResult.Failure("Required credential fields are incomplete")
+                    ))
+                )
+            }
+            return
+        }
+
+        val previousCredential = prefsManager.loadCredential(service)
+        prefsManager.saveCredential(service, credential)
 
         _uiState.update { state ->
             val current = state.serviceStates[service] ?: ServiceCredentialState()
@@ -163,7 +154,14 @@ class SettingsViewModel @Inject constructor(
             val result = repo.validateCredential()
             val validationResult = when (result) {
                 is Result.Success -> ValidationResult.Success
-                is Result.Failure -> ValidationResult.Failure(formatAppError(result.error))
+                is Result.Failure -> {
+                    if (previousCredential != null) {
+                        prefsManager.saveCredential(service, previousCredential)
+                    } else {
+                        prefsManager.deleteCredential(service)
+                    }
+                    ValidationResult.Failure(formatAppError(result.error))
+                }
             }
 
             _uiState.update { state ->
@@ -171,7 +169,9 @@ class SettingsViewModel @Inject constructor(
                 state.copy(
                     serviceStates = state.serviceStates + (service to current.copy(
                         isValidating = false,
-                        validationResult = validationResult
+                        validationResult = validationResult,
+                        isConnected = validationResult is ValidationResult.Success || previousCredential != null,
+                        hasUnsavedChanges = validationResult !is ValidationResult.Success
                     ))
                 )
             }
@@ -196,11 +196,30 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(showDeleteConfirmDialog = false) }
     }
 
+    fun showDisconnectConfirmDialog(service: AiService) {
+        _uiState.update { it.copy(disconnectConfirmService = service) }
+    }
+
+    fun dismissDisconnectConfirmDialog() {
+        _uiState.update { it.copy(disconnectConfirmService = null) }
+    }
+
+    fun disconnectService(service: AiService) {
+        prefsManager.deleteCredential(service)
+        _uiState.update { state ->
+            state.copy(
+                serviceStates = state.serviceStates + (service to ServiceCredentialState()),
+                disconnectConfirmService = null
+            )
+        }
+    }
+
     fun deleteAllCredentials() {
         prefsManager.deleteAllCredentials()
         _uiState.update {
             SettingsUiState(
-                refreshIntervalMinutes = it.refreshIntervalMinutes
+                refreshIntervalMinutes = it.refreshIntervalMinutes,
+                notificationsEnabled = it.notificationsEnabled
             )
         }
     }

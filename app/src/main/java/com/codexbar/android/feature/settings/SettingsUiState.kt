@@ -8,7 +8,8 @@ data class SettingsUiState(
     },
     val refreshIntervalMinutes: Long = 30L,
     val notificationsEnabled: Boolean = true,
-    val showDeleteConfirmDialog: Boolean = false
+    val showDeleteConfirmDialog: Boolean = false,
+    val disconnectConfirmService: AiService? = null
 )
 
 data class ServiceCredentialState(
@@ -19,7 +20,9 @@ data class ServiceCredentialState(
     val oauthClientSecret: String = "", // Gemini only
     val expiresAtDisplay: String = "", // Gemini only (read-only)
     val isValidating: Boolean = false,
-    val validationResult: ValidationResult? = null
+    val validationResult: ValidationResult? = null,
+    val isConnected: Boolean = false,
+    val hasUnsavedChanges: Boolean = false
 )
 
 sealed class ValidationResult {
