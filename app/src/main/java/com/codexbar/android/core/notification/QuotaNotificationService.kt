@@ -5,14 +5,10 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.QuotaInfo
-import com.codexbar.android.core.workmanager.QuotaRefreshWorker
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Duration
 import java.time.Instant
@@ -59,36 +55,21 @@ class QuotaNotificationService @Inject constructor(
     }
 
     fun showQuotaNotification(quotas: List<QuotaInfo>) {
-        val remoteViews = RemoteViews(context.packageName, R.layout.notification_compact)
-
-        // Populate service data
-        quotas.forEachIndexed { index, quota ->
-            if (index >= 3) return@forEachIndexed // Max 3 services
-
-            val maxUtilization = quota.windows.maxOfOrNull { it.utilization } ?: 0.0
-            val progress = (maxUtilization * 100).toInt()
-
-            when (index) {
-                0 -> {
-                    remoteViews.setTextViewText(R.id.service_name_1, quota.service.displayName)
-                    remoteViews.setProgressBar(R.id.progress_bar_1, 100, progress, false)
-                    remoteViews.setTextViewText(R.id.progress_text_1, "${progress}%")
-                }
-                1 -> {
-                    remoteViews.setTextViewText(R.id.service_name_2, quota.service.displayName)
-                    remoteViews.setProgressBar(R.id.progress_bar_2, 100, progress, false)
-                    remoteViews.setTextViewText(R.id.progress_text_2, "${progress}%")
-                }
-                2 -> {
-                    remoteViews.setTextViewText(R.id.service_name_3, quota.service.displayName)
-                    remoteViews.setProgressBar(R.id.progress_bar_3, 100, progress, false)
-                    remoteViews.setTextViewText(R.id.progress_text_3, "${progress}%")
-                }
-            }
-        }
-
         val elapsed = formatElapsed(quotas.firstOrNull()?.fetchedAt)
-        remoteViews.setTextViewText(R.id.update_time, "Updated: $elapsed")
+        val mostUsedProgress = quotas
+            .flatMap { it.windows }
+            .maxOfOrNull { (it.utilization * 100).toInt().coerceIn(0, 100) }
+            ?: 0
+        val summary = quotas.firstOrNull()?.let { quota ->
+            "${quota.service.displayName}: ${formatRemaining(quota)}"
+        } ?: "No quota data"
+        val style = NotificationCompat.InboxStyle()
+            .setBigContentTitle("AI quota status")
+            .setSummaryText("Updated $elapsed")
+
+        quotas.take(5).forEach { quota ->
+            style.addLine("${quota.service.displayName}: ${formatRemaining(quota)}")
+        }
 
         // Refresh action
         val refreshIntent = Intent(context, RefreshReceiver::class.java).apply {
@@ -112,10 +93,16 @@ class QuotaNotificationService @Inject constructor(
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_quota)
-            .setCustomContentView(remoteViews)
+            .setContentTitle("AI quota status")
+            .setContentText(summary)
+            .setSubText("Updated $elapsed")
+            .setStyle(style)
+            .setProgress(100, mostUsedProgress, false)
             .setContentIntent(dashboardPendingIntent)
             .setOngoing(true)
             .setSilent(true)
+            .setOnlyAlertOnce(true)
+            .setShowWhen(false)
             .addAction(R.drawable.ic_refresh, "Refresh", refreshPendingIntent)
             .build()
 
@@ -154,6 +141,28 @@ class QuotaNotificationService @Inject constructor(
             elapsed.toMinutes() < 1 -> "just now"
             elapsed.toMinutes() < 60 -> "${elapsed.toMinutes()} min ago"
             else -> "${elapsed.toHours()}h ago"
+        }
+    }
+
+    private fun formatRemaining(quota: QuotaInfo): String {
+        val primaryWindow = quota.windows.maxByOrNull { it.utilization } ?: return "waiting for data"
+        val remaining = ((1.0 - primaryWindow.utilization) * 100).toInt().coerceIn(0, 100)
+        val resetText = primaryWindow.resetsAt?.let { resetAt ->
+            val resetIn = formatDurationUntil(resetAt)
+            if (resetIn.isNotEmpty()) " - resets in $resetIn" else ""
+        } ?: ""
+        return "$remaining% left (${primaryWindow.label})$resetText"
+    }
+
+    private fun formatDurationUntil(instant: Instant): String {
+        val duration = Duration.between(Instant.now(), instant)
+        if (duration.isNegative || duration.isZero) return ""
+        val hours = duration.toHours()
+        val minutes = duration.toMinutes() % 60
+        return when {
+            hours >= 24 -> "${hours / 24}d ${hours % 24}h"
+            hours > 0 -> "${hours}h ${minutes}m"
+            else -> "${minutes}m"
         }
     }
 }
