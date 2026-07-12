@@ -2,6 +2,8 @@ package com.codexbar.android.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.codexbar.android.core.auth.AccountLinkManager
+import com.codexbar.android.core.auth.DeviceAuthSession
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.Credential
@@ -11,6 +13,7 @@ import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.PrivacySettings
 import com.codexbar.android.di.ClaudeRepository
 import com.codexbar.android.di.CodexRepository
+import com.codexbar.android.di.CopilotRepository
 import com.codexbar.android.di.GeminiRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +31,8 @@ class SettingsViewModel @Inject constructor(
     @ClaudeRepository private val claudeRepository: QuotaRepository,
     @CodexRepository private val codexRepository: QuotaRepository,
     @GeminiRepository private val geminiRepository: QuotaRepository,
+    @CopilotRepository private val copilotRepository: QuotaRepository,
+    private val accountLinkManager: AccountLinkManager,
     private val prefsManager: EncryptedPrefsManager
 ) : ViewModel() {
 
@@ -69,6 +74,10 @@ class SettingsViewModel @Inject constructor(
                     oauthClientId = credential.oauthClientId,
                     oauthClientSecret = credential.oauthClientSecret,
                     expiresAtDisplay = formatExpiryMs(credential.expiresAtMs),
+                    isConnected = true
+                )
+                is Credential.CopilotCredential -> ServiceCredentialState(
+                    accessToken = credential.accessToken,
                     isConnected = true
                 )
             }
@@ -121,15 +130,14 @@ class SettingsViewModel @Inject constructor(
                     oauthClientSecret = state.oauthClientSecret
                 )
             }
+            AiService.COPILOT -> Credential.CopilotCredential(
+                accessToken = state.accessToken
+            )
         }
     }
 
     fun validateCredential(service: AiService) {
-        val repo = when (service) {
-            AiService.CLAUDE -> claudeRepository
-            AiService.CODEX -> codexRepository
-            AiService.GEMINI -> geminiRepository
-        }
+        val repo = repositoryFor(service)
 
         val state = _uiState.value.serviceStates[service] ?: return
         val credential = buildCredential(service, state)
@@ -179,6 +187,69 @@ class SettingsViewModel @Inject constructor(
                         hasUnsavedChanges = validationResult !is ValidationResult.Success
                     ))
                 )
+            }
+        }
+    }
+
+    fun startAccountLink(service: AiService) {
+        if (!service.supportsDeviceAccountLink()) return
+
+        _uiState.update { state ->
+            val current = state.serviceStates[service] ?: ServiceCredentialState()
+            state.copy(
+                serviceStates = state.serviceStates + (service to current.copy(
+                    isAccountLinking = true,
+                    accountLinkPrompt = null,
+                    validationResult = null,
+                    hasUnsavedChanges = false
+                ))
+            )
+        }
+
+        viewModelScope.launch {
+            try {
+                val session = accountLinkManager.requestDeviceCode(service)
+                _uiState.updateAccountLinkPrompt(service, session)
+
+                val credential = accountLinkManager.completeDeviceCode(session)
+                prefsManager.saveCredential(service, credential)
+
+                val validationResult = when (val result = repositoryFor(service).validateCredential()) {
+                    is Result.Success -> ValidationResult.Success
+                    is Result.Failure -> {
+                        prefsManager.deleteCredential(service)
+                        ValidationResult.Failure(formatAppError(result.error))
+                    }
+                }
+
+                _uiState.update { state ->
+                    val current = state.serviceStates[service] ?: ServiceCredentialState()
+                    state.copy(
+                        serviceStates = state.serviceStates + (service to current.copy(
+                            accessToken = credential.accessToken,
+                            refreshToken = credential.refreshToken ?: "",
+                            isAccountLinking = false,
+                            accountLinkPrompt = null,
+                            validationResult = validationResult,
+                            isConnected = validationResult is ValidationResult.Success,
+                            hasUnsavedChanges = false
+                        ))
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { state ->
+                    val current = state.serviceStates[service] ?: ServiceCredentialState()
+                    state.copy(
+                        serviceStates = state.serviceStates + (service to current.copy(
+                            isAccountLinking = false,
+                            accountLinkPrompt = null,
+                            validationResult = ValidationResult.Failure(
+                                e.message ?: "Account link failed"
+                            ),
+                            isConnected = current.isConnected
+                        ))
+                    )
+                }
             }
         }
     }
@@ -253,6 +324,38 @@ class SettingsViewModel @Inject constructor(
             formatter.format(instant)
         } catch (_: Exception) {
             "Unknown"
+        }
+    }
+
+    private fun repositoryFor(service: AiService): QuotaRepository {
+        return when (service) {
+            AiService.CLAUDE -> claudeRepository
+            AiService.CODEX -> codexRepository
+            AiService.GEMINI -> geminiRepository
+            AiService.COPILOT -> copilotRepository
+        }
+    }
+
+    private fun AiService.supportsDeviceAccountLink(): Boolean {
+        return this == AiService.CODEX || this == AiService.COPILOT
+    }
+
+    private fun MutableStateFlow<SettingsUiState>.updateAccountLinkPrompt(
+        service: AiService,
+        session: DeviceAuthSession
+    ) {
+        update { state ->
+            val current = state.serviceStates[service] ?: ServiceCredentialState()
+            state.copy(
+                serviceStates = state.serviceStates + (service to current.copy(
+                    isAccountLinking = true,
+                    accountLinkPrompt = AccountLinkPrompt(
+                        verificationUrl = session.verificationUrl,
+                        userCode = session.userCode,
+                        expiresAtDisplay = formatExpiryMs(session.expiresAtEpochMs)
+                    )
+                ))
+            )
         }
     }
 

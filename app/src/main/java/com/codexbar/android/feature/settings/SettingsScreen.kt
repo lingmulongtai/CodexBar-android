@@ -1,5 +1,9 @@
 package com.codexbar.android.feature.settings
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,9 +53,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.core.domain.model.AiService
@@ -65,6 +71,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -107,6 +114,8 @@ fun SettingsScreen(
                     service = service,
                     state = state,
                     onFieldChange = { field, value -> viewModel.updateField(service, field, value) },
+                    onStartAccountLink = { viewModel.startAccountLink(service) },
+                    onOpenAccountLink = { url -> openAuthUrl(context, url) },
                     onValidate = { viewModel.validateCredential(service) },
                     onDisconnect = { viewModel.showDisconnectConfirmDialog(service) }
                 )
@@ -152,6 +161,8 @@ private fun ServiceCredentialSection(
     service: AiService,
     state: ServiceCredentialState,
     onFieldChange: (String, String) -> Unit,
+    onStartAccountLink: () -> Unit,
+    onOpenAccountLink: (String) -> Unit,
     onValidate: () -> Unit,
     onDisconnect: () -> Unit
 ) {
@@ -183,30 +194,43 @@ private fun ServiceCredentialSection(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            if (service.supportsAccountLink()) {
+                AccountLinkControls(
+                    service = service,
+                    state = state,
+                    onStartAccountLink = onStartAccountLink,
+                    onOpenAccountLink = onOpenAccountLink
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
             OutlinedTextField(
                 value = state.accessToken,
                 onValueChange = { onFieldChange("accessToken", it) },
-                label = { Text("Access Token") },
+                label = { Text(if (service == AiService.COPILOT) "GitHub OAuth Token" else "Access Token") },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = secretKeyboardOptions(),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            if (service != AiService.COPILOT) {
+                Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
-                value = state.refreshToken,
-                onValueChange = { onFieldChange("refreshToken", it) },
-                label = { Text("Refresh Token") },
-                supportingText = if (service == AiService.CLAUDE) {
-                    { Text("Required for auto-refresh (tokens expire every 8h)") }
-                } else null,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = secretKeyboardOptions(),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+                OutlinedTextField(
+                    value = state.refreshToken,
+                    onValueChange = { onFieldChange("refreshToken", it) },
+                    label = { Text("Refresh Token") },
+                    supportingText = if (service == AiService.CLAUDE) {
+                        { Text("Required for auto-refresh (tokens expire every 8h)") }
+                    } else null,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = secretKeyboardOptions(),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
 
             // Service-specific fields
             when (service) {
@@ -329,6 +353,86 @@ private fun ServiceCredentialSection(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun AccountLinkControls(
+    service: AiService,
+    state: ServiceCredentialState,
+    onStartAccountLink: () -> Unit,
+    onOpenAccountLink: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = when (service) {
+                AiService.CODEX -> "Sign in with ChatGPT using OpenAI's device-code flow. Tokens are saved only after validation."
+                AiService.COPILOT -> "Sign in with GitHub's device flow. The app stores the OAuth token only after validation."
+                else -> ""
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Button(
+                onClick = onStartAccountLink,
+                enabled = !state.isAccountLinking && !state.isValidating
+            ) {
+                if (state.isAccountLinking && state.accountLinkPrompt == null) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text(if (state.isAccountLinking) "Waiting for sign-in" else "Connect account")
+            }
+        }
+
+        state.accountLinkPrompt?.let { prompt ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f)
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Enter this code in the sign-in page:",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = prompt.userCode,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Text(
+                        text = "Expires: ${prompt.expiresAtDisplay}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedButton(onClick = { onOpenAccountLink(prompt.verificationUrl) }) {
+                        Text("Open sign-in page")
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun AiService.supportsAccountLink(): Boolean {
+    return this == AiService.CODEX || this == AiService.COPILOT
+}
+
+private fun openAuthUrl(context: Context, url: String) {
+    val uri = Uri.parse(url)
+    try {
+        CustomTabsIntent.Builder()
+            .build()
+            .launchUrl(context, uri)
+    } catch (_: ActivityNotFoundException) {
+        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
     }
 }
 

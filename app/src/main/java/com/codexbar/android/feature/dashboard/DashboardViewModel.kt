@@ -10,6 +10,7 @@ import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.di.ClaudeRepository
 import com.codexbar.android.di.CodexRepository
+import com.codexbar.android.di.CopilotRepository
 import com.codexbar.android.di.GeminiRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -25,6 +26,7 @@ class DashboardViewModel @Inject constructor(
     @ClaudeRepository private val claudeRepository: QuotaRepository,
     @CodexRepository private val codexRepository: QuotaRepository,
     @GeminiRepository private val geminiRepository: QuotaRepository,
+    @CopilotRepository private val copilotRepository: QuotaRepository,
     private val prefsManager: EncryptedPrefsManager
 ) : ViewModel() {
 
@@ -47,6 +49,7 @@ class DashboardViewModel @Inject constructor(
                 if (prefsManager.loadCredential(AiService.CLAUDE) != null) add(AiService.CLAUDE to claudeRepository)
                 if (prefsManager.loadCredential(AiService.CODEX) != null) add(AiService.CODEX to codexRepository)
                 if (prefsManager.loadCredential(AiService.GEMINI) != null) add(AiService.GEMINI to geminiRepository)
+                if (prefsManager.loadCredential(AiService.COPILOT) != null) add(AiService.COPILOT to copilotRepository)
             }
 
             if (repos.isEmpty()) {

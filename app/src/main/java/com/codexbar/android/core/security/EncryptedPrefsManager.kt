@@ -97,6 +97,10 @@ class EncryptedPrefsManager @Inject constructor(
                     prefs.putEncryptedString("${prefix}_oauth_client_id", credential.oauthClientId)
                     prefs.putEncryptedString("${prefix}_oauth_client_secret", credential.oauthClientSecret)
                 }
+
+                is Credential.CopilotCredential -> {
+                    // Access-token only; GitHub's device flow used here does not issue refresh tokens.
+                }
             }
         }
         updateCache(updated)
@@ -282,6 +286,10 @@ class EncryptedPrefsManager @Inject constructor(
                     oauthClientId = clientId,
                     oauthClientSecret = clientSecret
                 )
+            }
+
+            AiService.COPILOT -> {
+                Credential.CopilotCredential(accessToken = accessToken)
             }
         }
     }

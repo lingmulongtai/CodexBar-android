@@ -54,6 +54,7 @@ class TokenRefreshWorker @AssistedInject constructor(
             is Credential.ClaudeCredential -> refreshClaude(credential)
             is Credential.CodexCredential -> refreshCodex(credential)
             is Credential.GeminiCredential -> refreshGemini(credential)
+            is Credential.CopilotCredential -> true
         }
     }
 

@@ -22,9 +22,17 @@ data class ServiceCredentialState(
     val oauthClientSecret: String = "", // Gemini only
     val expiresAtDisplay: String = "", // Gemini only (read-only)
     val isValidating: Boolean = false,
+    val isAccountLinking: Boolean = false,
+    val accountLinkPrompt: AccountLinkPrompt? = null,
     val validationResult: ValidationResult? = null,
     val isConnected: Boolean = false,
     val hasUnsavedChanges: Boolean = false
+)
+
+data class AccountLinkPrompt(
+    val verificationUrl: String,
+    val userCode: String,
+    val expiresAtDisplay: String
 )
 
 sealed class ValidationResult {

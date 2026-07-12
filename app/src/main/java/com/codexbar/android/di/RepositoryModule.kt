@@ -2,12 +2,14 @@ package com.codexbar.android.di
 
 import com.codexbar.android.core.data.ClaudeRepositoryImpl
 import com.codexbar.android.core.data.CodexRepositoryImpl
+import com.codexbar.android.core.data.CopilotRepositoryImpl
 import com.codexbar.android.core.data.GeminiRepositoryImpl
 import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.network.claude.ClaudeApiService
 import com.codexbar.android.core.network.claude.ClaudeTokenRefreshService
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
+import com.codexbar.android.core.network.copilot.CopilotApiService
 import com.codexbar.android.core.network.gemini.GeminiApiService
 import com.codexbar.android.core.network.gemini.GeminiTokenRefreshService
 import com.codexbar.android.core.security.EncryptedPrefsManager
@@ -30,6 +32,10 @@ annotation class CodexRepository
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class GeminiRepository
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class CopilotRepository
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -62,4 +68,12 @@ object RepositoryModule {
         tokenRefreshService: GeminiTokenRefreshService,
         prefsManager: EncryptedPrefsManager
     ): QuotaRepository = GeminiRepositoryImpl(apiService, tokenRefreshService, prefsManager)
+
+    @Provides
+    @Singleton
+    @CopilotRepository
+    fun provideCopilotRepository(
+        apiService: CopilotApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = CopilotRepositoryImpl(apiService, prefsManager)
 }

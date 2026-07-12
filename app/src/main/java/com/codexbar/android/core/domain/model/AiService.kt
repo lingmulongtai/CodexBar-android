@@ -23,5 +23,11 @@ enum class AiService(
         brandColor = 0xFF4285F4,
         baseUrl = "https://cloudcode-pa.googleapis.com/",
         requiresManualCredentials = true
+    ),
+    COPILOT(
+        displayName = "GitHub Copilot",
+        brandColor = 0xFF6E7681,
+        baseUrl = "https://api.github.com/",
+        requiresManualCredentials = false
     )
 }

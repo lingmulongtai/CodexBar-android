@@ -1,0 +1,160 @@
+package com.codexbar.android.core.auth
+
+import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.domain.model.Credential
+import com.codexbar.android.core.network.codex.CodexDto
+import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
+import com.codexbar.android.core.network.oauth.DeviceAuthDto
+import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
+import java.io.IOException
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlinx.coroutines.delay
+
+@Singleton
+class AccountLinkManager @Inject constructor(
+    private val codexDeviceAuthService: CodexDeviceAuthService,
+    private val gitHubDeviceAuthService: GitHubDeviceAuthService
+) {
+
+    suspend fun requestDeviceCode(service: AiService): DeviceAuthSession {
+        return when (service) {
+            AiService.CODEX -> requestCodexDeviceCode()
+            AiService.COPILOT -> requestCopilotDeviceCode()
+            AiService.CLAUDE,
+            AiService.GEMINI -> throw UnsupportedOperationException(
+                "${service.displayName} does not expose a supported Android device-code flow."
+            )
+        }
+    }
+
+    suspend fun completeDeviceCode(session: DeviceAuthSession): Credential {
+        return when (session.service) {
+            AiService.CODEX -> completeCodexDeviceCode(session)
+            AiService.COPILOT -> completeCopilotDeviceCode(session)
+            AiService.CLAUDE,
+            AiService.GEMINI -> throw UnsupportedOperationException(
+                "${session.service.displayName} does not expose a supported Android device-code flow."
+            )
+        }
+    }
+
+    private suspend fun requestCodexDeviceCode(): DeviceAuthSession {
+        val response = codexDeviceAuthService.requestUserCode(
+            DeviceAuthDto.CodexUserCodeRequest(clientId = CodexDto.CODEX_CLIENT_ID)
+        )
+        if (!response.isSuccessful) {
+            throw IOException("Codex device-code request failed with HTTP ${response.code()}")
+        }
+
+        val body = response.body() ?: throw IOException("Codex device-code response was empty")
+        val userCode = body.effectiveUserCode
+            ?: throw IOException("Codex device-code response did not contain a user code")
+
+        return DeviceAuthSession(
+            service = AiService.CODEX,
+            verificationUrl = CodexDeviceAuthService.CODEX_DEVICE_VERIFICATION_URL,
+            userCode = userCode,
+            deviceCode = body.deviceAuthId,
+            intervalSeconds = body.intervalSeconds.coerceAtLeast(MIN_POLL_INTERVAL_SECONDS),
+            expiresAtEpochMs = System.currentTimeMillis() + CODEX_DEVICE_EXPIRY_MS
+        )
+    }
+
+    private suspend fun completeCodexDeviceCode(session: DeviceAuthSession): Credential.CodexCredential {
+        val deadline = System.currentTimeMillis() + CODEX_DEVICE_EXPIRY_MS
+        while (System.currentTimeMillis() < deadline) {
+            val response = codexDeviceAuthService.pollForAuthorizationCode(
+                DeviceAuthDto.CodexTokenPollRequest(
+                    deviceAuthId = session.deviceCode,
+                    userCode = session.userCode
+                )
+            )
+
+            if (response.isSuccessful) {
+                val code = response.body()
+                    ?: throw IOException("Codex authorization-code response was empty")
+                val tokenResponse = codexDeviceAuthService.exchangeAuthorizationCode(
+                    code = code.authorizationCode,
+                    clientId = CodexDto.CODEX_CLIENT_ID,
+                    codeVerifier = code.codeVerifier
+                )
+                if (!tokenResponse.isSuccessful) {
+                    throw IOException("Codex token exchange failed with HTTP ${tokenResponse.code()}")
+                }
+                val tokens = tokenResponse.body()
+                    ?: throw IOException("Codex token exchange response was empty")
+                return Credential.CodexCredential(
+                    accessToken = tokens.accessToken,
+                    refreshToken = tokens.refreshToken,
+                    accountId = null
+                )
+            }
+
+            when (response.code()) {
+                403, 404 -> delay(session.intervalSeconds * 1000L)
+                else -> throw IOException("Codex device-code polling failed with HTTP ${response.code()}")
+            }
+        }
+
+        throw IOException("Codex device-code login timed out")
+    }
+
+    private suspend fun requestCopilotDeviceCode(): DeviceAuthSession {
+        val response = gitHubDeviceAuthService.requestDeviceCode()
+        if (!response.isSuccessful) {
+            throw IOException("GitHub device-code request failed with HTTP ${response.code()}")
+        }
+
+        val body = response.body() ?: throw IOException("GitHub device-code response was empty")
+        return DeviceAuthSession(
+            service = AiService.COPILOT,
+            verificationUrl = body.verificationUriComplete ?: body.verificationUri,
+            userCode = body.userCode,
+            deviceCode = body.deviceCode,
+            intervalSeconds = body.interval.toLong().coerceAtLeast(MIN_POLL_INTERVAL_SECONDS),
+            expiresAtEpochMs = System.currentTimeMillis() + body.expiresIn * 1000L
+        )
+    }
+
+    private suspend fun completeCopilotDeviceCode(session: DeviceAuthSession): Credential.CopilotCredential {
+        var intervalSeconds = session.intervalSeconds
+        while (System.currentTimeMillis() < session.expiresAtEpochMs) {
+            delay(intervalSeconds * 1000L)
+            val response = gitHubDeviceAuthService.pollForAccessToken(deviceCode = session.deviceCode)
+            if (!response.isSuccessful) {
+                throw IOException("GitHub token polling failed with HTTP ${response.code()}")
+            }
+
+            val body = response.body() ?: throw IOException("GitHub token response was empty")
+            when (body.error) {
+                null -> {
+                    val token = body.accessToken
+                        ?: throw IOException("GitHub token response did not contain an access token")
+                    return Credential.CopilotCredential(accessToken = token)
+                }
+                "authorization_pending" -> Unit
+                "slow_down" -> intervalSeconds += SLOW_DOWN_INCREMENT_SECONDS
+                "expired_token" -> throw IOException("GitHub device-code login expired")
+                else -> throw IOException(body.errorDescription ?: "GitHub device-code login failed: ${body.error}")
+            }
+        }
+
+        throw IOException("GitHub device-code login timed out")
+    }
+
+    companion object {
+        const val CODEX_DEVICE_EXPIRY_MS = 15 * 60 * 1000L
+        private const val MIN_POLL_INTERVAL_SECONDS = 5L
+        private const val SLOW_DOWN_INCREMENT_SECONDS = 5L
+    }
+}
+
+data class DeviceAuthSession(
+    val service: AiService,
+    val verificationUrl: String,
+    val userCode: String,
+    val deviceCode: String,
+    val intervalSeconds: Long,
+    val expiresAtEpochMs: Long
+)

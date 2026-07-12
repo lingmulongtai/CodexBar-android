@@ -171,6 +171,7 @@ dependencies {
     implementation(libs.navigation.compose)
     implementation(libs.startup.runtime)
     implementation(libs.datastore.preferences)
+    implementation(libs.browser)
 
     // Hilt
     implementation(libs.hilt.android)
