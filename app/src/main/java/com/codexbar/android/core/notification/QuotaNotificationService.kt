@@ -9,6 +9,8 @@ import androidx.core.app.NotificationCompat
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.QuotaInfo
+import com.codexbar.android.core.security.EncryptedPrefsManager
+import com.codexbar.android.core.security.PrivacySettings
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Duration
 import java.time.Instant
@@ -17,7 +19,8 @@ import javax.inject.Singleton
 
 @Singleton
 class QuotaNotificationService @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val prefsManager: EncryptedPrefsManager
 ) {
     companion object {
         const val CHANNEL_ID = "quota_monitor"
@@ -55,20 +58,33 @@ class QuotaNotificationService @Inject constructor(
     }
 
     fun showQuotaNotification(quotas: List<QuotaInfo>) {
+        val privacySettings = prefsManager.getPrivacySettings()
         val elapsed = formatElapsed(quotas.firstOrNull()?.fetchedAt)
         val mostUsedProgress = quotas
             .flatMap { it.windows }
             .maxOfOrNull { (it.utilization * 100).toInt().coerceIn(0, 100) }
             ?: 0
-        val summary = quotas.firstOrNull()?.let { quota ->
-            "${quota.service.displayName}: ${formatRemaining(quota)}"
-        } ?: "No quota data"
-        val style = NotificationCompat.InboxStyle()
-            .setBigContentTitle("AI quota status")
-            .setSummaryText("Updated $elapsed")
-
-        quotas.take(5).forEach { quota ->
-            style.addLine("${quota.service.displayName}: ${formatRemaining(quota)}")
+        val summary = if (privacySettings.notificationRedactionEnabled) {
+            "Quota details hidden"
+        } else {
+            quotas.firstOrNull()?.let { quota ->
+                "${quota.service.displayName}: ${formatRemaining(quota)}"
+            } ?: "No quota data"
+        }
+        val style = if (privacySettings.notificationRedactionEnabled) {
+            NotificationCompat.InboxStyle()
+                .setBigContentTitle("AI quota status")
+                .addLine("Quota details hidden")
+                .setSummaryText("Updated $elapsed")
+        } else {
+            NotificationCompat.InboxStyle()
+                .setBigContentTitle("AI quota status")
+                .setSummaryText("Updated $elapsed")
+                .also { inbox ->
+                    quotas.take(5).forEach { quota ->
+                        inbox.addLine("${quota.service.displayName}: ${formatRemaining(quota)}")
+                    }
+                }
         }
 
         // Refresh action
@@ -97,12 +113,18 @@ class QuotaNotificationService @Inject constructor(
             .setContentText(summary)
             .setSubText("Updated $elapsed")
             .setStyle(style)
-            .setProgress(100, mostUsedProgress, false)
+            .setProgress(100, if (privacySettings.notificationRedactionEnabled) 0 else mostUsedProgress, false)
             .setContentIntent(dashboardPendingIntent)
             .setOngoing(true)
             .setSilent(true)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
+            .applyPrivacy(
+                privacySettings = privacySettings,
+                channelId = CHANNEL_ID,
+                redactedTitle = "AI quota status",
+                redactedText = "Quota details hidden"
+            )
             .addAction(R.drawable.ic_refresh, "Refresh", refreshPendingIntent)
             .build()
 
@@ -111,6 +133,7 @@ class QuotaNotificationService @Inject constructor(
     }
 
     fun showResetNotification(service: AiService, windowLabel: String) {
+        val privacySettings = prefsManager.getPrivacySettings()
         val dashboardIntent = Intent().apply {
             action = Intent.ACTION_VIEW
             data = android.net.Uri.parse("codexbar://dashboard")
@@ -121,12 +144,29 @@ class QuotaNotificationService @Inject constructor(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val contentTitle = if (privacySettings.notificationRedactionEnabled) {
+            "Quota reset"
+        } else {
+            "${service.displayName} quota reset"
+        }
+        val contentText = if (privacySettings.notificationRedactionEnabled) {
+            "A quota window has reset."
+        } else {
+            "$windowLabel window has been reset. Your quota is fully available."
+        }
+
         val notification = NotificationCompat.Builder(context, RESET_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_quota)
-            .setContentTitle("${service.displayName} quota reset")
-            .setContentText("$windowLabel window has been reset. Your quota is fully available.")
+            .setContentTitle(contentTitle)
+            .setContentText(contentText)
             .setContentIntent(dashboardPendingIntent)
             .setAutoCancel(true)
+            .applyPrivacy(
+                privacySettings = privacySettings,
+                channelId = RESET_CHANNEL_ID,
+                redactedTitle = "Quota reset",
+                redactedText = "Quota details hidden"
+            )
             .build()
 
         val notificationId = RESET_NOTIFICATION_ID_BASE + "${service.name}_$windowLabel".hashCode().and(0xFFFF)
@@ -164,5 +204,26 @@ class QuotaNotificationService @Inject constructor(
             hours > 0 -> "${hours}h ${minutes}m"
             else -> "${minutes}m"
         }
+    }
+
+    private fun NotificationCompat.Builder.applyPrivacy(
+        privacySettings: PrivacySettings,
+        channelId: String,
+        redactedTitle: String,
+        redactedText: String
+    ): NotificationCompat.Builder {
+        if (!privacySettings.lockScreenRedactionEnabled) {
+            return setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        }
+
+        val publicVersion = NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(R.drawable.ic_quota)
+            .setContentTitle(redactedTitle)
+            .setContentText(redactedText)
+            .setShowWhen(false)
+            .build()
+
+        return setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(publicVersion)
     }
 }

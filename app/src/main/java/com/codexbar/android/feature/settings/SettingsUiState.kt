@@ -1,6 +1,7 @@
 package com.codexbar.android.feature.settings
 
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.security.PrivacySettings
 
 data class SettingsUiState(
     val serviceStates: Map<AiService, ServiceCredentialState> = AiService.entries.associateWith {
@@ -8,6 +9,7 @@ data class SettingsUiState(
     },
     val refreshIntervalMinutes: Long = 30L,
     val notificationsEnabled: Boolean = true,
+    val privacySettings: PrivacySettings = PrivacySettings(),
     val showDeleteConfirmDialog: Boolean = false,
     val disconnectConfirmService: AiService? = null
 )

@@ -55,11 +55,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.security.PrivacySettings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
+    onScreenPrivacyChanged: (Boolean) -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -88,6 +90,14 @@ fun SettingsScreen(
             NotificationsSection(
                 enabled = uiState.notificationsEnabled,
                 onToggle = { viewModel.setNotificationsEnabled(it) }
+            )
+
+            PrivacySection(
+                settings = uiState.privacySettings,
+                onSettingsChange = { settings ->
+                    viewModel.setPrivacySettings(settings)
+                    onScreenPrivacyChanged(settings.screenPrivacyEnabled)
+                }
             )
 
             // Service credential sections
@@ -178,6 +188,7 @@ private fun ServiceCredentialSection(
                 onValueChange = { onFieldChange("accessToken", it) },
                 label = { Text("Access Token") },
                 visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = secretKeyboardOptions(),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -192,6 +203,7 @@ private fun ServiceCredentialSection(
                     { Text("Required for auto-refresh (tokens expire every 8h)") }
                 } else null,
                 visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = secretKeyboardOptions(),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -215,6 +227,7 @@ private fun ServiceCredentialSection(
                         onValueChange = { onFieldChange("oauthClientId", it) },
                         label = { Text("OAuth Client ID") },
                         supportingText = { Text("From Google Cloud Console") },
+                        keyboardOptions = secretKeyboardOptions(),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -224,6 +237,7 @@ private fun ServiceCredentialSection(
                         onValueChange = { onFieldChange("oauthClientSecret", it) },
                         label = { Text("OAuth Client Secret") },
                         visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = secretKeyboardOptions(),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -316,6 +330,13 @@ private fun ServiceCredentialSection(
             }
         }
     }
+}
+
+private fun secretKeyboardOptions(): KeyboardOptions {
+    return KeyboardOptions(
+        keyboardType = KeyboardType.Password,
+        autoCorrectEnabled = false
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -458,6 +479,91 @@ private fun DeleteConfirmDialog(
             }
         }
     )
+}
+
+@Composable
+private fun PrivacySection(
+    settings: PrivacySettings,
+    onSettingsChange: (PrivacySettings) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Privacy",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            PrivacyToggle(
+                title = "Block screenshots and Recents preview",
+                subtitle = "Protects token entry and account screens.",
+                checked = settings.screenPrivacyEnabled,
+                onCheckedChange = {
+                    onSettingsChange(settings.copy(screenPrivacyEnabled = it))
+                }
+            )
+            PrivacyToggle(
+                title = "Redact lock-screen notifications",
+                subtitle = "Shows a neutral lock-screen notification.",
+                checked = settings.lockScreenRedactionEnabled,
+                onCheckedChange = {
+                    onSettingsChange(settings.copy(lockScreenRedactionEnabled = it))
+                }
+            )
+            PrivacyToggle(
+                title = "Redact notification quota details",
+                subtitle = "Hides usage numbers from the notification shade.",
+                checked = settings.notificationRedactionEnabled,
+                onCheckedChange = {
+                    onSettingsChange(settings.copy(notificationRedactionEnabled = it))
+                }
+            )
+            PrivacyToggle(
+                title = "Redact widget quota details",
+                subtitle = "Keeps the widget visible without usage numbers.",
+                checked = settings.widgetRedactionEnabled,
+                onCheckedChange = {
+                    onSettingsChange(settings.copy(widgetRedactionEnabled = it))
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun PrivacyToggle(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
+    }
 }
 
 @Composable

@@ -212,6 +212,28 @@ class EncryptedPrefsManager @Inject constructor(
         }
     }
 
+    fun getPrivacySettings(): PrivacySettings {
+        return readSecureStore(PrivacySettings()) { prefs ->
+            PrivacySettings(
+                screenPrivacyEnabled = prefs.getBoolean("privacy_screen_enabled", true),
+                lockScreenRedactionEnabled = prefs.getBoolean("privacy_lock_screen_redaction_enabled", true),
+                notificationRedactionEnabled = prefs.getBoolean("privacy_notification_redaction_enabled", false),
+                widgetRedactionEnabled = prefs.getBoolean("privacy_widget_redaction_enabled", false)
+            )
+        }
+    }
+
+    fun setPrivacySettings(settings: PrivacySettings) {
+        writeSecureStore { prefs ->
+            prefs.edit()
+                .putBoolean("privacy_screen_enabled", settings.screenPrivacyEnabled)
+                .putBoolean("privacy_lock_screen_redaction_enabled", settings.lockScreenRedactionEnabled)
+                .putBoolean("privacy_notification_redaction_enabled", settings.notificationRedactionEnabled)
+                .putBoolean("privacy_widget_redaction_enabled", settings.widgetRedactionEnabled)
+                .apply()
+        }
+    }
+
     fun saveResetTimes(service: AiService, windows: List<Pair<String, Instant?>>) {
         writeSecureStore { prefs ->
             val editor = prefs.edit()

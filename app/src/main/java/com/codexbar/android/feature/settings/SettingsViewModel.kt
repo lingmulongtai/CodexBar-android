@@ -8,6 +8,7 @@ import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.security.EncryptedPrefsManager
+import com.codexbar.android.core.security.PrivacySettings
 import com.codexbar.android.di.ClaudeRepository
 import com.codexbar.android.di.CodexRepository
 import com.codexbar.android.di.GeminiRepository
@@ -38,7 +39,8 @@ class SettingsViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 refreshIntervalMinutes = prefsManager.getRefreshInterval(),
-                notificationsEnabled = prefsManager.isNotificationsEnabled()
+                notificationsEnabled = prefsManager.isNotificationsEnabled(),
+                privacySettings = prefsManager.getPrivacySettings()
             )
         }
     }
@@ -188,6 +190,11 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(notificationsEnabled = enabled) }
     }
 
+    fun setPrivacySettings(settings: PrivacySettings) {
+        prefsManager.setPrivacySettings(settings)
+        _uiState.update { it.copy(privacySettings = settings) }
+    }
+
     fun showDeleteConfirmDialog() {
         _uiState.update { it.copy(showDeleteConfirmDialog = true) }
     }
@@ -219,7 +226,8 @@ class SettingsViewModel @Inject constructor(
         _uiState.update {
             SettingsUiState(
                 refreshIntervalMinutes = it.refreshIntervalMinutes,
-                notificationsEnabled = it.notificationsEnabled
+                notificationsEnabled = it.notificationsEnabled,
+                privacySettings = it.privacySettings
             )
         }
     }

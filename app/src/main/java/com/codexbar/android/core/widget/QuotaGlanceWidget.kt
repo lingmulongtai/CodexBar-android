@@ -39,6 +39,7 @@ import androidx.glance.unit.ColorProvider
 import com.codexbar.android.MainActivity
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.workmanager.WorkManagerInitializer
 import java.time.Duration
 import java.time.Instant
@@ -48,20 +49,26 @@ class QuotaGlanceWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val widgetPrefs = WidgetPrefsManager(context)
+        val privacySettings = EncryptedPrefsManager(context).getPrivacySettings()
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val selectedServices = widgetPrefs.getSelectedServices(appWidgetId)
 
         provideContent {
             GlanceTheme {
-                WidgetContent(selectedServices.toList().sortedBy { it.ordinal }, widgetPrefs)
+                WidgetContent(
+                    selectedServices = selectedServices.toList().sortedBy { it.ordinal },
+                    widgetPrefs = widgetPrefs,
+                    redactQuotaDetails = privacySettings.widgetRedactionEnabled
+                )
             }
         }
     }
 
     @Composable
     private fun WidgetContent(
-        services: List<AiService>,
-        widgetPrefs: WidgetPrefsManager
+        selectedServices: List<AiService>,
+        widgetPrefs: WidgetPrefsManager,
+        redactQuotaDetails: Boolean
     ) {
         Box(
             modifier = GlanceModifier
@@ -71,11 +78,13 @@ class QuotaGlanceWidget : GlanceAppWidget() {
                 .clickable(actionStartActivity<MainActivity>())
                 .padding(16.dp)
         ) {
-            if (services.isEmpty()) {
+            if (redactQuotaDetails) {
+                RedactedState()
+            } else if (selectedServices.isEmpty()) {
                 EmptyState()
             } else {
                 Column(modifier = GlanceModifier.fillMaxSize()) {
-                    for ((index, service) in services.withIndex()) {
+                    for ((index, service) in selectedServices.withIndex()) {
                         if (index > 0) {
                             Spacer(modifier = GlanceModifier.height(4.dp))
                             Divider()
@@ -98,6 +107,33 @@ class QuotaGlanceWidget : GlanceAppWidget() {
                 text = "No services configured",
                 style = TextStyle(color = ColorProvider(Color.White.copy(alpha = 0.6f)), fontSize = 14.sp)
             )
+        }
+    }
+
+    @Composable
+    private fun RedactedState() {
+        Box(
+            modifier = GlanceModifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Quota hidden",
+                    style = TextStyle(
+                        color = ColorProvider(Color.White),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+                Spacer(modifier = GlanceModifier.height(4.dp))
+                Text(
+                    text = "Open CodexBar to view details",
+                    style = TextStyle(
+                        color = ColorProvider(Color.White.copy(alpha = 0.55f)),
+                        fontSize = 12.sp
+                    )
+                )
+            }
         }
     }
 
