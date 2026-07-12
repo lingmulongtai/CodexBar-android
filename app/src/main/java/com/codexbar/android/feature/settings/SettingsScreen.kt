@@ -194,6 +194,15 @@ private fun ServiceCredentialSection(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            if (service == AiService.CLAUDE) {
+                Text(
+                    text = "Use `claude setup-token` and paste the generated OAuth token. In-app sign-in is not offered because Claude Code does not expose a supported Android device-code flow.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
             OutlinedTextField(
                 value = state.accessToken,
                 onValueChange = { onFieldChange("accessToken", it) },
