@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -34,6 +35,7 @@ import com.codexbar.android.feature.dashboard.DashboardScreen
 import com.codexbar.android.feature.settings.SettingsScreen
 import com.codexbar.android.ui.theme.CodexBarTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -55,6 +57,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyScreenPrivacy(prefsManager.getPrivacySettings().screenPrivacyEnabled)
+        lifecycleScope.launch {
+            prefsManager.warmCache()
+            applyScreenPrivacy(prefsManager.getPrivacySettings().screenPrivacyEnabled)
+        }
         enableEdgeToEdge()
 
         setContent {

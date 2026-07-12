@@ -35,17 +35,20 @@ class SettingsViewModel @Inject constructor(
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     init {
-        loadSavedCredentials()
-        _uiState.update {
-            it.copy(
-                refreshIntervalMinutes = prefsManager.getRefreshInterval(),
-                notificationsEnabled = prefsManager.isNotificationsEnabled(),
-                privacySettings = prefsManager.getPrivacySettings()
-            )
+        viewModelScope.launch {
+            prefsManager.warmCache()
+            loadSavedCredentials()
+            _uiState.update {
+                it.copy(
+                    refreshIntervalMinutes = prefsManager.getRefreshInterval(),
+                    notificationsEnabled = prefsManager.isNotificationsEnabled(),
+                    privacySettings = prefsManager.getPrivacySettings()
+                )
+            }
         }
     }
 
-    private fun loadSavedCredentials() {
+    private suspend fun loadSavedCredentials() {
         for (service in AiService.entries) {
             val credential = prefsManager.loadCredential(service) ?: continue
             val state = when (credential) {
@@ -142,9 +145,6 @@ class SettingsViewModel @Inject constructor(
             return
         }
 
-        val previousCredential = prefsManager.loadCredential(service)
-        prefsManager.saveCredential(service, credential)
-
         _uiState.update { state ->
             val current = state.serviceStates[service] ?: ServiceCredentialState()
             state.copy(
@@ -153,6 +153,9 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            val previousCredential = prefsManager.loadCredential(service)
+            prefsManager.saveCredential(service, credential)
+
             val result = repo.validateCredential()
             val validationResult = when (result) {
                 is Result.Success -> ValidationResult.Success
@@ -181,18 +184,24 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setRefreshInterval(minutes: Long) {
-        prefsManager.setRefreshInterval(minutes)
         _uiState.update { it.copy(refreshIntervalMinutes = minutes) }
+        viewModelScope.launch {
+            prefsManager.setRefreshInterval(minutes)
+        }
     }
 
     fun setNotificationsEnabled(enabled: Boolean) {
-        prefsManager.setNotificationsEnabled(enabled)
         _uiState.update { it.copy(notificationsEnabled = enabled) }
+        viewModelScope.launch {
+            prefsManager.setNotificationsEnabled(enabled)
+        }
     }
 
     fun setPrivacySettings(settings: PrivacySettings) {
-        prefsManager.setPrivacySettings(settings)
         _uiState.update { it.copy(privacySettings = settings) }
+        viewModelScope.launch {
+            prefsManager.setPrivacySettings(settings)
+        }
     }
 
     fun showDeleteConfirmDialog() {
@@ -212,23 +221,27 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun disconnectService(service: AiService) {
-        prefsManager.deleteCredential(service)
         _uiState.update { state ->
             state.copy(
                 serviceStates = state.serviceStates + (service to ServiceCredentialState()),
                 disconnectConfirmService = null
             )
         }
+        viewModelScope.launch {
+            prefsManager.deleteCredential(service)
+        }
     }
 
     fun deleteAllCredentials() {
-        prefsManager.deleteAllCredentials()
         _uiState.update {
             SettingsUiState(
                 refreshIntervalMinutes = it.refreshIntervalMinutes,
                 notificationsEnabled = it.notificationsEnabled,
                 privacySettings = it.privacySettings
             )
+        }
+        viewModelScope.launch {
+            prefsManager.deleteAllCredentials()
         }
     }
 

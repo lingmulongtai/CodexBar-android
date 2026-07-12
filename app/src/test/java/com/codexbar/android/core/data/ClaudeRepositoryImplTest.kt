@@ -61,7 +61,9 @@ class ClaudeRepositoryImplTest {
             .create(ClaudeTokenRefreshService::class.java)
 
         prefsManager = mock(EncryptedPrefsManager::class.java)
-        `when`(prefsManager.loadCredential(AiService.CLAUDE)).thenReturn(testCredential)
+        runTest {
+            `when`(prefsManager.loadCredential(AiService.CLAUDE)).thenReturn(testCredential)
+        }
 
         repository = ClaudeRepositoryImpl(apiService, tokenRefreshService, prefsManager)
     }

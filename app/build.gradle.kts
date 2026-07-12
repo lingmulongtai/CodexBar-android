@@ -194,9 +194,6 @@ dependencies {
     // WorkManager
     implementation(libs.work.runtime.ktx)
 
-    // Security
-    implementation(libs.security.crypto)
-
     // Glance (AppWidget)
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)

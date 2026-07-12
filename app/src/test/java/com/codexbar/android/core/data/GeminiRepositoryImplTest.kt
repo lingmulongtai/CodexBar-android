@@ -63,7 +63,9 @@ class GeminiRepositoryImplTest {
             .create(GeminiTokenRefreshService::class.java)
 
         prefsManager = mock(EncryptedPrefsManager::class.java)
-        `when`(prefsManager.loadCredential(AiService.GEMINI)).thenReturn(testCredential)
+        runTest {
+            `when`(prefsManager.loadCredential(AiService.GEMINI)).thenReturn(testCredential)
+        }
 
         repository = GeminiRepositoryImpl(apiService, tokenRefreshService, prefsManager)
     }

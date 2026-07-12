@@ -43,9 +43,9 @@ class QuotaRefreshWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         val repos = buildList {
-            if (prefsManager.hasCredential(AiService.CLAUDE)) add(AiService.CLAUDE to claudeRepository)
-            if (prefsManager.hasCredential(AiService.CODEX)) add(AiService.CODEX to codexRepository)
-            if (prefsManager.hasCredential(AiService.GEMINI)) add(AiService.GEMINI to geminiRepository)
+            if (prefsManager.loadCredential(AiService.CLAUDE) != null) add(AiService.CLAUDE to claudeRepository)
+            if (prefsManager.loadCredential(AiService.CODEX) != null) add(AiService.CODEX to codexRepository)
+            if (prefsManager.loadCredential(AiService.GEMINI) != null) add(AiService.GEMINI to geminiRepository)
         }
 
         if (repos.isEmpty()) return Result.success()
@@ -107,7 +107,7 @@ class QuotaRefreshWorker @AssistedInject constructor(
         }
     }
 
-    private fun checkForResets(quotas: List<QuotaInfo>) {
+    private suspend fun checkForResets(quotas: List<QuotaInfo>) {
         val now = Instant.now()
         for (quota in quotas) {
             val previousResetTimes = prefsManager.loadResetTimes(quota.service)

@@ -34,8 +34,10 @@ class TokenRefreshWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val results = coroutineScope {
             AiService.entries
-                .filter { prefsManager.hasCredential(it) }
-                .map { service -> async { refreshIfNeeded(service) } }
+                .mapNotNull { service ->
+                    prefsManager.loadCredential(service)?.let { credential -> service to credential }
+                }
+                .map { (_, credential) -> async { refreshIfNeeded(credential) } }
                 .awaitAll()
         }
 
@@ -47,9 +49,7 @@ class TokenRefreshWorker @AssistedInject constructor(
     /**
      * Returns true if refresh was not needed or succeeded, false if refresh failed.
      */
-    private suspend fun refreshIfNeeded(service: AiService): Boolean {
-        val credential = prefsManager.loadCredential(service) ?: return true
-
+    private suspend fun refreshIfNeeded(credential: Credential): Boolean {
         return when (credential) {
             is Credential.ClaudeCredential -> refreshClaude(credential)
             is Credential.CodexCredential -> refreshCodex(credential)

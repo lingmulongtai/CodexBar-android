@@ -1,270 +1,391 @@
 package com.codexbar.android.core.security
 
 import android.content.Context
-import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKeys
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import android.util.Base64
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.Credential
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
+import java.nio.charset.StandardCharsets
 import java.security.GeneralSecurityException
+import java.security.KeyStore
 import java.time.Instant
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+
+private const val SECURE_DATASTORE_NAME = "codexbar_secure_prefs"
+private const val DEFAULT_REFRESH_INTERVAL_MINUTES = 30L
+private val Context.secureDataStore: DataStore<Preferences> by preferencesDataStore(
+    name = SECURE_DATASTORE_NAME
+)
 
 @Singleton
 class EncryptedPrefsManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+    private val dataStore = context.secureDataStore
+    private val valueCipher = AndroidKeyStoreValueCipher()
+    private val cacheScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     @Volatile
-    private var cachedPrefs: SharedPreferences? = null
+    private var cachedSettings = CachedSettings()
 
-    private val prefs: SharedPreferences
-        get() = cachedPrefs ?: synchronized(this) {
-            cachedPrefs ?: createPrefs().also { cachedPrefs = it }
-        }
+    @Volatile
+    private var cacheRefreshStarted = false
 
-    private fun createPrefs(): SharedPreferences {
-        return try {
-            EncryptedSharedPreferences.create(
-                SECURE_PREFS_NAME,
-                masterKeyAlias,
-                context,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
-        } catch (e: Exception) {
-            if (!e.isSecureStoreFailure()) throw e
-            purgeSecureStore()
-            EncryptedSharedPreferences.create(
-                SECURE_PREFS_NAME,
-                masterKeyAlias,
-                context,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
-        }
-    }
-
-    private inline fun <T> readSecureStore(defaultValue: T, block: (SharedPreferences) -> T): T {
-        return try {
-            block(prefs)
-        } catch (e: Exception) {
-            if (!e.isSecureStoreFailure()) throw e
-            purgeSecureStore()
-            defaultValue
-        }
-    }
-
-    private inline fun writeSecureStore(block: (SharedPreferences) -> Unit) {
-        try {
-            block(prefs)
-        } catch (e: Exception) {
-            if (!e.isSecureStoreFailure()) throw e
-            purgeSecureStore()
-            throw e
-        }
-    }
-
-    private fun purgeSecureStore() {
-        cachedPrefs = null
+    init {
         context.deleteSharedPreferences(SECURE_PREFS_NAME)
+        refreshCacheAsync()
     }
 
-    private fun Exception.isSecureStoreFailure(): Boolean {
-        return this is SecurityException ||
-            this is GeneralSecurityException ||
-            this is IOException ||
-            this is IllegalStateException
+    suspend fun warmCache() {
+        val prefs = readPreferences()
+        updateCache(prefs)
     }
 
-    fun saveCredential(service: AiService, credential: Credential) {
-        writeSecureStore { prefs ->
-            val editor = prefs.edit()
+    suspend fun saveCredential(service: AiService, credential: Credential) {
+        val updated = dataStore.edit { prefs ->
+            prefs.removeServiceEntries(service)
             val prefix = service.name
 
-            editor.putString("${prefix}_access_token", credential.accessToken)
-            editor.putString("${prefix}_refresh_token", credential.refreshToken)
+            prefs.putEncryptedString("${prefix}_access_token", credential.accessToken)
+            credential.refreshToken?.let {
+                prefs.putEncryptedString("${prefix}_refresh_token", it)
+            }
 
             when (credential) {
                 is Credential.ClaudeCredential -> {
                     credential.expiresAt?.let {
-                        editor.putLong("${prefix}_expires_at", it.epochSecond)
+                        prefs[longPreferencesKey("${prefix}_expires_at")] = it.epochSecond
                     }
                     credential.scopes?.let {
-                        editor.putString("${prefix}_scopes", it)
+                        prefs.putEncryptedString("${prefix}_scopes", it)
                     }
                     credential.rateLimitTier?.let {
-                        editor.putString("${prefix}_rate_limit_tier", it)
+                        prefs.putEncryptedString("${prefix}_rate_limit_tier", it)
                     }
                 }
+
                 is Credential.CodexCredential -> {
                     credential.accountId?.let {
-                        editor.putString("${prefix}_account_id", it)
+                        prefs.putEncryptedString("${prefix}_account_id", it)
                     }
                 }
+
                 is Credential.GeminiCredential -> {
-                    editor.putLong("${prefix}_expires_at_ms", credential.expiresAtMs)
-                    editor.putString("${prefix}_oauth_client_id", credential.oauthClientId)
-                    editor.putString("${prefix}_oauth_client_secret", credential.oauthClientSecret)
-                }
-            }
-
-            editor.apply() // atomic write via SharedPreferences commit semantics
-        }
-    }
-
-    fun loadCredential(service: AiService): Credential? {
-        return readSecureStore(null) { prefs ->
-            val prefix = service.name
-            val accessToken = prefs.getString("${prefix}_access_token", null) ?: return@readSecureStore null
-
-            when (service) {
-                AiService.CLAUDE -> {
-                    val refreshToken = prefs.getString("${prefix}_refresh_token", null)
-                    val expiresAt = prefs.getLong("${prefix}_expires_at", -1L)
-                        .takeIf { it > 0 }
-                        ?.let { Instant.ofEpochSecond(it) }
-                    val scopes = prefs.getString("${prefix}_scopes", null)
-                    val rateLimitTier = prefs.getString("${prefix}_rate_limit_tier", null)
-                    Credential.ClaudeCredential(
-                        accessToken = accessToken,
-                        refreshToken = refreshToken,
-                        expiresAt = expiresAt,
-                        scopes = scopes,
-                        rateLimitTier = rateLimitTier
-                    )
-                }
-                AiService.CODEX -> {
-                    val refreshToken = prefs.getString("${prefix}_refresh_token", null) ?: return@readSecureStore null
-                    val accountId = prefs.getString("${prefix}_account_id", null)
-                    Credential.CodexCredential(
-                        accessToken = accessToken,
-                        refreshToken = refreshToken,
-                        accountId = accountId
-                    )
-                }
-                AiService.GEMINI -> {
-                    val refreshToken = prefs.getString("${prefix}_refresh_token", null) ?: return@readSecureStore null
-                    val expiresAtMs = prefs.getLong("${prefix}_expires_at_ms", -1L)
-                        .takeIf { it > 0 } ?: return@readSecureStore null
-                    val clientId = prefs.getString("${prefix}_oauth_client_id", null) ?: return@readSecureStore null
-                    val clientSecret = prefs.getString("${prefix}_oauth_client_secret", null) ?: return@readSecureStore null
-                    Credential.GeminiCredential(
-                        accessToken = accessToken,
-                        refreshToken = refreshToken,
-                        expiresAtMs = expiresAtMs,
-                        oauthClientId = clientId,
-                        oauthClientSecret = clientSecret
-                    )
+                    prefs[longPreferencesKey("${prefix}_expires_at_ms")] = credential.expiresAtMs
+                    prefs.putEncryptedString("${prefix}_oauth_client_id", credential.oauthClientId)
+                    prefs.putEncryptedString("${prefix}_oauth_client_secret", credential.oauthClientSecret)
                 }
             }
         }
+        updateCache(updated)
     }
 
-    fun deleteCredential(service: AiService) {
-        writeSecureStore { prefs ->
-            val prefix = service.name
-            val editor = prefs.edit()
-
-            val keys = prefs.all.keys.filter { it.startsWith(prefix) }
-            keys.forEach { editor.remove(it) }
-
-            editor.apply()
-        }
+    suspend fun loadCredential(service: AiService): Credential? {
+        return readCredential(readPreferences(), service)
     }
 
-    fun deleteAllCredentials() {
-        writeSecureStore { prefs ->
-            prefs.edit().clear().apply()
+    suspend fun deleteCredential(service: AiService) {
+        val updated = dataStore.edit { prefs ->
+            prefs.removeServiceEntries(service)
         }
+        updateCache(updated)
+    }
+
+    suspend fun deleteAllCredentials() {
+        val updated = dataStore.edit { prefs ->
+            AiService.entries.forEach { prefs.removeServiceEntries(it) }
+        }
+        updateCache(updated)
     }
 
     fun hasCredential(service: AiService): Boolean {
-        return readSecureStore(false) { prefs ->
-            prefs.getString("${service.name}_access_token", null) != null
-        }
+        refreshCacheAsync()
+        return service in cachedSettings.credentialServices
     }
 
     fun getRefreshInterval(): Long {
-        return readSecureStore(30L) { prefs ->
-            prefs.getLong("refresh_interval_minutes", 30L)
-        }
+        refreshCacheAsync()
+        return cachedSettings.refreshIntervalMinutes
     }
 
-    fun setRefreshInterval(minutes: Long) {
-        writeSecureStore { prefs ->
-            prefs.edit().putLong("refresh_interval_minutes", minutes).apply()
+    suspend fun setRefreshInterval(minutes: Long) {
+        val updated = dataStore.edit { prefs ->
+            prefs[KEY_REFRESH_INTERVAL] = minutes
         }
+        updateCache(updated)
     }
 
     fun isNotificationsEnabled(): Boolean {
-        return readSecureStore(true) { prefs ->
-            prefs.getBoolean("notifications_enabled", true)
-        }
+        refreshCacheAsync()
+        return cachedSettings.notificationsEnabled
     }
 
-    fun setNotificationsEnabled(enabled: Boolean) {
-        writeSecureStore { prefs ->
-            prefs.edit().putBoolean("notifications_enabled", enabled).apply()
+    suspend fun setNotificationsEnabled(enabled: Boolean) {
+        val updated = dataStore.edit { prefs ->
+            prefs[KEY_NOTIFICATIONS_ENABLED] = enabled
         }
+        updateCache(updated)
     }
 
     fun getPrivacySettings(): PrivacySettings {
-        return readSecureStore(PrivacySettings()) { prefs ->
-            PrivacySettings(
-                screenPrivacyEnabled = prefs.getBoolean("privacy_screen_enabled", true),
-                lockScreenRedactionEnabled = prefs.getBoolean("privacy_lock_screen_redaction_enabled", true),
-                notificationRedactionEnabled = prefs.getBoolean("privacy_notification_redaction_enabled", false),
-                widgetRedactionEnabled = prefs.getBoolean("privacy_widget_redaction_enabled", false)
-            )
-        }
+        refreshCacheAsync()
+        return cachedSettings.privacySettings
     }
 
-    fun setPrivacySettings(settings: PrivacySettings) {
-        writeSecureStore { prefs ->
-            prefs.edit()
-                .putBoolean("privacy_screen_enabled", settings.screenPrivacyEnabled)
-                .putBoolean("privacy_lock_screen_redaction_enabled", settings.lockScreenRedactionEnabled)
-                .putBoolean("privacy_notification_redaction_enabled", settings.notificationRedactionEnabled)
-                .putBoolean("privacy_widget_redaction_enabled", settings.widgetRedactionEnabled)
-                .apply()
+    suspend fun setPrivacySettings(settings: PrivacySettings) {
+        val updated = dataStore.edit { prefs ->
+            prefs[KEY_PRIVACY_SCREEN_ENABLED] = settings.screenPrivacyEnabled
+            prefs[KEY_PRIVACY_LOCK_SCREEN_REDACTION_ENABLED] = settings.lockScreenRedactionEnabled
+            prefs[KEY_PRIVACY_NOTIFICATION_REDACTION_ENABLED] = settings.notificationRedactionEnabled
+            prefs[KEY_PRIVACY_WIDGET_REDACTION_ENABLED] = settings.widgetRedactionEnabled
         }
+        updateCache(updated)
     }
 
-    fun saveResetTimes(service: AiService, windows: List<Pair<String, Instant?>>) {
-        writeSecureStore { prefs ->
-            val editor = prefs.edit()
+    suspend fun saveResetTimes(service: AiService, windows: List<Pair<String, Instant?>>) {
+        val updated = dataStore.edit { prefs ->
             windows.forEach { (label, resetsAt) ->
-                val key = "${service.name}_${label}_resets_at"
+                val key = longPreferencesKey("${service.name}_${label}_resets_at")
                 if (resetsAt != null) {
-                    editor.putLong(key, resetsAt.epochSecond)
+                    prefs[key] = resetsAt.epochSecond
                 } else {
-                    editor.remove(key)
+                    prefs.remove(key)
                 }
             }
-            editor.apply()
+        }
+        updateCache(updated)
+    }
+
+    suspend fun loadResetTimes(service: AiService): Map<String, Instant> {
+        val prefs = readPreferences()
+        val prefix = "${service.name}_"
+        val suffix = "_resets_at"
+        return prefs.asMap()
+            .filter { it.key.name.startsWith(prefix) && it.key.name.endsWith(suffix) }
+            .mapNotNull { (key, value) ->
+                val label = key.name.removePrefix(prefix).removeSuffix(suffix)
+                val epochSecond = (value as? Long)?.takeIf { it > 0 } ?: return@mapNotNull null
+                label to Instant.ofEpochSecond(epochSecond)
+            }
+            .toMap()
+    }
+
+    private fun refreshCacheAsync() {
+        if (cacheRefreshStarted) return
+        synchronized(this) {
+            if (cacheRefreshStarted) return
+            cacheRefreshStarted = true
+            cacheScope.launch {
+                try {
+                    warmCache()
+                } catch (_: Exception) {
+                    cachedSettings = CachedSettings()
+                    synchronized(this@EncryptedPrefsManager) {
+                        cacheRefreshStarted = false
+                    }
+                }
+            }
         }
     }
 
-    fun loadResetTimes(service: AiService): Map<String, Instant> {
-        return readSecureStore(emptyMap()) { prefs ->
-            val prefix = "${service.name}_"
-            val suffix = "_resets_at"
-            prefs.all
-                .filter { it.key.startsWith(prefix) && it.key.endsWith(suffix) }
-                .mapNotNull { (key, value) ->
-                    val label = key.removePrefix(prefix).removeSuffix(suffix)
-                    val epochSecond = (value as? Long)?.takeIf { it > 0 } ?: return@mapNotNull null
-                    label to Instant.ofEpochSecond(epochSecond)
-                }
-                .toMap()
+    private suspend fun readPreferences(): Preferences {
+        return try {
+            dataStore.data.first()
+        } catch (_: IOException) {
+            emptyPreferences()
+        } catch (_: GeneralSecurityException) {
+            emptyPreferences()
+        } catch (_: IllegalStateException) {
+            emptyPreferences()
         }
+    }
+
+    private fun updateCache(prefs: Preferences) {
+        cachedSettings = CachedSettings(
+            credentialServices = AiService.entries
+                .filter { service -> readCredential(prefs, service) != null }
+                .toSet(),
+            refreshIntervalMinutes = prefs[KEY_REFRESH_INTERVAL] ?: DEFAULT_REFRESH_INTERVAL_MINUTES,
+            notificationsEnabled = prefs[KEY_NOTIFICATIONS_ENABLED] ?: true,
+            privacySettings = PrivacySettings(
+                screenPrivacyEnabled = prefs[KEY_PRIVACY_SCREEN_ENABLED] ?: true,
+                lockScreenRedactionEnabled = prefs[KEY_PRIVACY_LOCK_SCREEN_REDACTION_ENABLED] ?: true,
+                notificationRedactionEnabled = prefs[KEY_PRIVACY_NOTIFICATION_REDACTION_ENABLED] ?: false,
+                widgetRedactionEnabled = prefs[KEY_PRIVACY_WIDGET_REDACTION_ENABLED] ?: false
+            )
+        )
+    }
+
+    private fun readCredential(prefs: Preferences, service: AiService): Credential? {
+        val prefix = service.name
+        val accessToken = prefs.getEncryptedString("${prefix}_access_token") ?: return null
+
+        return when (service) {
+            AiService.CLAUDE -> {
+                val refreshToken = prefs.getEncryptedString("${prefix}_refresh_token")
+                val expiresAt = prefs[longPreferencesKey("${prefix}_expires_at")]
+                    ?.takeIf { it > 0 }
+                    ?.let { Instant.ofEpochSecond(it) }
+                val scopes = prefs.getEncryptedString("${prefix}_scopes")
+                val rateLimitTier = prefs.getEncryptedString("${prefix}_rate_limit_tier")
+                Credential.ClaudeCredential(
+                    accessToken = accessToken,
+                    refreshToken = refreshToken,
+                    expiresAt = expiresAt,
+                    scopes = scopes,
+                    rateLimitTier = rateLimitTier
+                )
+            }
+
+            AiService.CODEX -> {
+                val refreshToken = prefs.getEncryptedString("${prefix}_refresh_token") ?: return null
+                val accountId = prefs.getEncryptedString("${prefix}_account_id")
+                Credential.CodexCredential(
+                    accessToken = accessToken,
+                    refreshToken = refreshToken,
+                    accountId = accountId
+                )
+            }
+
+            AiService.GEMINI -> {
+                val refreshToken = prefs.getEncryptedString("${prefix}_refresh_token") ?: return null
+                val expiresAtMs = prefs[longPreferencesKey("${prefix}_expires_at_ms")]
+                    ?.takeIf { it > 0 } ?: return null
+                val clientId = prefs.getEncryptedString("${prefix}_oauth_client_id") ?: return null
+                val clientSecret = prefs.getEncryptedString("${prefix}_oauth_client_secret") ?: return null
+                Credential.GeminiCredential(
+                    accessToken = accessToken,
+                    refreshToken = refreshToken,
+                    expiresAtMs = expiresAtMs,
+                    oauthClientId = clientId,
+                    oauthClientSecret = clientSecret
+                )
+            }
+        }
+    }
+
+    private fun MutablePreferences.putEncryptedString(keyName: String, value: String) {
+        this[stringPreferencesKey(keyName)] = valueCipher.encryptToString(value)
+    }
+
+    private fun Preferences.getEncryptedString(keyName: String): String? {
+        val encryptedValue = this[stringPreferencesKey(keyName)] ?: return null
+        return valueCipher.decryptToString(encryptedValue)
+    }
+
+    private fun MutablePreferences.removeServiceEntries(service: AiService) {
+        val prefix = "${service.name}_"
+        val keysToRemove = asMap().keys.filter { it.name.startsWith(prefix) }
+        keysToRemove.forEach { key ->
+            @Suppress("UNCHECKED_CAST")
+            remove(key as Preferences.Key<Any>)
+        }
+    }
+
+    private data class CachedSettings(
+        val credentialServices: Set<AiService> = emptySet(),
+        val refreshIntervalMinutes: Long = DEFAULT_REFRESH_INTERVAL_MINUTES,
+        val notificationsEnabled: Boolean = true,
+        val privacySettings: PrivacySettings = PrivacySettings()
+    )
+
+    companion object {
+        const val SECURE_PREFS_NAME = SECURE_DATASTORE_NAME
+        const val SECURE_DATASTORE_BACKUP_PATH = "datastore/$SECURE_DATASTORE_NAME.preferences_pb"
+
+        private val KEY_REFRESH_INTERVAL = longPreferencesKey("refresh_interval_minutes")
+        private val KEY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
+        private val KEY_PRIVACY_SCREEN_ENABLED = booleanPreferencesKey("privacy_screen_enabled")
+        private val KEY_PRIVACY_LOCK_SCREEN_REDACTION_ENABLED =
+            booleanPreferencesKey("privacy_lock_screen_redaction_enabled")
+        private val KEY_PRIVACY_NOTIFICATION_REDACTION_ENABLED =
+            booleanPreferencesKey("privacy_notification_redaction_enabled")
+        private val KEY_PRIVACY_WIDGET_REDACTION_ENABLED =
+            booleanPreferencesKey("privacy_widget_redaction_enabled")
+    }
+}
+
+private class AndroidKeyStoreValueCipher {
+    fun encryptToString(plainText: String): String {
+        val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
+        cipher.init(Cipher.ENCRYPT_MODE, getOrCreateSecretKey())
+        val ciphertext = cipher.doFinal(plainText.toByteArray(StandardCharsets.UTF_8))
+        return listOf(
+            ENVELOPE_VERSION,
+            Base64.encodeToString(cipher.iv, Base64.NO_WRAP),
+            Base64.encodeToString(ciphertext, Base64.NO_WRAP)
+        ).joinToString(":")
+    }
+
+    fun decryptToString(encryptedValue: String): String? {
+        return try {
+            val parts = encryptedValue.split(":", limit = 3)
+            if (parts.size != 3 || parts[0] != ENVELOPE_VERSION) return null
+
+            val iv = Base64.decode(parts[1], Base64.NO_WRAP)
+            val ciphertext = Base64.decode(parts[2], Base64.NO_WRAP)
+            val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
+            cipher.init(
+                Cipher.DECRYPT_MODE,
+                getOrCreateSecretKey(),
+                GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv)
+            )
+            String(cipher.doFinal(ciphertext), StandardCharsets.UTF_8)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun getOrCreateSecretKey(): SecretKey {
+        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
+            load(null)
+        }
+        (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+
+        val keyGenerator = KeyGenerator.getInstance(
+            KeyProperties.KEY_ALGORITHM_AES,
+            ANDROID_KEYSTORE
+        )
+        val spec = KeyGenParameterSpec.Builder(
+            KEY_ALIAS,
+            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+        )
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setKeySize(KEY_SIZE_BITS)
+            .build()
+        keyGenerator.init(spec)
+        return keyGenerator.generateKey()
     }
 
     companion object {
-        const val SECURE_PREFS_NAME = "codexbar_secure_prefs"
+        private const val ANDROID_KEYSTORE = "AndroidKeyStore"
+        private const val KEY_ALIAS = "codexbar_secure_prefs_aes_gcm"
+        private const val CIPHER_TRANSFORMATION = "AES/GCM/NoPadding"
+        private const val ENVELOPE_VERSION = "v1"
+        private const val GCM_TAG_LENGTH_BITS = 128
+        private const val KEY_SIZE_BITS = 256
     }
 }

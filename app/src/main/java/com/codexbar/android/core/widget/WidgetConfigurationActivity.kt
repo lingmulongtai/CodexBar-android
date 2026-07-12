@@ -72,86 +72,90 @@ class WidgetConfigurationActivity : ComponentActivity() {
 
         enableEdgeToEdge()
 
-        setContent {
-            CodexBarTheme {
-                val availableServices = AiService.entries.filter {
-                    encryptedPrefsManager.hasCredential(it)
-                }
-                val checkedState = remember {
-                    mutableStateMapOf<AiService, Boolean>().apply {
-                        // Pre-check all available services
-                        availableServices.forEach { this[it] = true }
+        lifecycleScope.launch {
+            encryptedPrefsManager.warmCache()
+
+            setContent {
+                CodexBarTheme {
+                    val availableServices = AiService.entries.filter {
+                        encryptedPrefsManager.hasCredential(it)
                     }
-                }
-                val anyChecked = checkedState.values.any { it }
-
-                Scaffold(
-                    topBar = {
-                        TopAppBar(
-                            title = { Text("Configure Widget") }
-                        )
-                    }
-                ) { padding ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(padding)
-                            .padding(horizontal = 16.dp)
-                    ) {
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                            text = "Select services to display in this widget:",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        if (availableServices.isEmpty()) {
-                            Text(
-                                text = "No services configured yet. Please add credentials in the app settings first.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        } else {
-                            for (service in AiService.entries) {
-                                val hasCredential = service in availableServices
-                                ServiceCheckRow(
-                                    service = service,
-                                    checked = checkedState[service] ?: false,
-                                    enabled = hasCredential,
-                                    onCheckedChange = { checkedState[service] = it }
-                                )
-                            }
+                    val checkedState = remember {
+                        mutableStateMapOf<AiService, Boolean>().apply {
+                            // Pre-check all available services
+                            availableServices.forEach { this[it] = true }
                         }
+                    }
+                    val anyChecked = checkedState.values.any { it }
 
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        // Action buttons
-                        Row(
+                    Scaffold(
+                        topBar = {
+                            TopAppBar(
+                                title = { Text("Configure Widget") }
+                            )
+                        }
+                    ) { padding ->
+                        Column(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 24.dp)
+                                .fillMaxSize()
+                                .padding(padding)
+                                .padding(horizontal = 16.dp)
                         ) {
-                            OutlinedButton(
-                                onClick = {
-                                    setResult(RESULT_CANCELED)
-                                    finish()
-                                },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Cancel")
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = "Select services to display in this widget:",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            if (availableServices.isEmpty()) {
+                                Text(
+                                    text = "No services configured yet. Please add credentials in the app settings first.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            } else {
+                                for (service in AiService.entries) {
+                                    val hasCredential = service in availableServices
+                                    ServiceCheckRow(
+                                        service = service,
+                                        checked = checkedState[service] ?: false,
+                                        enabled = hasCredential,
+                                        onCheckedChange = { checkedState[service] = it }
+                                    )
+                                }
                             }
 
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.weight(1f))
 
-                            Button(
-                                onClick = { confirmSelection(checkedState) },
-                                enabled = anyChecked,
-                                modifier = Modifier.weight(1f)
+                            // Action buttons
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 24.dp)
                             ) {
-                                Text("Confirm")
+                                OutlinedButton(
+                                    onClick = {
+                                        setResult(RESULT_CANCELED)
+                                        finish()
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Cancel")
+                                }
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                Button(
+                                    onClick = { confirmSelection(checkedState) },
+                                    enabled = anyChecked,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Confirm")
+                                }
                             }
                         }
                     }

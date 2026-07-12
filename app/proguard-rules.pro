@@ -49,9 +49,6 @@
 # ===== RemoteViews (Notification) =====
 -keep class android.widget.RemoteViews { *; }
 
-# ===== Tink (used by security-crypto) =====
--dontwarn com.google.errorprone.annotations.**
-
 # ===== Glance =====
 -keep class * extends androidx.glance.appwidget.GlanceAppWidget { *; }
 -keep class * extends androidx.glance.appwidget.GlanceAppWidgetReceiver { *; }

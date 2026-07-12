@@ -64,7 +64,9 @@ class CodexRepositoryImplTest {
             .create(CodexTokenRefreshService::class.java)
 
         prefsManager = mock(EncryptedPrefsManager::class.java)
-        `when`(prefsManager.loadCredential(AiService.CODEX)).thenReturn(testCredential)
+        runTest {
+            `when`(prefsManager.loadCredential(AiService.CODEX)).thenReturn(testCredential)
+        }
 
         repository = CodexRepositoryImpl(apiService, tokenRefreshService, prefsManager, TokenRefreshCoordinator())
     }

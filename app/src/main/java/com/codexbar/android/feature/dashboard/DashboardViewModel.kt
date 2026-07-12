@@ -44,9 +44,9 @@ class DashboardViewModel @Inject constructor(
             _uiState.value = DashboardUiState.Loading
 
             val repos = buildList {
-                if (prefsManager.hasCredential(AiService.CLAUDE)) add(AiService.CLAUDE to claudeRepository)
-                if (prefsManager.hasCredential(AiService.CODEX)) add(AiService.CODEX to codexRepository)
-                if (prefsManager.hasCredential(AiService.GEMINI)) add(AiService.GEMINI to geminiRepository)
+                if (prefsManager.loadCredential(AiService.CLAUDE) != null) add(AiService.CLAUDE to claudeRepository)
+                if (prefsManager.loadCredential(AiService.CODEX) != null) add(AiService.CODEX to codexRepository)
+                if (prefsManager.loadCredential(AiService.GEMINI) != null) add(AiService.GEMINI to geminiRepository)
             }
 
             if (repos.isEmpty()) {

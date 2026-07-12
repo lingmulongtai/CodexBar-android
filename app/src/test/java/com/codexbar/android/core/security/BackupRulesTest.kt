@@ -23,16 +23,11 @@ class BackupRulesTest {
     }
 
     @Test
-    fun `legacy backup rules exclude encrypted credential preferences`() {
+    fun `legacy backup rules exclude secure credential stores`() {
         val rules = parseXml(File(appDir, "src/main/res/xml/backup_rules.xml"))
         val excludes = rules.getElementsByTagName("exclude").asElements()
 
-        assertTrue(
-            excludes.any { exclude ->
-                exclude.getAttribute("domain") == "sharedpref" &&
-                    exclude.getAttribute("path") == "${EncryptedPrefsManager.SECURE_PREFS_NAME}.xml"
-            }
-        )
+        assertSecurePrefsExcluded(excludes)
     }
 
     @Test
@@ -54,6 +49,12 @@ class BackupRulesTest {
             excludes.any { exclude ->
                 exclude.getAttribute("domain") == "sharedpref" &&
                     exclude.getAttribute("path") == "${EncryptedPrefsManager.SECURE_PREFS_NAME}.xml"
+            }
+        )
+        assertTrue(
+            excludes.any { exclude ->
+                exclude.getAttribute("domain") == "file" &&
+                    exclude.getAttribute("path") == EncryptedPrefsManager.SECURE_DATASTORE_BACKUP_PATH
             }
         )
     }
