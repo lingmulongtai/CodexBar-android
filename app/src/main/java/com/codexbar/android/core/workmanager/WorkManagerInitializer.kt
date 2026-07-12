@@ -5,10 +5,13 @@ import androidx.startup.Initializer
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkManagerInitializer as AndroidWorkManagerInitializer
+import androidx.work.workDataOf
 import java.util.concurrent.TimeUnit
 
 class WorkManagerInitializer : Initializer<Unit> {
@@ -25,6 +28,8 @@ class WorkManagerInitializer : Initializer<Unit> {
     companion object {
         private const val QUOTA_WORK_NAME = "quota_periodic_refresh"
         private const val TOKEN_WORK_NAME = "token_periodic_refresh"
+        private const val MANUAL_QUOTA_WORK_NAME = "quota_manual_refresh"
+        const val KEY_REFRESH_SOURCE = "refresh_source"
 
         fun schedulePeriodicRefresh(context: Context, intervalMinutes: Long = 30) {
             if (intervalMinutes <= 0) {
@@ -83,6 +88,26 @@ class WorkManagerInitializer : Initializer<Unit> {
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 TOKEN_WORK_NAME,
                 ExistingPeriodicWorkPolicy.UPDATE,
+                request
+            )
+        }
+
+        fun enqueueManualQuotaRefresh(context: Context, source: String) {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val request = OneTimeWorkRequestBuilder<QuotaRefreshWorker>()
+                .setConstraints(constraints)
+                .setInputData(workDataOf(KEY_REFRESH_SOURCE to source))
+                .addTag("quota_refresh")
+                .addTag("quota_refresh_manual")
+                .addTag("quota_refresh_source_$source")
+                .build()
+
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                MANUAL_QUOTA_WORK_NAME,
+                ExistingWorkPolicy.KEEP,
                 request
             )
         }

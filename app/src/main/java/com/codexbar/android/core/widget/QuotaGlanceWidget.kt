@@ -1,7 +1,6 @@
 package com.codexbar.android.core.widget
 
 import android.content.Context
-import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -40,6 +39,7 @@ import androidx.glance.unit.ColorProvider
 import com.codexbar.android.MainActivity
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.workmanager.WorkManagerInitializer
 import java.time.Duration
 import java.time.Instant
 import kotlin.math.roundToInt
@@ -311,9 +311,7 @@ class RefreshWidgetAction : ActionCallback {
         glanceId: GlanceId,
         parameters: ActionParameters
     ) {
-        val intent = Intent("com.codexbar.android.ACTION_REFRESH")
-        intent.setPackage(context.packageName)
-        context.sendBroadcast(intent)
+        WorkManagerInitializer.enqueueManualQuotaRefresh(context, source = "widget")
         QuotaGlanceWidget().update(context, glanceId)
     }
 }
