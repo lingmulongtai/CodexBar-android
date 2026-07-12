@@ -11,6 +11,7 @@ import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.network.claude.ClaudeApiService
 import com.codexbar.android.core.network.claude.ClaudeDto
 import com.codexbar.android.core.network.claude.ClaudeTokenRefreshService
+import com.codexbar.android.core.network.RetryAfter
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -76,7 +77,7 @@ class ClaudeRepositoryImpl @Inject constructor(
                         Result.Failure(AppError.AuthError(AiService.CLAUDE, isTerminal = true))
                     }
                 }
-                429 -> Result.Failure(AppError.RateLimited)
+                429 -> Result.Failure(AppError.RateLimited(RetryAfter.parseRetryAt(response.headers()["Retry-After"])))
                 else -> Result.Failure(
                     AppError.NetworkError("HTTP ${response.code()}: ${response.message()}")
                 )

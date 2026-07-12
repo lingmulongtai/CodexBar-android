@@ -10,6 +10,7 @@ import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.network.gemini.GeminiApiService
 import com.codexbar.android.core.network.gemini.GeminiDto
 import com.codexbar.android.core.network.gemini.GeminiTokenRefreshService
+import com.codexbar.android.core.network.RetryAfter
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -62,7 +63,7 @@ class GeminiRepositoryImpl @Inject constructor(
         )
 
         if (!loadResponse.isSuccessful) {
-            return handleErrorResponse(loadResponse.code())
+            return handleErrorResponse(loadResponse.code(), loadResponse.headers()["Retry-After"])
         }
 
         val loadBody = loadResponse.body()
@@ -82,7 +83,7 @@ class GeminiRepositoryImpl @Inject constructor(
         )
 
         if (!quotaResponse.isSuccessful) {
-            return handleErrorResponse(quotaResponse.code())
+            return handleErrorResponse(quotaResponse.code(), quotaResponse.headers()["Retry-After"])
         }
 
         val quotaBody = quotaResponse.body()
@@ -186,10 +187,10 @@ class GeminiRepositoryImpl @Inject constructor(
         }
     }
 
-    private fun <T> handleErrorResponse(code: Int): Result<T, AppError> {
+    private fun <T> handleErrorResponse(code: Int, retryAfter: String? = null): Result<T, AppError> {
         return when (code) {
             401 -> Result.Failure(AppError.AuthError(AiService.GEMINI, isTerminal = false))
-            429 -> Result.Failure(AppError.RateLimited)
+            429 -> Result.Failure(AppError.RateLimited(RetryAfter.parseRetryAt(retryAfter)))
             503 -> Result.Failure(AppError.ServiceUnavailable)
             else -> Result.Failure(AppError.NetworkError("HTTP $code"))
         }

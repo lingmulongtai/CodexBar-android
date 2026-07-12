@@ -10,6 +10,7 @@ import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexDto
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
+import com.codexbar.android.core.network.RetryAfter
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
@@ -58,7 +59,7 @@ class CodexRepositoryImpl @Inject constructor(
                         Result.Failure(AppError.AuthError(AiService.CODEX, isTerminal = true))
                     }
                 }
-                429 -> Result.Failure(AppError.RateLimited)
+                429 -> Result.Failure(AppError.RateLimited(RetryAfter.parseRetryAt(response.headers()["Retry-After"])))
                 else -> Result.Failure(
                     AppError.NetworkError("HTTP ${response.code()}: ${response.message()}")
                 )

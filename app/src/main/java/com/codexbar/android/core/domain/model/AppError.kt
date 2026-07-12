@@ -1,5 +1,7 @@
 package com.codexbar.android.core.domain.model
 
+import java.time.Instant
+
 sealed class AppError {
     data class NetworkError(val message: String, val cause: Throwable? = null) : AppError()
 
@@ -9,7 +11,7 @@ sealed class AppError {
         val message: String = ""
     ) : AppError()
 
-    data object RateLimited : AppError()
+    data class RateLimited(val retryAt: Instant? = null) : AppError()
 
     data class ParseError(val message: String, val cause: Throwable? = null) : AppError()
 
