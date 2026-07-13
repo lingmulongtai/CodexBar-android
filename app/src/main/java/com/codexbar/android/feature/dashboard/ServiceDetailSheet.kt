@@ -29,8 +29,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.codexbar.android.R
 import com.codexbar.android.core.presentation.ExtraUsagePresentation
 import com.codexbar.android.core.presentation.QuotaMetricPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
@@ -64,7 +66,7 @@ fun ServiceDetailSheet(
             ServiceStateSummary(service)
 
             if (service.metrics.isNotEmpty()) {
-                SectionTitle("Quota windows")
+                SectionTitle(stringResource(R.string.quota_windows))
                 Column(verticalArrangement = Arrangement.spacedBy(CodexBarSpacing.medium)) {
                     service.metrics.forEach { metric ->
                         MetricDetailCard(metric)
@@ -73,7 +75,7 @@ fun ServiceDetailSheet(
             }
 
             service.extraUsage?.let { extraUsage ->
-                SectionTitle("Extra usage")
+                SectionTitle(stringResource(R.string.extra_usage))
                 ExtraUsageCard(extraUsage)
             }
 
@@ -90,7 +92,7 @@ fun ServiceDetailSheet(
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = null)
                     Spacer(modifier = Modifier.size(8.dp))
-                    Text("Refresh")
+                    Text(stringResource(R.string.action_refresh))
                 }
                 Button(
                     onClick = onOpenSettings,
@@ -98,7 +100,7 @@ fun ServiceDetailSheet(
                 ) {
                     Icon(Icons.Default.Settings, contentDescription = null)
                     Spacer(modifier = Modifier.size(8.dp))
-                    Text("Settings")
+                    Text(stringResource(R.string.action_settings))
                 }
             }
         }
@@ -119,14 +121,19 @@ private fun ServiceDetailHeader(service: ServiceQuotaPresentation) {
             tint = CodexBarStateColors.providerAccent(service.service)
         )
         Column(modifier = Modifier.weight(1f)) {
+            val subtitle = listOfNotNull(service.tier, service.accountLabel)
+                .joinToString(" - ")
             Text(
                 text = service.service.displayName,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = listOfNotNull(service.tier, service.accountLabel).joinToString(" - ")
-                    .ifBlank { "Quota monitor" },
+                text = if (subtitle.isBlank()) {
+                    stringResource(R.string.quota_monitor)
+                } else {
+                    subtitle
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -159,10 +166,14 @@ private fun ServiceStateSummary(service: ServiceQuotaPresentation) {
             modifier = Modifier.padding(CodexBarSpacing.large),
             verticalArrangement = Arrangement.spacedBy(CodexBarSpacing.small)
         ) {
-            DetailRow("Status", service.status.toDetailLabel(), statusColor)
-            DetailRow("Freshness", service.freshness.ageLabel)
-            service.freshness.staleReason?.let { DetailRow("Reason", it, statusColor) }
-            service.freshness.nextRetryAt?.let { DetailRow("Next retry", it.toString()) }
+            DetailRow(stringResource(R.string.detail_status), service.status.toDetailLabel(), statusColor)
+            DetailRow(stringResource(R.string.detail_freshness), service.freshness.ageLabel)
+            service.freshness.staleReason?.let {
+                DetailRow(stringResource(R.string.detail_reason), it, statusColor)
+            }
+            service.freshness.nextRetryAt?.let {
+                DetailRow(stringResource(R.string.detail_next_retry), it.toString())
+            }
         }
     }
 }
@@ -213,10 +224,14 @@ private fun MetricDetailCard(metric: QuotaMetricPresentation) {
             }
 
             if (metric.pace.label.isNotBlank()) {
-                DetailRow("Pace", metric.pace.label)
+                DetailRow(stringResource(R.string.detail_pace), metric.pace.label)
             }
-            metric.pace.forecastLabel?.let { DetailRow("Forecast", it) }
-            metric.resetsAt?.let { DetailRow("Reset time", it.toString()) }
+            metric.pace.forecastLabel?.let {
+                DetailRow(stringResource(R.string.detail_forecast), it)
+            }
+            metric.resetsAt?.let {
+                DetailRow(stringResource(R.string.detail_reset_time), it.toString())
+            }
         }
     }
 }
@@ -235,8 +250,12 @@ private fun ExtraUsageCard(extraUsage: ExtraUsagePresentation) {
             verticalArrangement = Arrangement.spacedBy(CodexBarSpacing.small)
         ) {
             DetailRow(extraUsage.label, extraUsage.usedCreditsLabel)
-            DetailRow("Limit", extraUsage.limitLabel)
-            DetailRow("Remaining", extraUsage.remainingLabel, CodexBarStateColors.severityColor(extraUsage.severity))
+            DetailRow(stringResource(R.string.detail_limit), extraUsage.limitLabel)
+            DetailRow(
+                stringResource(R.string.detail_remaining),
+                extraUsage.remainingLabel,
+                CodexBarStateColors.severityColor(extraUsage.severity)
+            )
         }
     }
 }
@@ -293,17 +312,18 @@ private fun DetailChip(label: String) {
     }
 }
 
+@Composable
 private fun ServiceQuotaStatus.toDetailLabel(): String {
     return when (this) {
-        ServiceQuotaStatus.Fresh -> "Fresh"
-        ServiceQuotaStatus.Stale -> "Stale data"
-        ServiceQuotaStatus.Loading -> "Loading"
-        ServiceQuotaStatus.AuthRequired -> "Re-authentication required"
-        ServiceQuotaStatus.RateLimited -> "Rate limited"
-        ServiceQuotaStatus.Offline -> "Offline"
-        ServiceQuotaStatus.ProviderError -> "Provider error"
-        ServiceQuotaStatus.Disconnected -> "Not connected"
-        ServiceQuotaStatus.Redacted -> "Quota hidden"
+        ServiceQuotaStatus.Fresh -> stringResource(R.string.status_fresh)
+        ServiceQuotaStatus.Stale -> stringResource(R.string.status_stale)
+        ServiceQuotaStatus.Loading -> stringResource(R.string.status_loading)
+        ServiceQuotaStatus.AuthRequired -> stringResource(R.string.status_reauthentication_required)
+        ServiceQuotaStatus.RateLimited -> stringResource(R.string.status_rate_limited)
+        ServiceQuotaStatus.Offline -> stringResource(R.string.status_offline)
+        ServiceQuotaStatus.ProviderError -> stringResource(R.string.status_provider_error)
+        ServiceQuotaStatus.Disconnected -> stringResource(R.string.status_not_connected)
+        ServiceQuotaStatus.Redacted -> stringResource(R.string.status_quota_hidden)
     }
 }
 

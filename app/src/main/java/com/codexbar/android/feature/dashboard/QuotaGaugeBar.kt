@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -28,6 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.codexbar.android.R
 import com.codexbar.android.core.presentation.QuotaMetricPresentation
 import com.codexbar.android.ui.theme.CodexBarStateColors
 
@@ -55,13 +57,18 @@ fun QuotaGaugeBar(
         animationSpec = tween(durationMillis = 400),
         label = "gauge_color"
     )
+    val gaugeDescription = stringResource(
+        R.string.quota_metric_description,
+        metric.label,
+        metric.remainingLabel
+    )
 
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clearAndSetSemantics {
-                    contentDescription = "${metric.label}: ${metric.remainingLabel}"
+                    contentDescription = gaugeDescription
                 },
             verticalAlignment = Alignment.CenterVertically
         ) {

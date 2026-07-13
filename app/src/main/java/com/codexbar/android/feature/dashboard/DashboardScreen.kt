@@ -36,10 +36,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.codexbar.android.R
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaStatus
 
@@ -60,10 +62,13 @@ fun DashboardScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("CodexBar") },
+                title = { Text(stringResource(R.string.app_name)) },
                 actions = {
                     IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.action_settings)
+                        )
                     }
                 }
             )
@@ -99,7 +104,7 @@ fun DashboardScreen(
                         CardList(
                             services = state.snapshot.services,
                             errorBanner = failedServices.takeIf { it.isNotBlank() }
-                                ?.let { "Needs attention: $it" },
+                                ?.let { stringResource(R.string.dashboard_needs_attention, it) },
                             onServiceClick = { selectedServiceName = it.service.name }
                         )
                     }
@@ -186,12 +191,12 @@ private fun EmptyState(onOpenSettings: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "No services configured",
+                text = stringResource(R.string.dashboard_empty_title),
                 style = MaterialTheme.typography.titleMedium
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Go to Settings to add your API credentials",
+                text = stringResource(R.string.dashboard_empty_message),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -200,7 +205,7 @@ private fun EmptyState(onOpenSettings: () -> Unit) {
             Button(onClick = onOpenSettings) {
                 Icon(Icons.Default.Settings, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Open settings")
+                Text(stringResource(R.string.action_open_settings))
             }
         }
     }

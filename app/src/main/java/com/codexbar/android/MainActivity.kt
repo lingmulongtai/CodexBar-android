@@ -18,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -78,12 +79,9 @@ class MainActivity : AppCompatActivity() {
                         onDismissRequest = {
                             showBatteryDialog = false
                         },
-                        title = { Text("Background Token Refresh") },
+                        title = { Text(stringResource(R.string.battery_refresh_title)) },
                         text = {
-                            Text(
-                                "To keep your API tokens up to date in the background, " +
-                                    "please exempt this app from battery optimization."
-                            )
+                            Text(stringResource(R.string.battery_refresh_message))
                         },
                         confirmButton = {
                             TextButton(onClick = {
@@ -93,7 +91,7 @@ class MainActivity : AppCompatActivity() {
                                         .requestIgnoreBatteryOptimizationsIntent(this@MainActivity)
                                 )
                             }) {
-                                Text("Allow")
+                                Text(stringResource(R.string.action_allow))
                             }
                         },
                         dismissButton = {
@@ -109,7 +107,7 @@ class MainActivity : AppCompatActivity() {
                                     // Ignore if settings page is not available
                                 }
                             }) {
-                                Text("Settings")
+                                Text(stringResource(R.string.action_settings))
                             }
                         }
                     )

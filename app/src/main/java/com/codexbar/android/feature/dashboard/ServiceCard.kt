@@ -23,8 +23,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.codexbar.android.R
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaStatus
 import com.codexbar.android.ui.theme.CodexBarSpacing
@@ -111,7 +113,7 @@ fun ServiceCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Error,
-                        contentDescription = "Error",
+                        contentDescription = stringResource(R.string.content_description_error),
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(16.dp)
                     )
@@ -155,7 +157,13 @@ fun ServiceCard(
             service.extraUsage?.let { extra ->
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "${extra.label}: ${extra.usedCreditsLabel} / ${extra.limitLabel} (${extra.remainingLabel})",
+                    text = stringResource(
+                        R.string.extra_usage_summary,
+                        extra.label,
+                        extra.usedCreditsLabel,
+                        extra.limitLabel,
+                        extra.remainingLabel
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -171,17 +179,18 @@ fun ServiceCard(
     }
 }
 
+@Composable
 private fun ServiceQuotaStatus.toLabel(): String {
     return when (this) {
-        ServiceQuotaStatus.Fresh -> "Fresh"
-        ServiceQuotaStatus.Stale -> "Stale data"
-        ServiceQuotaStatus.Loading -> "Loading"
-        ServiceQuotaStatus.AuthRequired -> "Re-authentication required"
-        ServiceQuotaStatus.RateLimited -> "Rate limited"
-        ServiceQuotaStatus.Offline -> "Offline"
-        ServiceQuotaStatus.ProviderError -> "Provider error"
-        ServiceQuotaStatus.Disconnected -> "Not connected"
-        ServiceQuotaStatus.Redacted -> "Quota hidden"
+        ServiceQuotaStatus.Fresh -> stringResource(R.string.status_fresh)
+        ServiceQuotaStatus.Stale -> stringResource(R.string.status_stale)
+        ServiceQuotaStatus.Loading -> stringResource(R.string.status_loading)
+        ServiceQuotaStatus.AuthRequired -> stringResource(R.string.status_reauthentication_required)
+        ServiceQuotaStatus.RateLimited -> stringResource(R.string.status_rate_limited)
+        ServiceQuotaStatus.Offline -> stringResource(R.string.status_offline)
+        ServiceQuotaStatus.ProviderError -> stringResource(R.string.status_provider_error)
+        ServiceQuotaStatus.Disconnected -> stringResource(R.string.status_not_connected)
+        ServiceQuotaStatus.Redacted -> stringResource(R.string.status_quota_hidden)
     }
 }
 
@@ -220,10 +229,11 @@ private fun ServiceQuotaStatus.color(): Color {
     }
 }
 
+@Composable
 private fun ServiceQuotaStatus.toStatusLabel(): String {
     return when (this) {
-        ServiceQuotaStatus.Fresh -> "Up to date"
-        ServiceQuotaStatus.Redacted -> "Hidden"
+        ServiceQuotaStatus.Fresh -> stringResource(R.string.status_up_to_date)
+        ServiceQuotaStatus.Redacted -> stringResource(R.string.status_hidden)
         else -> toLabel()
     }
 }
