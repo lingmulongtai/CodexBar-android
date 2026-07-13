@@ -3,6 +3,7 @@ package com.codexbar.android.feature.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.content.Context
+import com.codexbar.android.R
 import com.codexbar.android.core.auth.AccountLinkManager
 import com.codexbar.android.core.auth.DeviceAuthSession
 import com.codexbar.android.core.data.QuotaHistoryStore
@@ -32,6 +33,7 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import javax.inject.Inject
 
 @HiltViewModel
@@ -162,7 +164,9 @@ class SettingsViewModel @Inject constructor(
                 val current = currentState.serviceStates[service] ?: ServiceCredentialState()
                 currentState.copy(
                     serviceStates = currentState.serviceStates + (service to current.copy(
-                        validationResult = ValidationResult.Failure("Required credential fields are incomplete")
+                        validationResult = ValidationResult.Failure(
+                            appContext.getString(R.string.validation_required_fields)
+                        )
                     ))
                 )
             }
@@ -260,7 +264,12 @@ class SettingsViewModel @Inject constructor(
                             isAccountLinking = false,
                             accountLinkPrompt = null,
                             validationResult = ValidationResult.Failure(
-                                e.message ?: "Account link failed"
+                                e.message?.let {
+                                    appContext.getString(
+                                        R.string.validation_account_link_failed_detail,
+                                        it
+                                    )
+                                } ?: appContext.getString(R.string.validation_account_link_failed)
                             ),
                             isConnected = current.isConnected
                         ))
@@ -400,11 +409,13 @@ class SettingsViewModel @Inject constructor(
     private fun formatExpiryMs(expiresAtMs: Long): String {
         return try {
             val instant = Instant.ofEpochMilli(expiresAtMs)
-            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+            val locale = appContext.resources.configuration.locales[0]
+            val formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)
+                .withLocale(locale)
                 .withZone(ZoneId.systemDefault())
             formatter.format(instant)
         } catch (_: Exception) {
-            "Unknown"
+            appContext.getString(R.string.validation_unknown)
         }
     }
 
@@ -442,13 +453,30 @@ class SettingsViewModel @Inject constructor(
 
     private fun formatAppError(error: AppError): String {
         return when (error) {
-            is AppError.NetworkError -> "Network error: ${error.message}"
-            is AppError.AuthError -> if (error.isTerminal) "Authentication failed (re-login required)" else "Authentication error"
-            is AppError.RateLimited -> error.retryAt?.let { "Rate limited until $it" }
-                ?: "Rate limited — try again later"
-            is AppError.ParseError -> "Parse error: ${error.message}"
-            is AppError.CredentialNotFound -> "No credentials saved"
-            is AppError.ServiceUnavailable -> "Service temporarily unavailable"
+            is AppError.NetworkError -> appContext.getString(
+                R.string.validation_network_error,
+                error.message
+            )
+            is AppError.AuthError -> appContext.getString(
+                if (error.isTerminal) {
+                    R.string.validation_authentication_required
+                } else {
+                    R.string.validation_authentication_error
+                }
+            )
+            is AppError.RateLimited -> error.retryAt?.let {
+                appContext.getString(R.string.validation_rate_limited_until, it)
+            } ?: appContext.getString(R.string.validation_rate_limited)
+            is AppError.ParseError -> appContext.getString(
+                R.string.validation_parse_error,
+                error.message
+            )
+            is AppError.CredentialNotFound -> appContext.getString(
+                R.string.validation_no_credentials
+            )
+            is AppError.ServiceUnavailable -> appContext.getString(
+                R.string.validation_service_unavailable
+            )
         }
     }
 }

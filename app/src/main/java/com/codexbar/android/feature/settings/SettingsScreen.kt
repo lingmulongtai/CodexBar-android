@@ -327,7 +327,9 @@ private fun ServiceCredentialSection(
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = if (state.isConnected) "Connected" else "Not connected",
+                    text = stringResource(
+                        if (state.isConnected) R.string.status_connected else R.string.status_not_connected
+                    ),
                     style = MaterialTheme.typography.labelSmall,
                     color = if (state.isConnected) {
                         MaterialTheme.colorScheme.primary
@@ -341,7 +343,7 @@ private fun ServiceCredentialSection(
 
             if (service == AiService.CLAUDE) {
                 Text(
-                    text = "Use `claude setup-token` and paste the generated OAuth token. In-app sign-in is not offered because Claude Code does not expose a supported Android device-code flow.",
+                    text = stringResource(R.string.credential_claude_instructions),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -351,7 +353,17 @@ private fun ServiceCredentialSection(
             OutlinedTextField(
                 value = state.accessToken,
                 onValueChange = { onFieldChange("accessToken", it) },
-                label = { Text(if (service == AiService.COPILOT) "GitHub OAuth Token" else "Access Token") },
+                label = {
+                    Text(
+                        stringResource(
+                            if (service == AiService.COPILOT) {
+                                R.string.credential_github_oauth_token
+                            } else {
+                                R.string.credential_access_token
+                            }
+                        )
+                    )
+                },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = secretKeyboardOptions(),
                 modifier = Modifier.fillMaxWidth(),
@@ -364,9 +376,9 @@ private fun ServiceCredentialSection(
                 OutlinedTextField(
                     value = state.refreshToken,
                     onValueChange = { onFieldChange("refreshToken", it) },
-                    label = { Text("Refresh Token") },
+                    label = { Text(stringResource(R.string.credential_refresh_token)) },
                     supportingText = if (service == AiService.CLAUDE) {
-                        { Text("Required for auto-refresh (tokens expire every 8h)") }
+                        { Text(stringResource(R.string.credential_claude_refresh_support)) }
                     } else null,
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = secretKeyboardOptions(),
@@ -382,7 +394,7 @@ private fun ServiceCredentialSection(
                     OutlinedTextField(
                         value = state.accountId,
                         onValueChange = { onFieldChange("accountId", it) },
-                        label = { Text("Account ID (optional)") },
+                        label = { Text(stringResource(R.string.credential_account_id_optional)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -392,8 +404,10 @@ private fun ServiceCredentialSection(
                     OutlinedTextField(
                         value = state.oauthClientId,
                         onValueChange = { onFieldChange("oauthClientId", it) },
-                        label = { Text("OAuth Client ID") },
-                        supportingText = { Text("Use a public/native Google OAuth client. Client secrets are not accepted.") },
+                        label = { Text(stringResource(R.string.credential_oauth_client_id)) },
+                        supportingText = {
+                            Text(stringResource(R.string.credential_google_client_support))
+                        },
                         keyboardOptions = secretKeyboardOptions(),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
@@ -403,7 +417,7 @@ private fun ServiceCredentialSection(
                         OutlinedTextField(
                             value = state.expiresAtDisplay,
                             onValueChange = {},
-                            label = { Text("Token Expiry") },
+                            label = { Text(stringResource(R.string.credential_token_expiry)) },
                             modifier = Modifier.fillMaxWidth(),
                             readOnly = true,
                             enabled = false,
@@ -444,11 +458,13 @@ private fun ServiceCredentialSection(
                         Spacer(modifier = Modifier.width(8.dp))
                     }
                     Text(
-                        when {
-                            state.isConnected && state.hasUnsavedChanges -> "Save changes"
-                            state.isConnected -> "Revalidate"
-                            else -> "Validate & connect"
-                        }
+                        stringResource(
+                            when {
+                                state.isConnected && state.hasUnsavedChanges -> R.string.action_save_changes
+                                state.isConnected -> R.string.action_revalidate
+                                else -> R.string.action_validate_connect
+                            }
+                        )
                     )
                 }
 
@@ -463,7 +479,7 @@ private fun ServiceCredentialSection(
                     ) {
                         Icon(Icons.Default.DeleteForever, contentDescription = null)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Disconnect")
+                        Text(stringResource(R.string.action_disconnect))
                     }
                 }
             }
@@ -474,13 +490,13 @@ private fun ServiceCredentialSection(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             Icons.Default.CheckCircle,
-                            contentDescription = "Valid",
+                            contentDescription = stringResource(R.string.content_description_valid),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Valid",
+                            text = stringResource(R.string.status_valid),
                             color = MaterialTheme.colorScheme.primary,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -490,7 +506,7 @@ private fun ServiceCredentialSection(
                     Row(verticalAlignment = Alignment.Top) {
                         Icon(
                             Icons.Default.Error,
-                            contentDescription = "Invalid",
+                            contentDescription = stringResource(R.string.content_description_invalid),
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(20.dp)
                         )
@@ -509,7 +525,7 @@ private fun ServiceCredentialSection(
             if (state.hasUnsavedChanges) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Changes are not active until validation succeeds.",
+                    text = stringResource(R.string.credential_changes_pending),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -529,9 +545,9 @@ private fun AccountLinkControls(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = when (service) {
-                AiService.CODEX -> "Sign in with ChatGPT using OpenAI's device-code flow. Tokens are saved only after validation."
-                AiService.GEMINI -> "Sign in with Google using device-code OAuth. Enter your OAuth Client ID above first."
-                AiService.COPILOT -> "Sign in with GitHub's device flow. The app stores the OAuth token only after validation."
+                AiService.CODEX -> stringResource(R.string.account_link_codex_description)
+                AiService.GEMINI -> stringResource(R.string.account_link_gemini_description)
+                AiService.COPILOT -> stringResource(R.string.account_link_copilot_description)
                 else -> ""
             },
             style = MaterialTheme.typography.bodySmall,
@@ -549,7 +565,15 @@ private fun AccountLinkControls(
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(8.dp))
                 }
-                Text(if (state.isAccountLinking) "Waiting for sign-in" else "Connect account")
+                Text(
+                    stringResource(
+                        if (state.isAccountLinking) {
+                            R.string.action_waiting_for_sign_in
+                        } else {
+                            R.string.action_connect_account
+                        }
+                    )
+                )
             }
         }
 
@@ -565,7 +589,7 @@ private fun AccountLinkControls(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Enter this code in the sign-in page:",
+                        text = stringResource(R.string.account_link_enter_code),
                         style = MaterialTheme.typography.bodySmall
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -576,16 +600,16 @@ private fun AccountLinkControls(
                             modifier = Modifier.weight(1f)
                         )
                         TextButton(onClick = { onCopyAccountCode(prompt.userCode) }) {
-                            Text("Copy")
+                            Text(stringResource(R.string.action_copy))
                         }
                     }
                     Text(
-                        text = "Expires: ${prompt.expiresAtDisplay}",
+                        text = stringResource(R.string.account_link_expires, prompt.expiresAtDisplay),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     OutlinedButton(onClick = { onOpenAccountLink(prompt.verificationUrl) }) {
-                        Text("Open sign-in page")
+                        Text(stringResource(R.string.action_open_sign_in_page))
                     }
                 }
             }
@@ -656,7 +680,7 @@ private fun openPromotionSettings(context: Context) {
 
 private fun copyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService(ClipboardManager::class.java) ?: return
-    val clip = ClipData.newPlainText("Sign-in code", text).apply {
+    val clip = ClipData.newPlainText(context.getString(R.string.clipboard_sign_in_code), text).apply {
         description.extras = PersistableBundle().apply {
             putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
         }
@@ -664,7 +688,7 @@ private fun copyToClipboard(context: Context, text: String) {
     clipboard.setPrimaryClip(clip)
 
     if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
-        Toast.makeText(context, "Code copied", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.message_code_copied), Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -697,14 +721,17 @@ private fun RefreshIntervalSection(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Background refresh",
+                        text = stringResource(R.string.background_refresh_title),
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
                         text = if (automaticRefresh) {
-                            "Every ${formatMonitoringDuration(currentMinutes)}"
+                            stringResource(
+                                R.string.background_refresh_every,
+                                formatMonitoringDuration(currentMinutes)
+                            )
                         } else {
-                            "Manual only"
+                            stringResource(R.string.background_refresh_manual_only)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -749,7 +776,7 @@ private fun RefreshIntervalSection(
             }
 
             Text(
-                text = "Choose 15–120 minutes in 5-minute steps. Android schedules background work approximately; 15 minutes is the system minimum, not an exact polling guarantee.",
+                text = stringResource(R.string.background_refresh_guidance),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -789,11 +816,11 @@ private fun NotificationsSection(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Notifications & live monitor",
+                        text = stringResource(R.string.notifications_title),
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
-                        text = "Quota updates, reset alerts, and a time-limited live session",
+                        text = stringResource(R.string.notifications_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -806,23 +833,27 @@ private fun NotificationsSection(
 
             if (!notificationsAllowed) {
                 Text(
-                    text = "Android is blocking notifications. Enable access to use quota alerts or live monitoring.",
+                    text = stringResource(R.string.notifications_blocked),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )
                 TextButton(onClick = onOpenNotificationSettings) {
-                    Text("Open notification settings")
+                    Text(stringResource(R.string.action_open_notification_settings))
                 }
             }
 
             Text(
                 text = when {
                     isMonitoring -> {
-                        val remaining = remainingMinutes?.let(::formatMonitoringDuration) ?: "ending soon"
-                        "Live monitor running · $remaining remaining"
+                        val remaining = if (remainingMinutes == null) {
+                            stringResource(R.string.notifications_live_ending_soon)
+                        } else {
+                            formatMonitoringDuration(remainingMinutes)
+                        }
+                        stringResource(R.string.notifications_live_running, remaining)
                     }
-                    enabled && notificationsAllowed -> "Notifications ready · live monitor stopped"
-                    else -> "Notifications off"
+                    enabled && notificationsAllowed -> stringResource(R.string.notifications_ready)
+                    else -> stringResource(R.string.notifications_off)
                 },
                 style = MaterialTheme.typography.labelLarge,
                 color = if (isMonitoring) {
@@ -833,7 +864,7 @@ private fun NotificationsSection(
             )
 
             Text(
-                text = "Session length",
+                text = stringResource(R.string.notifications_session_length),
                 style = MaterialTheme.typography.labelLarge
             )
             Text(
@@ -854,7 +885,7 @@ private fun NotificationsSection(
                 enabled = !isMonitoring
             )
             Text(
-                text = "Starts with an immediate refresh, then updates about every 15 minutes. Android may delay background work to protect battery; use Refresh in the notification for an on-demand update.",
+                text = stringResource(R.string.notifications_schedule_guidance),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -864,7 +895,7 @@ private fun NotificationsSection(
                     onClick = onStopMonitoring,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Stop live monitor")
+                    Text(stringResource(R.string.action_stop_live_monitor))
                 }
             } else {
                 Button(
@@ -872,13 +903,13 @@ private fun NotificationsSection(
                     enabled = enabled && notificationsAllowed && hasConnectedService,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Start live monitor")
+                    Text(stringResource(R.string.action_start_live_monitor))
                 }
             }
 
             if (!hasConnectedService) {
                 Text(
-                    text = "Connect at least one service before starting a live session.",
+                    text = stringResource(R.string.notifications_service_required),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -887,7 +918,7 @@ private fun NotificationsSection(
             if (Build.VERSION.SDK_INT >= 36) {
                 if (promotedUpdatesAllowed) {
                     Text(
-                        text = "Enhanced Android Live Updates are allowed for this app.",
+                        text = stringResource(R.string.notifications_promoted_allowed),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -896,7 +927,7 @@ private fun NotificationsSection(
                         onClick = onOpenPromotionSettings,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Allow enhanced Live Updates")
+                        Text(stringResource(R.string.action_allow_promoted_updates))
                     }
                 }
             }
@@ -904,11 +935,16 @@ private fun NotificationsSection(
     }
 }
 
+@Composable
 private fun formatMonitoringDuration(minutes: Long): String {
-    if (minutes < 60) return "$minutes min"
+    if (minutes < 60) return stringResource(R.string.duration_minutes, minutes)
     val hours = minutes / 60
     val remainder = minutes % 60
-    return if (remainder == 0L) "$hours hr" else "$hours hr $remainder min"
+    return if (remainder == 0L) {
+        stringResource(R.string.duration_hours, hours)
+    } else {
+        stringResource(R.string.duration_hours_minutes, hours, remainder)
+    }
 }
 
 @Composable
@@ -922,7 +958,7 @@ private fun DangerZoneSection(onDeleteAll: () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Danger Zone",
+                text = stringResource(R.string.danger_zone_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.error
             )
@@ -935,7 +971,7 @@ private fun DangerZoneSection(onDeleteAll: () -> Unit) {
             ) {
                 Icon(Icons.Default.DeleteForever, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Delete All Credentials")
+                Text(stringResource(R.string.delete_all_credentials))
             }
         }
     }
@@ -950,15 +986,15 @@ private fun DeleteConfirmDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Delete All Credentials") },
+        title = { Text(stringResource(R.string.delete_all_credentials)) },
         text = {
             Column {
-                Text("This will permanently delete all saved API credentials. Type DELETE to confirm.")
+                Text(stringResource(R.string.delete_all_credentials_confirmation))
                 Spacer(modifier = Modifier.height(12.dp))
                 TextField(
                     value = confirmText,
                     onValueChange = { confirmText = it },
-                    label = { Text("Type DELETE") },
+                    label = { Text(stringResource(R.string.delete_all_credentials_type)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -970,12 +1006,12 @@ private fun DeleteConfirmDialog(
                 onClick = onConfirm,
                 enabled = confirmText == "DELETE"
             ) {
-                Text("Delete", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )
@@ -996,37 +1032,37 @@ private fun PrivacySection(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Privacy",
+                text = stringResource(R.string.privacy_title),
                 style = MaterialTheme.typography.titleMedium
             )
 
             PrivacyToggle(
-                title = "Block screenshots and Recents preview",
-                subtitle = "Protects token entry and account screens.",
+                title = stringResource(R.string.privacy_screen_title),
+                subtitle = stringResource(R.string.privacy_screen_description),
                 checked = settings.screenPrivacyEnabled,
                 onCheckedChange = {
                     onSettingsChange(settings.copy(screenPrivacyEnabled = it))
                 }
             )
             PrivacyToggle(
-                title = "Redact lock-screen notifications",
-                subtitle = "Shows a neutral lock-screen notification.",
+                title = stringResource(R.string.privacy_lock_screen_title),
+                subtitle = stringResource(R.string.privacy_lock_screen_description),
                 checked = settings.lockScreenRedactionEnabled,
                 onCheckedChange = {
                     onSettingsChange(settings.copy(lockScreenRedactionEnabled = it))
                 }
             )
             PrivacyToggle(
-                title = "Redact notification quota details",
-                subtitle = "Hides usage numbers from the notification shade.",
+                title = stringResource(R.string.privacy_notification_title),
+                subtitle = stringResource(R.string.privacy_notification_description),
                 checked = settings.notificationRedactionEnabled,
                 onCheckedChange = {
                     onSettingsChange(settings.copy(notificationRedactionEnabled = it))
                 }
             )
             PrivacyToggle(
-                title = "Redact widget quota details",
-                subtitle = "Keeps the widget visible without usage numbers.",
+                title = stringResource(R.string.privacy_widget_title),
+                subtitle = stringResource(R.string.privacy_widget_description),
                 checked = settings.widgetRedactionEnabled,
                 onCheckedChange = {
                     onSettingsChange(settings.copy(widgetRedactionEnabled = it))
@@ -1074,16 +1110,18 @@ private fun DisconnectConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Disconnect ${service.displayName}") },
-        text = { Text("This deletes saved credentials and cached reset data for ${service.displayName}.") },
+        title = { Text(stringResource(R.string.disconnect_service_title, service.displayName)) },
+        text = {
+            Text(stringResource(R.string.disconnect_service_message, service.displayName))
+        },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Disconnect", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.action_disconnect), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )

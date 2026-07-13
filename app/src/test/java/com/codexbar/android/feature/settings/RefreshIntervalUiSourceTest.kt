@@ -15,8 +15,8 @@ class RefreshIntervalUiSourceTest {
             "src/main/java/com/codexbar/android/feature/settings/SettingsScreen.kt"
         ).readText().replace("\r\n", "\n")
 
-        assertTrue(source.contains("Background refresh"))
-        assertTrue(source.contains("Manual only"))
+        assertTrue(source.contains("R.string.background_refresh_title"))
+        assertTrue(source.contains("R.string.background_refresh_manual_only"))
         assertTrue(source.contains("RefreshIntervalPolicy.MIN_MINUTES"))
         assertTrue(source.contains("RefreshIntervalPolicy.MAX_MINUTES"))
         assertTrue(source.contains("Slider("))

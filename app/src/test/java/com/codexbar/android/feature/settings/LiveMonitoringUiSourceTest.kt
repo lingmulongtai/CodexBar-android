@@ -26,9 +26,9 @@ class LiveMonitoringUiSourceTest {
     fun `settings provides labeled live monitor controls and system access`() {
         val source = sourceFile("feature/settings/SettingsScreen.kt")
 
-        assertTrue(source.contains("Notifications & live monitor"))
-        assertTrue(source.contains("Start live monitor"))
-        assertTrue(source.contains("Stop live monitor"))
+        assertTrue(source.contains("R.string.notifications_title"))
+        assertTrue(source.contains("R.string.action_start_live_monitor"))
+        assertTrue(source.contains("R.string.action_stop_live_monitor"))
         assertTrue(source.contains("ActivityResultContracts.RequestPermission()"))
         assertTrue(source.contains("Settings.ACTION_APP_NOTIFICATION_PROMOTION_SETTINGS"))
     }
