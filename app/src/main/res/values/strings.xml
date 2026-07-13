@@ -148,6 +148,7 @@
     <string name="widget_setup_description">Choose the connected services and details shown on your Home screen.</string>
     <string name="widget_setup_services">Services</string>
     <string name="widget_setup_select_service">Select at least one connected service.</string>
+    <string name="widget_setup_selected_count">%1$d of %2$d selected</string>
     <string name="widget_setup_connect_first">Connect a service in the app before adding the widget.</string>
     <string name="widget_setup_open_app_settings">Open app settings</string>
     <string name="widget_setup_display_options">Display options</string>

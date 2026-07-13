@@ -148,6 +148,7 @@
     <string name="widget_setup_description">ホーム画面に表示する接続済みサービスと情報を選択します。</string>
     <string name="widget_setup_services">サービス</string>
     <string name="widget_setup_select_service">接続済みサービスを1つ以上選択してください。</string>
+    <string name="widget_setup_selected_count">%2$d件中%1$d件を選択</string>
     <string name="widget_setup_connect_first">ウィジェットを追加する前に、アプリでサービスを接続してください。</string>
     <string name="widget_setup_open_app_settings">アプリの設定を開く</string>
     <string name="widget_setup_display_options">表示オプション</string>

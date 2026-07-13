@@ -7,7 +7,9 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,11 +18,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -30,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -42,7 +45,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -53,6 +55,8 @@ import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.workmanager.WorkManagerInitializer
+import com.codexbar.android.ui.components.providerIcon
+import com.codexbar.android.ui.theme.CodexBarStateColors
 import com.codexbar.android.ui.theme.CodexBarTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -102,7 +106,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                         mutableStateMapOf<AiService, Boolean>().apply {
                             val existingServices = existingConfig.services.toSet()
                             availableServices.forEach { service ->
-                                this[service] = if (existingServices.isEmpty()) true else service in existingServices
+                                this[service] = existingServices.isEmpty() || service in existingServices
                             }
                         }
                     }
@@ -118,149 +122,201 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                             TopAppBar(
                                 title = { Text(stringResource(R.string.widget_setup_title)) }
                             )
-                        }
-                    ) { padding ->
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(padding)
-                                .verticalScroll(rememberScrollState())
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.widget_setup_description),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        },
+                        bottomBar = {
+                            BottomAppBar(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainer
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp)
                                 ) {
-                                    Text(
-                                        text = stringResource(R.string.widget_setup_services),
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.widget_setup_select_service),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-
-                                    if (availableServices.isEmpty()) {
-                                        Text(
-                                            text = stringResource(R.string.widget_setup_connect_first),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.error
-                                        )
-                                        OutlinedButton(onClick = ::openAppSettings) {
-                                            Text(stringResource(R.string.widget_setup_open_app_settings))
+                                    Row(
+                                        modifier = Modifier
+                                            .align(Alignment.Center)
+                                            .widthIn(max = 720.dp)
+                                            .fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                setResult(RESULT_CANCELED)
+                                                finish()
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text(stringResource(R.string.action_cancel))
                                         }
-                                    } else {
-                                        availableServices.forEach { service ->
-                                            ServiceCheckRow(
-                                                service = service,
-                                                checked = checkedState[service] ?: false,
-                                                onCheckedChange = { checkedState[service] = it }
+
+                                        Button(
+                                            onClick = {
+                                                confirmSelection(
+                                                    checkedState = checkedState,
+                                                    showReset = showReset,
+                                                    showPace = showPace,
+                                                    showFreshness = showFreshness,
+                                                    maxRows = maxRows
+                                                )
+                                            },
+                                            enabled = anyChecked,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text(
+                                                stringResource(
+                                                    if (isReconfigure) {
+                                                        R.string.widget_setup_save
+                                                    } else {
+                                                        R.string.widget_setup_add
+                                                    }
+                                                )
                                             )
                                         }
                                     }
                                 }
                             }
-
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.widget_setup_display_options),
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
-                                    ConfigToggleRow(
-                                        title = stringResource(R.string.widget_setup_reset_title),
-                                        subtitle = stringResource(R.string.widget_setup_reset_description),
-                                        checked = showReset,
-                                        onCheckedChange = { showReset = it }
-                                    )
-                                    ConfigToggleRow(
-                                        title = stringResource(R.string.widget_setup_pace_title),
-                                        subtitle = stringResource(R.string.widget_setup_pace_description),
-                                        checked = showPace,
-                                        onCheckedChange = { showPace = it }
-                                    )
-                                    ConfigToggleRow(
-                                        title = stringResource(R.string.widget_setup_freshness_title),
-                                        subtitle = stringResource(R.string.widget_setup_freshness_description),
-                                        checked = showFreshness,
-                                        onCheckedChange = { showFreshness = it }
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.widget_setup_max_rows, maxRows),
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                    Slider(
-                                        value = maxRows.toFloat(),
-                                        onValueChange = { maxRows = it.roundToInt().coerceIn(1, 6) },
-                                        valueRange = 1f..6f,
-                                        steps = 4
-                                    )
-                                }
-                            }
-
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                                )
+                        }
+                    ) { padding ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(padding)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .widthIn(max = 720.dp)
+                                    .fillMaxWidth()
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 Text(
-                                    text = stringResource(R.string.widget_setup_data_hint),
-                                    modifier = Modifier.padding(16.dp),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    text = stringResource(R.string.widget_setup_description),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                            }
 
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 24.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                OutlinedButton(
-                                    onClick = {
-                                        setResult(RESULT_CANCELED)
-                                        finish()
-                                    },
-                                    modifier = Modifier.weight(1f)
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = MaterialTheme.shapes.extraLarge,
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                                    ),
+                                    border = BorderStroke(
+                                        1.dp,
+                                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                                    )
                                 ) {
-                                    Text(stringResource(R.string.action_cancel))
+                                    Column(
+                                        modifier = Modifier.padding(20.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.widget_setup_services),
+                                            style = MaterialTheme.typography.headlineSmall
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.widget_setup_select_service),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+
+                                        if (availableServices.isEmpty()) {
+                                            Text(
+                                                text = stringResource(R.string.widget_setup_connect_first),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                            OutlinedButton(onClick = ::openAppSettings) {
+                                                Text(stringResource(R.string.widget_setup_open_app_settings))
+                                            }
+                                        } else {
+                                            Text(
+                                                text = stringResource(
+                                                    R.string.widget_setup_selected_count,
+                                                    checkedState.values.count { it },
+                                                    availableServices.size
+                                                ),
+                                                style = MaterialTheme.typography.labelLarge,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                            availableServices.forEach { service ->
+                                                ServiceCheckRow(
+                                                    service = service,
+                                                    checked = checkedState[service] ?: false,
+                                                    onCheckedChange = { checkedState[service] = it }
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
 
-                                Button(
-                                    onClick = {
-                                        confirmSelection(
-                                            checkedState = checkedState,
-                                            showReset = showReset,
-                                            showPace = showPace,
-                                            showFreshness = showFreshness,
-                                            maxRows = maxRows
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = MaterialTheme.shapes.extraLarge,
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                                    ),
+                                    border = BorderStroke(
+                                        1.dp,
+                                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                                    )
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(20.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.widget_setup_display_options),
+                                            style = MaterialTheme.typography.headlineSmall
                                         )
-                                    },
-                                    enabled = anyChecked,
-                                    modifier = Modifier.weight(1f)
+                                        ConfigToggleRow(
+                                            title = stringResource(R.string.widget_setup_reset_title),
+                                            subtitle = stringResource(R.string.widget_setup_reset_description),
+                                            checked = showReset,
+                                            onCheckedChange = { showReset = it }
+                                        )
+                                        ConfigToggleRow(
+                                            title = stringResource(R.string.widget_setup_pace_title),
+                                            subtitle = stringResource(R.string.widget_setup_pace_description),
+                                            checked = showPace,
+                                            onCheckedChange = { showPace = it }
+                                        )
+                                        ConfigToggleRow(
+                                            title = stringResource(R.string.widget_setup_freshness_title),
+                                            subtitle = stringResource(R.string.widget_setup_freshness_description),
+                                            checked = showFreshness,
+                                            onCheckedChange = { showFreshness = it }
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.widget_setup_max_rows, maxRows),
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                        Slider(
+                                            value = maxRows.toFloat(),
+                                            onValueChange = {
+                                                maxRows = it.roundToInt().coerceIn(1, 6)
+                                            },
+                                            valueRange = 1f..6f,
+                                            steps = 4
+                                        )
+                                    }
+                                }
+
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = MaterialTheme.shapes.large,
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                    )
                                 ) {
                                     Text(
-                                        stringResource(
-                                            if (isReconfigure) {
-                                                R.string.widget_setup_save
-                                            } else {
-                                                R.string.widget_setup_add
-                                            }
-                                        )
+                                        text = stringResource(R.string.widget_setup_data_hint),
+                                        modifier = Modifier.padding(16.dp),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
                                     )
                                 }
                             }
@@ -365,33 +421,54 @@ private fun ServiceCheckRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .toggleable(
-                value = checked,
-                role = Role.Checkbox,
-                onValueChange = onCheckedChange
-            )
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+    val accent = CodexBarStateColors.providerAccent(service)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = if (checked) {
+            accent.copy(alpha = 0.12f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer
+        },
+        border = BorderStroke(
+            1.dp,
+            if (checked) accent.copy(alpha = 0.55f) else MaterialTheme.colorScheme.outlineVariant
+        )
     ) {
-        Checkbox(
-            checked = checked,
-            onCheckedChange = null
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Icon(
-            imageVector = Icons.Default.Cloud,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = Color(service.brandColor)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .toggleable(
+                    value = checked,
+                    role = Role.Checkbox,
+                    onValueChange = onCheckedChange
+                )
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = MaterialTheme.shapes.small,
+                color = accent.copy(alpha = 0.14f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = service.providerIcon(),
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp),
+                        tint = accent
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = service.displayName,
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
+            )
+            Checkbox(
+                checked = checked,
+                onCheckedChange = null
             )
         }
     }
