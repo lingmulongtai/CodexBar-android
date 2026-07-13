@@ -1,5 +1,6 @@
 package com.codexbar.android.core.notification
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -9,6 +10,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.Icon
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
@@ -212,6 +214,8 @@ class QuotaNotificationService @Inject constructor(
         manager.notify(notificationId, notification)
     }
 
+    @RequiresApi(36)
+    @SuppressLint("WrongConstant")
     private fun buildPlatformMonitoringNotification(
         title: String,
         text: String,
