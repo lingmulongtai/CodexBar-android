@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
@@ -18,7 +17,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.lifecycleScope
-import com.codexbar.android.core.util.BatteryOptimizationHelper
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.update.AvailableUpdate
 import com.codexbar.android.core.update.GitHubReleaseUpdateChecker
@@ -37,14 +35,6 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var releaseUpdateChecker: GitHubReleaseUpdateChecker
 
-    private val batteryOptLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) {
-        // After returning from the battery optimization dialog,
-        // schedule workers regardless of the result
-        WorkManagerInitializer.applySavedRefreshPolicyAsync(this)
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val initialDestination = startDestinationForHost(intent?.data?.host)
@@ -61,87 +51,40 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             CodexBarTheme {
-                // Battery optimization exemption
-                var showBatteryDialog by remember { mutableStateOf(false) }
                 var availableUpdate by remember { mutableStateOf<AvailableUpdate?>(null) }
-
-                LaunchedEffect(Unit) {
-                    if (!BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this@MainActivity)) {
-                        showBatteryDialog = true
-                    }
-                }
 
                 LaunchedEffect(Unit) {
                     availableUpdate = releaseUpdateChecker.checkForUpdate(BuildConfig.VERSION_NAME)
                 }
 
-                if (showBatteryDialog) {
+                availableUpdate?.let { update ->
                     AlertDialog(
-                        onDismissRequest = {
-                            showBatteryDialog = false
-                        },
-                        title = { Text(stringResource(R.string.battery_refresh_title)) },
+                        onDismissRequest = { availableUpdate = null },
+                        title = { Text(stringResource(R.string.update_available_title)) },
                         text = {
-                            Text(stringResource(R.string.battery_refresh_message))
+                            Text(
+                                stringResource(
+                                    R.string.update_available_message,
+                                    update.version
+                                )
+                            )
                         },
                         confirmButton = {
-                            TextButton(onClick = {
-                                showBatteryDialog = false
-                                batteryOptLauncher.launch(
-                                    BatteryOptimizationHelper
-                                        .requestIgnoreBatteryOptimizationsIntent(this@MainActivity)
-                                )
-                            }) {
-                                Text(stringResource(R.string.action_allow))
+                            TextButton(
+                                onClick = {
+                                    availableUpdate = null
+                                    openUpdateDownload(update)
+                                }
+                            ) {
+                                Text(stringResource(R.string.action_download_update))
                             }
                         },
                         dismissButton = {
-                            TextButton(onClick = {
-                                showBatteryDialog = false
-                                // Fallback: open system battery settings
-                                try {
-                                    batteryOptLauncher.launch(
-                                        BatteryOptimizationHelper
-                                            .openBatteryOptimizationSettingsIntent()
-                                    )
-                                } catch (_: Exception) {
-                                    // Ignore if settings page is not available
-                                }
-                            }) {
-                                Text(stringResource(R.string.action_settings))
+                            TextButton(onClick = { availableUpdate = null }) {
+                                Text(stringResource(R.string.action_later))
                             }
                         }
                     )
-                } else {
-                    availableUpdate?.let { update ->
-                        AlertDialog(
-                            onDismissRequest = { availableUpdate = null },
-                            title = { Text(stringResource(R.string.update_available_title)) },
-                            text = {
-                                Text(
-                                    stringResource(
-                                        R.string.update_available_message,
-                                        update.version
-                                    )
-                                )
-                            },
-                            confirmButton = {
-                                TextButton(
-                                    onClick = {
-                                        availableUpdate = null
-                                        openUpdateDownload(update)
-                                    }
-                                ) {
-                                    Text(stringResource(R.string.action_download_update))
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = { availableUpdate = null }) {
-                                    Text(stringResource(R.string.action_later))
-                                }
-                            }
-                        )
-                    }
                 }
 
                 CodexBarApp(

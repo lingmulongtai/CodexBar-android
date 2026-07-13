@@ -24,9 +24,6 @@
     <string name="action_settings">Settings</string>
     <string name="action_refresh">Refresh</string>
     <string name="action_open_settings">Open settings</string>
-    <string name="action_allow">Allow</string>
-    <string name="battery_refresh_title">Background token refresh</string>
-    <string name="battery_refresh_message">To keep your API tokens up to date in the background, exempt this app from battery optimization.</string>
     <string name="dashboard_needs_attention">Needs attention: %1$s</string>
     <string name="dashboard_empty_title">No services configured</string>
     <string name="dashboard_empty_message">Go to Settings to add your account credentials.</string>

@@ -24,9 +24,6 @@
     <string name="action_settings">設定</string>
     <string name="action_refresh">更新</string>
     <string name="action_open_settings">設定を開く</string>
-    <string name="action_allow">許可</string>
-    <string name="battery_refresh_title">バックグラウンドでトークンを更新</string>
-    <string name="battery_refresh_message">APIトークンをバックグラウンドで最新に保つため、このアプリをバッテリー最適化の対象外にしてください。</string>
     <string name="dashboard_needs_attention">確認が必要: %1$s</string>
     <string name="dashboard_empty_title">接続済みサービスがありません</string>
     <string name="dashboard_empty_message">設定からアカウントを接続してください。</string>
