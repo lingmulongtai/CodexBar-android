@@ -35,6 +35,11 @@ No backend server — all tokens are processed and stored strictly on-device.
 
 Provider credentials are stored in `codexbar_secure_prefs`, an encrypted on-device preferences file. That file is explicitly excluded from Android cloud backup and device-to-device transfer. After restoring or moving to a new device, providers must be linked again instead of reusing undecryptable credential ciphertext from the old device.
 
+## Architecture & Verification
+
+- [Provider account-linking architecture](docs/provider-auth-architecture.md)
+- [Android widget feature parity](docs/widget-feature-parity.md)
+- [Verification matrix](docs/verification-matrix.md)
 
 ## Setup
 
