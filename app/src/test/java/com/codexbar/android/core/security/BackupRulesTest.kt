@@ -53,6 +53,12 @@ class BackupRulesTest {
         )
         assertTrue(
             excludes.any { exclude ->
+                exclude.getAttribute("domain") == "sharedpref" &&
+                    exclude.getAttribute("path") == TokenRefreshStateStore.BACKUP_PATH
+            }
+        )
+        assertTrue(
+            excludes.any { exclude ->
                 exclude.getAttribute("domain") == "file" &&
                     exclude.getAttribute("path") == EncryptedPrefsManager.SECURE_DATASTORE_BACKUP_PATH
             }

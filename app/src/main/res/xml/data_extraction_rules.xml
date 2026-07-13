@@ -2,10 +2,12 @@
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="codexbar_secure_prefs.xml" />
+        <exclude domain="sharedpref" path="codexbar_token_refresh_state.xml" />
         <exclude domain="file" path="datastore/codexbar_secure_prefs.preferences_pb" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="codexbar_secure_prefs.xml" />
+        <exclude domain="sharedpref" path="codexbar_token_refresh_state.xml" />
         <exclude domain="file" path="datastore/codexbar_secure_prefs.preferences_pb" />
     </device-transfer>
 </data-extraction-rules>

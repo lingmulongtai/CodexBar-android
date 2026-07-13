@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
     <exclude domain="sharedpref" path="codexbar_secure_prefs.xml" />
+    <exclude domain="sharedpref" path="codexbar_token_refresh_state.xml" />
     <exclude domain="file" path="datastore/codexbar_secure_prefs.preferences_pb" />
 </full-backup-content>

@@ -11,7 +11,10 @@ import com.codexbar.android.core.network.codex.CodexDto
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.gemini.GeminiTokenRefreshService
 import com.codexbar.android.core.security.EncryptedPrefsManager
+import com.codexbar.android.core.security.TokenRefreshAttemptDecision
 import com.codexbar.android.core.security.TokenRefreshCoordinator
+import com.codexbar.android.core.security.TokenRefreshRetryPolicy
+import com.codexbar.android.core.security.TokenRefreshStateStore
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.async
@@ -27,8 +30,11 @@ class TokenRefreshWorker @AssistedInject constructor(
     private val codexTokenRefreshService: CodexTokenRefreshService,
     private val geminiTokenRefreshService: GeminiTokenRefreshService,
     private val prefsManager: EncryptedPrefsManager,
-    private val tokenRefreshCoordinator: TokenRefreshCoordinator
+    private val tokenRefreshCoordinator: TokenRefreshCoordinator,
+    private val tokenRefreshStateStore: TokenRefreshStateStore
 ) : CoroutineWorker(context, workerParams) {
+
+    private val retryPolicy = TokenRefreshRetryPolicy()
 
     override suspend fun doWork(): Result {
         val results = coroutineScope {
@@ -36,37 +42,73 @@ class TokenRefreshWorker @AssistedInject constructor(
                 .mapNotNull { service ->
                     prefsManager.loadCredential(service)?.let { credential -> service to credential }
                 }
-                .map { (_, credential) -> async { refreshIfNeeded(credential) } }
+                .map { (service, credential) -> async { refreshIfDue(service, credential) } }
                 .awaitAll()
         }
 
-        // If all services had no credential or succeeded, it's a success.
-        // If any failed, retry with backoff.
-        return if (results.all { it }) Result.success() else Result.retry()
+        return if (results.any { it.shouldRetryWork }) Result.retry() else Result.success()
     }
 
-    /**
-     * Returns true if refresh was not needed or succeeded, false if refresh failed.
-     */
-    private suspend fun refreshIfNeeded(credential: Credential): Boolean {
+    private suspend fun refreshIfDue(service: AiService, credential: Credential): RefreshRunResult {
+        val nowMillis = System.currentTimeMillis()
+        val credentialFingerprint = tokenRefreshStateStore.fingerprintFor(service, credential)
+        val previousState = tokenRefreshStateStore.load(service)
+        return when (retryPolicy.decision(previousState, credentialFingerprint, nowMillis)) {
+            TokenRefreshAttemptDecision.SkipTerminal,
+            TokenRefreshAttemptDecision.SkipUntilDue -> RefreshRunResult.Skipped
+
+            TokenRefreshAttemptDecision.Attempt -> {
+                val outcome = refreshIfNeeded(credential)
+                when (outcome) {
+                    is RefreshOutcome.Success,
+                    is RefreshOutcome.NotNeeded -> {
+                        tokenRefreshStateStore.save(
+                            service,
+                            retryPolicy.success(
+                                credentialFingerprint = credentialFingerprint,
+                                nextAttemptAtMillis = nextRefreshDueMillis(credential, nowMillis)
+                            )
+                        )
+                        RefreshRunResult.Succeeded
+                    }
+
+                    is RefreshOutcome.Failure -> {
+                        tokenRefreshStateStore.save(
+                            service,
+                            retryPolicy.failure(
+                                previousState = previousState,
+                                credentialFingerprint = credentialFingerprint,
+                                nowMillis = nowMillis,
+                                terminal = outcome.terminal,
+                                retryAtMillis = outcome.retryAtMillis
+                            )
+                        )
+                        RefreshRunResult(shouldRetryWork = !outcome.terminal)
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun refreshIfNeeded(credential: Credential): RefreshOutcome {
         return when (credential) {
             is Credential.ClaudeCredential -> refreshClaude(credential)
             is Credential.CodexCredential -> refreshCodex(credential)
             is Credential.GeminiCredential -> refreshGemini(credential)
-            is Credential.CopilotCredential -> true
+            is Credential.CopilotCredential -> RefreshOutcome.NotNeeded
         }
     }
 
-    private suspend fun refreshClaude(credential: Credential.ClaudeCredential): Boolean {
-        val expiresAt = credential.expiresAt ?: return true
+    private suspend fun refreshClaude(credential: Credential.ClaudeCredential): RefreshOutcome {
+        val expiresAt = credential.expiresAt ?: return RefreshOutcome.NotNeeded
         // Refresh if within 10 minutes of expiry
-        if (Instant.now().isBefore(expiresAt.minusSeconds(REFRESH_BUFFER_SECONDS))) return true
+        if (Instant.now().isBefore(expiresAt.minusSeconds(REFRESH_BUFFER_SECONDS))) return RefreshOutcome.NotNeeded
 
-        val refreshToken = credential.refreshToken ?: return false
+        val refreshToken = credential.refreshToken ?: return RefreshOutcome.Failure(terminal = true)
         return try {
             val response = claudeTokenRefreshService.refreshToken(refreshToken = refreshToken)
             if (response.isSuccessful) {
-                val body = response.body() ?: return false
+                val body = response.body() ?: return RefreshOutcome.Failure()
                 prefsManager.saveCredential(
                     AiService.CLAUDE,
                     Credential.ClaudeCredential(
@@ -77,31 +119,30 @@ class TokenRefreshWorker @AssistedInject constructor(
                         rateLimitTier = credential.rateLimitTier
                     )
                 )
-                true
+                RefreshOutcome.Success
             } else {
-                false
+                RefreshOutcome.Failure(terminal = response.code() == 400 || response.code() == 401)
             }
         } catch (_: Exception) {
-            false
+            RefreshOutcome.Failure()
         }
     }
 
-    private suspend fun refreshCodex(credential: Credential.CodexCredential): Boolean {
-        // Codex has no expiry field — always attempt a proactive refresh
+    private suspend fun refreshCodex(credential: Credential.CodexCredential): RefreshOutcome {
         return tokenRefreshCoordinator.withRefreshLock(AiService.CODEX) {
             val activeCredential = prefsManager.loadCredential(AiService.CODEX)
                 as? Credential.CodexCredential
-                ?: return@withRefreshLock true
+                ?: return@withRefreshLock RefreshOutcome.NotNeeded
 
             if (!activeCredential.matchesRefreshSubject(credential)) {
-                return@withRefreshLock true
+                return@withRefreshLock RefreshOutcome.NotNeeded
             }
 
             try {
                 val request = CodexDto.TokenRefreshRequest(refreshToken = activeCredential.refreshToken)
                 val response = codexTokenRefreshService.refreshToken(request)
                 if (response.isSuccessful) {
-                    val body = response.body() ?: return@withRefreshLock false
+                    val body = response.body() ?: return@withRefreshLock RefreshOutcome.Failure()
                     val newCredential = Credential.CodexCredential(
                         accessToken = body.accessToken,
                         refreshToken = body.refreshToken ?: activeCredential.refreshToken,
@@ -112,7 +153,7 @@ class TokenRefreshWorker @AssistedInject constructor(
                     if (currentCredential?.matchesRefreshSubject(activeCredential) == true) {
                         prefsManager.saveCredential(AiService.CODEX, newCredential)
                     }
-                    true
+                    RefreshOutcome.Success
                 } else {
                     val errorBody = response.errorBody()?.string() ?: ""
                     val isTerminal = CodexDto.TERMINAL_ERROR_CODES.any { errorBody.contains(it) }
@@ -123,10 +164,10 @@ class TokenRefreshWorker @AssistedInject constructor(
                             prefsManager.deleteCredential(AiService.CODEX)
                         }
                     }
-                    false
+                    RefreshOutcome.Failure(terminal = isTerminal)
                 }
             } catch (_: Exception) {
-                false
+                RefreshOutcome.Failure()
             }
         }
     }
@@ -137,9 +178,11 @@ class TokenRefreshWorker @AssistedInject constructor(
         return refreshToken == other.refreshToken && accountId == other.accountId
     }
 
-    private suspend fun refreshGemini(credential: Credential.GeminiCredential): Boolean {
+    private suspend fun refreshGemini(credential: Credential.GeminiCredential): RefreshOutcome {
         // Refresh if within 10 minutes of expiry
-        if (System.currentTimeMillis() < credential.expiresAtMs - REFRESH_BUFFER_SECONDS * 1000) return true
+        if (System.currentTimeMillis() < credential.expiresAtMs - REFRESH_BUFFER_SECONDS * 1000) {
+            return RefreshOutcome.NotNeeded
+        }
 
         return try {
             val response = geminiTokenRefreshService.refreshToken(
@@ -147,7 +190,7 @@ class TokenRefreshWorker @AssistedInject constructor(
                 clientId = credential.oauthClientId
             )
             if (response.isSuccessful) {
-                val body = response.body() ?: return false
+                val body = response.body() ?: return RefreshOutcome.Failure()
                 val expiresIn = body.expiresIn ?: 3600
                 prefsManager.saveCredential(
                     AiService.GEMINI,
@@ -158,17 +201,55 @@ class TokenRefreshWorker @AssistedInject constructor(
                         oauthClientId = credential.oauthClientId
                     )
                 )
-                true
+                RefreshOutcome.Success
             } else {
-                false
+                RefreshOutcome.Failure(terminal = response.code() == 400 || response.code() == 401)
             }
         } catch (_: Exception) {
-            false
+            RefreshOutcome.Failure()
         }
+    }
+
+    private fun nextRefreshDueMillis(credential: Credential, nowMillis: Long): Long {
+        val minimumDue = nowMillis + MIN_REFRESH_GAP_MILLIS
+        return when (credential) {
+            is Credential.ClaudeCredential -> credential.expiresAt
+                ?.minusSeconds(REFRESH_BUFFER_SECONDS)
+                ?.toEpochMilli()
+                ?.coerceAtLeast(minimumDue)
+                ?: (nowMillis + DEFAULT_PROACTIVE_REFRESH_MILLIS)
+
+            is Credential.CodexCredential -> nowMillis + DEFAULT_PROACTIVE_REFRESH_MILLIS
+
+            is Credential.GeminiCredential -> (credential.expiresAtMs - REFRESH_BUFFER_SECONDS * 1000)
+                .coerceAtLeast(minimumDue)
+
+            is Credential.CopilotCredential -> Long.MAX_VALUE
+        }
+    }
+
+    private data class RefreshRunResult(
+        val shouldRetryWork: Boolean
+    ) {
+        companion object {
+            val Skipped = RefreshRunResult(shouldRetryWork = false)
+            val Succeeded = RefreshRunResult(shouldRetryWork = false)
+        }
+    }
+
+    private sealed class RefreshOutcome {
+        data object Success : RefreshOutcome()
+        data object NotNeeded : RefreshOutcome()
+        data class Failure(
+            val terminal: Boolean = false,
+            val retryAtMillis: Long? = null
+        ) : RefreshOutcome()
     }
 
     companion object {
         /** Refresh buffer: refresh tokens that expire within this many seconds. */
         const val REFRESH_BUFFER_SECONDS = 600L // 10 minutes
+        private const val MIN_REFRESH_GAP_MILLIS = 15 * 60 * 1000L
+        private const val DEFAULT_PROACTIVE_REFRESH_MILLIS = 6 * 60 * 60 * 1000L
     }
 }
