@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.presentation.QuotaSeverity
@@ -29,17 +30,25 @@ val CodexBarShapes = Shapes(
 )
 
 object CodexBarStateColors {
-    val Warning = Color(0xFFFFB300)
     val Success = Color(0xFF2E7D32)
     val Unknown = Color(0xFF6F6F6F)
 
     @Composable
-    fun severityColor(severity: QuotaSeverity): Color {
+    fun warningColor(): Color {
+        return if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) {
+            Color(0xFFFFB95C)
+        } else {
+            Color(0xFF9A4B00)
+        }
+    }
+
+    @Composable
+    fun severityColor(severity: QuotaSeverity, goodColor: Color? = null): Color {
         val scheme = MaterialTheme.colorScheme
         return when (severity) {
             QuotaSeverity.Critical -> scheme.error
-            QuotaSeverity.Warning -> Warning
-            QuotaSeverity.Good -> scheme.primary
+            QuotaSeverity.Warning -> warningColor()
+            QuotaSeverity.Good -> goodColor ?: scheme.primary
             QuotaSeverity.Unknown -> scheme.outline
             QuotaSeverity.Redacted -> scheme.surfaceVariant
         }

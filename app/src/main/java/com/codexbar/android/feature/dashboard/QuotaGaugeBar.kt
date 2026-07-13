@@ -1,8 +1,8 @@
 package com.codexbar.android.feature.dashboard
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -17,10 +17,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -32,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import com.codexbar.android.R
 import com.codexbar.android.core.presentation.QuotaMetricPresentation
 import com.codexbar.android.ui.theme.CodexBarStateColors
+import kotlin.math.abs
 
 /**
  * Displays a gauge bar showing remaining quota.
@@ -42,15 +46,21 @@ import com.codexbar.android.ui.theme.CodexBarStateColors
 fun QuotaGaugeBar(
     metric: QuotaMetricPresentation,
     showExtendedDetails: Boolean = false,
+    goodColor: Color? = null,
     modifier: Modifier = Modifier
 ) {
-    val animatedProgress by animateFloatAsState(
-        targetValue = metric.barProgress.coerceIn(0f, 1f),
-        animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
-        label = "gauge_progress"
-    )
+    val targetProgress = metric.barProgress.coerceIn(0f, 1f)
+    val progress = remember(metric.id) { Animatable(targetProgress) }
+    LaunchedEffect(targetProgress) {
+        if (abs(progress.value - targetProgress) > 0.001f) {
+            progress.animateTo(
+                targetValue = targetProgress,
+                animationSpec = tween(durationMillis = 720, easing = FastOutSlowInEasing)
+            )
+        }
+    }
 
-    val gaugeColor = CodexBarStateColors.severityColor(metric.severity)
+    val gaugeColor = CodexBarStateColors.severityColor(metric.severity, goodColor)
 
     val animatedColor by animateColorAsState(
         targetValue = gaugeColor,
@@ -92,7 +102,7 @@ fun QuotaGaugeBar(
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
-                        .fillMaxWidth(animatedProgress)
+                        .fillMaxWidth(progress.value)
                         .clip(RoundedCornerShape(50))
                         .background(animatedColor)
                 )

@@ -45,6 +45,7 @@
     <string name="status_hidden">非表示</string>
     <string name="extra_usage_summary">%1$s: %2$s / %3$s（%4$s）</string>
     <string name="quota_metric_description">%1$s: %2$s</string>
+    <string name="quota_percent_value">%1$d%%</string>
     <string name="action_cancel">キャンセル</string>
     <string name="action_connect_account">アカウントを接続</string>
     <string name="action_copy">コピー</string>
