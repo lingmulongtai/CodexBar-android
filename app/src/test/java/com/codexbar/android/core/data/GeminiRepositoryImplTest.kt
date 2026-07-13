@@ -36,8 +36,7 @@ class GeminiRepositoryImplTest {
         accessToken = "test-access-token",
         refreshToken = "test-refresh-token",
         expiresAtMs = System.currentTimeMillis() + 3600_000,
-        oauthClientId = "test-client-id",
-        oauthClientSecret = "test-client-secret"
+        oauthClientId = "test-client-id"
     )
 
     @Before

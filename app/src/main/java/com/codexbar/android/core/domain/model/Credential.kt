@@ -24,8 +24,7 @@ sealed class Credential {
         override val accessToken: String,
         override val refreshToken: String,
         val expiresAtMs: Long,
-        val oauthClientId: String,
-        val oauthClientSecret: String? = null
+        val oauthClientId: String
     ) : Credential()
 
     data class CopilotCredential(

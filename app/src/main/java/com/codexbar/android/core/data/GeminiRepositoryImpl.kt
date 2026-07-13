@@ -173,8 +173,7 @@ class GeminiRepositoryImpl @Inject constructor(
         return try {
             val response = tokenRefreshService.refreshToken(
                 refreshToken = credential.refreshToken,
-                clientId = credential.oauthClientId,
-                clientSecret = credential.oauthClientSecret
+                clientId = credential.oauthClientId
             )
             if (response.isSuccessful) {
                 val body = response.body() ?: return null
@@ -183,8 +182,7 @@ class GeminiRepositoryImpl @Inject constructor(
                     accessToken = body.accessToken,
                     refreshToken = body.refreshToken ?: credential.refreshToken,
                     expiresAtMs = System.currentTimeMillis() + (expiresIn * 1000L),
-                    oauthClientId = credential.oauthClientId,
-                    oauthClientSecret = credential.oauthClientSecret
+                    oauthClientId = credential.oauthClientId
                 )
                 prefsManager.saveCredential(AiService.GEMINI, newCredential)
                 newCredential

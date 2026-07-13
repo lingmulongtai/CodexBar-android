@@ -73,7 +73,7 @@ Do not extract bearer tokens from browser DevTools unless you are debugging loca
 
 ### Gemini (Google)
 
-Use **Connect account** in Settings after entering a Google OAuth Client ID. The app uses Google's device authorization grant with the `https://www.googleapis.com/auth/cloud-platform` scope, then stores the access token, refresh token, client ID, and optional client secret encrypted on-device.
+Use **Connect account** in Settings after entering a Google OAuth Client ID for a public/native client. The app uses Google's device authorization grant with the `https://www.googleapis.com/auth/cloud-platform` scope, then stores the access token, refresh token, and client ID encrypted on-device. Client secrets are not accepted, stored, or sent because native Android apps cannot keep them confidential.
 
 Manual fallback, if needed:
 
@@ -85,7 +85,7 @@ python3 -c "import json; print(json.load(open('$HOME/.gemini/oauth_creds.json'))
 python3 -c "import json; print(json.load(open('$HOME/.gemini/oauth_creds.json'))['refresh_token'])"
 ```
 
-Paste the access token, refresh token, and OAuth Client ID into Settings. The client secret is optional for public/native OAuth clients.
+Paste the access token, refresh token, and OAuth Client ID into Settings only when you cannot use the in-app account link flow. Do not paste a Google OAuth client secret; this app rejects that pattern.
 
 ### GitHub Copilot
 

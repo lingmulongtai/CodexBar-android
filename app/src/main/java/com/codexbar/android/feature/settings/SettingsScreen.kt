@@ -248,18 +248,7 @@ private fun ServiceCredentialSection(
                         value = state.oauthClientId,
                         onValueChange = { onFieldChange("oauthClientId", it) },
                         label = { Text("OAuth Client ID") },
-                        supportingText = { Text("From Google Cloud Console") },
-                        keyboardOptions = secretKeyboardOptions(),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = state.oauthClientSecret,
-                        onValueChange = { onFieldChange("oauthClientSecret", it) },
-                        label = { Text("OAuth Client Secret (optional)") },
-                        supportingText = { Text("Only needed for confidential/web OAuth clients.") },
-                        visualTransformation = PasswordVisualTransformation(),
+                        supportingText = { Text("Use a public/native Google OAuth client. Client secrets are not accepted.") },
                         keyboardOptions = secretKeyboardOptions(),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true

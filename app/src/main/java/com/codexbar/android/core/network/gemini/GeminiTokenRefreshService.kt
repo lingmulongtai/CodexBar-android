@@ -12,8 +12,7 @@ interface GeminiTokenRefreshService {
     suspend fun refreshToken(
         @Field("grant_type") grantType: String = "refresh_token",
         @Field("refresh_token") refreshToken: String,
-        @Field("client_id") clientId: String,
-        @Field("client_secret") clientSecret: String? = null
+        @Field("client_id") clientId: String
     ): Response<GeminiDto.TokenRefreshResponse>
 
     companion object {

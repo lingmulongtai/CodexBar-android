@@ -80,7 +80,6 @@ class SettingsViewModel @Inject constructor(
                     accessToken = credential.accessToken,
                     refreshToken = credential.refreshToken,
                     oauthClientId = credential.oauthClientId,
-                    oauthClientSecret = credential.oauthClientSecret ?: "",
                     expiresAtDisplay = formatExpiryMs(credential.expiresAtMs),
                     isConnected = true
                 )
@@ -103,7 +102,6 @@ class SettingsViewModel @Inject constructor(
                 "refreshToken" -> current.copy(refreshToken = value, validationResult = null, hasUnsavedChanges = true)
                 "accountId" -> current.copy(accountId = value, validationResult = null, hasUnsavedChanges = true)
                 "oauthClientId" -> current.copy(oauthClientId = value, validationResult = null, hasUnsavedChanges = true)
-                "oauthClientSecret" -> current.copy(oauthClientSecret = value, validationResult = null, hasUnsavedChanges = true)
                 else -> current
             }
             state.copy(serviceStates = state.serviceStates + (service to updated))
@@ -134,8 +132,7 @@ class SettingsViewModel @Inject constructor(
                     accessToken = state.accessToken,
                     refreshToken = state.refreshToken,
                     expiresAtMs = System.currentTimeMillis() + 3600_000, // default 1h
-                    oauthClientId = state.oauthClientId,
-                    oauthClientSecret = state.oauthClientSecret.ifBlank { null }
+                    oauthClientId = state.oauthClientId
                 )
             }
             AiService.COPILOT -> Credential.CopilotCredential(
@@ -215,8 +212,7 @@ class SettingsViewModel @Inject constructor(
                 val current = _uiState.value.serviceStates[service] ?: ServiceCredentialState()
                 val session = accountLinkManager.requestDeviceCode(
                     service = service,
-                    oauthClientId = current.oauthClientId,
-                    oauthClientSecret = current.oauthClientSecret
+                    oauthClientId = current.oauthClientId
                 )
                 _uiState.updateAccountLinkPrompt(service, session)
 

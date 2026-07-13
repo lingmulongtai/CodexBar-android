@@ -144,8 +144,7 @@ class TokenRefreshWorker @AssistedInject constructor(
         return try {
             val response = geminiTokenRefreshService.refreshToken(
                 refreshToken = credential.refreshToken,
-                clientId = credential.oauthClientId,
-                clientSecret = credential.oauthClientSecret
+                clientId = credential.oauthClientId
             )
             if (response.isSuccessful) {
                 val body = response.body() ?: return false
@@ -156,8 +155,7 @@ class TokenRefreshWorker @AssistedInject constructor(
                         accessToken = body.accessToken,
                         refreshToken = body.refreshToken ?: credential.refreshToken,
                         expiresAtMs = System.currentTimeMillis() + (expiresIn * 1000L),
-                        oauthClientId = credential.oauthClientId,
-                        oauthClientSecret = credential.oauthClientSecret
+                        oauthClientId = credential.oauthClientId
                     )
                 )
                 true

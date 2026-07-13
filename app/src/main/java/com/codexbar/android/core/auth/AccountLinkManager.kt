@@ -21,13 +21,12 @@ class AccountLinkManager @Inject constructor(
 
     suspend fun requestDeviceCode(
         service: AiService,
-        oauthClientId: String? = null,
-        oauthClientSecret: String? = null
+        oauthClientId: String? = null
     ): DeviceAuthSession {
         return when (service) {
             AiService.CODEX -> requestCodexDeviceCode()
             AiService.COPILOT -> requestCopilotDeviceCode()
-            AiService.GEMINI -> requestGeminiDeviceCode(oauthClientId, oauthClientSecret)
+            AiService.GEMINI -> requestGeminiDeviceCode(oauthClientId)
             AiService.CLAUDE -> throw UnsupportedOperationException(
                 "${service.displayName} does not expose a supported Android device-code flow."
             )
@@ -123,10 +122,7 @@ class AccountLinkManager @Inject constructor(
         )
     }
 
-    private suspend fun requestGeminiDeviceCode(
-        oauthClientId: String?,
-        oauthClientSecret: String?
-    ): DeviceAuthSession {
+    private suspend fun requestGeminiDeviceCode(oauthClientId: String?): DeviceAuthSession {
         val clientId = oauthClientId?.trim().takeUnless { it.isNullOrBlank() }
             ?: throw IllegalArgumentException("Gemini OAuth Client ID is required")
 
@@ -143,8 +139,7 @@ class AccountLinkManager @Inject constructor(
             deviceCode = body.deviceCode,
             intervalSeconds = body.interval.toLong().coerceAtLeast(MIN_POLL_INTERVAL_SECONDS),
             expiresAtEpochMs = System.currentTimeMillis() + body.expiresIn * 1000L,
-            oauthClientId = clientId,
-            oauthClientSecret = oauthClientSecret?.trim()?.takeIf { it.isNotBlank() }
+            oauthClientId = clientId
         )
     }
 
@@ -201,8 +196,7 @@ class AccountLinkManager @Inject constructor(
                         accessToken = accessToken,
                         refreshToken = refreshToken,
                         expiresAtMs = System.currentTimeMillis() + expiresIn * 1000L,
-                        oauthClientId = clientId,
-                        oauthClientSecret = session.oauthClientSecret
+                        oauthClientId = clientId
                     )
                 }
                 "authorization_pending" -> Unit
@@ -231,6 +225,5 @@ data class DeviceAuthSession(
     val deviceCode: String,
     val intervalSeconds: Long,
     val expiresAtEpochMs: Long,
-    val oauthClientId: String? = null,
-    val oauthClientSecret: String? = null
+    val oauthClientId: String? = null
 )
