@@ -11,14 +11,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -64,8 +65,13 @@ fun DashboardScreen(
                         }
                     ) {
                         Icon(
-                            imageVector = if (isMonitoring) Icons.Default.Close else Icons.Default.PlayArrow,
-                            contentDescription = if (isMonitoring) "Stop monitoring" else "Start monitoring"
+                            imageVector = if (isMonitoring) Icons.Default.Stop else Icons.Default.PlayArrow,
+                            contentDescription = if (isMonitoring) "Stop monitoring" else "Start monitoring",
+                            tint = if (isMonitoring) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                LocalContentColor.current
+                            }
                         )
                     }
                     IconButton(onClick = onNavigateToSettings) {
