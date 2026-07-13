@@ -4,9 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
-import com.codexbar.android.core.domain.model.QuotaInfo
 import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.domain.repository.QuotaRepository
+import com.codexbar.android.core.presentation.PrivacyPresentation
+import com.codexbar.android.core.presentation.QuotaPresentationMapper
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.di.ClaudeRepository
 import com.codexbar.android.di.CodexRepository
@@ -29,6 +30,8 @@ class DashboardViewModel @Inject constructor(
     @CopilotRepository private val copilotRepository: QuotaRepository,
     private val prefsManager: EncryptedPrefsManager
 ) : ViewModel() {
+
+    private val presentationMapper = QuotaPresentationMapper()
 
     private val _uiState = MutableStateFlow<DashboardUiState>(DashboardUiState.Loading)
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
@@ -53,7 +56,9 @@ class DashboardViewModel @Inject constructor(
             }
 
             if (repos.isEmpty()) {
-                _uiState.value = DashboardUiState.Success(emptyList(), Instant.now())
+                _uiState.value = DashboardUiState.Content(
+                    presentationMapper.map(emptyList(), generatedAt = Instant.now())
+                )
                 _isRefreshing.value = false
                 return@launch
             }
@@ -64,65 +69,37 @@ class DashboardViewModel @Inject constructor(
 
             val results = deferreds.map { it.await() }
 
-            val successCards = mutableListOf<ServiceCardData>()
+            val successfulQuotas = mutableListOf<com.codexbar.android.core.domain.model.QuotaInfo>()
             val errors = mutableMapOf<AiService, AppError>()
 
             for ((service, result) in results) {
                 when (result) {
                     is Result.Success -> {
-                        successCards.add(mapToCardData(result.value))
+                        successfulQuotas.add(result.value)
                     }
                     is Result.Failure -> {
                         errors[service] = result.error
-                        successCards.add(
-                            ServiceCardData(
-                                service = service,
-                                windows = emptyList(),
-                                extraUsage = null,
-                                tier = null,
-                                error = result.error
-                            )
-                        )
                     }
                 }
             }
 
-            // Sort by highest utilization first
-            val sortedCards = successCards.sortedByDescending { card ->
-                card.windows.maxOfOrNull { it.utilization } ?: 0.0
-            }
+            val privacySettings = prefsManager.getPrivacySettings()
+            val privacy = PrivacyPresentation(
+                redactSensitiveValues = privacySettings.widgetRedactionEnabled,
+                lockScreenRedacted = privacySettings.lockScreenRedactionEnabled,
+                widgetRedacted = privacySettings.widgetRedactionEnabled
+            )
 
-            _uiState.value = if (errors.isEmpty()) {
-                DashboardUiState.Success(sortedCards, Instant.now())
-            } else if (successCards.all { it.error != null }) {
-                DashboardUiState.Error(errors.values.first())
-            } else {
-                DashboardUiState.PartialSuccess(sortedCards, errors)
-            }
+            _uiState.value = DashboardUiState.Content(
+                presentationMapper.map(
+                    quotas = successfulQuotas,
+                    errors = errors,
+                    generatedAt = Instant.now(),
+                    privacy = privacy
+                )
+            )
 
             _isRefreshing.value = false
         }
-    }
-
-    private fun mapToCardData(quotaInfo: QuotaInfo): ServiceCardData {
-        return ServiceCardData(
-            service = quotaInfo.service,
-            windows = quotaInfo.windows.map { window ->
-                UsageWindowUi(
-                    label = window.label,
-                    utilization = window.utilization,
-                    resetsAt = window.resetsAt
-                )
-            },
-            extraUsage = quotaInfo.extraUsage?.let { extra ->
-                ExtraUsageUi(
-                    monthlyLimit = extra.monthlyLimit,
-                    usedCredits = extra.usedCredits,
-                    utilization = extra.utilization,
-                    currency = extra.currency
-                )
-            },
-            tier = quotaInfo.tier
-        )
     }
 }

@@ -30,7 +30,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.presentation.ServiceQuotaPresentation
+import com.codexbar.android.core.presentation.ServiceQuotaStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,43 +71,21 @@ fun DashboardScreen(
                     }
                 }
 
-                is DashboardUiState.Success -> {
-                    if (state.cards.isEmpty()) {
+                is DashboardUiState.Content -> {
+                    if (state.snapshot.services.isEmpty()) {
                         EmptyState()
                     } else {
+                        val failedServices = state.snapshot.services
+                            .filterNot {
+                                it.status == ServiceQuotaStatus.Fresh ||
+                                    it.status == ServiceQuotaStatus.Redacted
+                            }
+                            .joinToString(", ") { it.service.displayName }
                         CardList(
-                            cards = state.cards,
-                            errorBanner = null
+                            services = state.snapshot.services,
+                            errorBanner = failedServices.takeIf { it.isNotBlank() }
+                                ?.let { "Needs attention: $it" }
                         )
-                    }
-                }
-
-                is DashboardUiState.PartialSuccess -> {
-                    val errorServices = state.errors.keys.joinToString(", ") { it.displayName }
-                    CardList(
-                        cards = state.cards,
-                        errorBanner = "Failed to load: $errorServices"
-                    )
-                }
-
-                is DashboardUiState.Error -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                Icons.Default.Warning,
-                                contentDescription = "Error",
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Failed to load quota data",
-                                style = MaterialTheme.typography.bodyLarge,
-                                textAlign = TextAlign.Center
-                            )
-                        }
                     }
                 }
             }
@@ -116,7 +95,7 @@ fun DashboardScreen(
 
 @Composable
 private fun CardList(
-    cards: List<ServiceCardData>,
+    services: List<ServiceQuotaPresentation>,
     errorBanner: String?
 ) {
     LazyColumn(
@@ -133,9 +112,9 @@ private fun CardList(
                 )
             }
         }
-        items(cards, key = { it.service.name }) { card ->
+        items(services, key = { it.service.name }) { service ->
             ServiceCard(
-                cardData = card,
+                service = service,
                 onClick = { /* Bottom sheet detail — future enhancement */ }
             )
         }

@@ -26,8 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.time.Duration
-import java.time.Instant
+import com.codexbar.android.core.presentation.QuotaMetricPresentation
+import com.codexbar.android.core.presentation.QuotaSeverity
 
 private val AmberWarning = Color(0xFFFFC107)
 
@@ -38,25 +38,21 @@ private val AmberWarning = Color(0xFFFFC107)
  */
 @Composable
 fun QuotaGaugeBar(
-    utilization: Double,
-    label: String? = null,
-    showPercentage: Boolean = true,
-    resetsAt: Instant? = null,
+    metric: QuotaMetricPresentation,
     modifier: Modifier = Modifier
 ) {
-    val remaining = (1.0 - utilization).coerceIn(0.0, 1.0)
-
     val animatedProgress by animateFloatAsState(
-        targetValue = remaining.toFloat(),
+        targetValue = metric.barProgress.coerceIn(0f, 1f),
         animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
         label = "gauge_progress"
     )
 
-    // Color based on how much is used (danger when high utilization)
-    val gaugeColor = when {
-        utilization >= 0.85 -> MaterialTheme.colorScheme.error
-        utilization >= 0.60 -> AmberWarning
-        else -> MaterialTheme.colorScheme.primary
+    val gaugeColor = when (metric.severity) {
+        QuotaSeverity.Critical -> MaterialTheme.colorScheme.error
+        QuotaSeverity.Warning -> AmberWarning
+        QuotaSeverity.Good -> MaterialTheme.colorScheme.primary
+        QuotaSeverity.Unknown -> MaterialTheme.colorScheme.outline
+        QuotaSeverity.Redacted -> MaterialTheme.colorScheme.surfaceVariant
     }
 
     val animatedColor by animateColorAsState(
@@ -65,22 +61,18 @@ fun QuotaGaugeBar(
         label = "gauge_color"
     )
 
-    val resetText = resetsAt?.let { formatResetTime(it) }
-
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (label != null) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.width(72.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-            }
+            Text(
+                text = metric.label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.width(72.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
 
             Box(
                 modifier = Modifier
@@ -98,41 +90,25 @@ fun QuotaGaugeBar(
                 )
             }
 
-            if (showPercentage) {
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "${(remaining * 100).toInt()}% left",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 12.sp
-                    ),
-                    color = animatedColor
-                )
-            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = metric.remainingLabel,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.sp
+                ),
+                color = animatedColor
+            )
         }
 
-        if (resetText != null) {
+        if (metric.resetLabel != null || metric.pace.label.isNotBlank()) {
             Text(
-                text = resetText,
+                text = listOfNotNull(metric.resetLabel, metric.pace.label).joinToString(" - "),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.End,
                 modifier = Modifier.fillMaxWidth()
             )
         }
-    }
-}
-
-private fun formatResetTime(resetsAt: Instant): String? {
-    val now = Instant.now()
-    if (resetsAt.isBefore(now)) return null
-    val duration = Duration.between(now, resetsAt)
-    val totalMinutes = duration.toMinutes()
-    val hours = duration.toHours()
-    val days = duration.toDays()
-    return when {
-        days >= 1 -> "Resets in ${days}d ${hours % 24}h"
-        hours >= 1 -> "Resets in ${hours}h ${totalMinutes % 60}m"
-        else -> "Resets in ${totalMinutes}m"
     }
 }

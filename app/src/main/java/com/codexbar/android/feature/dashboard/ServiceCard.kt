@@ -25,11 +25,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.codexbar.android.core.domain.model.AppError
+import com.codexbar.android.core.presentation.ServiceQuotaPresentation
+import com.codexbar.android.core.presentation.ServiceQuotaStatus
 
 @Composable
 fun ServiceCard(
-    cardData: ServiceCardData,
+    service: ServiceQuotaPresentation,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -52,17 +53,17 @@ fun ServiceCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Cloud,
-                    contentDescription = cardData.service.displayName,
+                    contentDescription = service.service.displayName,
                     modifier = Modifier.size(32.dp),
-                    tint = Color(cardData.service.brandColor)
+                    tint = Color(service.service.brandColor)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = cardData.service.displayName,
+                    text = service.service.displayName,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                cardData.tier?.let { tier ->
+                service.tier?.let { tier ->
                     Spacer(modifier = Modifier.width(8.dp))
                     Surface(
                         shape = RoundedCornerShape(4.dp),
@@ -79,7 +80,7 @@ fun ServiceCard(
             }
 
             // Error state
-            if (cardData.error != null) {
+            if (service.status != ServiceQuotaStatus.Fresh && service.status != ServiceQuotaStatus.Redacted) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -90,66 +91,68 @@ fun ServiceCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = formatError(cardData.error),
+                        text = service.freshness.staleReason ?: service.status.toLabel(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error
                     )
                 }
-                return@Column
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             // Primary gauge (first window)
-            val primaryWindow = cardData.windows.firstOrNull()
-            primaryWindow?.let { window ->
+            service.primaryMetric?.let { metric ->
                 QuotaGaugeBar(
-                    utilization = window.utilization,
-                    label = window.label,
-                    showPercentage = true,
-                    resetsAt = window.resetsAt
+                    metric = metric
                 )
             }
 
             // Secondary windows
-            val secondaryWindows = cardData.windows.drop(1)
+            val secondaryWindows = service.metrics.filterNot { it.id == service.primaryMetric?.id }
 
             if (secondaryWindows.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Column(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    secondaryWindows.forEach { window ->
+                    secondaryWindows.forEach { metric ->
                         QuotaGaugeBar(
-                            utilization = window.utilization,
-                            label = window.label,
-                            showPercentage = true,
-                            resetsAt = window.resetsAt
+                            metric = metric
                         )
                     }
                 }
             }
 
             // Extra usage (Claude credits)
-            cardData.extraUsage?.let { extra ->
+            service.extraUsage?.let { extra ->
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Credits: ${extra.currency} ${String.format("%.2f", extra.usedCredits)} / ${String.format("%.2f", extra.monthlyLimit)}",
+                    text = "${extra.label}: ${extra.usedCreditsLabel} / ${extra.limitLabel} (${extra.remainingLabel})",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = service.freshness.ageLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
 
-private fun formatError(error: AppError): String {
-    return when (error) {
-        is AppError.NetworkError -> "Network error"
-        is AppError.AuthError -> if (error.isTerminal) "Re-authentication required" else "Auth error"
-        is AppError.RateLimited -> error.retryAt?.let { "Rate limited until $it" } ?: "Rate limited"
-        is AppError.ParseError -> error.message ?: "Response parse error"
-        is AppError.CredentialNotFound -> "No credentials configured"
-        is AppError.ServiceUnavailable -> "Service unavailable"
+private fun ServiceQuotaStatus.toLabel(): String {
+    return when (this) {
+        ServiceQuotaStatus.Fresh -> "Fresh"
+        ServiceQuotaStatus.Stale -> "Stale data"
+        ServiceQuotaStatus.Loading -> "Loading"
+        ServiceQuotaStatus.AuthRequired -> "Re-authentication required"
+        ServiceQuotaStatus.RateLimited -> "Rate limited"
+        ServiceQuotaStatus.Offline -> "Offline"
+        ServiceQuotaStatus.ProviderError -> "Provider error"
+        ServiceQuotaStatus.Disconnected -> "Not connected"
+        ServiceQuotaStatus.Redacted -> "Quota hidden"
     }
 }
