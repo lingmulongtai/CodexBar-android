@@ -21,8 +21,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.codexbar.android.core.presentation.QuotaMetricPresentation
@@ -54,14 +57,20 @@ fun QuotaGaugeBar(
 
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clearAndSetSemantics {
+                    contentDescription = "${metric.label}: ${metric.remainingLabel}"
+                },
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = metric.label,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.width(72.dp)
+                modifier = Modifier.width(72.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.width(8.dp))
 
@@ -88,7 +97,9 @@ fun QuotaGaugeBar(
                     fontWeight = FontWeight.Medium,
                     fontSize = 12.sp
                 ),
-                color = animatedColor
+                color = animatedColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
 
