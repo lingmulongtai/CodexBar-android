@@ -1,9 +1,15 @@
 package com.codexbar.android.feature.settings
 
 import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipDescription
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.os.PersistableBundle
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -116,6 +122,7 @@ fun SettingsScreen(
                     onFieldChange = { field, value -> viewModel.updateField(service, field, value) },
                     onStartAccountLink = { viewModel.startAccountLink(service) },
                     onOpenAccountLink = { url -> openAuthUrl(context, url) },
+                    onCopyAccountCode = { code -> copyToClipboard(context, code) },
                     onValidate = { viewModel.validateCredential(service) },
                     onDisconnect = { viewModel.showDisconnectConfirmDialog(service) }
                 )
@@ -163,6 +170,7 @@ private fun ServiceCredentialSection(
     onFieldChange: (String, String) -> Unit,
     onStartAccountLink: () -> Unit,
     onOpenAccountLink: (String) -> Unit,
+    onCopyAccountCode: (String) -> Unit,
     onValidate: () -> Unit,
     onDisconnect: () -> Unit
 ) {
@@ -188,7 +196,11 @@ private fun ServiceCredentialSection(
                 Text(
                     text = if (state.isConnected) "Connected" else "Not connected",
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (state.isConnected) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (state.isConnected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
                 )
             }
 
@@ -276,31 +288,42 @@ private fun ServiceCredentialSection(
                     service = service,
                     state = state,
                     onStartAccountLink = onStartAccountLink,
-                    onOpenAccountLink = onOpenAccountLink
+                    onOpenAccountLink = onOpenAccountLink,
+                    onCopyAccountCode = onCopyAccountCode
                 )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Validate button + result
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Actions
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 OutlinedButton(
                     onClick = onValidate,
-                    enabled = !state.isValidating && state.accessToken.isNotBlank()
+                    enabled = !state.isValidating && state.accessToken.isNotBlank(),
+                    modifier = if (state.isConnected) Modifier.weight(1f) else Modifier.fillMaxWidth()
                 ) {
                     if (state.isValidating) {
                         CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Text("Validate and Connect")
+                    Text(
+                        when {
+                            state.isConnected && state.hasUnsavedChanges -> "Save changes"
+                            state.isConnected -> "Revalidate"
+                            else -> "Validate & connect"
+                        }
+                    )
                 }
-
-                Spacer(modifier = Modifier.width(12.dp))
 
                 if (state.isConnected) {
                     OutlinedButton(
                         onClick = onDisconnect,
                         enabled = !state.isValidating,
+                        modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.error
                         )
@@ -309,22 +332,29 @@ private fun ServiceCredentialSection(
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Disconnect")
                     }
-
-                    Spacer(modifier = Modifier.width(12.dp))
                 }
+            }
 
-                when (state.validationResult) {
-                    is ValidationResult.Success -> {
+            // Validation result
+            when (state.validationResult) {
+                is ValidationResult.Success -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             Icons.Default.CheckCircle,
                             contentDescription = "Valid",
-                            tint = Color(0xFF4CAF50),
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Valid", color = Color(0xFF4CAF50), style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            text = "Valid",
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
-                    is ValidationResult.Failure -> {
+                }
+                is ValidationResult.Failure -> {
+                    Row(verticalAlignment = Alignment.Top) {
                         Icon(
                             Icons.Default.Error,
                             contentDescription = "Invalid",
@@ -339,8 +369,8 @@ private fun ServiceCredentialSection(
                             modifier = Modifier.weight(1f)
                         )
                     }
-                    null -> {}
                 }
+                null -> {}
             }
 
             if (state.hasUnsavedChanges) {
@@ -360,7 +390,8 @@ private fun AccountLinkControls(
     service: AiService,
     state: ServiceCredentialState,
     onStartAccountLink: () -> Unit,
-    onOpenAccountLink: (String) -> Unit
+    onOpenAccountLink: (String) -> Unit,
+    onCopyAccountCode: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -404,11 +435,17 @@ private fun AccountLinkControls(
                         text = "Enter this code in the sign-in page:",
                         style = MaterialTheme.typography.bodySmall
                     )
-                    Text(
-                        text = prompt.userCode,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = prompt.userCode,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = { onCopyAccountCode(prompt.userCode) }) {
+                            Text("Copy")
+                        }
+                    }
                     Text(
                         text = "Expires: ${prompt.expiresAtDisplay}",
                         style = MaterialTheme.typography.bodySmall,
@@ -435,6 +472,20 @@ private fun openAuthUrl(context: Context, url: String) {
             .launchUrl(context, uri)
     } catch (_: ActivityNotFoundException) {
         context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+    }
+}
+
+private fun copyToClipboard(context: Context, text: String) {
+    val clipboard = context.getSystemService(ClipboardManager::class.java) ?: return
+    val clip = ClipData.newPlainText("Sign-in code", text).apply {
+        description.extras = PersistableBundle().apply {
+            putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+        }
+    }
+    clipboard.setPrimaryClip(clip)
+
+    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
+        Toast.makeText(context, "Code copied", Toast.LENGTH_SHORT).show()
     }
 }
 
