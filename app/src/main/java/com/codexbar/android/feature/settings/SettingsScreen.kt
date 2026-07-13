@@ -14,9 +14,12 @@ import android.os.Build
 import android.os.PersistableBundle
 import android.provider.Settings
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,14 +31,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.Login
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -45,6 +54,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -53,6 +63,7 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
@@ -63,6 +74,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,6 +83,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.app.NotificationManagerCompat
@@ -83,6 +96,8 @@ import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.security.PrivacySettings
 import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
+import com.codexbar.android.ui.components.providerIcon
+import com.codexbar.android.ui.theme.providerVisualStyle
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -217,7 +232,25 @@ fun SettingsScreen(
                     onFieldChange = { field, value -> viewModel.updateField(service, field, value) },
                     onStartAccountLink = { viewModel.startAccountLink(service) },
                     onOpenAccountLink = { url -> openAuthUrl(context, url) },
-                    onCopyAccountCode = { code -> copyToClipboard(context, code) },
+                    onCopyAccountCode = { code ->
+                        copyToClipboard(
+                            context = context,
+                            text = code,
+                            labelRes = R.string.clipboard_sign_in_code,
+                            sensitive = true
+                        )
+                    },
+                    onCopySetupCommand = { command ->
+                        copyToClipboard(
+                            context = context,
+                            text = command,
+                            labelRes = R.string.clipboard_setup_command,
+                            sensitive = false
+                        )
+                    },
+                    onOpenSetupGuide = {
+                        openAuthUrl(context, accountGuideUrl(service))
+                    },
                     onValidate = { viewModel.validateCredential(service) },
                     onDisconnect = { viewModel.showDisconnectConfirmDialog(service) }
                 )
@@ -308,226 +341,192 @@ private fun ServiceCredentialSection(
     onStartAccountLink: () -> Unit,
     onOpenAccountLink: (String) -> Unit,
     onCopyAccountCode: (String) -> Unit,
+    onCopySetupCommand: (String) -> Unit,
+    onOpenSetupGuide: () -> Unit,
     onValidate: () -> Unit,
     onDisconnect: () -> Unit
 ) {
+    val visualStyle = providerVisualStyle(service)
+    var showManualSetup by rememberSaveable(service) {
+        mutableStateOf(service == AiService.CLAUDE)
+    }
+    LaunchedEffect(state.hasUnsavedChanges) {
+        if (state.hasUnsavedChanges) showManualSetup = true
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = visualStyle.shape,
+        colors = CardDefaults.cardColors(containerColor = visualStyle.container),
+        border = BorderStroke(1.dp, visualStyle.accent.copy(alpha = 0.28f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.Cloud,
-                    contentDescription = service.displayName,
-                    tint = Color(service.brandColor),
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = service.displayName,
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = stringResource(
-                        if (state.isConnected) R.string.status_connected else R.string.status_not_connected
-                    ),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (state.isConnected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (service == AiService.CLAUDE) {
-                Text(
-                    text = stringResource(R.string.credential_claude_instructions),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            OutlinedTextField(
-                value = state.accessToken,
-                onValueChange = { onFieldChange("accessToken", it) },
-                label = {
-                    Text(
-                        stringResource(
-                            if (service == AiService.COPILOT) {
-                                R.string.credential_github_oauth_token
-                            } else {
-                                R.string.credential_access_token
-                            }
+                Surface(
+                    modifier = Modifier.size(46.dp),
+                    shape = MaterialTheme.shapes.small,
+                    color = visualStyle.accent.copy(alpha = 0.14f),
+                    border = BorderStroke(1.dp, visualStyle.accent.copy(alpha = 0.3f))
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = service.providerIcon(),
+                            contentDescription = service.displayName,
+                            tint = visualStyle.accent,
+                            modifier = Modifier.size(24.dp)
                         )
+                    }
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = service.displayName,
+                        style = MaterialTheme.typography.titleLarge
                     )
-                },
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = secretKeyboardOptions(),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+                }
+                val statusColor = if (state.isConnected) {
+                    visualStyle.accent
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = statusColor.copy(alpha = 0.12f)
+                ) {
+                    Text(
+                        text = stringResource(
+                            if (state.isConnected) {
+                                R.string.status_connected
+                            } else {
+                                R.string.status_not_connected
+                            }
+                        ),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = statusColor
+                    )
+                }
+            }
 
-            if (service != AiService.COPILOT) {
-                Spacer(modifier = Modifier.height(8.dp))
-
+            if (service == AiService.GEMINI) {
                 OutlinedTextField(
-                    value = state.refreshToken,
-                    onValueChange = { onFieldChange("refreshToken", it) },
-                    label = { Text(stringResource(R.string.credential_refresh_token)) },
-                    supportingText = if (service == AiService.CLAUDE) {
-                        { Text(stringResource(R.string.credential_claude_refresh_support)) }
-                    } else null,
-                    visualTransformation = PasswordVisualTransformation(),
+                    value = state.oauthClientId,
+                    onValueChange = { onFieldChange("oauthClientId", it) },
+                    label = { Text(stringResource(R.string.credential_oauth_client_id)) },
+                    supportingText = {
+                        Text(stringResource(R.string.credential_google_client_support))
+                    },
                     keyboardOptions = secretKeyboardOptions(),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
             }
 
-            // Service-specific fields
-            when (service) {
-                AiService.CODEX -> {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = state.accountId,
-                        onValueChange = { onFieldChange("accountId", it) },
-                        label = { Text(stringResource(R.string.credential_account_id_optional)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                }
-                AiService.GEMINI -> {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = state.oauthClientId,
-                        onValueChange = { onFieldChange("oauthClientId", it) },
-                        label = { Text(stringResource(R.string.credential_oauth_client_id)) },
-                        supportingText = {
-                            Text(stringResource(R.string.credential_google_client_support))
-                        },
-                        keyboardOptions = secretKeyboardOptions(),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                    if (state.expiresAtDisplay.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = state.expiresAtDisplay,
-                            onValueChange = {},
-                            label = { Text(stringResource(R.string.credential_token_expiry)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            readOnly = true,
-                            enabled = false,
-                            singleLine = true
-                        )
-                    }
-                }
-                else -> {} // Claude has no extra fields
-            }
-
             if (service.supportsAccountLink()) {
-                Spacer(modifier = Modifier.height(12.dp))
-
                 AccountLinkControls(
                     service = service,
                     state = state,
+                    accent = visualStyle.accent,
+                    onAccent = visualStyle.onAccent,
                     onStartAccountLink = onStartAccountLink,
                     onOpenAccountLink = onOpenAccountLink,
                     onCopyAccountCode = onCopyAccountCode
                 )
+            } else {
+                ClaudeSetupGuide(
+                    accent = visualStyle.accent,
+                    onCopySetupCommand = onCopySetupCommand
+                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Actions
-            Row(
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.76f)
             ) {
-                OutlinedButton(
-                    onClick = onValidate,
-                    enabled = !state.isValidating && state.accessToken.isNotBlank(),
-                    modifier = if (state.isConnected) Modifier.weight(1f) else Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.Top
                 ) {
-                    if (state.isValidating) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
+                    Icon(
+                        imageVector = Icons.Rounded.Security,
+                        contentDescription = null,
+                        tint = visualStyle.accent,
+                        modifier = Modifier.size(19.dp)
+                    )
                     Text(
-                        stringResource(
-                            when {
-                                state.isConnected && state.hasUnsavedChanges -> R.string.action_save_changes
-                                state.isConnected -> R.string.action_revalidate
-                                else -> R.string.action_validate_connect
-                            }
-                        )
+                        text = stringResource(R.string.account_security_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
                     )
                 }
+            }
 
-                if (state.isConnected) {
-                    OutlinedButton(
-                        onClick = onDisconnect,
-                        enabled = !state.isValidating,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Icon(Icons.Default.DeleteForever, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.action_disconnect))
-                    }
+            TextButton(onClick = onOpenSetupGuide) {
+                Icon(Icons.AutoMirrored.Rounded.OpenInNew, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.action_view_setup_guide))
+            }
+
+            HorizontalDivider(color = visualStyle.accent.copy(alpha = 0.2f))
+
+            TextButton(
+                onClick = { showManualSetup = !showManualSetup },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = if (showManualSetup) {
+                        Icons.Rounded.ExpandLess
+                    } else {
+                        Icons.Rounded.ExpandMore
+                    },
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.account_manual_setup),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            if (showManualSetup) {
+                Text(
+                    text = stringResource(R.string.account_manual_setup_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                ManualCredentialFields(
+                    service = service,
+                    state = state,
+                    onFieldChange = onFieldChange,
+                    onValidate = onValidate
+                )
+            }
+
+            if (state.isConnected) {
+                OutlinedButton(
+                    onClick = onDisconnect,
+                    enabled = !state.isValidating,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Icon(Icons.Default.DeleteForever, contentDescription = null)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(stringResource(R.string.action_disconnect))
                 }
             }
 
-            // Validation result
-            when (state.validationResult) {
-                is ValidationResult.Success -> {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.CheckCircle,
-                            contentDescription = stringResource(R.string.content_description_valid),
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = stringResource(R.string.status_valid),
-                            color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                }
-                is ValidationResult.Failure -> {
-                    Row(verticalAlignment = Alignment.Top) {
-                        Icon(
-                            Icons.Default.Error,
-                            contentDescription = stringResource(R.string.content_description_invalid),
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            state.validationResult.message,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-                null -> {}
-            }
+            CredentialValidationResult(state.validationResult, visualStyle.accent)
 
             if (state.hasUnsavedChanges) {
-                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = stringResource(R.string.credential_changes_pending),
                     style = MaterialTheme.typography.bodySmall,
@@ -539,72 +538,313 @@ private fun ServiceCredentialSection(
 }
 
 @Composable
+private fun ClaudeSetupGuide(
+    accent: Color,
+    onCopySetupCommand: (String) -> Unit
+) {
+    var copied by rememberSaveable { mutableStateOf(false) }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = accent.copy(alpha = 0.11f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.credential_claude_step_command),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SelectionContainer(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = CLAUDE_SETUP_COMMAND,
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontFamily = FontFamily.Monospace
+                        ),
+                        color = accent
+                    )
+                }
+                OutlinedButton(
+                    onClick = {
+                        onCopySetupCommand(CLAUDE_SETUP_COMMAND)
+                        copied = true
+                    }
+                ) {
+                    Icon(Icons.Rounded.ContentCopy, contentDescription = null)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        stringResource(
+                            if (copied) R.string.action_copied else R.string.action_copy_command
+                        )
+                    )
+                }
+            }
+            Text(
+                text = stringResource(R.string.credential_claude_step_paste),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun ManualCredentialFields(
+    service: AiService,
+    state: ServiceCredentialState,
+    onFieldChange: (String, String) -> Unit,
+    onValidate: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        OutlinedTextField(
+            value = state.accessToken,
+            onValueChange = { onFieldChange("accessToken", it) },
+            label = {
+                Text(
+                    stringResource(
+                        if (service == AiService.COPILOT) {
+                            R.string.credential_github_oauth_token
+                        } else {
+                            R.string.credential_access_token
+                        }
+                    )
+                )
+            },
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = secretKeyboardOptions(),
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        if (service != AiService.COPILOT) {
+            OutlinedTextField(
+                value = state.refreshToken,
+                onValueChange = { onFieldChange("refreshToken", it) },
+                label = { Text(stringResource(R.string.credential_refresh_token)) },
+                supportingText = if (service == AiService.CLAUDE) {
+                    { Text(stringResource(R.string.credential_claude_refresh_support)) }
+                } else null,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = secretKeyboardOptions(),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+        }
+
+        if (service == AiService.CODEX) {
+            OutlinedTextField(
+                value = state.accountId,
+                onValueChange = { onFieldChange("accountId", it) },
+                label = { Text(stringResource(R.string.credential_account_id_optional)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+        }
+
+        if (service == AiService.GEMINI && state.expiresAtDisplay.isNotBlank()) {
+            OutlinedTextField(
+                value = state.expiresAtDisplay,
+                onValueChange = {},
+                label = { Text(stringResource(R.string.credential_token_expiry)) },
+                modifier = Modifier.fillMaxWidth(),
+                readOnly = true,
+                enabled = false,
+                singleLine = true
+            )
+        }
+
+        OutlinedButton(
+            onClick = onValidate,
+            enabled = !state.isValidating && state.accessToken.isNotBlank(),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            if (state.isValidating) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Text(
+                stringResource(
+                    when {
+                        state.isConnected && state.hasUnsavedChanges -> R.string.action_save_changes
+                        state.isConnected -> R.string.action_revalidate
+                        else -> R.string.action_validate_connect
+                    }
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun CredentialValidationResult(
+    validationResult: ValidationResult?,
+    successColor: Color
+) {
+    when (validationResult) {
+        is ValidationResult.Success -> {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = stringResource(R.string.content_description_valid),
+                    tint = successColor,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = stringResource(R.string.status_valid),
+                    color = successColor,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+        is ValidationResult.Failure -> {
+            Row(verticalAlignment = Alignment.Top) {
+                Icon(
+                    Icons.Default.Error,
+                    contentDescription = stringResource(R.string.content_description_invalid),
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    validationResult.message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+        null -> Unit
+    }
+}
+
+@Composable
 private fun AccountLinkControls(
     service: AiService,
     state: ServiceCredentialState,
+    accent: Color,
+    onAccent: Color,
     onStartAccountLink: () -> Unit,
     onOpenAccountLink: (String) -> Unit,
     onCopyAccountCode: (String) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val prompt = state.accountLinkPrompt
+    var lastOpenedCode by rememberSaveable(service) { mutableStateOf<String?>(null) }
+    var copiedCode by rememberSaveable(service) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(prompt?.userCode) {
+        if (prompt != null && prompt.userCode != lastOpenedCode) {
+            lastOpenedCode = prompt.userCode
+            copiedCode = null
+            onOpenAccountLink(prompt.verificationUrl)
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Surface(
+            shape = MaterialTheme.shapes.extraSmall,
+            color = accent.copy(alpha = 0.12f)
+        ) {
+            Text(
+                text = stringResource(R.string.account_connect_recommended),
+                modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                style = MaterialTheme.typography.labelSmall,
+                color = accent
+            )
+        }
         Text(
             text = when (service) {
                 AiService.CODEX -> stringResource(R.string.account_link_codex_description)
                 AiService.GEMINI -> stringResource(R.string.account_link_gemini_description)
                 AiService.COPILOT -> stringResource(R.string.account_link_copilot_description)
-                else -> ""
+                AiService.CLAUDE -> stringResource(R.string.credential_claude_instructions)
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Button(
-                onClick = onStartAccountLink,
-                enabled = !state.isAccountLinking &&
-                    !state.isValidating &&
-                    (service != AiService.GEMINI || state.oauthClientId.isNotBlank())
-            ) {
-                if (state.isAccountLinking && state.accountLinkPrompt == null) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-                Text(
-                    stringResource(
-                        if (state.isAccountLinking) {
-                            R.string.action_waiting_for_sign_in
-                        } else {
-                            R.string.action_connect_account
-                        }
-                    )
+        Button(
+            onClick = onStartAccountLink,
+            enabled = !state.isAccountLinking &&
+                !state.isValidating &&
+                (service != AiService.GEMINI || state.oauthClientId.isNotBlank()),
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = accent,
+                contentColor = onAccent
+            )
+        ) {
+            if (state.isAccountLinking && prompt == null) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = onAccent
                 )
+                Spacer(modifier = Modifier.width(8.dp))
+            } else {
+                Icon(Icons.AutoMirrored.Rounded.Login, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
             }
+            Text(
+                stringResource(
+                    when {
+                        state.isAccountLinking -> R.string.action_waiting_for_sign_in
+                        state.isConnected -> R.string.action_reconnect_account
+                        else -> R.string.action_connect_account
+                    }
+                )
+            )
         }
 
-        state.accountLinkPrompt?.let { prompt ->
-            Card(
+        prompt?.let {
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f)
-                )
+                shape = MaterialTheme.shapes.medium,
+                color = accent.copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, accent.copy(alpha = 0.28f))
             ) {
                 Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
                         text = stringResource(R.string.account_link_enter_code),
                         style = MaterialTheme.typography.bodySmall
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = prompt.userCode,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.weight(1f)
-                        )
-                        TextButton(onClick = { onCopyAccountCode(prompt.userCode) }) {
-                            Text(stringResource(R.string.action_copy))
+                        SelectionContainer(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = prompt.userCode,
+                                style = MaterialTheme.typography.headlineSmall.copy(
+                                    fontFamily = FontFamily.Monospace
+                                ),
+                                color = accent
+                            )
+                        }
+                        TextButton(
+                            onClick = {
+                                onCopyAccountCode(prompt.userCode)
+                                copiedCode = prompt.userCode
+                            }
+                        ) {
+                            Icon(Icons.Rounded.ContentCopy, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                stringResource(
+                                    if (copiedCode == prompt.userCode) {
+                                        R.string.action_copied
+                                    } else {
+                                        R.string.action_copy
+                                    }
+                                )
+                            )
                         }
                     }
                     Text(
@@ -612,7 +852,12 @@ private fun AccountLinkControls(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    OutlinedButton(onClick = { onOpenAccountLink(prompt.verificationUrl) }) {
+                    OutlinedButton(
+                        onClick = { onOpenAccountLink(prompt.verificationUrl) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.AutoMirrored.Rounded.OpenInNew, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(stringResource(R.string.action_open_sign_in_page))
                     }
                 }
@@ -623,6 +868,16 @@ private fun AccountLinkControls(
 
 private fun AiService.supportsAccountLink(): Boolean {
     return this == AiService.CODEX || this == AiService.GEMINI || this == AiService.COPILOT
+}
+
+internal fun accountGuideUrl(service: AiService): String {
+    val anchor = when (service) {
+        AiService.CLAUDE -> "claude-anthropic"
+        AiService.CODEX -> "codex-openai--chatgpt"
+        AiService.GEMINI -> "gemini-google"
+        AiService.COPILOT -> "github-copilot"
+    }
+    return "$ACCOUNT_GUIDE_BASE_URL#$anchor"
 }
 
 private fun openAuthUrl(context: Context, url: String) {
@@ -682,11 +937,18 @@ private fun openPromotionSettings(context: Context) {
     }
 }
 
-private fun copyToClipboard(context: Context, text: String) {
+private fun copyToClipboard(
+    context: Context,
+    text: String,
+    @StringRes labelRes: Int,
+    sensitive: Boolean
+) {
     val clipboard = context.getSystemService(ClipboardManager::class.java) ?: return
-    val clip = ClipData.newPlainText(context.getString(R.string.clipboard_sign_in_code), text).apply {
-        description.extras = PersistableBundle().apply {
-            putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+    val clip = ClipData.newPlainText(context.getString(labelRes), text).apply {
+        if (sensitive) {
+            description.extras = PersistableBundle().apply {
+                putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+            }
         }
     }
     clipboard.setPrimaryClip(clip)
@@ -695,6 +957,10 @@ private fun copyToClipboard(context: Context, text: String) {
         Toast.makeText(context, context.getString(R.string.message_code_copied), Toast.LENGTH_SHORT).show()
     }
 }
+
+private const val CLAUDE_SETUP_COMMAND = "claude setup-token"
+private const val ACCOUNT_GUIDE_BASE_URL =
+    "https://github.com/lingmulongtai/CodexBar-android"
 
 private fun secretKeyboardOptions(): KeyboardOptions {
     return KeyboardOptions(

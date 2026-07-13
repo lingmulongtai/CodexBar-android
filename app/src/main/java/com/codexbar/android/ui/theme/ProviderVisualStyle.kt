@@ -12,6 +12,7 @@ import com.codexbar.android.core.domain.model.AiService
 
 data class ProviderVisualStyle(
     val accent: Color,
+    val onAccent: Color,
     val container: Color,
     val shape: Shape
 )
@@ -50,6 +51,7 @@ fun providerVisualStyle(service: AiService): ProviderVisualStyle {
     }
     return ProviderVisualStyle(
         accent = accent,
+        onAccent = if (accent.luminance() > 0.45f) Color(0xFF101014) else Color.White,
         container = accent.copy(alpha = tintAlpha).compositeOver(colors.surfaceContainerLow),
         shape = shape
     )
