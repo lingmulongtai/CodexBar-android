@@ -12,6 +12,9 @@ import com.codexbar.android.core.domain.model.QuotaInfo
 import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.notification.QuotaNotificationService
+import com.codexbar.android.core.presentation.PrivacyPresentation
+import com.codexbar.android.core.presentation.QuotaPresentationMapper
+import com.codexbar.android.core.presentation.RefreshSourcePresentation
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.tile.QuotaTileService
 import com.codexbar.android.core.widget.QuotaGlanceWidget
@@ -43,6 +46,8 @@ class QuotaRefreshWorker @AssistedInject constructor(
     private val widgetPrefsManager: WidgetPrefsManager
 ) : CoroutineWorker(context, workerParams) {
 
+    private val presentationMapper = QuotaPresentationMapper()
+
     override suspend fun doWork(): Result {
         val repos = buildList {
             if (prefsManager.loadCredential(AiService.CLAUDE) != null) add(AiService.CLAUDE to claudeRepository)
@@ -72,7 +77,20 @@ class QuotaRefreshWorker @AssistedInject constructor(
                 cacheQuotaData(successfulQuotas)
 
                 if (prefsManager.isNotificationsEnabled()) {
-                    notificationService.showQuotaNotification(successfulQuotas)
+                    val privacySettings = prefsManager.getPrivacySettings()
+                    val snapshot = presentationMapper.map(
+                        quotas = successfulQuotas,
+                        generatedAt = Instant.now(),
+                        privacy = PrivacyPresentation(
+                            redactSensitiveValues = privacySettings.notificationRedactionEnabled,
+                            lockScreenRedacted = privacySettings.lockScreenRedactionEnabled,
+                            widgetRedacted = privacySettings.widgetRedactionEnabled
+                        ),
+                        source = RefreshSourcePresentation.Trigger(
+                            inputData.getString(WorkManagerInitializer.KEY_REFRESH_SOURCE) ?: "periodic"
+                        )
+                    )
+                    notificationService.showQuotaNotification(snapshot)
                     checkForResets(successfulQuotas)
                 }
 

@@ -8,7 +8,8 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
-import com.codexbar.android.core.domain.model.QuotaInfo
+import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
+import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.PrivacySettings
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -57,18 +58,18 @@ class QuotaNotificationService @Inject constructor(
         manager.createNotificationChannels(listOf(monitorChannel, resetChannel))
     }
 
-    fun showQuotaNotification(quotas: List<QuotaInfo>) {
+    fun showQuotaNotification(snapshot: QuotaPresentationSnapshot) {
         val privacySettings = prefsManager.getPrivacySettings()
-        val elapsed = formatElapsed(quotas.firstOrNull()?.fetchedAt)
-        val mostUsedProgress = quotas
-            .flatMap { it.windows }
-            .maxOfOrNull { (it.utilization * 100).toInt().coerceIn(0, 100) }
+        val elapsed = snapshot.services.firstOrNull()?.freshness?.ageLabel ?: "just now"
+        val mostUsedProgress = snapshot.services
+            .mapNotNull { it.primaryMetric?.usedPercent }
+            .maxOrNull()
             ?: 0
         val summary = if (privacySettings.notificationRedactionEnabled) {
             "Quota details hidden"
         } else {
-            quotas.firstOrNull()?.let { quota ->
-                "${quota.service.displayName}: ${formatRemaining(quota)}"
+            snapshot.services.firstOrNull()?.let { service ->
+                "${service.service.displayName}: ${formatRemaining(service)}"
             } ?: "No quota data"
         }
         val style = if (privacySettings.notificationRedactionEnabled) {
@@ -81,8 +82,8 @@ class QuotaNotificationService @Inject constructor(
                 .setBigContentTitle("AI quota status")
                 .setSummaryText("Updated $elapsed")
                 .also { inbox ->
-                    quotas.take(5).forEach { quota ->
-                        inbox.addLine("${quota.service.displayName}: ${formatRemaining(quota)}")
+                    snapshot.services.take(5).forEach { service ->
+                        inbox.addLine("${service.service.displayName}: ${formatRemaining(service)}")
                     }
                 }
         }
@@ -174,36 +175,14 @@ class QuotaNotificationService @Inject constructor(
         manager.notify(notificationId, notification)
     }
 
-    private fun formatElapsed(fetchedAt: Instant?): String {
-        if (fetchedAt == null) return "just now"
-        val elapsed = Duration.between(fetchedAt, Instant.now())
-        return when {
-            elapsed.toMinutes() < 1 -> "just now"
-            elapsed.toMinutes() < 60 -> "${elapsed.toMinutes()} min ago"
-            else -> "${elapsed.toHours()}h ago"
+    private fun formatRemaining(service: ServiceQuotaPresentation): String {
+        val primaryMetric = service.primaryMetric
+        if (primaryMetric == null) {
+            return service.freshness.staleReason ?: "waiting for data"
         }
-    }
-
-    private fun formatRemaining(quota: QuotaInfo): String {
-        val primaryWindow = quota.windows.maxByOrNull { it.utilization } ?: return "waiting for data"
-        val remaining = ((1.0 - primaryWindow.utilization) * 100).toInt().coerceIn(0, 100)
-        val resetText = primaryWindow.resetsAt?.let { resetAt ->
-            val resetIn = formatDurationUntil(resetAt)
-            if (resetIn.isNotEmpty()) " - resets in $resetIn" else ""
-        } ?: ""
-        return "$remaining% left (${primaryWindow.label})$resetText"
-    }
-
-    private fun formatDurationUntil(instant: Instant): String {
-        val duration = Duration.between(Instant.now(), instant)
-        if (duration.isNegative || duration.isZero) return ""
-        val hours = duration.toHours()
-        val minutes = duration.toMinutes() % 60
-        return when {
-            hours >= 24 -> "${hours / 24}d ${hours % 24}h"
-            hours > 0 -> "${hours}h ${minutes}m"
-            else -> "${minutes}m"
-        }
+        val resetText = primaryMetric.resetLabel?.let { " - $it" } ?: ""
+        val paceText = primaryMetric.pace.label.takeIf { it.isNotBlank() }?.let { " - $it" } ?: ""
+        return "${primaryMetric.remainingLabel} (${primaryMetric.label})$resetText$paceText"
     }
 
     private fun NotificationCompat.Builder.applyPrivacy(
