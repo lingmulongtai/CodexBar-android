@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import android.content.Context
 import com.codexbar.android.core.auth.AccountLinkManager
 import com.codexbar.android.core.auth.DeviceAuthSession
+import com.codexbar.android.core.data.QuotaHistoryStore
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.Credential
@@ -12,6 +13,7 @@ import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.PrivacySettings
+import com.codexbar.android.core.widget.WidgetPrefsManager
 import com.codexbar.android.core.workmanager.WorkManagerInitializer
 import com.codexbar.android.di.ClaudeRepository
 import com.codexbar.android.di.CodexRepository
@@ -37,6 +39,8 @@ class SettingsViewModel @Inject constructor(
     @CopilotRepository private val copilotRepository: QuotaRepository,
     private val accountLinkManager: AccountLinkManager,
     private val prefsManager: EncryptedPrefsManager,
+    private val quotaHistoryStore: QuotaHistoryStore,
+    private val widgetPrefsManager: WidgetPrefsManager,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
@@ -306,6 +310,8 @@ class SettingsViewModel @Inject constructor(
         }
         viewModelScope.launch {
             prefsManager.deleteCredential(service)
+            quotaHistoryStore.deleteService(service)
+            widgetPrefsManager.deleteServiceCache(service)
         }
     }
 
@@ -319,6 +325,8 @@ class SettingsViewModel @Inject constructor(
         }
         viewModelScope.launch {
             prefsManager.deleteAllCredentials()
+            AiService.entries.forEach { quotaHistoryStore.deleteService(it) }
+            widgetPrefsManager.deleteAllServiceCaches()
         }
     }
 

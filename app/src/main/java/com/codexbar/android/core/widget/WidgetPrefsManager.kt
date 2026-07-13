@@ -44,6 +44,19 @@ class WidgetPrefsManager @Inject constructor(
         editor.apply()
     }
 
+    fun deleteServiceCache(service: AiService) {
+        val prefix = "cache_${service.name}"
+        val editor = prefs.edit()
+        prefs.all.keys.filter { it.startsWith(prefix) }.forEach { editor.remove(it) }
+        editor.apply()
+    }
+
+    fun deleteAllServiceCaches() {
+        val editor = prefs.edit()
+        prefs.all.keys.filter { it.startsWith("cache_") }.forEach { editor.remove(it) }
+        editor.apply()
+    }
+
     // --- Cached quota data for widgets ---
 
     fun cacheQuotaData(service: AiService, label: String, utilization: Double, resetsAtEpochSecond: Long?) {
