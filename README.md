@@ -12,7 +12,7 @@ Monitor your AI service quotas from your Android device. Track remaining usage f
 
 ## Features
 
-- Real-time quota monitoring for Claude, Codex, and Gemini (more services coming soon)
+- Real-time quota monitoring for Claude, Codex, Gemini, and GitHub Copilot
 - Animated gauge bars showing remaining usage percentage
 - Quick Settings tile for at-a-glance status
 - Configurable Android home screen widgets with quota, reset, freshness, and pace controls
