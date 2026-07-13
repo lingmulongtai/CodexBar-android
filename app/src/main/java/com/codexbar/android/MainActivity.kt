@@ -49,8 +49,7 @@ class MainActivity : ComponentActivity() {
     ) {
         // After returning from the battery optimization dialog,
         // schedule workers regardless of the result
-        WorkManagerInitializer.scheduleTokenRefresh(this)
-        WorkManagerInitializer.schedulePeriodicRefresh(this)
+        WorkManagerInitializer.applySavedRefreshPolicyAsync(this)
     }
 
     @OptIn(ExperimentalPermissionsApi::class)
@@ -60,6 +59,10 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             prefsManager.warmCache()
             applyScreenPrivacy(prefsManager.getPrivacySettings().screenPrivacyEnabled)
+            WorkManagerInitializer.applyRefreshPolicy(
+                this@MainActivity,
+                prefsManager.getRefreshInterval()
+            )
         }
         enableEdgeToEdge()
 

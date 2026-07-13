@@ -2,6 +2,7 @@ package com.codexbar.android.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.content.Context
 import com.codexbar.android.core.auth.AccountLinkManager
 import com.codexbar.android.core.auth.DeviceAuthSession
 import com.codexbar.android.core.domain.model.AiService
@@ -11,11 +12,13 @@ import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.PrivacySettings
+import com.codexbar.android.core.workmanager.WorkManagerInitializer
 import com.codexbar.android.di.ClaudeRepository
 import com.codexbar.android.di.CodexRepository
 import com.codexbar.android.di.CopilotRepository
 import com.codexbar.android.di.GeminiRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,7 +36,8 @@ class SettingsViewModel @Inject constructor(
     @GeminiRepository private val geminiRepository: QuotaRepository,
     @CopilotRepository private val copilotRepository: QuotaRepository,
     private val accountLinkManager: AccountLinkManager,
-    private val prefsManager: EncryptedPrefsManager
+    private val prefsManager: EncryptedPrefsManager,
+    @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -263,6 +267,7 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(refreshIntervalMinutes = minutes) }
         viewModelScope.launch {
             prefsManager.setRefreshInterval(minutes)
+            WorkManagerInitializer.applyRefreshPolicy(appContext, minutes)
         }
     }
 

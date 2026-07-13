@@ -12,13 +12,17 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkManagerInitializer as AndroidWorkManagerInitializer
 import androidx.work.workDataOf
+import com.codexbar.android.core.security.EncryptedPrefsManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 class WorkManagerInitializer : Initializer<Unit> {
 
     override fun create(context: Context) {
-        schedulePeriodicRefresh(context)
-        scheduleTokenRefresh(context)
+        applySavedRefreshPolicyAsync(context)
     }
 
     override fun dependencies(): List<Class<out Initializer<*>>> {
@@ -30,6 +34,20 @@ class WorkManagerInitializer : Initializer<Unit> {
         private const val TOKEN_WORK_NAME = "token_periodic_refresh"
         private const val MANUAL_QUOTA_WORK_NAME = "quota_manual_refresh"
         const val KEY_REFRESH_SOURCE = "refresh_source"
+
+        fun applyRefreshPolicy(context: Context, intervalMinutes: Long) {
+            schedulePeriodicRefresh(context, intervalMinutes)
+            scheduleTokenRefresh(context, intervalMinutes)
+        }
+
+        fun applySavedRefreshPolicyAsync(context: Context) {
+            val appContext = context.applicationContext
+            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+                val prefsManager = EncryptedPrefsManager(appContext)
+                prefsManager.warmCache()
+                applyRefreshPolicy(appContext, prefsManager.getRefreshInterval())
+            }
+        }
 
         fun schedulePeriodicRefresh(context: Context, intervalMinutes: Long = 30) {
             if (intervalMinutes <= 0) {
