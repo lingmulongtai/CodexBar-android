@@ -9,6 +9,9 @@ data class SettingsUiState(
     },
     val refreshIntervalMinutes: Long = 30L,
     val notificationsEnabled: Boolean = true,
+    val isMonitoring: Boolean = false,
+    val monitoringDurationMinutes: Long = 60L,
+    val monitoringRemainingMinutes: Long? = null,
     val privacySettings: PrivacySettings = PrivacySettings(),
     val showDeleteConfirmDialog: Boolean = false,
     val disconnectConfirmService: AiService? = null

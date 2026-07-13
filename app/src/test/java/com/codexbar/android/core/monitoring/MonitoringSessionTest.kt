@@ -34,4 +34,11 @@ class MonitoringSessionTest {
         assertEquals(0, session.remainingMinutes(120_000))
         assertEquals(0, session.remainingMinutes(121_000))
     }
+
+    @Test
+    fun `monitoring duration stays within supported session bounds`() {
+        assertEquals(15, normalizeMonitoringDuration(1))
+        assertEquals(60, normalizeMonitoringDuration(60))
+        assertEquals(180, normalizeMonitoringDuration(999))
+    }
 }

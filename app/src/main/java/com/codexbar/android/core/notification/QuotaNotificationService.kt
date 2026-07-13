@@ -185,6 +185,11 @@ class QuotaNotificationService @Inject constructor(
         manager.cancel(MONITORING_NOTIFICATION_ID)
     }
 
+    fun cancelAllNotifications() {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.cancelAll()
+    }
+
     fun showResetNotification(service: AiService, windowLabel: String) {
         val privacySettings = prefsManager.getPrivacySettings()
         val contentTitle = if (privacySettings.notificationRedactionEnabled) {

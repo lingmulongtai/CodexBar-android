@@ -11,6 +11,8 @@ import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.domain.repository.QuotaRepository
+import com.codexbar.android.core.monitoring.MonitoringSessionStore
+import com.codexbar.android.core.notification.QuotaNotificationService
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.PrivacySettings
 import com.codexbar.android.core.widget.WidgetPrefsManager
@@ -41,6 +43,8 @@ class SettingsViewModel @Inject constructor(
     private val prefsManager: EncryptedPrefsManager,
     private val quotaHistoryStore: QuotaHistoryStore,
     private val widgetPrefsManager: WidgetPrefsManager,
+    private val monitoringSessionStore: MonitoringSessionStore,
+    private val notificationService: QuotaNotificationService,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
@@ -51,10 +55,14 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             prefsManager.warmCache()
             loadSavedCredentials()
+            val monitoringSession = monitoringSessionStore.activeSession()
             _uiState.update {
                 it.copy(
                     refreshIntervalMinutes = prefsManager.getRefreshInterval(),
                     notificationsEnabled = prefsManager.isNotificationsEnabled(),
+                    isMonitoring = monitoringSession != null,
+                    monitoringDurationMinutes = monitoringSessionStore.preferredDurationMinutes(),
+                    monitoringRemainingMinutes = monitoringSession?.remainingMinutes(),
                     privacySettings = prefsManager.getPrivacySettings()
                 )
             }
@@ -268,9 +276,65 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setNotificationsEnabled(enabled: Boolean) {
-        _uiState.update { it.copy(notificationsEnabled = enabled) }
+        _uiState.update {
+            it.copy(
+                notificationsEnabled = enabled,
+                isMonitoring = if (enabled) it.isMonitoring else false,
+                monitoringRemainingMinutes = if (enabled) it.monitoringRemainingMinutes else null
+            )
+        }
         viewModelScope.launch {
             prefsManager.setNotificationsEnabled(enabled)
+            if (enabled) {
+                WorkManagerInitializer.enqueueManualQuotaRefresh(appContext, source = "notifications_enabled")
+            } else {
+                WorkManagerInitializer.stopMonitoringSession(appContext)
+                notificationService.cancelAllNotifications()
+            }
+        }
+    }
+
+    fun setMonitoringDuration(minutes: Long) {
+        val bounded = minutes.coerceIn(
+            MonitoringSessionStore.MIN_DURATION_MINUTES,
+            MonitoringSessionStore.MAX_DURATION_MINUTES
+        )
+        monitoringSessionStore.setPreferredDurationMinutes(bounded)
+        _uiState.update { it.copy(monitoringDurationMinutes = bounded) }
+    }
+
+    fun startMonitoring() {
+        viewModelScope.launch {
+            prefsManager.setNotificationsEnabled(true)
+            val session = WorkManagerInitializer.startMonitoringSession(
+                context = appContext,
+                durationMinutes = _uiState.value.monitoringDurationMinutes
+            )
+            _uiState.update {
+                it.copy(
+                    notificationsEnabled = true,
+                    isMonitoring = true,
+                    monitoringRemainingMinutes = session.remainingMinutes()
+                )
+            }
+        }
+    }
+
+    fun stopMonitoring() {
+        WorkManagerInitializer.stopMonitoringSession(appContext)
+        notificationService.cancelMonitoringNotification()
+        _uiState.update {
+            it.copy(isMonitoring = false, monitoringRemainingMinutes = null)
+        }
+    }
+
+    fun syncMonitoringState() {
+        val session = monitoringSessionStore.activeSession()
+        _uiState.update {
+            it.copy(
+                isMonitoring = session != null,
+                monitoringRemainingMinutes = session?.remainingMinutes()
+            )
         }
     }
 
@@ -316,6 +380,9 @@ class SettingsViewModel @Inject constructor(
             SettingsUiState(
                 refreshIntervalMinutes = it.refreshIntervalMinutes,
                 notificationsEnabled = it.notificationsEnabled,
+                isMonitoring = it.isMonitoring,
+                monitoringDurationMinutes = it.monitoringDurationMinutes,
+                monitoringRemainingMinutes = it.monitoringRemainingMinutes,
                 privacySettings = it.privacySettings
             )
         }

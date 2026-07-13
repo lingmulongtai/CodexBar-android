@@ -30,7 +30,7 @@ class MonitoringSessionStore @Inject constructor(
         cadenceMinutes: Long = DEFAULT_CADENCE_MINUTES,
         nowMillis: Long = System.currentTimeMillis()
     ): MonitoringSession {
-        val boundedDuration = durationMinutes.coerceIn(MIN_DURATION_MINUTES, MAX_DURATION_MINUTES)
+        val boundedDuration = normalizeMonitoringDuration(durationMinutes)
         val boundedCadence = cadenceMinutes.coerceAtLeast(MIN_CADENCE_MINUTES)
         val session = MonitoringSession(
             startedAtMillis = nowMillis,
@@ -53,6 +53,18 @@ class MonitoringSessionStore @Inject constructor(
             .apply()
     }
 
+    fun preferredDurationMinutes(): Long {
+        return normalizeMonitoringDuration(
+            prefs.getLong(KEY_PREFERRED_DURATION_MINUTES, DEFAULT_DURATION_MINUTES)
+        )
+    }
+
+    fun setPreferredDurationMinutes(durationMinutes: Long) {
+        prefs.edit()
+            .putLong(KEY_PREFERRED_DURATION_MINUTES, normalizeMonitoringDuration(durationMinutes))
+            .apply()
+    }
+
     fun activeSession(nowMillis: Long = System.currentTimeMillis()): MonitoringSession? {
         val startedAt = prefs.getLong(KEY_STARTED_AT, 0L).takeIf { it > 0L } ?: return null
         val endsAt = prefs.getLong(KEY_ENDS_AT, 0L).takeIf { it > startedAt } ?: return null
@@ -72,12 +84,20 @@ class MonitoringSessionStore @Inject constructor(
 
         const val DEFAULT_DURATION_MINUTES = 60L
         const val DEFAULT_CADENCE_MINUTES = 15L
-        private const val MIN_DURATION_MINUTES = 15L
-        private const val MAX_DURATION_MINUTES = 180L
+        const val MIN_DURATION_MINUTES = 15L
+        const val MAX_DURATION_MINUTES = 180L
         private const val MIN_CADENCE_MINUTES = 15L
 
         private const val KEY_STARTED_AT = "started_at_ms"
         private const val KEY_ENDS_AT = "ends_at_ms"
         private const val KEY_CADENCE_MINUTES = "cadence_minutes"
+        private const val KEY_PREFERRED_DURATION_MINUTES = "preferred_duration_minutes"
     }
+}
+
+internal fun normalizeMonitoringDuration(durationMinutes: Long): Long {
+    return durationMinutes.coerceIn(
+        MonitoringSessionStore.MIN_DURATION_MINUTES,
+        MonitoringSessionStore.MAX_DURATION_MINUTES
+    )
 }
