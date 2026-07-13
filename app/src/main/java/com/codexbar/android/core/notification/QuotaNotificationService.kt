@@ -10,6 +10,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.Icon
 import android.os.Build
+import android.os.Bundle
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import com.codexbar.android.R
@@ -38,6 +39,7 @@ class QuotaNotificationService @Inject constructor(
         const val MONITORING_NOTIFICATION_ID = 1002
         const val RESET_NOTIFICATION_ID_BASE = 2000
         const val ACTION_REFRESH = "com.codexbar.android.ACTION_REFRESH"
+        private const val EXTRA_REQUEST_PROMOTED_ONGOING = "android.requestPromotedOngoing"
     }
 
     init {
@@ -147,7 +149,8 @@ class QuotaNotificationService @Inject constructor(
                 subText = subText,
                 progress = progress,
                 primaryService = primaryService,
-                privacySettings = privacySettings
+                privacySettings = privacySettings,
+                endsAtMillis = session.endsAtMillis
             )
         } else {
             NotificationCompat.Builder(context, CHANNEL_ID)
@@ -222,7 +225,8 @@ class QuotaNotificationService @Inject constructor(
         subText: String,
         progress: Int,
         primaryService: ServiceQuotaPresentation?,
-        privacySettings: PrivacySettings
+        privacySettings: PrivacySettings,
+        endsAtMillis: Long
     ): Notification {
         val progressStyle = Notification.ProgressStyle()
             .setStyledByProgress(true)
@@ -238,8 +242,8 @@ class QuotaNotificationService @Inject constructor(
             .setContentText("Quota details hidden")
             .setShowWhen(false)
             .build()
+        val criticalText = if (privacySettings.notificationRedactionEnabled) "Live" else "$progress%"
 
-        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         return Notification.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_quota)
             .setContentTitle(title)
@@ -249,8 +253,16 @@ class QuotaNotificationService @Inject constructor(
             .setContentIntent(dashboardPendingIntent())
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setShowWhen(false)
-            .setFlag(Notification.FLAG_PROMOTED_ONGOING, manager.canPostPromotedNotifications())
+            .setWhen(endsAtMillis)
+            .setUsesChronometer(true)
+            .setChronometerCountDown(true)
+            .setShowWhen(true)
+            .setShortCriticalText(criticalText)
+            .addExtras(
+                Bundle().apply {
+                    putBoolean(EXTRA_REQUEST_PROMOTED_ONGOING, true)
+                }
+            )
             .setPublicVersion(publicVersion.takeIf { privacySettings.lockScreenRedactionEnabled })
             .addAction(
                 Notification.Action.Builder(
