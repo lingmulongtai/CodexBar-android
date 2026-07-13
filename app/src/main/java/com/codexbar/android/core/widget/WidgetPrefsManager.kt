@@ -140,6 +140,9 @@ class WidgetPrefsManager @Inject constructor(
         editor.putLong("${prefix}_updated_at", System.currentTimeMillis())
         editor.putString("${prefix}_status", service.status.name)
         editor.putString("${prefix}_freshness", service.freshness.ageLabel)
+        service.freshness.staleReason?.let {
+            editor.putString("${prefix}_status_message", it)
+        }
 
         service.tier?.let { editor.putString("${prefix}_tier", it) }
 
@@ -196,6 +199,10 @@ class WidgetPrefsManager @Inject constructor(
 
     fun getCachedFreshness(service: AiService): String? {
         return prefs.getString("cache_${service.name}_freshness", null)
+    }
+
+    fun getCachedStatusMessage(service: AiService): String? {
+        return prefs.getString("cache_${service.name}_status_message", null)
     }
 
     fun getCachedResetsAt(service: AiService, label: String): Long? {

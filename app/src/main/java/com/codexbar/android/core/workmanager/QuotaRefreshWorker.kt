@@ -9,10 +9,10 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.codexbar.android.R
+import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.data.QuotaHistoryStore
 import com.codexbar.android.core.domain.model.QuotaInfo
-import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.monitoring.MonitoringSessionStore
 import com.codexbar.android.core.notification.QuotaNotificationService
@@ -69,40 +69,53 @@ class QuotaRefreshWorker @AssistedInject constructor(
         if (repos.isEmpty()) return Result.success()
 
         return try {
-            val quotas = coroutineScope {
-                repos.map { (_, repo) ->
-                    async { repo.fetchQuota() }
+            val refreshResults = coroutineScope {
+                repos.map { (service, repo) ->
+                    async { service to repo.fetchQuota() }
                 }.awaitAll()
             }
 
-            val successfulQuotas = quotas.mapNotNull { result ->
+            val successfulQuotas = mutableListOf<QuotaInfo>()
+            val errors = mutableMapOf<AiService, AppError>()
+            for ((service, result) in refreshResults) {
                 when (result) {
-                    is com.codexbar.android.core.domain.model.Result.Success -> result.value
-                    is com.codexbar.android.core.domain.model.Result.Failure -> null
+                    is com.codexbar.android.core.domain.model.Result.Success -> {
+                        successfulQuotas.add(result.value)
+                    }
+                    is com.codexbar.android.core.domain.model.Result.Failure -> {
+                        errors[service] = result.error
+                    }
                 }
             }
 
-            if (successfulQuotas.isNotEmpty()) {
-                val privacySettings = prefsManager.getPrivacySettings()
-                val now = Instant.now()
+            val privacySettings = prefsManager.getPrivacySettings()
+            val now = Instant.now()
+            val paceByMetricKey = if (successfulQuotas.isNotEmpty()) {
                 quotaHistoryStore.record(successfulQuotas)
-                val paceByMetricKey = quotaHistoryStore.paceFor(successfulQuotas, now)
-                val snapshot = presentationMapper.map(
-                    quotas = successfulQuotas,
-                    generatedAt = now,
-                    privacy = PrivacyPresentation(
-                        redactSensitiveValues = false,
-                        lockScreenRedacted = privacySettings.lockScreenRedactionEnabled,
-                        widgetRedacted = privacySettings.widgetRedactionEnabled
-                    ),
-                    source = RefreshSourcePresentation.Trigger(
-                        inputData.getString(WorkManagerInitializer.KEY_REFRESH_SOURCE) ?: "periodic"
-                    ),
-                    paceByMetricKey = paceByMetricKey
-                )
-                // Cache quota data for widgets
-                cacheQuotaData(snapshot)
+                quotaHistoryStore.paceFor(successfulQuotas, now)
+            } else {
+                emptyMap()
+            }
+            val snapshot = presentationMapper.map(
+                quotas = successfulQuotas,
+                errors = errors,
+                generatedAt = now,
+                privacy = PrivacyPresentation(
+                    redactSensitiveValues = false,
+                    lockScreenRedacted = privacySettings.lockScreenRedactionEnabled,
+                    widgetRedacted = privacySettings.widgetRedactionEnabled
+                ),
+                source = RefreshSourcePresentation.Trigger(
+                    inputData.getString(WorkManagerInitializer.KEY_REFRESH_SOURCE) ?: "periodic"
+                ),
+                paceByMetricKey = paceByMetricKey
+            )
 
+            // Publish both successful data and actionable provider errors to widgets.
+            cacheQuotaData(snapshot)
+            QuotaGlanceWidget().updateAll(applicationContext)
+
+            if (successfulQuotas.isNotEmpty()) {
                 if (prefsManager.isNotificationsEnabled()) {
                     val notificationSnapshot = if (privacySettings.notificationRedactionEnabled) {
                         presentationMapper.map(
@@ -124,9 +137,6 @@ class QuotaRefreshWorker @AssistedInject constructor(
                     }
                     checkForResets(successfulQuotas)
                 }
-
-                // Update all widgets
-                QuotaGlanceWidget().updateAll(applicationContext)
             }
 
             // Request tile update

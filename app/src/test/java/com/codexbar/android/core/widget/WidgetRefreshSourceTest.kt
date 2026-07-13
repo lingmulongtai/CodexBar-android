@@ -50,10 +50,31 @@ class WidgetRefreshSourceTest {
         assertFalse(enqueueManualRefresh.contains("ExistingWorkPolicy.KEEP"))
     }
 
+    @Test
+    fun `provider failures replace waiting state with an actionable message`() {
+        val worker = sourceFileFromCore("workmanager/QuotaRefreshWorker.kt")
+        val widgetPrefs = sourceFile("WidgetPrefsManager.kt")
+        val widget = sourceFile("QuotaGlanceWidget.kt")
+
+        assertTrue(worker.contains("errors[service] = result.error"))
+        assertTrue(worker.contains("errors = errors"))
+        assertTrue(worker.contains("cacheQuotaData(snapshot)"))
+        assertTrue(widgetPrefs.contains("service.freshness.staleReason?.let"))
+        assertTrue(widgetPrefs.contains("fun getCachedStatusMessage("))
+        assertTrue(widget.contains("statusMessage ?: strings.waitingForData"))
+    }
+
     private fun sourceFile(name: String): String {
         return File(
             appDir,
             "src/main/java/com/codexbar/android/core/widget/$name"
+        ).readText().replace("\r\n", "\n")
+    }
+
+    private fun sourceFileFromCore(relativePath: String): String {
+        return File(
+            appDir,
+            "src/main/java/com/codexbar/android/core/$relativePath"
         ).readText().replace("\r\n", "\n")
     }
 }

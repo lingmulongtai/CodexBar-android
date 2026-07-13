@@ -198,6 +198,7 @@ class QuotaGlanceWidget : GlanceAppWidget() {
         val labels = widgetPrefs.getCachedLabels(service).take(config.maxRows)
         val tier = widgetPrefs.getCachedTier(service)
         val freshness = widgetPrefs.getCachedFreshness(service)
+        val statusMessage = widgetPrefs.getCachedStatusMessage(service)
 
         Column(modifier = GlanceModifier.fillMaxWidth()) {
             // Header: service name + tier + refresh button
@@ -277,7 +278,7 @@ class QuotaGlanceWidget : GlanceAppWidget() {
             // Show placeholder if no cached data yet
             if (labels.isEmpty()) {
                 Text(
-                    text = strings.waitingForData,
+                    text = statusMessage ?: strings.waitingForData,
                     style = TextStyle(
                         color = ColorProvider(Color.White.copy(alpha = 0.4f)),
                         fontSize = 12.sp
