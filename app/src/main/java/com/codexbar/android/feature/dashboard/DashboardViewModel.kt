@@ -58,59 +58,59 @@ class DashboardViewModel @Inject constructor(
 
         viewModelScope.launch {
             _isRefreshing.value = true
+            try {
+                val repos = buildList {
+                    if (prefsManager.loadCredential(AiService.CLAUDE) != null) add(AiService.CLAUDE to claudeRepository)
+                    if (prefsManager.loadCredential(AiService.CODEX) != null) add(AiService.CODEX to codexRepository)
+                    if (prefsManager.loadCredential(AiService.GEMINI) != null) add(AiService.GEMINI to geminiRepository)
+                    if (prefsManager.loadCredential(AiService.COPILOT) != null) add(AiService.COPILOT to copilotRepository)
+                }
 
-            val repos = buildList {
-                if (prefsManager.loadCredential(AiService.CLAUDE) != null) add(AiService.CLAUDE to claudeRepository)
-                if (prefsManager.loadCredential(AiService.CODEX) != null) add(AiService.CODEX to codexRepository)
-                if (prefsManager.loadCredential(AiService.GEMINI) != null) add(AiService.GEMINI to geminiRepository)
-                if (prefsManager.loadCredential(AiService.COPILOT) != null) add(AiService.COPILOT to copilotRepository)
-            }
+                if (repos.isEmpty()) {
+                    _uiState.value = DashboardUiState.Content(
+                        presentationMapper.map(emptyList(), generatedAt = Instant.now())
+                    )
+                    return@launch
+                }
 
-            if (repos.isEmpty()) {
-                _uiState.value = DashboardUiState.Content(
-                    presentationMapper.map(emptyList(), generatedAt = Instant.now())
-                )
-                _isRefreshing.value = false
-                return@launch
-            }
+                val deferreds = repos.map { (service, repo) ->
+                    async { service to repo.fetchQuota() }
+                }
 
-            val deferreds = repos.map { (service, repo) ->
-                async { service to repo.fetchQuota() }
-            }
+                val results = deferreds.map { it.await() }
 
-            val results = deferreds.map { it.await() }
+                val successfulQuotas = mutableListOf<com.codexbar.android.core.domain.model.QuotaInfo>()
+                val errors = mutableMapOf<AiService, AppError>()
 
-            val successfulQuotas = mutableListOf<com.codexbar.android.core.domain.model.QuotaInfo>()
-            val errors = mutableMapOf<AiService, AppError>()
-
-            for ((service, result) in results) {
-                when (result) {
-                    is Result.Success -> {
-                        successfulQuotas.add(result.value)
-                    }
-                    is Result.Failure -> {
-                        errors[service] = result.error
+                for ((service, result) in results) {
+                    when (result) {
+                        is Result.Success -> {
+                            successfulQuotas.add(result.value)
+                        }
+                        is Result.Failure -> {
+                            errors[service] = result.error
+                        }
                     }
                 }
-            }
 
-            val privacySettings = prefsManager.getPrivacySettings()
-            val privacy = PrivacyPresentation(
-                redactSensitiveValues = privacySettings.widgetRedactionEnabled,
-                lockScreenRedacted = privacySettings.lockScreenRedactionEnabled,
-                widgetRedacted = privacySettings.widgetRedactionEnabled
-            )
-
-            _uiState.value = DashboardUiState.Content(
-                presentationMapper.map(
-                    quotas = successfulQuotas,
-                    errors = errors,
-                    generatedAt = Instant.now(),
-                    privacy = privacy
+                val privacySettings = prefsManager.getPrivacySettings()
+                val privacy = PrivacyPresentation(
+                    redactSensitiveValues = privacySettings.widgetRedactionEnabled,
+                    lockScreenRedacted = privacySettings.lockScreenRedactionEnabled,
+                    widgetRedacted = privacySettings.widgetRedactionEnabled
                 )
-            )
 
-            _isRefreshing.value = false
+                _uiState.value = DashboardUiState.Content(
+                    presentationMapper.map(
+                        quotas = successfulQuotas,
+                        errors = errors,
+                        generatedAt = Instant.now(),
+                        privacy = privacy
+                    )
+                )
+            } finally {
+                _isRefreshing.value = false
+            }
         }
     }
 
