@@ -330,6 +330,7 @@ class SettingsViewModel @Inject constructor(
                 context = appContext,
                 durationMinutes = _uiState.value.monitoringDurationMinutes
             )
+            notificationService.showMonitoringPlaceholder(session)
             _uiState.update {
                 it.copy(
                     notificationsEnabled = true,

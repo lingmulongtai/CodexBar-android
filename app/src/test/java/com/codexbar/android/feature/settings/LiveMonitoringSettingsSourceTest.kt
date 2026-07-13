@@ -25,6 +25,7 @@ class LiveMonitoringSettingsSourceTest {
 
         assertTrue(source.contains("fun startMonitoring()"))
         assertTrue(source.contains("WorkManagerInitializer.startMonitoringSession("))
+        assertTrue(source.contains("notificationService.showMonitoringPlaceholder(session)"))
         assertTrue(source.contains("fun stopMonitoring()"))
         assertTrue(source.contains("notificationService.cancelMonitoringNotification()"))
     }

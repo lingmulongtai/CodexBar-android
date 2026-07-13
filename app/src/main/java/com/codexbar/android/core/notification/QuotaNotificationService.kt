@@ -158,14 +158,20 @@ class QuotaNotificationService @Inject constructor(
         val remainingDuration = localizedString(R.string.duration_minutes, remaining)
         val title = localizedString(R.string.notification_monitoring_title)
         val hiddenText = localizedString(R.string.notification_quota_hidden)
-        val text = if (privacySettings.notificationRedactionEnabled || primaryService == null || primaryMetric == null) {
-            localizedString(R.string.notification_monitoring_hidden, remainingDuration)
-        } else {
-            localizedString(
-                R.string.notification_service_summary,
-                primaryService.service.displayName,
-                formatRemaining(primaryService)
-            )
+        val text = when {
+            privacySettings.notificationRedactionEnabled -> {
+                localizedString(R.string.notification_monitoring_hidden, remainingDuration)
+            }
+            primaryService == null || primaryMetric == null -> {
+                localizedString(R.string.notification_monitoring_waiting, remainingDuration)
+            }
+            else -> {
+                localizedString(
+                    R.string.notification_service_summary,
+                    primaryService.service.displayName,
+                    formatRemaining(primaryService)
+                )
+            }
         }
         val subText = localizedString(R.string.notification_live_session, remainingDuration)
         val notification = if (Build.VERSION.SDK_INT >= 36) {
@@ -190,7 +196,10 @@ class QuotaNotificationService @Inject constructor(
                 .setOngoing(true)
                 .setSilent(true)
                 .setOnlyAlertOnce(true)
-                .setShowWhen(false)
+                .setWhen(session.endsAtMillis)
+                .setUsesChronometer(true)
+                .setChronometerCountDown(true)
+                .setShowWhen(true)
                 .applyPrivacy(
                     privacySettings = privacySettings,
                     channelId = CHANNEL_ID,
@@ -212,6 +221,16 @@ class QuotaNotificationService @Inject constructor(
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(MONITORING_NOTIFICATION_ID, notification)
+    }
+
+    fun showMonitoringPlaceholder(session: MonitoringSession) {
+        showMonitoringNotification(
+            snapshot = QuotaPresentationSnapshot(
+                generatedAt = Instant.now(),
+                services = emptyList()
+            ),
+            session = session
+        )
     }
 
     fun cancelMonitoringNotification() {

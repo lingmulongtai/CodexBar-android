@@ -24,4 +24,24 @@ class LiveNotificationSourceTest {
         assertTrue(builder.contains(".setShortCriticalText(criticalText)"))
         assertFalse(builder.contains("setFlag(Notification.FLAG_PROMOTED_ONGOING"))
     }
+
+    @Test
+    fun `monitoring starts with a placeholder and a system countdown`() {
+        val source = File(
+            appDir,
+            "src/main/java/com/codexbar/android/core/notification/QuotaNotificationService.kt"
+        ).readText().replace("\r\n", "\n")
+        val monitoringIndex = source.indexOf("fun showMonitoringNotification(")
+        val platformBuilderIndex = source.indexOf("private fun buildPlatformMonitoringNotification(")
+        assertTrue("monitoring builder must exist", monitoringIndex >= 0)
+        assertTrue("platform builder must exist", platformBuilderIndex > monitoringIndex)
+        val compatBuilder = source.substring(monitoringIndex, platformBuilderIndex)
+
+        assertTrue(compatBuilder.contains("R.string.notification_monitoring_waiting"))
+        assertTrue(compatBuilder.contains(".setWhen(session.endsAtMillis)"))
+        assertTrue(compatBuilder.contains(".setUsesChronometer(true)"))
+        assertTrue(compatBuilder.contains(".setChronometerCountDown(true)"))
+        assertTrue(source.contains("fun showMonitoringPlaceholder(session: MonitoringSession)"))
+        assertTrue(source.contains("services = emptyList()"))
+    }
 }

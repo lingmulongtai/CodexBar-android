@@ -192,6 +192,7 @@
     <string name="notification_service_summary">%1$s: %2$s</string>
     <string name="notification_monitoring_title">Quota monitoring</string>
     <string name="notification_monitoring_hidden">%1$s left · quota details hidden</string>
+    <string name="notification_monitoring_waiting">%1$s left · waiting for the first quota update</string>
     <string name="notification_live_session">Live session · %1$s left</string>
     <string name="notification_reset_title">Quota reset</string>
     <string name="notification_reset_service_title">%1$s quota reset</string>
