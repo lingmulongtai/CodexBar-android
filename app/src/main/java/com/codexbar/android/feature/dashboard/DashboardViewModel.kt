@@ -96,7 +96,7 @@ class DashboardViewModel @Inject constructor(
                 val paceByMetricKey = quotaHistoryStore.paceFor(successfulQuotas, now)
                 val privacySettings = prefsManager.getPrivacySettings()
                 val privacy = PrivacyPresentation(
-                    redactSensitiveValues = privacySettings.widgetRedactionEnabled,
+                    redactSensitiveValues = false,
                     lockScreenRedacted = privacySettings.lockScreenRedactionEnabled,
                     widgetRedacted = privacySettings.widgetRedactionEnabled
                 )
