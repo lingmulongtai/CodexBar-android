@@ -165,18 +165,14 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            val previousCredential = prefsManager.loadCredential(service)
-            prefsManager.saveCredential(service, credential)
-
-            val result = repo.validateCredential()
+            val hadPreviousCredential = prefsManager.loadCredential(service) != null
+            val result = repo.validateCredential(credential)
             val validationResult = when (result) {
-                is Result.Success -> ValidationResult.Success
+                is Result.Success -> {
+                    prefsManager.saveCredential(service, credential)
+                    ValidationResult.Success
+                }
                 is Result.Failure -> {
-                    if (previousCredential != null) {
-                        prefsManager.saveCredential(service, previousCredential)
-                    } else {
-                        prefsManager.deleteCredential(service)
-                    }
                     ValidationResult.Failure(formatAppError(result.error))
                 }
             }
@@ -187,7 +183,7 @@ class SettingsViewModel @Inject constructor(
                     serviceStates = state.serviceStates + (service to current.copy(
                         isValidating = false,
                         validationResult = validationResult,
-                        isConnected = validationResult is ValidationResult.Success || previousCredential != null,
+                        isConnected = validationResult is ValidationResult.Success || hadPreviousCredential,
                         hasUnsavedChanges = validationResult !is ValidationResult.Success
                     ))
                 )

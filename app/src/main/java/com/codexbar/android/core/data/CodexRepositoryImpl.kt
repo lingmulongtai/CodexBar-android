@@ -80,6 +80,28 @@ class CodexRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun validateCredential(credential: Credential): Result<Unit, AppError> {
+        val typed = credential as? Credential.CodexCredential
+            ?: return Result.Failure(AppError.AuthError(AiService.CODEX, isTerminal = true))
+
+        return try {
+            val response = apiService.getUsage(
+                authorization = "Bearer ${typed.accessToken}",
+                accountId = typed.accountId
+            )
+            when (response.code()) {
+                200 -> Result.Success(Unit)
+                401, 403 -> Result.Failure(AppError.AuthError(AiService.CODEX, isTerminal = true))
+                429 -> Result.Failure(AppError.RateLimited(RetryAfter.parseRetryAt(response.headers()["Retry-After"])))
+                else -> Result.Failure(AppError.NetworkError("HTTP ${response.code()}: ${response.message()}"))
+            }
+        } catch (e: IOException) {
+            Result.Failure(AppError.NetworkError(e.message ?: "Network error", e))
+        } catch (e: Exception) {
+            Result.Failure(AppError.ParseError(e.message ?: "Parse error", e))
+        }
+    }
+
     private suspend fun refreshToken(credential: Credential.CodexCredential): Credential.CodexCredential? {
         return tokenRefreshCoordinator.withRefreshLock(AiService.CODEX) {
             val activeCredential = prefsManager.loadCredential(AiService.CODEX)

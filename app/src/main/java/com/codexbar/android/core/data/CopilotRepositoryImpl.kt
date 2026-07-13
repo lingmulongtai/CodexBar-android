@@ -61,6 +61,25 @@ class CopilotRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun validateCredential(credential: Credential): Result<Unit, AppError> {
+        val typed = credential as? Credential.CopilotCredential
+            ?: return Result.Failure(AppError.AuthError(AiService.COPILOT, isTerminal = true))
+
+        return try {
+            val response = apiService.getUsage("token ${typed.accessToken}")
+            when (response.code()) {
+                200 -> Result.Success(Unit)
+                401, 403 -> Result.Failure(AppError.AuthError(AiService.COPILOT, isTerminal = true))
+                429 -> Result.Failure(AppError.RateLimited(RetryAfter.parseRetryAt(response.headers()["Retry-After"])))
+                else -> Result.Failure(AppError.NetworkError("HTTP ${response.code()}: ${response.message()}"))
+            }
+        } catch (e: IOException) {
+            Result.Failure(AppError.NetworkError(e.message ?: "Network error", e))
+        } catch (e: Exception) {
+            Result.Failure(AppError.ParseError(e.message ?: "Parse error", e))
+        }
+    }
+
     private fun mapToQuotaInfo(response: CopilotDto.UsageResponse): QuotaInfo {
         val snapshots = response.snapshots
         val windows = buildList {

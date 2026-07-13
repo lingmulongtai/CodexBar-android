@@ -99,6 +99,16 @@ class GeminiRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun validateCredential(credential: Credential): Result<Unit, AppError> {
+        val typed = credential as? Credential.GeminiCredential
+            ?: return Result.Failure(AppError.AuthError(AiService.GEMINI, isTerminal = true))
+
+        return when (val result = fetchQuotaWithToken(typed)) {
+            is Result.Success -> Result.Success(Unit)
+            is Result.Failure -> Result.Failure(result.error)
+        }
+    }
+
     private fun extractProjectId(response: GeminiDto.LoadCodeAssistResponse): String? {
         val element = response.cloudaicompanionProject ?: return null
         // cloudaicompanionProject can be String or Object {"id": "..."}
