@@ -1,10 +1,8 @@
 package com.codexbar.android.feature.dashboard
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codexbar.android.core.data.QuotaHistoryStore
-import com.codexbar.android.core.monitoring.MonitoringSessionStore
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.Result
@@ -12,13 +10,11 @@ import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.presentation.PrivacyPresentation
 import com.codexbar.android.core.presentation.QuotaPresentationMapper
 import com.codexbar.android.core.security.EncryptedPrefsManager
-import com.codexbar.android.core.workmanager.WorkManagerInitializer
 import com.codexbar.android.di.ClaudeRepository
 import com.codexbar.android.di.CodexRepository
 import com.codexbar.android.di.CopilotRepository
 import com.codexbar.android.di.GeminiRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,9 +30,7 @@ class DashboardViewModel @Inject constructor(
     @GeminiRepository private val geminiRepository: QuotaRepository,
     @CopilotRepository private val copilotRepository: QuotaRepository,
     private val prefsManager: EncryptedPrefsManager,
-    private val quotaHistoryStore: QuotaHistoryStore,
-    private val monitoringSessionStore: MonitoringSessionStore,
-    @ApplicationContext private val appContext: Context
+    private val quotaHistoryStore: QuotaHistoryStore
 ) : ViewModel() {
 
     private val presentationMapper = QuotaPresentationMapper()
@@ -47,11 +41,7 @@ class DashboardViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
-    private val _isMonitoring = MutableStateFlow(false)
-    val isMonitoring: StateFlow<Boolean> = _isMonitoring.asStateFlow()
-
     init {
-        _isMonitoring.value = monitoringSessionStore.activeSession() != null
         refresh()
     }
 
@@ -118,20 +108,5 @@ class DashboardViewModel @Inject constructor(
                 _isRefreshing.value = false
             }
         }
-    }
-
-    fun startMonitoring() {
-        WorkManagerInitializer.startMonitoringSession(appContext)
-        _isMonitoring.value = true
-        refresh()
-    }
-
-    fun syncMonitoringState() {
-        _isMonitoring.value = monitoringSessionStore.activeSession() != null
-    }
-
-    fun stopMonitoring() {
-        WorkManagerInitializer.stopMonitoringSession(appContext)
-        _isMonitoring.value = false
     }
 }

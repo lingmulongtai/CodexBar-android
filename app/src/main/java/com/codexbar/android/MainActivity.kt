@@ -1,7 +1,5 @@
 package com.codexbar.android
 
-import android.Manifest
-import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -10,11 +8,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
@@ -30,9 +25,6 @@ import androidx.navigation.compose.rememberNavController
 import com.codexbar.android.core.util.BatteryOptimizationHelper
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.workmanager.WorkManagerInitializer
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import com.codexbar.android.feature.dashboard.DashboardScreen
 import com.codexbar.android.feature.settings.SettingsScreen
 import com.codexbar.android.ui.theme.CodexBarTheme
@@ -54,7 +46,6 @@ class MainActivity : ComponentActivity() {
         WorkManagerInitializer.applySavedRefreshPolicyAsync(this)
     }
 
-    @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val initialDestination = startDestinationForHost(intent?.data?.host)
@@ -72,26 +63,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             CodexBarTheme {
                 val navController = rememberNavController()
-                val snackbarHostState = remember { SnackbarHostState() }
-
-                // Android 13+ notification permission
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    val permissionState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS)
-
-                    LaunchedEffect(permissionState.status.isGranted) {
-                        if (!permissionState.status.isGranted) {
-                            permissionState.launchPermissionRequest()
-                        }
-                    }
-
-                    LaunchedEffect(permissionState.status) {
-                        if (!permissionState.status.isGranted) {
-                            snackbarHostState.showSnackbar(
-                                "Notification permission required for background quota updates"
-                            )
-                        }
-                    }
-                }
 
                 // Battery optimization exemption
                 var showBatteryDialog by remember { mutableStateOf(false) }
@@ -145,13 +116,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 Scaffold(
-                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                    snackbarHost = {
-                        SnackbarHost(
-                            hostState = snackbarHostState,
-                            modifier = Modifier.navigationBarsPadding()
-                        )
-                    }
+                    contentWindowInsets = WindowInsets(0, 0, 0, 0)
                 ) { paddingValues ->
                     NavHost(
                         navController = navController,

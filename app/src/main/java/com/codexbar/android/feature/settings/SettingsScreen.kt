@@ -1,15 +1,21 @@
 package com.codexbar.android.feature.settings
 
+import android.Manifest
+import android.app.NotificationManager
 import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.PersistableBundle
+import android.provider.Settings
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,12 +52,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,10 +72,16 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.security.PrivacySettings
+import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,6 +92,41 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var notificationsAllowed by remember { mutableStateOf(context.canPostNotifications()) }
+    var promotedUpdatesAllowed by remember { mutableStateOf(context.canPostPromotedNotifications()) }
+    var enableNotificationsAfterSettings by remember { mutableStateOf(false) }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val allowed = granted && context.canPostNotifications()
+        notificationsAllowed = allowed
+        viewModel.setNotificationsEnabled(allowed)
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        val allowed = context.canPostNotifications()
+        notificationsAllowed = allowed
+        promotedUpdatesAllowed = context.canPostPromotedNotifications()
+        if (enableNotificationsAfterSettings) {
+            enableNotificationsAfterSettings = false
+            if (allowed) {
+                viewModel.setNotificationsEnabled(true)
+            } else if (uiState.notificationsEnabled) {
+                viewModel.setNotificationsEnabled(false)
+            }
+        } else if (!allowed && uiState.notificationsEnabled) {
+            viewModel.setNotificationsEnabled(false)
+        }
+        viewModel.syncMonitoringState()
+    }
+
+    LaunchedEffect(uiState.isMonitoring) {
+        if (!uiState.isMonitoring) return@LaunchedEffect
+        while (true) {
+            delay(60_000L)
+            viewModel.syncMonitoringState()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -102,7 +151,34 @@ fun SettingsScreen(
             // Notifications
             NotificationsSection(
                 enabled = uiState.notificationsEnabled,
-                onToggle = { viewModel.setNotificationsEnabled(it) }
+                notificationsAllowed = notificationsAllowed,
+                isMonitoring = uiState.isMonitoring,
+                durationMinutes = uiState.monitoringDurationMinutes,
+                remainingMinutes = uiState.monitoringRemainingMinutes,
+                hasConnectedService = uiState.serviceStates.values.any { it.isConnected },
+                promotedUpdatesAllowed = promotedUpdatesAllowed,
+                onToggle = { requested ->
+                    when {
+                        !requested -> viewModel.setNotificationsEnabled(false)
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            !context.hasNotificationPermission() -> {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                        !context.canPostNotifications() -> {
+                            enableNotificationsAfterSettings = true
+                            openAppNotificationSettings(context)
+                        }
+                        else -> viewModel.setNotificationsEnabled(true)
+                    }
+                },
+                onDurationChange = viewModel::setMonitoringDuration,
+                onStartMonitoring = viewModel::startMonitoring,
+                onStopMonitoring = viewModel::stopMonitoring,
+                onOpenNotificationSettings = {
+                    enableNotificationsAfterSettings = true
+                    openAppNotificationSettings(context)
+                },
+                onOpenPromotionSettings = { openPromotionSettings(context) }
             )
 
             PrivacySection(
@@ -475,6 +551,52 @@ private fun openAuthUrl(context: Context, url: String) {
     }
 }
 
+private fun Context.hasNotificationPermission(): Boolean {
+    return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+}
+
+private fun Context.canPostNotifications(): Boolean {
+    return hasNotificationPermission() &&
+        NotificationManagerCompat.from(this).areNotificationsEnabled()
+}
+
+private fun Context.canPostPromotedNotifications(): Boolean {
+    if (Build.VERSION.SDK_INT < 36) return false
+    val manager = getSystemService(NotificationManager::class.java) ?: return false
+    return manager.canPostPromotedNotifications()
+}
+
+private fun openAppNotificationSettings(context: Context) {
+    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+    try {
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        context.startActivity(
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:${context.packageName}")
+            )
+        )
+    }
+}
+
+private fun openPromotionSettings(context: Context) {
+    if (Build.VERSION.SDK_INT < 36) return
+    try {
+        context.startActivity(
+            Intent(Settings.ACTION_APP_NOTIFICATION_PROMOTION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        )
+    } catch (_: ActivityNotFoundException) {
+        openAppNotificationSettings(context)
+    }
+}
+
 private fun copyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService(ClipboardManager::class.java) ?: return
     val clip = ClipData.newPlainText("Sign-in code", text).apply {
@@ -535,37 +657,155 @@ private fun RefreshIntervalSection(
 @Composable
 private fun NotificationsSection(
     enabled: Boolean,
-    onToggle: (Boolean) -> Unit
+    notificationsAllowed: Boolean,
+    isMonitoring: Boolean,
+    durationMinutes: Long,
+    remainingMinutes: Long?,
+    hasConnectedService: Boolean,
+    promotedUpdatesAllowed: Boolean,
+    onToggle: (Boolean) -> Unit,
+    onDurationChange: (Long) -> Unit,
+    onStartMonitoring: () -> Unit,
+    onStopMonitoring: () -> Unit,
+    onOpenNotificationSettings: () -> Unit,
+    onOpenPromotionSettings: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Notifications",
-                    style = MaterialTheme.typography.titleMedium
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Notifications & live monitor",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "Quota updates, reset alerts, and a time-limited live session",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = enabled && notificationsAllowed,
+                    onCheckedChange = onToggle
                 )
+            }
+
+            if (!notificationsAllowed) {
                 Text(
-                    text = "Quota status and reset alerts",
+                    text = "Android is blocking notifications. Enable access to use quota alerts or live monitoring.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+                TextButton(onClick = onOpenNotificationSettings) {
+                    Text("Open notification settings")
+                }
+            }
+
+            Text(
+                text = when {
+                    isMonitoring -> {
+                        val remaining = remainingMinutes?.let(::formatMonitoringDuration) ?: "ending soon"
+                        "Live monitor running · $remaining remaining"
+                    }
+                    enabled && notificationsAllowed -> "Notifications ready · live monitor stopped"
+                    else -> "Notifications off"
+                },
+                style = MaterialTheme.typography.labelLarge,
+                color = if (isMonitoring) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
+
+            Text(
+                text = "Session length",
+                style = MaterialTheme.typography.labelLarge
+            )
+            Text(
+                text = formatMonitoringDuration(durationMinutes),
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Slider(
+                value = durationMinutes.toFloat(),
+                onValueChange = { value ->
+                    val minutes = ((value / 15f).roundToInt() * 15)
+                        .coerceIn(15, 180)
+                        .toLong()
+                    onDurationChange(minutes)
+                },
+                valueRange = 15f..180f,
+                steps = 10,
+                enabled = !isMonitoring
+            )
+            Text(
+                text = "Starts with an immediate refresh, then updates about every 15 minutes. Android may delay background work to protect battery; use Refresh in the notification for an on-demand update.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            if (isMonitoring) {
+                OutlinedButton(
+                    onClick = onStopMonitoring,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Stop live monitor")
+                }
+            } else {
+                Button(
+                    onClick = onStartMonitoring,
+                    enabled = enabled && notificationsAllowed && hasConnectedService,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Start live monitor")
+                }
+            }
+
+            if (!hasConnectedService) {
+                Text(
+                    text = "Connect at least one service before starting a live session.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Switch(
-                checked = enabled,
-                onCheckedChange = onToggle
-            )
+
+            if (Build.VERSION.SDK_INT >= 36) {
+                if (promotedUpdatesAllowed) {
+                    Text(
+                        text = "Enhanced Android Live Updates are allowed for this app.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else {
+                    OutlinedButton(
+                        onClick = onOpenPromotionSettings,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Allow enhanced Live Updates")
+                    }
+                }
+            }
         }
     }
+}
+
+private fun formatMonitoringDuration(minutes: Long): String {
+    if (minutes < 60) return "$minutes min"
+    val hours = minutes / 60
+    val remainder = minutes % 60
+    return if (remainder == 0L) "$hours hr" else "$hours hr $remainder min"
 }
 
 @Composable

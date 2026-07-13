@@ -16,16 +16,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -42,8 +39,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaStatus
@@ -56,37 +51,17 @@ fun DashboardScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
-    val isMonitoring by viewModel.isMonitoring.collectAsStateWithLifecycle()
     var selectedServiceName by remember { mutableStateOf<String?>(null) }
     val selectedService = (uiState as? DashboardUiState.Content)
         ?.snapshot
         ?.services
         ?.firstOrNull { it.service.name == selectedServiceName }
 
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.syncMonitoringState()
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("CodexBar") },
                 actions = {
-                    IconButton(
-                        onClick = {
-                            if (isMonitoring) viewModel.stopMonitoring() else viewModel.startMonitoring()
-                        }
-                    ) {
-                        Icon(
-                            imageVector = if (isMonitoring) Icons.Default.Stop else Icons.Default.PlayArrow,
-                            contentDescription = if (isMonitoring) "Stop monitoring" else "Start monitoring",
-                            tint = if (isMonitoring) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                LocalContentColor.current
-                            }
-                        )
-                    }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
