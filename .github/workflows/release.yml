@@ -50,6 +50,19 @@ jobs:
       - name: Build signed release artifacts
         run: ./gradlew --dependency-verification=strict :app:assembleRelease :app:bundleRelease :app:generateReleaseSbom
 
+      - name: Verify release signing identity
+        run: |
+          mapfile -t release_apks < <(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk')
+          test "${#release_apks[@]}" -eq 1
+          apksigner="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "$apksigner"
+          certificate_output="$("$apksigner" verify --verbose --print-certs "${release_apks[0]}")"
+          signer_count="$(awk -F': ' '/Number of signers:/ { print $2; exit }' <<< "$certificate_output")"
+          actual_sha256="$(awk -F': ' '/Signer #1 certificate SHA-256 digest:/ { print tolower($2); exit }' <<< "$certificate_output")"
+          expected_sha256="$(tr -d '[:space:]' < .github/release-signing-cert-sha256.txt)"
+          test "$signer_count" = "1"
+          test "$actual_sha256" = "$expected_sha256"
+
       - name: Prepare release bundle
         run: |
           mkdir -p build/release
