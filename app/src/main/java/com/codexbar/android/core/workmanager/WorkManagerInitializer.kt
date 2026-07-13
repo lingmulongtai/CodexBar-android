@@ -10,7 +10,6 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import androidx.work.WorkManagerInitializer as AndroidWorkManagerInitializer
 import androidx.work.workDataOf
 import com.codexbar.android.core.monitoring.MonitoringSession
 import com.codexbar.android.core.monitoring.MonitoringSessionStore
@@ -28,7 +27,7 @@ class WorkManagerInitializer : Initializer<Unit> {
     }
 
     override fun dependencies(): List<Class<out Initializer<*>>> {
-        return listOf(AndroidWorkManagerInitializer::class.java)
+        return emptyList()
     }
 
     companion object {
