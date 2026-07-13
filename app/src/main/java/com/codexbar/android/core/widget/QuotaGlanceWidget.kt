@@ -3,6 +3,7 @@ package com.codexbar.android.core.widget
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.ColorFilter
@@ -11,11 +12,13 @@ import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
@@ -48,16 +51,25 @@ import kotlin.math.roundToInt
 
 class QuotaGlanceWidget : GlanceAppWidget() {
 
+    override val sizeMode: SizeMode = SizeMode.Responsive(
+        setOf(
+            DpSize(180.dp, 90.dp),
+            DpSize(250.dp, 120.dp),
+            DpSize(320.dp, 180.dp),
+            DpSize(420.dp, 260.dp)
+        )
+    )
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val widgetPrefs = WidgetPrefsManager(context)
         val privacySettings = EncryptedPrefsManager(context).getPrivacySettings()
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
-        val selectedServices = widgetPrefs.getSelectedServices(appWidgetId)
+        val config = widgetPrefs.getWidgetConfig(appWidgetId)
 
         provideContent {
             GlanceTheme {
                 WidgetContent(
-                    selectedServices = selectedServices.toList().sortedBy { it.ordinal },
+                    config = config,
                     widgetPrefs = widgetPrefs,
                     redactQuotaDetails = privacySettings.widgetRedactionEnabled
                 )
@@ -67,10 +79,17 @@ class QuotaGlanceWidget : GlanceAppWidget() {
 
     @Composable
     private fun WidgetContent(
-        selectedServices: List<AiService>,
+        config: WidgetDisplayConfig,
         widgetPrefs: WidgetPrefsManager,
         redactQuotaDetails: Boolean
     ) {
+        val size = LocalSize.current
+        val selectedServices = config.services
+        val maxServices = when {
+            size.height < 110.dp -> 1
+            size.height < 180.dp -> 2
+            else -> selectedServices.size
+        }
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
@@ -85,13 +104,23 @@ class QuotaGlanceWidget : GlanceAppWidget() {
                 EmptyState()
             } else {
                 Column(modifier = GlanceModifier.fillMaxSize()) {
-                    for ((index, service) in selectedServices.withIndex()) {
+                    for ((index, service) in selectedServices.take(maxServices).withIndex()) {
                         if (index > 0) {
                             Spacer(modifier = GlanceModifier.height(4.dp))
                             Divider()
                             Spacer(modifier = GlanceModifier.height(8.dp))
                         }
-                        ServiceSection(service, widgetPrefs, showRefresh = index == 0)
+                        ServiceSection(service, widgetPrefs, config, showRefresh = index == 0)
+                    }
+                    if (selectedServices.size > maxServices) {
+                        Spacer(modifier = GlanceModifier.height(4.dp))
+                        Text(
+                            text = "+${selectedServices.size - maxServices} more",
+                            style = TextStyle(
+                                color = ColorProvider(Color.White.copy(alpha = 0.45f)),
+                                fontSize = 10.sp
+                            )
+                        )
                     }
                 }
             }
@@ -152,10 +181,12 @@ class QuotaGlanceWidget : GlanceAppWidget() {
     private fun ServiceSection(
         service: AiService,
         widgetPrefs: WidgetPrefsManager,
+        config: WidgetDisplayConfig,
         showRefresh: Boolean
     ) {
-        val labels = widgetPrefs.getCachedLabels(service)
+        val labels = widgetPrefs.getCachedLabels(service).take(config.maxRows)
         val tier = widgetPrefs.getCachedTier(service)
+        val freshness = widgetPrefs.getCachedFreshness(service)
 
         Column(modifier = GlanceModifier.fillMaxWidth()) {
             // Header: service name + tier + refresh button
@@ -215,10 +246,21 @@ class QuotaGlanceWidget : GlanceAppWidget() {
 
             Spacer(modifier = GlanceModifier.height(8.dp))
 
+            if (config.showFreshness && freshness != null) {
+                Text(
+                    text = "Updated $freshness",
+                    style = TextStyle(
+                        color = ColorProvider(Color.White.copy(alpha = 0.45f)),
+                        fontSize = 10.sp
+                    )
+                )
+                Spacer(modifier = GlanceModifier.height(4.dp))
+            }
+
             // Each usage window — same layout as app dashboard
             for ((index, label) in labels.withIndex()) {
                 if (index > 0) Spacer(modifier = GlanceModifier.height(6.dp))
-                WindowRow(service, label, widgetPrefs)
+                WindowRow(service, label, widgetPrefs, config)
             }
 
             // Show placeholder if no cached data yet
@@ -238,7 +280,8 @@ class QuotaGlanceWidget : GlanceAppWidget() {
     private fun WindowRow(
         service: AiService,
         label: String,
-        widgetPrefs: WidgetPrefsManager
+        widgetPrefs: WidgetPrefsManager,
+        config: WidgetDisplayConfig
     ) {
         val utilization = widgetPrefs.getCachedUtilization(service, label)
         val barProgress = widgetPrefs.getCachedBarProgress(service, label)
@@ -279,7 +322,10 @@ class QuotaGlanceWidget : GlanceAppWidget() {
             SegmentedProgressBar(barProgress, severity)
 
             // Reset time
-            val detailText = listOf(resetText, paceText).filter { it.isNotBlank() }.joinToString(" · ")
+            val detailText = listOf(
+                resetText.takeIf { config.showReset },
+                paceText.takeIf { config.showPace }
+            ).filterNotNull().filter { it.isNotBlank() }.joinToString(" · ")
             if (detailText.isNotEmpty()) {
                 Spacer(modifier = GlanceModifier.height(2.dp))
                 Row(modifier = GlanceModifier.fillMaxWidth()) {

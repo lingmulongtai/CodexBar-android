@@ -9,6 +9,14 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+data class WidgetDisplayConfig(
+    val services: List<AiService> = emptyList(),
+    val showReset: Boolean = true,
+    val showPace: Boolean = true,
+    val showFreshness: Boolean = true,
+    val maxRows: Int = 4
+)
+
 /**
  * Manages per-widget configuration (selected services) and cached quota data.
  * Uses plain SharedPreferences (not encrypted) since widget data is non-sensitive display info.
@@ -18,22 +26,50 @@ class WidgetPrefsManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val prefs: SharedPreferences by lazy {
-        context.getSharedPreferences("codexbar_widget_prefs", Context.MODE_PRIVATE)
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
     // --- Per-widget service selection ---
 
     fun saveSelectedServices(appWidgetId: Int, services: Set<AiService>) {
-        val key = "widget_${appWidgetId}_services"
-        prefs.edit().putStringSet(key, services.map { it.name }.toSet()).commit()
+        val current = getWidgetConfig(appWidgetId)
+        saveWidgetConfig(appWidgetId, current.copy(services = services.sortedBy { it.ordinal }))
     }
 
     fun getSelectedServices(appWidgetId: Int): Set<AiService> {
-        val key = "widget_${appWidgetId}_services"
-        val names = prefs.getStringSet(key, null) ?: return emptySet()
-        return names.mapNotNull { name ->
-            try { AiService.valueOf(name) } catch (_: Exception) { null }
-        }.toSet()
+        return getWidgetConfig(appWidgetId).services.toSet()
+    }
+
+    fun saveWidgetConfig(appWidgetId: Int, config: WidgetDisplayConfig) {
+        val prefix = "widget_${appWidgetId}"
+        prefs.edit()
+            .putString("${prefix}_services_order", config.services.joinToString(",") { it.name })
+            .putStringSet("${prefix}_services", config.services.map { it.name }.toSet())
+            .putBoolean("${prefix}_show_reset", config.showReset)
+            .putBoolean("${prefix}_show_pace", config.showPace)
+            .putBoolean("${prefix}_show_freshness", config.showFreshness)
+            .putInt("${prefix}_max_rows", config.maxRows.coerceIn(1, 12))
+            .commit()
+    }
+
+    fun getWidgetConfig(appWidgetId: Int): WidgetDisplayConfig {
+        val prefix = "widget_${appWidgetId}"
+        val orderedServices = prefs.getString("${prefix}_services_order", null)
+            ?.split(",")
+            ?.mapNotNull { name -> name.toAiServiceOrNull() }
+            ?.takeIf { it.isNotEmpty() }
+            ?: prefs.getStringSet("${prefix}_services", null)
+                ?.mapNotNull { name -> name.toAiServiceOrNull() }
+                ?.sortedBy { it.ordinal }
+            ?: emptyList()
+
+        return WidgetDisplayConfig(
+            services = orderedServices,
+            showReset = prefs.getBoolean("${prefix}_show_reset", true),
+            showPace = prefs.getBoolean("${prefix}_show_pace", true),
+            showFreshness = prefs.getBoolean("${prefix}_show_freshness", true),
+            maxRows = prefs.getInt("${prefix}_max_rows", 4).coerceIn(1, 12)
+        )
     }
 
     fun deleteWidgetConfig(appWidgetId: Int) {
@@ -184,5 +220,18 @@ class WidgetPrefsManager @Inject constructor(
 
     fun getCachedTier(service: AiService): String? {
         return prefs.getString("cache_${service.name}_tier", null)
+    }
+
+    private fun String.toAiServiceOrNull(): AiService? {
+        return try {
+            AiService.valueOf(this)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    companion object {
+        const val PREFS_NAME = "codexbar_widget_prefs"
+        const val BACKUP_PATH = "$PREFS_NAME.xml"
     }
 }

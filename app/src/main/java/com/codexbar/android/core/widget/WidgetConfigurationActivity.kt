@@ -27,8 +27,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -80,12 +83,19 @@ class WidgetConfigurationActivity : ComponentActivity() {
                     val availableServices = AiService.entries.filter {
                         encryptedPrefsManager.hasCredential(it)
                     }
+                    val existingConfig = widgetPrefsManager.getWidgetConfig(appWidgetId)
                     val checkedState = remember {
                         mutableStateMapOf<AiService, Boolean>().apply {
-                            // Pre-check all available services
-                            availableServices.forEach { this[it] = true }
+                            val existingServices = existingConfig.services.toSet()
+                            availableServices.forEach { service ->
+                                this[service] = if (existingServices.isEmpty()) true else service in existingServices
+                            }
                         }
                     }
+                    var showReset by remember { mutableStateOf(existingConfig.showReset) }
+                    var showPace by remember { mutableStateOf(existingConfig.showPace) }
+                    var showFreshness by remember { mutableStateOf(existingConfig.showFreshness) }
+                    var maxRows by remember { mutableStateOf(existingConfig.maxRows.coerceIn(1, 6)) }
                     val anyChecked = checkedState.values.any { it }
 
                     Scaffold(
@@ -129,6 +139,46 @@ class WidgetConfigurationActivity : ComponentActivity() {
                                 }
                             }
 
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = "Display options",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            ConfigCheckRow(
+                                title = "Show reset countdown",
+                                checked = showReset,
+                                onCheckedChange = { showReset = it }
+                            )
+                            ConfigCheckRow(
+                                title = "Show pace and forecast",
+                                checked = showPace,
+                                onCheckedChange = { showPace = it }
+                            )
+                            ConfigCheckRow(
+                                title = "Show freshness",
+                                checked = showFreshness,
+                                onCheckedChange = { showFreshness = it }
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Rows per provider: $maxRows",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedButton(
+                                    onClick = { maxRows = (maxRows - 1).coerceAtLeast(1) }
+                                ) {
+                                    Text("-")
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                OutlinedButton(
+                                    onClick = { maxRows = (maxRows + 1).coerceAtMost(6) }
+                                ) {
+                                    Text("+")
+                                }
+                            }
+
                             Spacer(modifier = Modifier.weight(1f))
 
                             // Action buttons
@@ -150,7 +200,15 @@ class WidgetConfigurationActivity : ComponentActivity() {
                                 Spacer(modifier = Modifier.width(12.dp))
 
                                 Button(
-                                    onClick = { confirmSelection(checkedState) },
+                                    onClick = {
+                                        confirmSelection(
+                                            checkedState = checkedState,
+                                            showReset = showReset,
+                                            showPace = showPace,
+                                            showFreshness = showFreshness,
+                                            maxRows = maxRows
+                                        )
+                                    },
                                     enabled = anyChecked,
                                     modifier = Modifier.weight(1f)
                                 ) {
@@ -164,13 +222,28 @@ class WidgetConfigurationActivity : ComponentActivity() {
         }
     }
 
-    private fun confirmSelection(checkedState: Map<AiService, Boolean>) {
+    private fun confirmSelection(
+        checkedState: Map<AiService, Boolean>,
+        showReset: Boolean,
+        showPace: Boolean,
+        showFreshness: Boolean,
+        maxRows: Int
+    ) {
         val selectedServices = checkedState
             .filter { it.value }
             .keys
 
         // commit() ensures data is persisted before the widget reads it
-        widgetPrefsManager.saveSelectedServices(appWidgetId, selectedServices)
+        widgetPrefsManager.saveWidgetConfig(
+            appWidgetId,
+            WidgetDisplayConfig(
+                services = selectedServices.sortedBy { it.ordinal },
+                showReset = showReset,
+                showPace = showPace,
+                showFreshness = showFreshness,
+                maxRows = maxRows
+            )
+        )
 
         // Return RESULT_OK first so the launcher places the widget
         val resultValue = Intent().apply {
@@ -189,6 +262,30 @@ class WidgetConfigurationActivity : ComponentActivity() {
             }
             finish()
         }
+    }
+}
+
+@Composable
+private fun ConfigCheckRow(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
 

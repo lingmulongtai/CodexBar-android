@@ -14,4 +14,5 @@
     android:initialLayout="@layout/widget_loading"
     android:configure="com.codexbar.android.core.widget.WidgetConfigurationActivity"
     android:description="@string/widget_description"
+    android:widgetFeatures="reconfigurable"
     android:previewLayout="@layout/widget_preview" />
