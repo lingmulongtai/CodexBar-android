@@ -8,6 +8,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.data.QuotaHistoryStore
 import com.codexbar.android.core.domain.model.QuotaInfo
 import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.domain.repository.QuotaRepository
@@ -44,7 +45,8 @@ class QuotaRefreshWorker @AssistedInject constructor(
     @CopilotRepository private val copilotRepository: QuotaRepository,
     private val prefsManager: EncryptedPrefsManager,
     private val notificationService: QuotaNotificationService,
-    private val widgetPrefsManager: WidgetPrefsManager
+    private val widgetPrefsManager: WidgetPrefsManager,
+    private val quotaHistoryStore: QuotaHistoryStore
 ) : CoroutineWorker(context, workerParams) {
 
     private val presentationMapper = QuotaPresentationMapper()
@@ -75,9 +77,12 @@ class QuotaRefreshWorker @AssistedInject constructor(
 
             if (successfulQuotas.isNotEmpty()) {
                 val privacySettings = prefsManager.getPrivacySettings()
+                val now = Instant.now()
+                quotaHistoryStore.record(successfulQuotas)
+                val paceByMetricKey = quotaHistoryStore.paceFor(successfulQuotas, now)
                 val snapshot = presentationMapper.map(
                     quotas = successfulQuotas,
-                    generatedAt = Instant.now(),
+                    generatedAt = now,
                     privacy = PrivacyPresentation(
                         redactSensitiveValues = false,
                         lockScreenRedacted = privacySettings.lockScreenRedactionEnabled,
@@ -85,7 +90,8 @@ class QuotaRefreshWorker @AssistedInject constructor(
                     ),
                     source = RefreshSourcePresentation.Trigger(
                         inputData.getString(WorkManagerInitializer.KEY_REFRESH_SOURCE) ?: "periodic"
-                    )
+                    ),
+                    paceByMetricKey = paceByMetricKey
                 )
                 // Cache quota data for widgets
                 cacheQuotaData(snapshot)
@@ -96,7 +102,8 @@ class QuotaRefreshWorker @AssistedInject constructor(
                             quotas = successfulQuotas,
                             generatedAt = snapshot.generatedAt,
                             privacy = snapshot.privacy.copy(redactSensitiveValues = true),
-                            source = snapshot.source
+                            source = snapshot.source,
+                            paceByMetricKey = paceByMetricKey
                         )
                     } else {
                         snapshot

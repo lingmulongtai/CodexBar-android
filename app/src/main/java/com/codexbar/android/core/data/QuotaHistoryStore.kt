@@ -1,0 +1,106 @@
+package com.codexbar.android.core.data
+
+import android.content.Context
+import android.content.SharedPreferences
+import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.domain.model.QuotaInfo
+import com.codexbar.android.core.presentation.PacePresentation
+import com.codexbar.android.core.presentation.QuotaHistorySample
+import com.codexbar.android.core.presentation.QuotaPaceCalculator
+import com.codexbar.android.core.presentation.QuotaPresentationMapper
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+import java.time.Instant
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class QuotaHistoryStore @Inject constructor(
+    @ApplicationContext context: Context
+) {
+    private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val calculator = QuotaPaceCalculator()
+
+    fun record(quotas: List<QuotaInfo>) {
+        val editor = prefs.edit()
+        for (quota in quotas) {
+            for (window in quota.windows) {
+                val key = historyKey(quota.service, window.label)
+                val sample = QuotaHistorySample(
+                    fetchedAt = quota.fetchedAt,
+                    utilization = window.utilization.coerceIn(0.0, 1.0),
+                    resetsAt = window.resetsAt
+                )
+                val samples = (loadSamples(key) + sample)
+                    .distinctBy { "${it.fetchedAt.toEpochMilli()}|${it.resetsAt?.epochSecond}|${it.utilization}" }
+                    .sortedBy { it.fetchedAt }
+                    .takeLast(MAX_SAMPLES_PER_WINDOW)
+                editor.putString(key, samples.joinToString("\n") { it.serialize() })
+            }
+        }
+        editor.apply()
+    }
+
+    fun paceFor(quotas: List<QuotaInfo>, now: Instant): Map<String, PacePresentation> {
+        return buildMap {
+            for (quota in quotas) {
+                for (window in quota.windows) {
+                    put(
+                        QuotaPresentationMapper.metricKey(quota.service, window.label),
+                        calculator.calculate(
+                            samples = loadSamples(historyKey(quota.service, window.label)),
+                            currentWindow = window,
+                            now = now
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    fun deleteService(service: AiService) {
+        val prefix = "${service.name}:"
+        val editor = prefs.edit()
+        prefs.all.keys.filter { it.startsWith(prefix) }.forEach { editor.remove(it) }
+        editor.apply()
+    }
+
+    private fun loadSamples(key: String): List<QuotaHistorySample> {
+        val raw = prefs.getString(key, null) ?: return emptyList()
+        return raw.lineSequence()
+            .mapNotNull { line -> line.deserializeSampleOrNull() }
+            .toList()
+    }
+
+    private fun historyKey(service: AiService, label: String): String {
+        return "${service.name}:${URLEncoder.encode(label, StandardCharsets.UTF_8.name())}"
+    }
+
+    private fun QuotaHistorySample.serialize(): String {
+        return listOf(
+            fetchedAt.toEpochMilli().toString(),
+            utilization.toString(),
+            resetsAt?.epochSecond?.toString().orEmpty()
+        ).joinToString("|")
+    }
+
+    private fun String.deserializeSampleOrNull(): QuotaHistorySample? {
+        val parts = split("|")
+        if (parts.size < 2) return null
+        return runCatching {
+            QuotaHistorySample(
+                fetchedAt = Instant.ofEpochMilli(parts[0].toLong()),
+                utilization = parts[1].toDouble(),
+                resetsAt = parts.getOrNull(2)
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { Instant.ofEpochSecond(it.toLong()) }
+            )
+        }.getOrNull()
+    }
+
+    private companion object {
+        const val PREFS_NAME = "codexbar_quota_history"
+        const val MAX_SAMPLES_PER_WINDOW = 96
+    }
+}

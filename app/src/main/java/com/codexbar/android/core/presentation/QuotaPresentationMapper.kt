@@ -20,11 +20,20 @@ class QuotaPresentationMapper(
         generatedAt: Instant = clock.instant(),
         locale: Locale = Locale.getDefault(),
         privacy: PrivacyPresentation = PrivacyPresentation(),
-        source: RefreshSourcePresentation = RefreshSourcePresentation.Unknown
+        source: RefreshSourcePresentation = RefreshSourcePresentation.Unknown,
+        paceByMetricKey: Map<String, PacePresentation> = emptyMap()
     ): QuotaPresentationSnapshot {
         val successfulServices = quotas.map { quota ->
             val metrics = quota.windows.mapIndexed { index, window ->
-                mapWindow(window, index, generatedAt, locale, privacy)
+                mapWindow(
+                    service = quota.service,
+                    window = window,
+                    index = index,
+                    generatedAt = generatedAt,
+                    locale = locale,
+                    privacy = privacy,
+                    paceByMetricKey = paceByMetricKey
+                )
             }
             val primary = metrics.maxWithOrNull(
                 compareBy<QuotaMetricPresentation> { it.usedFraction ?: -1.0 }
@@ -74,11 +83,13 @@ class QuotaPresentationMapper(
     }
 
     private fun mapWindow(
+        service: AiService,
         window: UsageWindow,
         index: Int,
         generatedAt: Instant,
         locale: Locale,
-        privacy: PrivacyPresentation
+        privacy: PrivacyPresentation,
+        paceByMetricKey: Map<String, PacePresentation>
     ): QuotaMetricPresentation {
         val used = window.utilization.takeIf { it.isFinite() }?.coerceIn(0.0, 1.0)
         val remaining = used?.let { 1.0 - it }
@@ -112,7 +123,7 @@ class QuotaPresentationMapper(
             resetLabel = if (privacy.redactSensitiveValues) null else window.resetsAt?.let {
                 formatResetLabel(it, generatedAt)
             },
-            pace = PacePresentation(
+            pace = paceByMetricKey[metricKey(service, label)] ?: PacePresentation(
                 state = PaceState.CollectingHistory,
                 label = "Collecting pace history"
             )
@@ -233,8 +244,10 @@ class QuotaPresentationMapper(
 
     private fun Double.toPercent(): Int = (this * 100.0).roundToInt().coerceIn(0, 100)
 
-    private companion object {
-        const val WARNING_USED_FRACTION = 0.60
-        const val CRITICAL_USED_FRACTION = 0.85
+    companion object {
+        fun metricKey(service: AiService, label: String): String = "${service.name}|$label"
+
+        private const val WARNING_USED_FRACTION = 0.60
+        private const val CRITICAL_USED_FRACTION = 0.85
     }
 }
