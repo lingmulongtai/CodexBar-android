@@ -2,26 +2,42 @@
 
 > Android port of [**CodexBar**](https://github.com/steipete/CodexBar) by [@steipete](https://github.com/steipete) — the macOS menu bar app for monitoring AI service quotas.
 
-Monitor your AI service quotas from your Android device. Track remaining usage for Claude, Codex (ChatGPT), and Gemini in one place.
+Monitor your AI service quotas from your Android device. Track remaining usage for Claude, Codex (ChatGPT), Gemini, and GitHub Copilot in one place.
 
 <p align="center">
-  <img src="docs/Screenshot_20260305_025201_CodexBar.jpg" width="320" alt="Dashboard" />
+  <img src="docs/images/dashboard-light.png" width="320" alt="Material 3 Expressive dashboard in light mode" />
   &nbsp;&nbsp;
-  <img src="docs/Screenshot_20260305_025207_CodexBar.jpg" width="320" alt="Settings" />
+  <img src="docs/images/dashboard-dark.png" width="320" alt="Material 3 Expressive dashboard in dark mode" />
 </p>
+
+<p align="center"><sub>Demo quota data is shown in screenshots. No account credentials are included.</sub></p>
 
 ## Features
 
-- Real-time quota monitoring for Claude, Codex, Gemini, and GitHub Copilot
-- Animated gauge bars showing remaining usage percentage
+- Unified quota monitoring for Claude, Codex, Gemini, and GitHub Copilot
+- Material 3 Expressive provider cards with animated rings, bars, exact values, reset countdowns, and pace forecasts
+- Adaptive phone navigation and a two-pane large-screen dashboard
 - Quick Settings tile for at-a-glance status
-- Configurable Android home screen widgets with quota, reset, freshness, and pace controls
-- Background refresh with configurable intervals
-- Persistent notification with per-service breakdown and a time-bound live monitoring mode
-- Dashboard detail sheets with quota windows, reset times, freshness, and pace forecast
+- Per-widget Android home screen customization for providers, quota windows, reset time, freshness, and pace
+- Configurable background refresh plus explicit refresh actions that supersede stale queued work
+- API 36 promoted Live Update with progress, remaining quota, reset, pace, Refresh, and Stop; compatible ongoing notification on older Android versions
+- Secure device-code account connection for Codex, Gemini, and GitHub Copilot, with a validated Claude setup-token fallback
 - Push alert when quota resets (fully replenished)
 - DataStore + Android Keystore-backed credential storage
-- Material 3 with Dynamic Color
+- English and Japanese per-app language selection
+- Dynamic color, light/dark themes, and responsive widget layouts
+
+## Live monitoring and large screens
+
+<p align="center">
+  <img src="docs/images/dashboard-large-screen.png" width="760" alt="Two-pane dashboard with a navigation rail on a large screen" />
+</p>
+
+<p align="center">
+  <img src="docs/images/live-update.png" width="320" alt="Android 16 promoted Live Update notification" />
+  &nbsp;&nbsp;
+  <img src="docs/images/account-setup.png" width="320" alt="Secure provider account setup" />
+</p>
 
 ## Download
 
@@ -137,7 +153,7 @@ The release workflow publishes signed APK/AAB artifacts, `SHA256SUMS`, a Cyclone
 
 ## Tech Stack
 
-- Kotlin 2.1.0, Jetpack Compose, Material 3
+- Kotlin 2.3.21, Jetpack Compose, Material 3 Expressive
 - Hilt (DI), Retrofit2 + OkHttp (networking)
 - WorkManager (background sync), DataStore + Android Keystore-backed encryption
 - Glance AppWidget, Quick Settings tile, Android notification/live monitoring APIs
