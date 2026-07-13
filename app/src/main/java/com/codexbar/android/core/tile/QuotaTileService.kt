@@ -6,6 +6,9 @@ import android.content.Intent
 import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
+import androidx.annotation.StringRes
+import androidx.core.content.ContextCompat
+import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.widget.WidgetPrefsManager
@@ -33,7 +36,7 @@ class QuotaTileService : TileService() {
         super.onClick()
         if (AiService.entries.any { prefsManager.hasCredential(it) }) {
             WorkManagerInitializer.enqueueManualQuotaRefresh(this, source = "tile")
-            updateTile(subtitleOverride = "Refreshing...")
+            updateTile(subtitleOverride = localizedString(R.string.tile_refreshing))
             return
         }
 
@@ -68,16 +71,16 @@ class QuotaTileService : TileService() {
 
         if (!hasAnyCredential) {
             tile.state = Tile.STATE_INACTIVE
-            tile.label = "CodexBar"
+            tile.label = localizedString(R.string.app_name)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                tile.subtitle = "Tap to set up"
+                tile.subtitle = localizedString(R.string.tile_tap_to_setup)
             }
             tile.updateTile()
             return
         }
 
         tile.state = Tile.STATE_ACTIVE
-        tile.label = "CodexBar"
+        tile.label = localizedString(R.string.app_name)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             tile.subtitle = subtitleOverride ?: buildSummarySubtitle()
         }
@@ -87,7 +90,7 @@ class QuotaTileService : TileService() {
     private fun buildSummarySubtitle(): String {
         val privacySettings = prefsManager.getPrivacySettings()
         if (privacySettings.widgetRedactionEnabled || privacySettings.notificationRedactionEnabled) {
-            return "Quota hidden"
+            return localizedString(R.string.tile_quota_hidden)
         }
 
         val services = AiService.entries.filter { prefsManager.hasCredential(it) }
@@ -120,10 +123,18 @@ class QuotaTileService : TileService() {
         val duration = Duration.between(Instant.ofEpochMilli(updatedAtMillis), Instant.now())
         if (duration.isNegative) return ""
         return when {
-            duration.toMinutes() < 1 -> " - just now"
-            duration.toMinutes() < 60 -> " - ${duration.toMinutes()}m ago"
-            else -> " - ${duration.toHours()}h ago"
+            duration.toMinutes() < 1 -> localizedString(R.string.tile_age_just_now)
+            duration.toMinutes() < 60 -> localizedString(
+                R.string.tile_age_minutes,
+                duration.toMinutes()
+            )
+            else -> localizedString(R.string.tile_age_hours, duration.toHours())
         }
+    }
+
+    private fun localizedString(@StringRes resourceId: Int, vararg formatArgs: Any): String {
+        return ContextCompat.getContextForLanguage(this)
+            .getString(resourceId, *formatArgs)
     }
 
     private data class TileSnapshot(

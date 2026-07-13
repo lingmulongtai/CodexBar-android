@@ -4,9 +4,11 @@ import android.content.ComponentName
 import android.content.Context
 import android.service.quicksettings.TileService
 import androidx.hilt.work.HiltWorker
+import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.data.QuotaHistoryStore
 import com.codexbar.android.core.domain.model.QuotaInfo
@@ -170,8 +172,9 @@ class QuotaRefreshWorker @AssistedInject constructor(
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
+        val languageContext = ContextCompat.getContextForLanguage(applicationContext)
         val notification = android.app.Notification.Builder(applicationContext, QuotaNotificationService.CHANNEL_ID)
-            .setContentTitle("Refreshing quota data...")
+            .setContentTitle(languageContext.getString(R.string.worker_refreshing_quota))
             .setSmallIcon(android.R.drawable.ic_popup_sync)
             .build()
 

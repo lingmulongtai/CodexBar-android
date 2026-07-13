@@ -12,7 +12,9 @@ import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
 import androidx.annotation.RequiresApi
+import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.monitoring.MonitoringActionReceiver
@@ -51,19 +53,19 @@ class QuotaNotificationService @Inject constructor(
 
         val monitorChannel = NotificationChannel(
             CHANNEL_ID,
-            "AI Quota Monitor",
+            localizedString(R.string.notification_channel_quota_name),
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "Shows current AI service quota usage"
+            description = localizedString(R.string.notification_channel_quota_description)
             setShowBadge(false)
         }
 
         val resetChannel = NotificationChannel(
             RESET_CHANNEL_ID,
-            "Quota Reset Alerts",
+            localizedString(R.string.notification_channel_reset_name),
             NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
-            description = "Notifies when AI service quotas have been reset"
+            description = localizedString(R.string.notification_channel_reset_description)
         }
 
         manager.createNotificationChannels(listOf(monitorChannel, resetChannel))
@@ -71,39 +73,53 @@ class QuotaNotificationService @Inject constructor(
 
     fun showQuotaNotification(snapshot: QuotaPresentationSnapshot) {
         val privacySettings = prefsManager.getPrivacySettings()
-        val elapsed = snapshot.services.firstOrNull()?.freshness?.ageLabel ?: "just now"
+        val elapsed = snapshot.services.firstOrNull()?.freshness?.ageLabel
+            ?: localizedString(R.string.notification_just_now)
+        val title = localizedString(R.string.notification_quota_status_title)
+        val hiddenText = localizedString(R.string.notification_quota_hidden)
+        val updatedText = localizedString(R.string.notification_updated, elapsed)
         val mostUsedProgress = snapshot.services
             .mapNotNull { it.primaryMetric?.usedPercent }
             .maxOrNull()
             ?: 0
         val summary = if (privacySettings.notificationRedactionEnabled) {
-            "Quota details hidden"
+            hiddenText
         } else {
             snapshot.services.firstOrNull()?.let { service ->
-                "${service.service.displayName}: ${formatRemaining(service)}"
-            } ?: "No quota data"
+                localizedString(
+                    R.string.notification_service_summary,
+                    service.service.displayName,
+                    formatRemaining(service)
+                )
+            } ?: localizedString(R.string.notification_no_quota_data)
         }
         val style = if (privacySettings.notificationRedactionEnabled) {
             NotificationCompat.InboxStyle()
-                .setBigContentTitle("AI quota status")
-                .addLine("Quota details hidden")
-                .setSummaryText("Updated $elapsed")
+                .setBigContentTitle(title)
+                .addLine(hiddenText)
+                .setSummaryText(updatedText)
         } else {
             NotificationCompat.InboxStyle()
-                .setBigContentTitle("AI quota status")
-                .setSummaryText("Updated $elapsed")
+                .setBigContentTitle(title)
+                .setSummaryText(updatedText)
                 .also { inbox ->
                     snapshot.services.take(5).forEach { service ->
-                        inbox.addLine("${service.service.displayName}: ${formatRemaining(service)}")
+                        inbox.addLine(
+                            localizedString(
+                                R.string.notification_service_summary,
+                                service.service.displayName,
+                                formatRemaining(service)
+                            )
+                        )
                     }
                 }
         }
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_quota)
-            .setContentTitle("AI quota status")
+            .setContentTitle(title)
             .setContentText(summary)
-            .setSubText("Updated $elapsed")
+            .setSubText(updatedText)
             .setStyle(style)
             .setProgress(100, if (privacySettings.notificationRedactionEnabled) 0 else mostUsedProgress, false)
             .setContentIntent(dashboardPendingIntent())
@@ -114,10 +130,14 @@ class QuotaNotificationService @Inject constructor(
             .applyPrivacy(
                 privacySettings = privacySettings,
                 channelId = CHANNEL_ID,
-                redactedTitle = "AI quota status",
-                redactedText = "Quota details hidden"
+                redactedTitle = title,
+                redactedText = hiddenText
             )
-            .addAction(R.drawable.ic_refresh, "Refresh", refreshPendingIntent())
+            .addAction(
+                R.drawable.ic_refresh,
+                localizedString(R.string.action_refresh),
+                refreshPendingIntent()
+            )
             .build()
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -135,13 +155,19 @@ class QuotaNotificationService @Inject constructor(
             primaryMetric?.barProgress?.times(100)?.toInt()?.coerceIn(0, 100) ?: 0
         }
         val remaining = session.remainingMinutes()
-        val title = "Quota monitoring"
+        val remainingDuration = localizedString(R.string.duration_minutes, remaining)
+        val title = localizedString(R.string.notification_monitoring_title)
+        val hiddenText = localizedString(R.string.notification_quota_hidden)
         val text = if (privacySettings.notificationRedactionEnabled || primaryService == null || primaryMetric == null) {
-            "$remaining min left - quota details hidden"
+            localizedString(R.string.notification_monitoring_hidden, remainingDuration)
         } else {
-            "${primaryService.service.displayName}: ${formatRemaining(primaryService)}"
+            localizedString(
+                R.string.notification_service_summary,
+                primaryService.service.displayName,
+                formatRemaining(primaryService)
+            )
         }
-        val subText = "Live session - $remaining min left"
+        val subText = localizedString(R.string.notification_live_session, remainingDuration)
         val notification = if (Build.VERSION.SDK_INT >= 36) {
             buildPlatformMonitoringNotification(
                 title = title,
@@ -169,10 +195,18 @@ class QuotaNotificationService @Inject constructor(
                     privacySettings = privacySettings,
                     channelId = CHANNEL_ID,
                     redactedTitle = title,
-                    redactedText = "Quota details hidden"
+                    redactedText = hiddenText
                 )
-                .addAction(R.drawable.ic_refresh, "Refresh", refreshPendingIntent())
-                .addAction(R.drawable.ic_quota, "Stop", stopMonitoringPendingIntent())
+                .addAction(
+                    R.drawable.ic_refresh,
+                    localizedString(R.string.action_refresh),
+                    refreshPendingIntent()
+                )
+                .addAction(
+                    R.drawable.ic_quota,
+                    localizedString(R.string.action_stop),
+                    stopMonitoringPendingIntent()
+                )
                 .build()
         }
 
@@ -193,14 +227,14 @@ class QuotaNotificationService @Inject constructor(
     fun showResetNotification(service: AiService, windowLabel: String) {
         val privacySettings = prefsManager.getPrivacySettings()
         val contentTitle = if (privacySettings.notificationRedactionEnabled) {
-            "Quota reset"
+            localizedString(R.string.notification_reset_title)
         } else {
-            "${service.displayName} quota reset"
+            localizedString(R.string.notification_reset_service_title, service.displayName)
         }
         val contentText = if (privacySettings.notificationRedactionEnabled) {
-            "A quota window has reset."
+            localizedString(R.string.notification_reset_generic)
         } else {
-            "$windowLabel window has been reset. Your quota is fully available."
+            localizedString(R.string.notification_reset_window, windowLabel)
         }
 
         val notification = NotificationCompat.Builder(context, RESET_CHANNEL_ID)
@@ -212,8 +246,8 @@ class QuotaNotificationService @Inject constructor(
             .applyPrivacy(
                 privacySettings = privacySettings,
                 channelId = RESET_CHANNEL_ID,
-                redactedTitle = "Quota reset",
-                redactedText = "Quota details hidden"
+                redactedTitle = localizedString(R.string.notification_reset_title),
+                redactedText = localizedString(R.string.notification_quota_hidden)
             )
             .build()
 
@@ -244,10 +278,14 @@ class QuotaNotificationService @Inject constructor(
         val publicVersion = Notification.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_quota)
             .setContentTitle(title)
-            .setContentText("Quota details hidden")
+            .setContentText(localizedString(R.string.notification_quota_hidden))
             .setShowWhen(false)
             .build()
-        val criticalText = if (privacySettings.notificationRedactionEnabled) "Live" else "$progress%"
+        val criticalText = if (privacySettings.notificationRedactionEnabled) {
+            localizedString(R.string.notification_live_short)
+        } else {
+            "$progress%"
+        }
 
         return Notification.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_quota)
@@ -272,14 +310,14 @@ class QuotaNotificationService @Inject constructor(
             .addAction(
                 Notification.Action.Builder(
                     Icon.createWithResource(context, R.drawable.ic_refresh),
-                    "Refresh",
+                    localizedString(R.string.action_refresh),
                     refreshPendingIntent()
                 ).build()
             )
             .addAction(
                 Notification.Action.Builder(
                     Icon.createWithResource(context, R.drawable.ic_quota),
-                    "Stop",
+                    localizedString(R.string.action_stop),
                     stopMonitoringPendingIntent()
                 ).build()
             )
@@ -321,11 +359,17 @@ class QuotaNotificationService @Inject constructor(
     private fun formatRemaining(service: ServiceQuotaPresentation): String {
         val primaryMetric = service.primaryMetric
         if (primaryMetric == null) {
-            return service.freshness.staleReason ?: "waiting for data"
+            return service.freshness.staleReason
+                ?: localizedString(R.string.notification_waiting_for_data)
         }
         val resetText = primaryMetric.resetLabel?.let { " - $it" } ?: ""
         val paceText = primaryMetric.pace.label.takeIf { it.isNotBlank() }?.let { " - $it" } ?: ""
         return "${primaryMetric.remainingLabel} (${primaryMetric.label})$resetText$paceText"
+    }
+
+    private fun localizedString(@StringRes resourceId: Int, vararg formatArgs: Any): String {
+        return ContextCompat.getContextForLanguage(context)
+            .getString(resourceId, *formatArgs)
     }
 
     private fun NotificationCompat.Builder.applyPrivacy(
