@@ -40,6 +40,7 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.lifecycle.lifecycleScope
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.security.EncryptedPrefsManager
+import com.codexbar.android.core.workmanager.WorkManagerInitializer
 import com.codexbar.android.ui.theme.CodexBarTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -250,6 +251,11 @@ class WidgetConfigurationActivity : ComponentActivity() {
             putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
         }
         setResult(RESULT_OK, resultValue)
+
+        WorkManagerInitializer.enqueueManualQuotaRefresh(
+            context = this,
+            source = "widget_config"
+        )
 
         // Trigger widget update asynchronously to avoid main-thread deadlock
         lifecycleScope.launch {
