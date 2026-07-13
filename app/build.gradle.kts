@@ -11,12 +11,12 @@ plugins {
 
 android {
     namespace = "com.codexbar.android"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.codexbar.android"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 7
         versionName = "0.1.1-beta"
 
