@@ -39,8 +39,9 @@ class WorkManagerInitializer : Initializer<Unit> {
         const val KEY_REFRESH_SOURCE = "refresh_source"
 
         fun applyRefreshPolicy(context: Context, intervalMinutes: Long) {
-            schedulePeriodicRefresh(context, intervalMinutes)
-            scheduleTokenRefresh(context, intervalMinutes)
+            val normalizedInterval = RefreshIntervalPolicy.normalize(intervalMinutes)
+            schedulePeriodicRefresh(context, normalizedInterval)
+            scheduleTokenRefresh(context, normalizedInterval)
         }
 
         fun applySavedRefreshPolicyAsync(context: Context) {

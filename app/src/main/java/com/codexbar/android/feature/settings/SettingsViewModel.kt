@@ -16,6 +16,7 @@ import com.codexbar.android.core.notification.QuotaNotificationService
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.PrivacySettings
 import com.codexbar.android.core.widget.WidgetPrefsManager
+import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
 import com.codexbar.android.core.workmanager.WorkManagerInitializer
 import com.codexbar.android.di.ClaudeRepository
 import com.codexbar.android.di.CodexRepository
@@ -58,7 +59,9 @@ class SettingsViewModel @Inject constructor(
             val monitoringSession = monitoringSessionStore.activeSession()
             _uiState.update {
                 it.copy(
-                    refreshIntervalMinutes = prefsManager.getRefreshInterval(),
+                    refreshIntervalMinutes = RefreshIntervalPolicy.normalize(
+                        prefsManager.getRefreshInterval()
+                    ),
                     notificationsEnabled = prefsManager.isNotificationsEnabled(),
                     isMonitoring = monitoringSession != null,
                     monitoringDurationMinutes = monitoringSessionStore.preferredDurationMinutes(),
@@ -268,10 +271,11 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setRefreshInterval(minutes: Long) {
-        _uiState.update { it.copy(refreshIntervalMinutes = minutes) }
+        val normalizedMinutes = RefreshIntervalPolicy.normalize(minutes)
+        _uiState.update { it.copy(refreshIntervalMinutes = normalizedMinutes) }
         viewModelScope.launch {
-            prefsManager.setRefreshInterval(minutes)
-            WorkManagerInitializer.applyRefreshPolicy(appContext, minutes)
+            prefsManager.setRefreshInterval(normalizedMinutes)
+            WorkManagerInitializer.applyRefreshPolicy(appContext, normalizedMinutes)
         }
     }
 

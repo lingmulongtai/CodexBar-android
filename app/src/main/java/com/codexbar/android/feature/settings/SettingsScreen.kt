@@ -49,9 +49,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.Switch
@@ -80,6 +77,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.security.PrivacySettings
+import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -618,7 +616,6 @@ private fun secretKeyboardOptions(): KeyboardOptions {
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RefreshIntervalSection(
     currentMinutes: Long,
@@ -629,27 +626,74 @@ private fun RefreshIntervalSection(
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Refresh Interval",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            val options = listOf(15L to "15 min", 30L to "30 min", 60L to "1 hour", 0L to "Manual")
-            val selectedIndex = options.indexOfFirst { it.first == currentMinutes }.takeIf { it >= 0 } ?: 1
-
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                options.forEachIndexed { index, (minutes, label) ->
-                    SegmentedButton(
-                        selected = index == selectedIndex,
-                        onClick = { onIntervalChange(minutes) },
-                        shape = SegmentedButtonDefaults.itemShape(index, options.size)
-                    ) {
-                        Text(label)
-                    }
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            val automaticRefresh = currentMinutes > RefreshIntervalPolicy.MANUAL_MINUTES
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Background refresh",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = if (automaticRefresh) {
+                            "Every ${formatMonitoringDuration(currentMinutes)}"
+                        } else {
+                            "Manual only"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
+                Switch(
+                    checked = automaticRefresh,
+                    onCheckedChange = { enabled ->
+                        onIntervalChange(
+                            if (enabled) {
+                                RefreshIntervalPolicy.DEFAULT_MINUTES
+                            } else {
+                                RefreshIntervalPolicy.MANUAL_MINUTES
+                            }
+                        )
+                    }
+                )
             }
+
+            if (automaticRefresh) {
+                val refreshRange = RefreshIntervalPolicy.MIN_MINUTES.toFloat()..
+                    RefreshIntervalPolicy.MAX_MINUTES.toFloat()
+                val refreshSteps = (
+                    (RefreshIntervalPolicy.MAX_MINUTES - RefreshIntervalPolicy.MIN_MINUTES) /
+                        RefreshIntervalPolicy.STEP_MINUTES - 1
+                    ).toInt()
+                Text(
+                    text = formatMonitoringDuration(currentMinutes),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Slider(
+                    value = currentMinutes.toFloat(),
+                    onValueChange = { value ->
+                        onIntervalChange(
+                            RefreshIntervalPolicy.normalize(value.roundToInt().toLong())
+                        )
+                    },
+                    valueRange = refreshRange,
+                    steps = refreshSteps
+                )
+            }
+
+            Text(
+                text = "Choose 15–120 minutes in 5-minute steps. Android schedules background work approximately; 15 minutes is the system minimum, not an exact polling guarantee.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
