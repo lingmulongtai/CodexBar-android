@@ -47,7 +47,11 @@ fun DashboardScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val isMonitoring by viewModel.isMonitoring.collectAsStateWithLifecycle()
-    var selectedService by remember { mutableStateOf<ServiceQuotaPresentation?>(null) }
+    var selectedServiceName by remember { mutableStateOf<String?>(null) }
+    val selectedService = (uiState as? DashboardUiState.Content)
+        ?.snapshot
+        ?.services
+        ?.firstOrNull { it.service.name == selectedServiceName }
 
     Scaffold(
         topBar = {
@@ -102,7 +106,7 @@ fun DashboardScreen(
                             services = state.snapshot.services,
                             errorBanner = failedServices.takeIf { it.isNotBlank() }
                                 ?.let { "Needs attention: $it" },
-                            onServiceClick = { selectedService = it }
+                            onServiceClick = { selectedServiceName = it.service.name }
                         )
                     }
                 }
@@ -113,10 +117,10 @@ fun DashboardScreen(
     selectedService?.let { service ->
         ServiceDetailSheet(
             service = service,
-            onDismiss = { selectedService = null },
+            onDismiss = { selectedServiceName = null },
             onRefresh = { viewModel.refresh() },
             onOpenSettings = {
-                selectedService = null
+                selectedServiceName = null
                 onNavigateToSettings()
             }
         )
