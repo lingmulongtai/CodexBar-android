@@ -26,6 +26,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -44,6 +47,7 @@ fun DashboardScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val isMonitoring by viewModel.isMonitoring.collectAsStateWithLifecycle()
+    var selectedService by remember { mutableStateOf<ServiceQuotaPresentation?>(null) }
 
     Scaffold(
         topBar = {
@@ -97,19 +101,33 @@ fun DashboardScreen(
                         CardList(
                             services = state.snapshot.services,
                             errorBanner = failedServices.takeIf { it.isNotBlank() }
-                                ?.let { "Needs attention: $it" }
+                                ?.let { "Needs attention: $it" },
+                            onServiceClick = { selectedService = it }
                         )
                     }
                 }
             }
         }
     }
+
+    selectedService?.let { service ->
+        ServiceDetailSheet(
+            service = service,
+            onDismiss = { selectedService = null },
+            onRefresh = { viewModel.refresh() },
+            onOpenSettings = {
+                selectedService = null
+                onNavigateToSettings()
+            }
+        )
+    }
 }
 
 @Composable
 private fun CardList(
     services: List<ServiceQuotaPresentation>,
-    errorBanner: String?
+    errorBanner: String?,
+    onServiceClick: (ServiceQuotaPresentation) -> Unit
 ) {
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -128,7 +146,7 @@ private fun CardList(
         items(services, key = { it.service.name }) { service ->
             ServiceCard(
                 service = service,
-                onClick = { /* Bottom sheet detail — future enhancement */ }
+                onClick = { onServiceClick(service) }
             )
         }
     }
