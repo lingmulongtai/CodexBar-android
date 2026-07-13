@@ -39,6 +39,7 @@ import com.codexbar.android.ui.theme.CodexBarStateColors
 @Composable
 fun QuotaGaugeBar(
     metric: QuotaMetricPresentation,
+    showExtendedDetails: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val animatedProgress by animateFloatAsState(
@@ -103,13 +104,23 @@ fun QuotaGaugeBar(
             )
         }
 
-        if (metric.resetLabel != null || metric.pace.label.isNotBlank()) {
+        val detailLabels = buildList {
+            metric.resetLabel?.let(::add)
+            metric.pace.label.takeIf { it.isNotBlank() }?.let(::add)
+            if (showExtendedDetails) {
+                metric.pace.reserveLabel?.let(::add)
+                metric.pace.forecastLabel?.let(::add)
+            }
+        }.distinct()
+        if (detailLabels.isNotEmpty()) {
             Text(
-                text = listOfNotNull(metric.resetLabel, metric.pace.label).joinToString(" - "),
+                text = detailLabels.joinToString(" · "),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.End,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = if (showExtendedDetails) 2 else 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

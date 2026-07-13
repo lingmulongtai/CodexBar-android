@@ -129,7 +129,8 @@ fun ServiceCard(
             // Primary gauge (first window)
             service.primaryMetric?.let { metric ->
                 QuotaGaugeBar(
-                    metric = metric
+                    metric = metric,
+                    showExtendedDetails = true
                 )
             }
 
@@ -143,7 +144,8 @@ fun ServiceCard(
                 ) {
                     secondaryWindows.forEach { metric ->
                         QuotaGaugeBar(
-                            metric = metric
+                            metric = metric,
+                            showExtendedDetails = true
                         )
                     }
                 }

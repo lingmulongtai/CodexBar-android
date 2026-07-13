@@ -3,6 +3,7 @@ package com.codexbar.android.feature.dashboard
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.codexbar.android.core.data.QuotaHistoryStore
 import com.codexbar.android.core.monitoring.MonitoringSessionStore
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
@@ -33,6 +34,7 @@ class DashboardViewModel @Inject constructor(
     @GeminiRepository private val geminiRepository: QuotaRepository,
     @CopilotRepository private val copilotRepository: QuotaRepository,
     private val prefsManager: EncryptedPrefsManager,
+    private val quotaHistoryStore: QuotaHistoryStore,
     private val monitoringSessionStore: MonitoringSessionStore,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
@@ -93,6 +95,9 @@ class DashboardViewModel @Inject constructor(
                     }
                 }
 
+                val now = Instant.now()
+                quotaHistoryStore.record(successfulQuotas)
+                val paceByMetricKey = quotaHistoryStore.paceFor(successfulQuotas, now)
                 val privacySettings = prefsManager.getPrivacySettings()
                 val privacy = PrivacyPresentation(
                     redactSensitiveValues = privacySettings.widgetRedactionEnabled,
@@ -104,8 +109,9 @@ class DashboardViewModel @Inject constructor(
                     presentationMapper.map(
                         quotas = successfulQuotas,
                         errors = errors,
-                        generatedAt = Instant.now(),
-                        privacy = privacy
+                        generatedAt = now,
+                        privacy = privacy,
+                        paceByMetricKey = paceByMetricKey
                     )
                 )
             } finally {
