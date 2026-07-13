@@ -45,6 +45,7 @@ import com.codexbar.android.core.presentation.PacePresentation
 import com.codexbar.android.core.presentation.PaceState
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaStatus
+import com.codexbar.android.ui.components.providerIcon
 import com.codexbar.android.ui.theme.CodexBarSpacing
 import com.codexbar.android.ui.theme.CodexBarStateColors
 import com.codexbar.android.ui.theme.providerVisualStyle
