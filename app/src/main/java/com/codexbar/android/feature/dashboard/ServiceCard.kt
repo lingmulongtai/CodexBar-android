@@ -1,6 +1,7 @@
 package com.codexbar.android.feature.dashboard
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Error
@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
@@ -47,37 +48,61 @@ fun ServiceCard(
         Column(
             modifier = Modifier.padding(CodexBarSpacing.large)
         ) {
-            // Header: Icon + Name + Tier badge
+            // Header: provider identity + connection status
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(
-                    imageVector = Icons.Default.Cloud,
-                    contentDescription = service.service.displayName,
-                    modifier = Modifier.size(32.dp),
-                    tint = CodexBarStateColors.providerAccent(service.service)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = service.service.displayName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                service.tier?.let { tier ->
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer
-                    ) {
-                        Text(
-                            text = tier,
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                val providerColor = CodexBarStateColors.providerAccent(service.service)
+                Surface(
+                    modifier = Modifier.size(40.dp),
+                    shape = MaterialTheme.shapes.small,
+                    color = providerColor.copy(alpha = 0.14f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Cloud,
+                            contentDescription = service.service.displayName,
+                            modifier = Modifier.size(22.dp),
+                            tint = providerColor
                         )
                     }
                 }
+                Spacer(modifier = Modifier.width(CodexBarSpacing.medium))
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = service.service.displayName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        service.tier?.let { tier ->
+                            Spacer(modifier = Modifier.width(CodexBarSpacing.small))
+                            Surface(
+                                shape = MaterialTheme.shapes.extraSmall,
+                                color = MaterialTheme.colorScheme.secondaryContainer
+                            ) {
+                                Text(
+                                    text = tier,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(
+                                        horizontal = CodexBarSpacing.small,
+                                        vertical = CodexBarSpacing.xsmall
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    }
+                    service.accountLabel?.takeIf { it.isNotBlank() }?.let { account ->
+                        Text(
+                            text = account,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                StatusPill(status = service.status)
             }
 
             // Error state
@@ -155,5 +180,48 @@ private fun ServiceQuotaStatus.toLabel(): String {
         ServiceQuotaStatus.ProviderError -> "Provider error"
         ServiceQuotaStatus.Disconnected -> "Not connected"
         ServiceQuotaStatus.Redacted -> "Quota hidden"
+    }
+}
+
+@Composable
+private fun StatusPill(status: ServiceQuotaStatus) {
+    val color = status.color()
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = color.copy(alpha = 0.12f)
+    ) {
+        Text(
+            text = status.toStatusLabel(),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = color,
+            modifier = Modifier.padding(
+                horizontal = CodexBarSpacing.small,
+                vertical = CodexBarSpacing.xsmall
+            )
+        )
+    }
+}
+
+@Composable
+private fun ServiceQuotaStatus.color(): Color {
+    return when (this) {
+        ServiceQuotaStatus.Fresh -> MaterialTheme.colorScheme.primary
+        ServiceQuotaStatus.Redacted -> MaterialTheme.colorScheme.outline
+        ServiceQuotaStatus.Stale,
+        ServiceQuotaStatus.Loading,
+        ServiceQuotaStatus.Disconnected -> MaterialTheme.colorScheme.onSurfaceVariant
+        ServiceQuotaStatus.AuthRequired,
+        ServiceQuotaStatus.RateLimited,
+        ServiceQuotaStatus.Offline,
+        ServiceQuotaStatus.ProviderError -> MaterialTheme.colorScheme.error
+    }
+}
+
+private fun ServiceQuotaStatus.toStatusLabel(): String {
+    return when (this) {
+        ServiceQuotaStatus.Fresh -> "Up to date"
+        ServiceQuotaStatus.Redacted -> "Hidden"
+        else -> toLabel()
     }
 }
