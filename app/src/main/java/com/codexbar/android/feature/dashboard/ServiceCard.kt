@@ -22,11 +22,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaStatus
+import com.codexbar.android.ui.theme.CodexBarSpacing
+import com.codexbar.android.ui.theme.CodexBarStateColors
 
 @Composable
 fun ServiceCard(
@@ -37,14 +38,14 @@ fun ServiceCard(
     Card(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.medium,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(CodexBarSpacing.large)
         ) {
             // Header: Icon + Name + Tier badge
             Row(
@@ -55,7 +56,7 @@ fun ServiceCard(
                     imageVector = Icons.Default.Cloud,
                     contentDescription = service.service.displayName,
                     modifier = Modifier.size(32.dp),
-                    tint = Color(service.service.brandColor)
+                    tint = CodexBarStateColors.providerAccent(service.service)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(

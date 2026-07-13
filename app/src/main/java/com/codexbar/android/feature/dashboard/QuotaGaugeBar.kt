@@ -21,15 +21,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.codexbar.android.core.presentation.QuotaMetricPresentation
-import com.codexbar.android.core.presentation.QuotaSeverity
-
-private val AmberWarning = Color(0xFFFFC107)
+import com.codexbar.android.ui.theme.CodexBarStateColors
 
 /**
  * Displays a gauge bar showing remaining quota.
@@ -47,13 +44,7 @@ fun QuotaGaugeBar(
         label = "gauge_progress"
     )
 
-    val gaugeColor = when (metric.severity) {
-        QuotaSeverity.Critical -> MaterialTheme.colorScheme.error
-        QuotaSeverity.Warning -> AmberWarning
-        QuotaSeverity.Good -> MaterialTheme.colorScheme.primary
-        QuotaSeverity.Unknown -> MaterialTheme.colorScheme.outline
-        QuotaSeverity.Redacted -> MaterialTheme.colorScheme.surfaceVariant
-    }
+    val gaugeColor = CodexBarStateColors.severityColor(metric.severity)
 
     val animatedColor by animateColorAsState(
         targetValue = gaugeColor,
