@@ -1,5 +1,7 @@
 package com.codexbar.android
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.setContent
@@ -18,6 +20,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.lifecycleScope
 import com.codexbar.android.core.util.BatteryOptimizationHelper
 import com.codexbar.android.core.security.EncryptedPrefsManager
+import com.codexbar.android.core.update.AvailableUpdate
+import com.codexbar.android.core.update.GitHubReleaseUpdateChecker
 import com.codexbar.android.core.workmanager.WorkManagerInitializer
 import com.codexbar.android.ui.theme.CodexBarTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -29,6 +33,9 @@ class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var prefsManager: EncryptedPrefsManager
+
+    @Inject
+    lateinit var releaseUpdateChecker: GitHubReleaseUpdateChecker
 
     private val batteryOptLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -56,11 +63,16 @@ class MainActivity : AppCompatActivity() {
             CodexBarTheme {
                 // Battery optimization exemption
                 var showBatteryDialog by remember { mutableStateOf(false) }
+                var availableUpdate by remember { mutableStateOf<AvailableUpdate?>(null) }
 
                 LaunchedEffect(Unit) {
                     if (!BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this@MainActivity)) {
                         showBatteryDialog = true
                     }
+                }
+
+                LaunchedEffect(Unit) {
+                    availableUpdate = releaseUpdateChecker.checkForUpdate(BuildConfig.VERSION_NAME)
                 }
 
                 if (showBatteryDialog) {
@@ -100,6 +112,36 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                     )
+                } else {
+                    availableUpdate?.let { update ->
+                        AlertDialog(
+                            onDismissRequest = { availableUpdate = null },
+                            title = { Text(stringResource(R.string.update_available_title)) },
+                            text = {
+                                Text(
+                                    stringResource(
+                                        R.string.update_available_message,
+                                        update.version
+                                    )
+                                )
+                            },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        availableUpdate = null
+                                        openUpdateDownload(update)
+                                    }
+                                ) {
+                                    Text(stringResource(R.string.action_download_update))
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { availableUpdate = null }) {
+                                    Text(stringResource(R.string.action_later))
+                                }
+                            }
+                        )
+                    }
                 }
 
                 CodexBarApp(
@@ -118,6 +160,19 @@ class MainActivity : AppCompatActivity() {
             )
         } else {
             window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
+
+    private fun openUpdateDownload(update: AvailableUpdate) {
+        val urls = listOf(update.downloadUrl, update.releasePageUrl).distinct()
+        for (url in urls) {
+            val opened = runCatching {
+                startActivity(
+                    Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        .addCategory(Intent.CATEGORY_BROWSABLE)
+                )
+            }.isSuccess
+            if (opened) return
         }
     }
 }

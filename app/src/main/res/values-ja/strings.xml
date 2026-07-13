@@ -4,6 +4,10 @@
     <string name="tile_label">CodexBar</string>
     <string name="widget_description">AIサービスの使用枠をひと目で確認</string>
     <string name="settings_title">設定</string>
+    <string name="update_available_title">アップデートがあります</string>
+    <string name="update_available_message">CodexBar %1$sを利用できます。このプロジェクトのGitHub Releaseから署名済みAPKをダウンロードし、現在のバージョンへ上書きインストールすると、アカウントと設定を保持できます。</string>
+    <string name="action_download_update">アップデートをダウンロード</string>
+    <string name="action_later">後で</string>
     <string name="settings_accounts_title">アカウント</string>
     <string name="settings_accounts_description">安全なログイン、または上級者向けの手動設定でサービスを接続します。</string>
     <string name="settings_monitoring_title">モニタリング</string>

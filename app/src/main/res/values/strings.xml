@@ -4,6 +4,10 @@
     <string name="tile_label">CodexBar</string>
     <string name="widget_description">Monitor AI service quota usage at a glance</string>
     <string name="settings_title">Settings</string>
+    <string name="update_available_title">Update available</string>
+    <string name="update_available_message">CodexBar %1$s is available. Download the signed APK from this project’s GitHub Release and install it over this version to keep your accounts and settings.</string>
+    <string name="action_download_update">Download update</string>
+    <string name="action_later">Later</string>
     <string name="settings_accounts_title">Accounts</string>
     <string name="settings_accounts_description">Connect providers with secure sign-in or an advanced manual fallback.</string>
     <string name="settings_monitoring_title">Monitoring</string>
