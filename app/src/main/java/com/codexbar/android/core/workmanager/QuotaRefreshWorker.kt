@@ -16,6 +16,7 @@ import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.monitoring.MonitoringSessionStore
 import com.codexbar.android.core.notification.QuotaNotificationService
+import com.codexbar.android.core.presentation.AndroidQuotaPresentationText
 import com.codexbar.android.core.presentation.PrivacyPresentation
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.QuotaPresentationMapper
@@ -53,7 +54,9 @@ class QuotaRefreshWorker @AssistedInject constructor(
     private val monitoringSessionStore: MonitoringSessionStore
 ) : CoroutineWorker(context, workerParams) {
 
-    private val presentationMapper = QuotaPresentationMapper()
+    private val presentationMapper = QuotaPresentationMapper(
+        text = AndroidQuotaPresentationText(context)
+    )
 
     override suspend fun doWork(): Result {
         val repos = buildList {

@@ -12,13 +12,14 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 class QuotaPresentationMapper(
-    private val clock: Clock = Clock.systemDefaultZone()
+    private val clock: Clock = Clock.systemDefaultZone(),
+    private val text: QuotaPresentationText = EnglishQuotaPresentationText
 ) {
     fun map(
         quotas: List<QuotaInfo>,
         errors: Map<AiService, AppError> = emptyMap(),
         generatedAt: Instant = clock.instant(),
-        locale: Locale = Locale.getDefault(),
+        locale: Locale = text.locale,
         privacy: PrivacyPresentation = PrivacyPresentation(),
         source: RefreshSourcePresentation = RefreshSourcePresentation.Unknown,
         paceByMetricKey: Map<String, PacePresentation> = emptyMap()
@@ -102,7 +103,7 @@ class QuotaPresentationMapper(
             used >= WARNING_USED_FRACTION -> QuotaSeverity.Warning
             else -> QuotaSeverity.Good
         }
-        val label = window.label.ifBlank { "Window ${index + 1}" }
+        val label = window.label.ifBlank { text.window(index + 1) }
         return QuotaMetricPresentation(
             id = label.lowercase(locale).replace(Regex("[^a-z0-9]+"), "-").trim('-')
                 .ifBlank { "window-${index + 1}" },
@@ -111,11 +112,15 @@ class QuotaPresentationMapper(
             remainingFraction = if (privacy.redactSensitiveValues) null else remaining,
             usedPercent = if (privacy.redactSensitiveValues) null else usedPercent,
             remainingPercent = if (privacy.redactSensitiveValues) null else remainingPercent,
-            usedLabel = if (privacy.redactSensitiveValues || usedPercent == null) "Used hidden" else "$usedPercent% used",
-            remainingLabel = if (privacy.redactSensitiveValues || remainingPercent == null) {
-                "Remaining hidden"
+            usedLabel = if (privacy.redactSensitiveValues || usedPercent == null) {
+                text.usedHidden()
             } else {
-                "$remainingPercent% left"
+                text.percentUsed(usedPercent)
+            },
+            remainingLabel = if (privacy.redactSensitiveValues || remainingPercent == null) {
+                text.remainingHidden()
+            } else {
+                text.percentRemaining(remainingPercent)
             },
             barProgress = if (privacy.redactSensitiveValues) 0f else (remaining ?: 0.0).toFloat(),
             severity = severity,
@@ -125,7 +130,7 @@ class QuotaPresentationMapper(
             },
             pace = paceByMetricKey[metricKey(service, label)] ?: PacePresentation(
                 state = PaceState.CollectingHistory,
-                label = "Collecting pace history"
+                label = text.collectingPaceHistory()
             )
         )
     }
@@ -140,21 +145,30 @@ class QuotaPresentationMapper(
         val remaining = (limit - used).coerceAtLeast(0.0)
         val utilization = extraUsage.utilization.takeIf { it.isFinite() }?.coerceIn(0.0, 1.0) ?: 0.0
         return ExtraUsagePresentation(
-            label = "Credits",
+            label = text.credits(),
             usedCreditsLabel = if (privacy.redactSensitiveValues) {
-                "Used hidden"
+                text.usedHidden()
             } else {
-                "${extraUsage.currency} ${String.format(locale, "%.2f", used)} used"
+                text.currencyUsed(
+                    extraUsage.currency,
+                    String.format(locale, "%.2f", used)
+                )
             },
             limitLabel = if (privacy.redactSensitiveValues) {
-                "Limit hidden"
+                text.limitHidden()
             } else {
-                "${extraUsage.currency} ${String.format(locale, "%.2f", limit)} limit"
+                text.currencyLimit(
+                    extraUsage.currency,
+                    String.format(locale, "%.2f", limit)
+                )
             },
             remainingLabel = if (privacy.redactSensitiveValues) {
-                "Remaining hidden"
+                text.remainingHidden()
             } else {
-                "${extraUsage.currency} ${String.format(locale, "%.2f", remaining)} left"
+                text.currencyRemaining(
+                    extraUsage.currency,
+                    String.format(locale, "%.2f", remaining)
+                )
             },
             utilizationFraction = if (privacy.redactSensitiveValues) 0.0 else utilization,
             severity = when {
@@ -193,7 +207,7 @@ class QuotaPresentationMapper(
             extraUsage = null,
             freshness = FreshnessPresentation(
                 fetchedAt = null,
-                ageLabel = "No fresh data",
+                ageLabel = text.noFreshData(),
                 state = freshnessState,
                 staleReason = error.toPresentationMessage(),
                 nextRetryAt = (error as? AppError.RateLimited)?.retryAt
@@ -209,23 +223,27 @@ class QuotaPresentationMapper(
 
     private fun AppError.toPresentationMessage(): String {
         return when (this) {
-            is AppError.AuthError -> if (isTerminal) "Reauthentication required" else "Authentication failed"
-            is AppError.CredentialNotFound -> "Not connected"
-            is AppError.NetworkError -> "Network unavailable"
-            is AppError.RateLimited -> retryAt?.let { "Rate limited until $it" } ?: "Rate limited"
-            is AppError.ParseError -> "Provider response could not be parsed"
-            AppError.ServiceUnavailable -> "Provider unavailable"
+            is AppError.AuthError -> if (isTerminal) {
+                text.reauthenticationRequired()
+            } else {
+                text.authenticationFailed()
+            }
+            is AppError.CredentialNotFound -> text.notConnected()
+            is AppError.NetworkError -> text.networkUnavailable()
+            is AppError.RateLimited -> retryAt?.let(text::rateLimitedUntil) ?: text.rateLimited()
+            is AppError.ParseError -> text.providerResponseInvalid()
+            AppError.ServiceUnavailable -> text.providerUnavailable()
         }
     }
 
     private fun formatAge(fetchedAt: Instant?, now: Instant): String {
-        if (fetchedAt == null) return "No fresh data"
+        if (fetchedAt == null) return text.noFreshData()
         val age = Duration.between(fetchedAt, now)
-        if (age.isNegative || age.toMinutes() < 1) return "just now"
+        if (age.isNegative || age.toMinutes() < 1) return text.justNow()
         return when {
-            age.toMinutes() < 60 -> "${age.toMinutes()}m ago"
-            age.toHours() < 24 -> "${age.toHours()}h ago"
-            else -> "${age.toDays()}d ago"
+            age.toMinutes() < 60 -> text.minutesAgo(age.toMinutes())
+            age.toHours() < 24 -> text.hoursAgo(age.toHours())
+            else -> text.daysAgo(age.toDays())
         }
     }
 
@@ -236,9 +254,9 @@ class QuotaPresentationMapper(
         val hours = duration.toHours()
         val days = duration.toDays()
         return when {
-            days > 0 -> "Resets in ${days}d ${hours % 24}h"
-            hours > 0 -> "Resets in ${hours}h ${minutes % 60}m"
-            else -> "Resets in ${minutes}m"
+            days > 0 -> text.resetsInDays(days, hours % 24)
+            hours > 0 -> text.resetsInHours(hours, minutes % 60)
+            else -> text.resetsInMinutes(minutes)
         }
     }
 

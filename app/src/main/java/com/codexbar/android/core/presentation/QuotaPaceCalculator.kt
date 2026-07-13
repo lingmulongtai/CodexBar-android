@@ -11,7 +11,9 @@ data class QuotaHistorySample(
     val resetsAt: Instant?
 )
 
-class QuotaPaceCalculator {
+class QuotaPaceCalculator(
+    private val text: QuotaPresentationText = EnglishQuotaPresentationText
+) {
     fun calculate(
         samples: List<QuotaHistorySample>,
         currentWindow: UsageWindow,
@@ -19,8 +21,8 @@ class QuotaPaceCalculator {
     ): PacePresentation {
         val currentUsed = currentWindow.utilization.takeIf { it.isFinite() }?.coerceIn(0.0, 1.0)
             ?: return unknown()
-        val resetAt = currentWindow.resetsAt ?: return collecting("No reset time")
-        if (!resetAt.isAfter(now)) return collecting("Waiting for next window")
+        val resetAt = currentWindow.resetsAt ?: return collecting(text.noResetTime())
+        if (!resetAt.isAfter(now)) return collecting(text.waitingForNextWindow())
 
         val comparableSamples = samples
             .filter { sample ->
@@ -31,18 +33,20 @@ class QuotaPaceCalculator {
             .sortedBy { it.fetchedAt }
 
         val baseline = comparableSamples.firstOrNull { it.fetchedAt.isBefore(now.minusSeconds(MIN_SAMPLE_SPACING_SECONDS)) }
-            ?: return collecting("Collecting pace history")
+            ?: return collecting(text.collectingPaceHistory())
 
         val elapsedHours = Duration.between(baseline.fetchedAt, now).toMinutes() / 60.0
-        if (elapsedHours <= 0.0) return collecting("Collecting pace history")
+        if (elapsedHours <= 0.0) return collecting(text.collectingPaceHistory())
 
         val usedDelta = (currentUsed - baseline.utilization.coerceIn(0.0, 1.0)).coerceAtLeast(0.0)
         if (usedDelta <= 0.0) {
             return PacePresentation(
                 state = PaceState.OnTrack,
-                label = "Pace stable",
-                reserveLabel = "${((1.0 - currentUsed) * 100).roundToInt().coerceIn(0, 100)}% reserve",
-                forecastLabel = "No recent increase"
+                label = text.paceStable(),
+                reserveLabel = text.reserve(
+                    ((1.0 - currentUsed) * 100).roundToInt().coerceIn(0, 100)
+                ),
+                forecastLabel = text.noRecentIncrease()
             )
         }
 
@@ -59,17 +63,17 @@ class QuotaPaceCalculator {
             else -> PaceState.OnTrack
         }
         val label = when (state) {
-            PaceState.Exhausting -> "May run out before reset"
-            PaceState.AtRisk -> "Pace at risk"
-            PaceState.OnTrack -> "Pace on track"
+            PaceState.Exhausting -> text.mayRunOutBeforeReset()
+            PaceState.AtRisk -> text.paceAtRisk()
+            PaceState.OnTrack -> text.paceOnTrack()
             PaceState.Unknown,
-            PaceState.CollectingHistory -> "Collecting pace history"
+            PaceState.CollectingHistory -> text.collectingPaceHistory()
         }
         return PacePresentation(
             state = state,
             label = label,
-            reserveLabel = "$reservePercent% reserve",
-            forecastLabel = "At this pace: $projectedPercent% by reset"
+            reserveLabel = text.reserve(reservePercent),
+            forecastLabel = text.forecastAtReset(projectedPercent)
         )
     }
 
@@ -83,7 +87,7 @@ class QuotaPaceCalculator {
     private fun unknown(): PacePresentation {
         return PacePresentation(
             state = PaceState.Unknown,
-            label = "Pace unavailable"
+            label = text.paceUnavailable()
         )
     }
 

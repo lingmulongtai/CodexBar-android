@@ -1,5 +1,6 @@
 package com.codexbar.android.feature.dashboard
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codexbar.android.core.data.QuotaHistoryStore
@@ -7,6 +8,7 @@ import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.domain.repository.QuotaRepository
+import com.codexbar.android.core.presentation.AndroidQuotaPresentationText
 import com.codexbar.android.core.presentation.PrivacyPresentation
 import com.codexbar.android.core.presentation.QuotaPresentationMapper
 import com.codexbar.android.core.security.EncryptedPrefsManager
@@ -15,6 +17,7 @@ import com.codexbar.android.di.CodexRepository
 import com.codexbar.android.di.CopilotRepository
 import com.codexbar.android.di.GeminiRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,10 +33,13 @@ class DashboardViewModel @Inject constructor(
     @GeminiRepository private val geminiRepository: QuotaRepository,
     @CopilotRepository private val copilotRepository: QuotaRepository,
     private val prefsManager: EncryptedPrefsManager,
-    private val quotaHistoryStore: QuotaHistoryStore
+    private val quotaHistoryStore: QuotaHistoryStore,
+    @ApplicationContext appContext: Context
 ) : ViewModel() {
 
-    private val presentationMapper = QuotaPresentationMapper()
+    private val presentationMapper = QuotaPresentationMapper(
+        text = AndroidQuotaPresentationText(appContext)
+    )
 
     private val _uiState = MutableStateFlow<DashboardUiState>(DashboardUiState.Loading)
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()

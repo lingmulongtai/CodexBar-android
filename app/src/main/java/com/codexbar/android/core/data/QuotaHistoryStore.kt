@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.QuotaInfo
+import com.codexbar.android.core.presentation.AndroidQuotaPresentationText
 import com.codexbar.android.core.presentation.PacePresentation
 import com.codexbar.android.core.presentation.QuotaHistorySample
 import com.codexbar.android.core.presentation.QuotaPaceCalculator
@@ -20,7 +21,7 @@ class QuotaHistoryStore @Inject constructor(
     @ApplicationContext context: Context
 ) {
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    private val calculator = QuotaPaceCalculator()
+    private val calculator = QuotaPaceCalculator(AndroidQuotaPresentationText(context))
 
     fun record(quotas: List<QuotaInfo>) {
         val editor = prefs.edit()
