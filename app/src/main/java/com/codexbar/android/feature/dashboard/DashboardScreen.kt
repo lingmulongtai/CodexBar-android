@@ -2,11 +2,13 @@ package com.codexbar.android.feature.dashboard
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -27,6 +29,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,6 +47,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaStatus
+import com.codexbar.android.ui.theme.CodexBarSpacing
+
+private const val TwoPaneMinWidthDp = 720f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,7 +65,7 @@ fun DashboardScreen(
         viewModel.refresh()
     }
 
-    val selectedService = (uiState as? DashboardUiState.Content)
+    val explicitlySelectedService = (uiState as? DashboardUiState.Content)
         ?.snapshot
         ?.services
         ?.firstOrNull { it.service.name == selectedServiceName }
@@ -71,55 +77,98 @@ fun DashboardScreen(
             )
         }
     ) { paddingValues ->
-        PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = { viewModel.refresh() },
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when (val state = uiState) {
-                is DashboardUiState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
+            val useTwoPane = useTwoPaneDashboard(maxWidth.value)
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = { viewModel.refresh() },
+                modifier = Modifier.fillMaxSize()
+            ) {
+                when (val state = uiState) {
+                    is DashboardUiState.Loading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+
+                    is DashboardUiState.Content -> {
+                        if (state.snapshot.services.isEmpty()) {
+                            EmptyState(onOpenSettings = onNavigateToSettings)
+                        } else {
+                            val failedServices = state.snapshot.services
+                                .filterNot {
+                                    it.status == ServiceQuotaStatus.Fresh ||
+                                        it.status == ServiceQuotaStatus.Redacted
+                                }
+                                .joinToString(", ") { it.service.displayName }
+                            val errorBanner = failedServices.takeIf { it.isNotBlank() }
+                                ?.let {
+                                    stringResource(R.string.dashboard_needs_attention, it)
+                                }
+                            val paneService = explicitlySelectedService
+                                ?: state.snapshot.services.first()
+
+                            if (useTwoPane) {
+                                Row(modifier = Modifier.fillMaxSize()) {
+                                    CardList(
+                                        services = state.snapshot.services,
+                                        errorBanner = errorBanner,
+                                        selectedServiceName = paneService.service.name,
+                                        onServiceClick = {
+                                            selectedServiceName = it.service.name
+                                        },
+                                        modifier = Modifier.weight(0.46f)
+                                    )
+                                    VerticalDivider(modifier = Modifier.fillMaxHeight())
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(0.54f)
+                                            .fillMaxHeight()
+                                            .padding(CodexBarSpacing.large)
+                                    ) {
+                                        ServiceDetailPane(
+                                            service = paneService,
+                                            onRefresh = { viewModel.refresh() },
+                                            onOpenSettings = onNavigateToSettings
+                                        )
+                                    }
+                                }
+                            } else {
+                                CardList(
+                                    services = state.snapshot.services,
+                                    errorBanner = errorBanner,
+                                    selectedServiceName = null,
+                                    onServiceClick = {
+                                        selectedServiceName = it.service.name
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
+            }
 
-                is DashboardUiState.Content -> {
-                    if (state.snapshot.services.isEmpty()) {
-                        EmptyState(onOpenSettings = onNavigateToSettings)
-                    } else {
-                        val failedServices = state.snapshot.services
-                            .filterNot {
-                                it.status == ServiceQuotaStatus.Fresh ||
-                                    it.status == ServiceQuotaStatus.Redacted
-                            }
-                            .joinToString(", ") { it.service.displayName }
-                        CardList(
-                            services = state.snapshot.services,
-                            errorBanner = failedServices.takeIf { it.isNotBlank() }
-                                ?.let { stringResource(R.string.dashboard_needs_attention, it) },
-                            onServiceClick = { selectedServiceName = it.service.name }
-                        )
-                    }
+            if (!useTwoPane) {
+                explicitlySelectedService?.let { service ->
+                    ServiceDetailSheet(
+                        service = service,
+                        onDismiss = { selectedServiceName = null },
+                        onRefresh = { viewModel.refresh() },
+                        onOpenSettings = {
+                            selectedServiceName = null
+                            onNavigateToSettings()
+                        }
+                    )
                 }
             }
         }
-    }
-
-    selectedService?.let { service ->
-        ServiceDetailSheet(
-            service = service,
-            onDismiss = { selectedServiceName = null },
-            onRefresh = { viewModel.refresh() },
-            onOpenSettings = {
-                selectedServiceName = null
-                onNavigateToSettings()
-            }
-        )
     }
 }
 
@@ -127,9 +176,12 @@ fun DashboardScreen(
 private fun CardList(
     services: List<ServiceQuotaPresentation>,
     errorBanner: String?,
-    onServiceClick: (ServiceQuotaPresentation) -> Unit
+    selectedServiceName: String?,
+    onServiceClick: (ServiceQuotaPresentation) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     LazyColumn(
+        modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -164,7 +216,8 @@ private fun CardList(
         items(services, key = { it.service.name }) { service ->
             ServiceCard(
                 service = service,
-                onClick = { onServiceClick(service) }
+                onClick = { onServiceClick(service) },
+                selected = service.service.name == selectedServiceName
             )
         }
     }
@@ -206,4 +259,8 @@ private fun EmptyState(onOpenSettings: () -> Unit) {
             }
         }
     }
+}
+
+internal fun useTwoPaneDashboard(widthDp: Float): Boolean {
+    return widthDp >= TwoPaneMinWidthDp
 }

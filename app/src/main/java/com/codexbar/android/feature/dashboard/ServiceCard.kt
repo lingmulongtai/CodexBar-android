@@ -17,11 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Error
-import androidx.compose.material.icons.rounded.Psychology
-import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -38,13 +34,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.codexbar.android.R
-import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.presentation.PacePresentation
 import com.codexbar.android.core.presentation.PaceState
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
@@ -57,6 +53,7 @@ import com.codexbar.android.ui.theme.providerVisualStyle
 fun ServiceCard(
     service: ServiceQuotaPresentation,
     onClick: () -> Unit,
+    selected: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val visualStyle = providerVisualStyle(service.service)
@@ -80,6 +77,7 @@ fun ServiceCard(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
+            .semantics { this.selected = selected }
             .graphicsLayer {
                 val scale = 1f + (updatePulse.value * 0.012f)
                 scaleX = scale
@@ -87,11 +85,11 @@ fun ServiceCard(
             },
         shape = visualStyle.shape,
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 1.dp,
+            defaultElevation = if (selected) 3.dp else 1.dp,
             pressedElevation = 5.dp
         ),
         border = BorderStroke(
-            width = 1.dp,
+            width = if (selected) 2.dp else 1.dp,
             color = visualStyle.accent.copy(alpha = 0.22f + (updatePulse.value * 0.5f))
         ),
         colors = CardDefaults.cardColors(containerColor = visualStyle.container)
@@ -386,14 +384,5 @@ private fun ServiceQuotaStatus.toStatusLabel(): String {
         ServiceQuotaStatus.Fresh -> stringResource(R.string.status_up_to_date)
         ServiceQuotaStatus.Redacted -> stringResource(R.string.status_hidden)
         else -> toLabel()
-    }
-}
-
-private fun AiService.providerIcon(): ImageVector {
-    return when (this) {
-        AiService.CLAUDE -> Icons.Rounded.Psychology
-        AiService.CODEX -> Icons.Rounded.Terminal
-        AiService.GEMINI -> Icons.Rounded.AutoAwesome
-        AiService.COPILOT -> Icons.Rounded.Code
     }
 }

@@ -1,11 +1,13 @@
 package com.codexbar.android.feature.dashboard
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -13,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -39,6 +40,7 @@ import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaStatus
 import com.codexbar.android.ui.theme.CodexBarSpacing
 import com.codexbar.android.ui.theme.CodexBarStateColors
+import com.codexbar.android.ui.theme.providerVisualStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,72 +55,113 @@ fun ServiceDetailSheet(
         onDismissRequest = onDismiss,
         modifier = modifier
     ) {
-        Column(
+        ServiceDetailContent(
+            service = service,
+            onRefresh = onRefresh,
+            onOpenSettings = onOpenSettings,
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = CodexBarSpacing.large)
-                .padding(bottom = CodexBarSpacing.xlarge),
-            verticalArrangement = Arrangement.spacedBy(CodexBarSpacing.large)
+                .padding(bottom = CodexBarSpacing.xlarge)
+        )
+    }
+}
+
+@Composable
+fun ServiceDetailPane(
+    service: ServiceQuotaPresentation,
+    onRefresh: () -> Unit,
+    onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val visualStyle = providerVisualStyle(service.service)
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        shape = visualStyle.shape,
+        color = visualStyle.container,
+        border = BorderStroke(1.dp, visualStyle.accent.copy(alpha = 0.3f))
+    ) {
+        ServiceDetailContent(
+            service = service,
+            onRefresh = onRefresh,
+            onOpenSettings = onOpenSettings,
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(CodexBarSpacing.xlarge)
+        )
+    }
+}
+
+@Composable
+private fun ServiceDetailContent(
+    service: ServiceQuotaPresentation,
+    onRefresh: () -> Unit,
+    onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val accent = providerVisualStyle(service.service).accent
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(CodexBarSpacing.large)
+    ) {
+        ServiceDetailHeader(service, accent)
+        ServiceStateSummary(service, accent)
+
+        if (service.metrics.isNotEmpty()) {
+            SectionTitle(stringResource(R.string.quota_windows))
+            Column(verticalArrangement = Arrangement.spacedBy(CodexBarSpacing.medium)) {
+                service.metrics.forEach { metric ->
+                    MetricDetailCard(metric, accent)
+                }
+            }
+        }
+
+        service.extraUsage?.let { extraUsage ->
+            SectionTitle(stringResource(R.string.extra_usage))
+            ExtraUsageCard(extraUsage, accent)
+        }
+
+        HorizontalDivider()
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(CodexBarSpacing.medium),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            ServiceDetailHeader(service)
-            ServiceStateSummary(service)
-
-            if (service.metrics.isNotEmpty()) {
-                SectionTitle(stringResource(R.string.quota_windows))
-                Column(verticalArrangement = Arrangement.spacedBy(CodexBarSpacing.medium)) {
-                    service.metrics.forEach { metric ->
-                        MetricDetailCard(metric)
-                    }
-                }
-            }
-
-            service.extraUsage?.let { extraUsage ->
-                SectionTitle(stringResource(R.string.extra_usage))
-                ExtraUsageCard(extraUsage)
-            }
-
-            HorizontalDivider()
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(CodexBarSpacing.medium),
-                verticalAlignment = Alignment.CenterVertically
+            TextButton(
+                onClick = onRefresh,
+                modifier = Modifier.weight(1f)
             ) {
-                TextButton(
-                    onClick = onRefresh,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null)
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(stringResource(R.string.action_refresh))
-                }
-                Button(
-                    onClick = onOpenSettings,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.Settings, contentDescription = null)
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(stringResource(R.string.action_settings))
-                }
+                Icon(Icons.Default.Refresh, contentDescription = null)
+                Spacer(modifier = Modifier.size(8.dp))
+                Text(stringResource(R.string.action_refresh))
+            }
+            Button(
+                onClick = onOpenSettings,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Default.Settings, contentDescription = null)
+                Spacer(modifier = Modifier.size(8.dp))
+                Text(stringResource(R.string.action_settings))
             }
         }
     }
 }
 
 @Composable
-private fun ServiceDetailHeader(service: ServiceQuotaPresentation) {
+private fun ServiceDetailHeader(service: ServiceQuotaPresentation, accent: Color) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(CodexBarSpacing.medium)
     ) {
         Icon(
-            imageVector = Icons.Default.Cloud,
+            imageVector = service.service.providerIcon(),
             contentDescription = service.service.displayName,
             modifier = Modifier.size(40.dp),
-            tint = CodexBarStateColors.providerAccent(service.service)
+            tint = accent
         )
         Column(modifier = Modifier.weight(1f)) {
             val subtitle = listOfNotNull(service.tier, service.accountLabel)
@@ -138,7 +181,7 @@ private fun ServiceDetailHeader(service: ServiceQuotaPresentation) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        val statusColor = service.status.statusColor()
+        val statusColor = service.status.statusColor(accent)
         Surface(
             shape = MaterialTheme.shapes.small,
             color = statusColor.copy(alpha = 0.12f)
@@ -155,8 +198,8 @@ private fun ServiceDetailHeader(service: ServiceQuotaPresentation) {
 }
 
 @Composable
-private fun ServiceStateSummary(service: ServiceQuotaPresentation) {
-    val statusColor = service.status.statusColor()
+private fun ServiceStateSummary(service: ServiceQuotaPresentation, accent: Color) {
+    val statusColor = service.status.statusColor(accent)
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
@@ -180,7 +223,7 @@ private fun ServiceStateSummary(service: ServiceQuotaPresentation) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun MetricDetailCard(metric: QuotaMetricPresentation) {
+private fun MetricDetailCard(metric: QuotaMetricPresentation, accent: Color) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
@@ -206,12 +249,12 @@ private fun MetricDetailCard(metric: QuotaMetricPresentation) {
                 Text(
                     text = metric.remainingLabel,
                     style = MaterialTheme.typography.titleSmall,
-                    color = CodexBarStateColors.severityColor(metric.severity),
+                    color = CodexBarStateColors.severityColor(metric.severity, accent),
                     fontWeight = FontWeight.SemiBold
                 )
             }
 
-            QuotaGaugeBar(metric = metric)
+            QuotaGaugeBar(metric = metric, goodColor = accent)
 
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(CodexBarSpacing.small),
@@ -237,7 +280,7 @@ private fun MetricDetailCard(metric: QuotaMetricPresentation) {
 }
 
 @Composable
-private fun ExtraUsageCard(extraUsage: ExtraUsagePresentation) {
+private fun ExtraUsageCard(extraUsage: ExtraUsagePresentation, accent: Color) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
@@ -254,7 +297,7 @@ private fun ExtraUsageCard(extraUsage: ExtraUsagePresentation) {
             DetailRow(
                 stringResource(R.string.detail_remaining),
                 extraUsage.remainingLabel,
-                CodexBarStateColors.severityColor(extraUsage.severity)
+                CodexBarStateColors.severityColor(extraUsage.severity, accent)
             )
         }
     }
@@ -328,9 +371,9 @@ private fun ServiceQuotaStatus.toDetailLabel(): String {
 }
 
 @Composable
-private fun ServiceQuotaStatus.statusColor(): Color {
+private fun ServiceQuotaStatus.statusColor(freshColor: Color): Color {
     return when (this) {
-        ServiceQuotaStatus.Fresh -> MaterialTheme.colorScheme.primary
+        ServiceQuotaStatus.Fresh -> freshColor
         ServiceQuotaStatus.Redacted -> MaterialTheme.colorScheme.outline
         ServiceQuotaStatus.Stale,
         ServiceQuotaStatus.Loading,
