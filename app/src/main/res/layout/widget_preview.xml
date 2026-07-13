@@ -38,14 +38,14 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="5-Hour"
+            android:text="@string/widget_preview_five_hour"
             android:textColor="#B3FFFFFF"
             android:textSize="12sp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="42% left"
+            android:text="@string/widget_preview_42_remaining"
             android:textColor="#FFFFB74D"
             android:textSize="12sp" />
     </LinearLayout>
@@ -60,14 +60,14 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="7-Day"
+            android:text="@string/widget_preview_seven_day"
             android:textColor="#B3FFFFFF"
             android:textSize="12sp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="93% left"
+            android:text="@string/widget_preview_93_remaining"
             android:textColor="#FF81C784"
             android:textSize="12sp" />
     </LinearLayout>
@@ -125,14 +125,14 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="5-Hour"
+            android:text="@string/widget_preview_five_hour"
             android:textColor="#B3FFFFFF"
             android:textSize="12sp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="100% left"
+            android:text="@string/widget_preview_100_remaining"
             android:textColor="#FF81C784"
             android:textSize="12sp" />
     </LinearLayout>

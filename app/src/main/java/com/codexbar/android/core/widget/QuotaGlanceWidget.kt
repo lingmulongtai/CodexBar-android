@@ -39,6 +39,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import androidx.core.content.ContextCompat
 import com.codexbar.android.MainActivity
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
@@ -65,13 +66,15 @@ class QuotaGlanceWidget : GlanceAppWidget() {
         val privacySettings = EncryptedPrefsManager(context).getPrivacySettings()
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val config = widgetPrefs.getWidgetConfig(appWidgetId)
+        val strings = WidgetStrings(ContextCompat.getContextForLanguage(context))
 
         provideContent {
             GlanceTheme {
                 WidgetContent(
                     config = config,
                     widgetPrefs = widgetPrefs,
-                    redactQuotaDetails = privacySettings.widgetRedactionEnabled
+                    redactQuotaDetails = privacySettings.widgetRedactionEnabled,
+                    strings = strings
                 )
             }
         }
@@ -81,7 +84,8 @@ class QuotaGlanceWidget : GlanceAppWidget() {
     private fun WidgetContent(
         config: WidgetDisplayConfig,
         widgetPrefs: WidgetPrefsManager,
-        redactQuotaDetails: Boolean
+        redactQuotaDetails: Boolean,
+        strings: WidgetStrings
     ) {
         val size = LocalSize.current
         val selectedServices = config.services
@@ -96,12 +100,12 @@ class QuotaGlanceWidget : GlanceAppWidget() {
                 .cornerRadius(20.dp)
                 .background(ColorProvider(Color(0xB01C1B1F)))
                 .clickable(actionStartActivity<MainActivity>())
-                .padding(16.dp)
+            .padding(16.dp)
         ) {
             if (redactQuotaDetails) {
-                RedactedState()
+                RedactedState(strings)
             } else if (selectedServices.isEmpty()) {
-                EmptyState()
+                EmptyState(strings)
             } else {
                 Column(modifier = GlanceModifier.fillMaxSize()) {
                     for ((index, service) in selectedServices.take(maxServices).withIndex()) {
@@ -110,12 +114,18 @@ class QuotaGlanceWidget : GlanceAppWidget() {
                             Divider()
                             Spacer(modifier = GlanceModifier.height(8.dp))
                         }
-                        ServiceSection(service, widgetPrefs, config, showRefresh = index == 0)
+                        ServiceSection(
+                            service = service,
+                            widgetPrefs = widgetPrefs,
+                            config = config,
+                            showRefresh = index == 0,
+                            strings = strings
+                        )
                     }
                     if (selectedServices.size > maxServices) {
                         Spacer(modifier = GlanceModifier.height(4.dp))
                         Text(
-                            text = "+${selectedServices.size - maxServices} more",
+                            text = strings.moreServices(selectedServices.size - maxServices),
                             style = TextStyle(
                                 color = ColorProvider(Color.White.copy(alpha = 0.45f)),
                                 fontSize = 10.sp
@@ -128,27 +138,27 @@ class QuotaGlanceWidget : GlanceAppWidget() {
     }
 
     @Composable
-    private fun EmptyState() {
+    private fun EmptyState(strings: WidgetStrings) {
         Box(
             modifier = GlanceModifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "No services configured",
+                text = strings.noServices,
                 style = TextStyle(color = ColorProvider(Color.White.copy(alpha = 0.6f)), fontSize = 14.sp)
             )
         }
     }
 
     @Composable
-    private fun RedactedState() {
+    private fun RedactedState(strings: WidgetStrings) {
         Box(
             modifier = GlanceModifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "Quota hidden",
+                    text = strings.quotaHidden,
                     style = TextStyle(
                         color = ColorProvider(Color.White),
                         fontSize = 15.sp,
@@ -157,7 +167,7 @@ class QuotaGlanceWidget : GlanceAppWidget() {
                 )
                 Spacer(modifier = GlanceModifier.height(4.dp))
                 Text(
-                    text = "Open CodexBar to view details",
+                    text = strings.openDetails,
                     style = TextStyle(
                         color = ColorProvider(Color.White.copy(alpha = 0.55f)),
                         fontSize = 12.sp
@@ -182,7 +192,8 @@ class QuotaGlanceWidget : GlanceAppWidget() {
         service: AiService,
         widgetPrefs: WidgetPrefsManager,
         config: WidgetDisplayConfig,
-        showRefresh: Boolean
+        showRefresh: Boolean,
+        strings: WidgetStrings
     ) {
         val labels = widgetPrefs.getCachedLabels(service).take(config.maxRows)
         val tier = widgetPrefs.getCachedTier(service)
@@ -235,7 +246,7 @@ class QuotaGlanceWidget : GlanceAppWidget() {
                 if (showRefresh) {
                     Image(
                         provider = ImageProvider(R.drawable.ic_refresh),
-                        contentDescription = "Refresh",
+                        contentDescription = strings.refreshDescription,
                         modifier = GlanceModifier
                             .size(18.dp)
                             .clickable(actionRunCallback<RefreshWidgetAction>()),
@@ -248,7 +259,7 @@ class QuotaGlanceWidget : GlanceAppWidget() {
 
             if (config.showFreshness && freshness != null) {
                 Text(
-                    text = "Updated $freshness",
+                    text = strings.updated(freshness),
                     style = TextStyle(
                         color = ColorProvider(Color.White.copy(alpha = 0.45f)),
                         fontSize = 10.sp
@@ -266,7 +277,7 @@ class QuotaGlanceWidget : GlanceAppWidget() {
             // Show placeholder if no cached data yet
             if (labels.isEmpty()) {
                 Text(
-                    text = "Waiting for data...",
+                    text = strings.waitingForData,
                     style = TextStyle(
                         color = ColorProvider(Color.White.copy(alpha = 0.4f)),
                         fontSize = 12.sp
@@ -405,6 +416,18 @@ class QuotaGlanceWidget : GlanceAppWidget() {
             }
         }
     }
+}
+
+private class WidgetStrings(private val context: Context) {
+    val noServices: String = context.getString(R.string.widget_no_services)
+    val quotaHidden: String = context.getString(R.string.widget_quota_hidden)
+    val openDetails: String = context.getString(R.string.widget_open_details)
+    val waitingForData: String = context.getString(R.string.widget_waiting_for_data)
+    val refreshDescription: String = context.getString(R.string.widget_refresh_description)
+
+    fun moreServices(count: Int): String = context.getString(R.string.widget_more_services, count)
+
+    fun updated(freshness: String): String = context.getString(R.string.widget_updated, freshness)
 }
 
 class RefreshWidgetAction : ActionCallback {

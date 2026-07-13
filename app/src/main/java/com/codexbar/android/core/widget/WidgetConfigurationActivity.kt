@@ -43,11 +43,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.lifecycle.lifecycleScope
 import com.codexbar.android.MainActivity
+import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.workmanager.WorkManagerInitializer
@@ -114,7 +116,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                     Scaffold(
                         topBar = {
                             TopAppBar(
-                                title = { Text("Widget setup") }
+                                title = { Text(stringResource(R.string.widget_setup_title)) }
                             )
                         }
                     ) { padding ->
@@ -127,7 +129,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             Text(
-                                text = "Choose the connected services and details shown on your home screen.",
+                                text = stringResource(R.string.widget_setup_description),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -138,23 +140,23 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Text(
-                                        text = "Services",
+                                        text = stringResource(R.string.widget_setup_services),
                                         style = MaterialTheme.typography.titleMedium
                                     )
                                     Text(
-                                        text = "Select at least one connected service.",
+                                        text = stringResource(R.string.widget_setup_select_service),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
 
                                     if (availableServices.isEmpty()) {
                                         Text(
-                                            text = "Connect a service in the app before adding the widget.",
+                                            text = stringResource(R.string.widget_setup_connect_first),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.error
                                         )
                                         OutlinedButton(onClick = ::openAppSettings) {
-                                            Text("Open app settings")
+                                            Text(stringResource(R.string.widget_setup_open_app_settings))
                                         }
                                     } else {
                                         availableServices.forEach { service ->
@@ -174,29 +176,29 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Text(
-                                        text = "Display options",
+                                        text = stringResource(R.string.widget_setup_display_options),
                                         style = MaterialTheme.typography.titleMedium
                                     )
                                     ConfigToggleRow(
-                                        title = "Reset countdown",
-                                        subtitle = "Show when each quota window resets.",
+                                        title = stringResource(R.string.widget_setup_reset_title),
+                                        subtitle = stringResource(R.string.widget_setup_reset_description),
                                         checked = showReset,
                                         onCheckedChange = { showReset = it }
                                     )
                                     ConfigToggleRow(
-                                        title = "Pace and forecast",
-                                        subtitle = "Show whether current usage can last until reset.",
+                                        title = stringResource(R.string.widget_setup_pace_title),
+                                        subtitle = stringResource(R.string.widget_setup_pace_description),
                                         checked = showPace,
                                         onCheckedChange = { showPace = it }
                                     )
                                     ConfigToggleRow(
-                                        title = "Last updated",
-                                        subtitle = "Show how fresh the displayed data is.",
+                                        title = stringResource(R.string.widget_setup_freshness_title),
+                                        subtitle = stringResource(R.string.widget_setup_freshness_description),
                                         checked = showFreshness,
                                         onCheckedChange = { showFreshness = it }
                                     )
                                     Text(
-                                        text = "Maximum rows per service: $maxRows",
+                                        text = stringResource(R.string.widget_setup_max_rows, maxRows),
                                         style = MaterialTheme.typography.bodyMedium
                                     )
                                     Slider(
@@ -215,7 +217,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                 )
                             ) {
                                 Text(
-                                    text = "Quota data loads after you save. You can also tap the refresh icon on the widget at any time.",
+                                    text = stringResource(R.string.widget_setup_data_hint),
                                     modifier = Modifier.padding(16.dp),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -235,7 +237,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                     },
                                     modifier = Modifier.weight(1f)
                                 ) {
-                                    Text("Cancel")
+                                    Text(stringResource(R.string.action_cancel))
                                 }
 
                                 Button(
@@ -251,7 +253,15 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                     enabled = anyChecked,
                                     modifier = Modifier.weight(1f)
                                 ) {
-                                    Text(if (isReconfigure) "Save" else "Add widget")
+                                    Text(
+                                        stringResource(
+                                            if (isReconfigure) {
+                                                R.string.widget_setup_save
+                                            } else {
+                                                R.string.widget_setup_add
+                                            }
+                                        )
+                                    )
                                 }
                             }
                         }

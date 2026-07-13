@@ -2,6 +2,8 @@ package com.codexbar.android.core.widget
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.ContextCompat
+import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.presentation.QuotaMetricPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
@@ -174,7 +176,10 @@ class WidgetPrefsManager @Inject constructor(
 
     fun getCachedRemainingLabel(service: AiService, label: String): String {
         return prefs.getString("cache_${service.name}_${label}_remaining_label", null)
-            ?: "${((1f - getCachedUtilization(service, label)) * 100).toInt().coerceIn(0, 100)}% left"
+            ?: ContextCompat.getContextForLanguage(context).getString(
+                R.string.quota_remaining_percent,
+                ((1f - getCachedUtilization(service, label)) * 100).toInt().coerceIn(0, 100)
+            )
     }
 
     fun getCachedResetLabel(service: AiService, label: String): String? {
