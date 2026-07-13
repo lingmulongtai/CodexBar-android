@@ -46,9 +46,6 @@
     public <init>(android.content.Context, androidx.work.WorkerParameters);
 }
 
-# ===== RemoteViews (Notification) =====
--keep class android.widget.RemoteViews { *; }
-
 # ===== Glance =====
 -keep class * extends androidx.glance.appwidget.GlanceAppWidget { *; }
 -keep class * extends androidx.glance.appwidget.GlanceAppWidgetReceiver { *; }
