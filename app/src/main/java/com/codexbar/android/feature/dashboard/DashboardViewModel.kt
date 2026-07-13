@@ -54,9 +54,10 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun refresh() {
+        if (_isRefreshing.value) return
+
         viewModelScope.launch {
             _isRefreshing.value = true
-            _uiState.value = DashboardUiState.Loading
 
             val repos = buildList {
                 if (prefsManager.loadCredential(AiService.CLAUDE) != null) add(AiService.CLAUDE to claudeRepository)
