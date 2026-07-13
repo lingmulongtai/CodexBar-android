@@ -14,10 +14,17 @@ class SettingsValidationSourceTest {
         val source = File(
             appDir,
             "src/main/java/com/codexbar/android/feature/settings/SettingsViewModel.kt"
-        ).readText()
+        ).readText().replace("\r\n", "\n")
 
-        assertTrue(source.contains("val result = repo.validateCredential(credential)"))
-        assertTrue(source.contains("is Result.Success -> {\n                    prefsManager.saveCredential(service, credential)"))
-        assertFalse(source.contains("prefsManager.saveCredential(service, credential)\n\n            val result = repo.validateCredential()"))
+        val validationCall = source.indexOf("val result = repo.validateCredential(credential)")
+        val successBranch = source.indexOf("is Result.Success -> {", startIndex = validationCall)
+        val saveCredential = source.indexOf("prefsManager.saveCredential(service, credential)", startIndex = successBranch)
+        val failureBranch = source.indexOf("is Result.Failure ->", startIndex = successBranch)
+
+        assertTrue("manual validation must validate the candidate credential", validationCall >= 0)
+        assertTrue("manual validation must save only from the success branch", successBranch > validationCall)
+        assertTrue("manual validation must persist the credential after success", saveCredential > successBranch)
+        assertTrue("manual validation must not save from the failure branch", failureBranch == -1 || saveCredential < failureBranch)
+        assertFalse(source.contains("val result = repo.validateCredential()\n"))
     }
 }
