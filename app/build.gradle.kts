@@ -166,6 +166,7 @@ dependencies {
     // AndroidX
     implementation(libs.core.ktx)
     implementation(libs.activity.compose)
+    implementation(libs.appcompat)
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.navigation.compose)
@@ -198,9 +199,6 @@ dependencies {
     // Glance (AppWidget)
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)
-
-    // Accompanist
-    implementation(libs.accompanist.permissions)
 
     // Testing
     testImplementation(libs.junit)
