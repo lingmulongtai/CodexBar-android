@@ -4,6 +4,7 @@
     <string name="tile_label">CodexBar</string>
     <string name="widget_description">Monitor AI service quota usage at a glance</string>
     <string name="settings_title">Settings</string>
+    <string name="navigation_dashboard">Usage</string>
     <string name="action_back">Back</string>
     <string name="language_title">App language</string>
     <string name="language_description">Choose the language used throughout CodexBar.</string>
