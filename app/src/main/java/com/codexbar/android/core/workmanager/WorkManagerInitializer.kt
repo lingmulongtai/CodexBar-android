@@ -128,7 +128,7 @@ class WorkManagerInitializer : Initializer<Unit> {
 
             WorkManager.getInstance(context).enqueueUniqueWork(
                 MANUAL_QUOTA_WORK_NAME,
-                ExistingWorkPolicy.KEEP,
+                ExistingWorkPolicy.REPLACE,
                 request
             )
         }

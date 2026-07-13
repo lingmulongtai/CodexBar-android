@@ -1,6 +1,7 @@
 package com.codexbar.android.core.widget
 
 import java.io.File
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -32,6 +33,21 @@ class WidgetRefreshSourceTest {
             onUpdate.contains("WorkManagerInitializer.enqueueManualQuotaRefresh(") &&
                 onUpdate.contains("source = \"widget_update\"")
         )
+    }
+
+    @Test
+    fun `explicit widget refresh supersedes stale manual work`() {
+        val source = File(
+            appDir,
+            "src/main/java/com/codexbar/android/core/workmanager/WorkManagerInitializer.kt"
+        ).readText().replace("\r\n", "\n")
+        val start = source.indexOf("fun enqueueManualQuotaRefresh(")
+        val end = source.indexOf("fun startMonitoringSession(", start)
+        assertTrue("enqueueManualQuotaRefresh must exist", start >= 0 && end > start)
+        val enqueueManualRefresh = source.substring(start, end)
+
+        assertTrue(enqueueManualRefresh.contains("ExistingWorkPolicy.REPLACE"))
+        assertFalse(enqueueManualRefresh.contains("ExistingWorkPolicy.KEEP"))
     }
 
     private fun sourceFile(name: String): String {
