@@ -27,12 +27,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.codexbar.android.R
 import com.codexbar.android.core.presentation.ExtraUsagePresentation
 import com.codexbar.android.core.presentation.QuotaMetricPresentation
@@ -42,6 +45,11 @@ import com.codexbar.android.ui.components.providerIcon
 import com.codexbar.android.ui.theme.CodexBarSpacing
 import com.codexbar.android.ui.theme.CodexBarStateColors
 import com.codexbar.android.ui.theme.providerVisualStyle
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -216,7 +224,7 @@ private fun ServiceStateSummary(service: ServiceQuotaPresentation, accent: Color
                 DetailRow(stringResource(R.string.detail_reason), it, statusColor)
             }
             service.freshness.nextRetryAt?.let {
-                DetailRow(stringResource(R.string.detail_next_retry), it.toString())
+                DetailRow(stringResource(R.string.detail_next_retry), formatDetailInstant(it))
             }
         }
     }
@@ -274,7 +282,7 @@ private fun MetricDetailCard(metric: QuotaMetricPresentation, accent: Color) {
                 DetailRow(stringResource(R.string.detail_forecast), it)
             }
             metric.resetsAt?.let {
-                DetailRow(stringResource(R.string.detail_reset_time), it.toString())
+                DetailRow(stringResource(R.string.detail_reset_time), formatDetailInstant(it))
             }
         }
     }
@@ -302,6 +310,27 @@ private fun ExtraUsageCard(extraUsage: ExtraUsagePresentation, accent: Color) {
             )
         }
     }
+}
+
+@Composable
+private fun formatDetailInstant(instant: Instant): String {
+    val languageContext = ContextCompat.getContextForLanguage(LocalContext.current)
+    val locale = languageContext.resources.configuration.locales[0]
+    val zoneId = ZoneId.systemDefault()
+    return remember(instant, locale, zoneId) {
+        formatDetailInstant(instant, locale, zoneId)
+    }
+}
+
+internal fun formatDetailInstant(
+    instant: Instant,
+    locale: Locale,
+    zoneId: ZoneId
+): String {
+    return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)
+        .withLocale(locale)
+        .withZone(zoneId)
+        .format(instant)
 }
 
 @Composable
