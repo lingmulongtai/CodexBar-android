@@ -120,6 +120,10 @@ class DashboardViewModel @Inject constructor(
         refresh()
     }
 
+    fun syncMonitoringState() {
+        _isMonitoring.value = monitoringSessionStore.activeSession() != null
+    }
+
     fun stopMonitoring() {
         WorkManagerInitializer.stopMonitoringSession(appContext)
         _isMonitoring.value = false
