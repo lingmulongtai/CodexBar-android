@@ -20,10 +20,15 @@ class AppLanguageSourceTest {
     @Test
     fun `settings exposes system english and japanese choices`() {
         val screen = sourceFile("feature/settings/SettingsScreen.kt")
+        val settingsViewModel = sourceFile("feature/settings/SettingsViewModel.kt")
+        val dashboard = sourceFile("feature/dashboard/DashboardScreen.kt")
         val japaneseResources = File(appDir, "src/main/res/values-ja/strings.xml")
 
         assertTrue(screen.contains("LanguageSection("))
         assertTrue(screen.contains("language.apply()"))
+        assertTrue(screen.contains("viewModel.refreshLocalizedSurfaces()"))
+        assertTrue(settingsViewModel.contains("source = \"language_changed\""))
+        assertTrue(dashboard.contains("LaunchedEffect(Unit)"))
         assertTrue(japaneseResources.isFile)
         assertTrue(japaneseResources.readText().contains("アプリの言語"))
     }

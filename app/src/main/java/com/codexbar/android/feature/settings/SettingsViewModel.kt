@@ -288,6 +288,13 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun refreshLocalizedSurfaces() {
+        WorkManagerInitializer.enqueueManualQuotaRefresh(
+            context = appContext,
+            source = "language_changed"
+        )
+    }
+
     fun setNotificationsEnabled(enabled: Boolean) {
         _uiState.update {
             it.copy(

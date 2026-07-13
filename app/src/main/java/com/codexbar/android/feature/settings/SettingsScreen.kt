@@ -193,6 +193,7 @@ fun SettingsScreen(
                 onLanguageSelected = { language ->
                     selectedLanguage = language
                     language.apply()
+                    viewModel.refreshLocalizedSurfaces()
                 }
             )
 
