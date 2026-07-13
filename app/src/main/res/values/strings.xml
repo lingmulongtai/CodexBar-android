@@ -4,6 +4,12 @@
     <string name="tile_label">CodexBar</string>
     <string name="widget_description">Monitor AI service quota usage at a glance</string>
     <string name="settings_title">Settings</string>
+    <string name="settings_accounts_title">Accounts</string>
+    <string name="settings_accounts_description">Connect providers with secure sign-in or an advanced manual fallback.</string>
+    <string name="settings_monitoring_title">Monitoring</string>
+    <string name="settings_monitoring_description">Control background refresh, alerts, and time-limited live sessions.</string>
+    <string name="settings_preferences_title">App preferences</string>
+    <string name="settings_preferences_description">Choose language and privacy behavior for every surface.</string>
     <string name="navigation_dashboard">Usage</string>
     <string name="action_back">Back</string>
     <string name="language_title">App language</string>

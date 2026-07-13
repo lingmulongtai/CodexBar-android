@@ -4,6 +4,12 @@
     <string name="tile_label">CodexBar</string>
     <string name="widget_description">AIサービスの使用枠をひと目で確認</string>
     <string name="settings_title">設定</string>
+    <string name="settings_accounts_title">アカウント</string>
+    <string name="settings_accounts_description">安全なログイン、または上級者向けの手動設定でサービスを接続します。</string>
+    <string name="settings_monitoring_title">モニタリング</string>
+    <string name="settings_monitoring_description">バックグラウンド更新、通知、時間制限付きライブセッションを設定します。</string>
+    <string name="settings_preferences_title">アプリ設定</string>
+    <string name="settings_preferences_description">すべての表示面で使用する言語とプライバシー動作を選択します。</string>
     <string name="navigation_dashboard">使用状況</string>
     <string name="action_back">戻る</string>
     <string name="language_title">アプリの言語</string>

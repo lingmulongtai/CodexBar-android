@@ -29,8 +29,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -165,109 +165,131 @@ fun SettingsScreen(
             )
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Notifications
-            NotificationsSection(
-                enabled = uiState.notificationsEnabled,
-                notificationsAllowed = notificationsAllowed,
-                isMonitoring = uiState.isMonitoring,
-                durationMinutes = uiState.monitoringDurationMinutes,
-                remainingMinutes = uiState.monitoringRemainingMinutes,
-                hasConnectedService = uiState.serviceStates.values.any { it.isConnected },
-                promotedUpdatesAllowed = promotedUpdatesAllowed,
-                onToggle = { requested ->
-                    when {
-                        !requested -> viewModel.setNotificationsEnabled(false)
-                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                            !context.hasNotificationPermission() -> {
-                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        }
-                        !context.canPostNotifications() -> {
-                            enableNotificationsAfterSettings = true
-                            openAppNotificationSettings(context)
-                        }
-                        else -> viewModel.setNotificationsEnabled(true)
-                    }
-                },
-                onDurationChange = viewModel::setMonitoringDuration,
-                onStartMonitoring = viewModel::startMonitoring,
-                onStopMonitoring = viewModel::stopMonitoring,
-                onOpenNotificationSettings = {
-                    enableNotificationsAfterSettings = true
-                    openAppNotificationSettings(context)
-                },
-                onOpenPromotionSettings = { openPromotionSettings(context) }
-            )
-
-            LanguageSection(
-                selectedLanguage = selectedLanguage,
-                onLanguageSelected = { language ->
-                    selectedLanguage = language
-                    language.apply()
-                    viewModel.refreshLocalizedSurfaces()
-                }
-            )
-
-            PrivacySection(
-                settings = uiState.privacySettings,
-                onSettingsChange = { settings ->
-                    viewModel.setPrivacySettings(settings)
-                    onScreenPrivacyChanged(settings.screenPrivacyEnabled)
-                }
-            )
-
-            // Service credential sections
-            AiService.entries.forEach { service ->
-                val state = uiState.serviceStates[service] ?: ServiceCredentialState()
-                ServiceCredentialSection(
-                    service = service,
-                    state = state,
-                    onFieldChange = { field, value -> viewModel.updateField(service, field, value) },
-                    onStartAccountLink = { viewModel.startAccountLink(service) },
-                    onOpenAccountLink = { url -> openAuthUrl(context, url) },
-                    onCopyAccountCode = { code ->
-                        copyToClipboard(
-                            context = context,
-                            text = code,
-                            labelRes = R.string.clipboard_sign_in_code,
-                            sensitive = true
-                        )
-                    },
-                    onCopySetupCommand = { command ->
-                        copyToClipboard(
-                            context = context,
-                            text = command,
-                            labelRes = R.string.clipboard_setup_command,
-                            sensitive = false
-                        )
-                    },
-                    onOpenSetupGuide = {
-                        openAuthUrl(context, accountGuideUrl(service))
-                    },
-                    onValidate = { viewModel.validateCredential(service) },
-                    onDisconnect = { viewModel.showDisconnectConfirmDialog(service) }
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .widthIn(max = 840.dp)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                SettingsSectionHeader(
+                    title = stringResource(R.string.settings_accounts_title),
+                    description = stringResource(R.string.settings_accounts_description)
                 )
+
+                AiService.entries.forEach { service ->
+                    val state = uiState.serviceStates[service] ?: ServiceCredentialState()
+                    ServiceCredentialSection(
+                        service = service,
+                        state = state,
+                        onFieldChange = { field, value ->
+                            viewModel.updateField(service, field, value)
+                        },
+                        onStartAccountLink = { viewModel.startAccountLink(service) },
+                        onOpenAccountLink = { url -> openAuthUrl(context, url) },
+                        onCopyAccountCode = { code ->
+                            copyToClipboard(
+                                context = context,
+                                text = code,
+                                labelRes = R.string.clipboard_sign_in_code,
+                                sensitive = true
+                            )
+                        },
+                        onCopySetupCommand = { command ->
+                            copyToClipboard(
+                                context = context,
+                                text = command,
+                                labelRes = R.string.clipboard_setup_command,
+                                sensitive = false
+                            )
+                        },
+                        onOpenSetupGuide = {
+                            openAuthUrl(context, accountGuideUrl(service))
+                        },
+                        onValidate = { viewModel.validateCredential(service) },
+                        onDisconnect = { viewModel.showDisconnectConfirmDialog(service) }
+                    )
+                }
+
+                SettingsSectionHeader(
+                    title = stringResource(R.string.settings_monitoring_title),
+                    description = stringResource(R.string.settings_monitoring_description)
+                )
+
+                NotificationsSection(
+                    enabled = uiState.notificationsEnabled,
+                    notificationsAllowed = notificationsAllowed,
+                    isMonitoring = uiState.isMonitoring,
+                    durationMinutes = uiState.monitoringDurationMinutes,
+                    remainingMinutes = uiState.monitoringRemainingMinutes,
+                    hasConnectedService = uiState.serviceStates.values.any { it.isConnected },
+                    promotedUpdatesAllowed = promotedUpdatesAllowed,
+                    onToggle = { requested ->
+                        when {
+                            !requested -> viewModel.setNotificationsEnabled(false)
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                !context.hasNotificationPermission() -> {
+                                notificationPermissionLauncher.launch(
+                                    Manifest.permission.POST_NOTIFICATIONS
+                                )
+                            }
+                            !context.canPostNotifications() -> {
+                                enableNotificationsAfterSettings = true
+                                openAppNotificationSettings(context)
+                            }
+                            else -> viewModel.setNotificationsEnabled(true)
+                        }
+                    },
+                    onDurationChange = viewModel::setMonitoringDuration,
+                    onStartMonitoring = viewModel::startMonitoring,
+                    onStopMonitoring = viewModel::stopMonitoring,
+                    onOpenNotificationSettings = {
+                        enableNotificationsAfterSettings = true
+                        openAppNotificationSettings(context)
+                    },
+                    onOpenPromotionSettings = { openPromotionSettings(context) }
+                )
+
+                RefreshIntervalSection(
+                    currentMinutes = uiState.refreshIntervalMinutes,
+                    onIntervalChange = { viewModel.setRefreshInterval(it) }
+                )
+
+                SettingsSectionHeader(
+                    title = stringResource(R.string.settings_preferences_title),
+                    description = stringResource(R.string.settings_preferences_description)
+                )
+
+                LanguageSection(
+                    selectedLanguage = selectedLanguage,
+                    onLanguageSelected = { language ->
+                        selectedLanguage = language
+                        language.apply()
+                        viewModel.refreshLocalizedSurfaces()
+                    }
+                )
+
+                PrivacySection(
+                    settings = uiState.privacySettings,
+                    onSettingsChange = { settings ->
+                        viewModel.setPrivacySettings(settings)
+                        onScreenPrivacyChanged(settings.screenPrivacyEnabled)
+                    }
+                )
+
+                DangerZoneSection(
+                    onDeleteAll = { viewModel.showDeleteConfirmDialog() }
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
             }
-
-            // Refresh interval
-            RefreshIntervalSection(
-                currentMinutes = uiState.refreshIntervalMinutes,
-                onIntervalChange = { viewModel.setRefreshInterval(it) }
-            )
-
-            // Danger zone
-            DangerZoneSection(
-                onDeleteAll = { viewModel.showDeleteConfirmDialog() }
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 
@@ -291,6 +313,27 @@ fun SettingsScreen(
     }
 }
 
+@Composable
+private fun SettingsSectionHeader(
+    title: String,
+    description: String
+) {
+    Column(
+        modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall
+        )
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LanguageSection(
@@ -299,7 +342,14 @@ private fun LanguageSection(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
@@ -976,7 +1026,14 @@ private fun RefreshIntervalSection(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
@@ -1072,7 +1129,14 @@ private fun NotificationsSection(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
@@ -1221,10 +1285,11 @@ private fun formatMonitoringDuration(minutes: Long): String {
 private fun DangerZoneSection(onDeleteAll: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
-        )
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.28f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -1294,7 +1359,14 @@ private fun PrivacySection(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
