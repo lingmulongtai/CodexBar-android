@@ -1,5 +1,3 @@
-> **⚠️ Known Issue:** Claude's refresh token is consistently failing to renew. Investigating workarounds.
-
 # CodexBar for Android
 
 > Android port of [**CodexBar**](https://github.com/steipete/CodexBar) by [@steipete](https://github.com/steipete) — the macOS menu bar app for monitoring AI service quotas.
@@ -17,23 +15,25 @@ Monitor your AI service quotas from your Android device. Track remaining usage f
 - Real-time quota monitoring for Claude, Codex, and Gemini (more services coming soon)
 - Animated gauge bars showing remaining usage percentage
 - Quick Settings tile for at-a-glance status
+- Configurable Android home screen widgets with quota, reset, freshness, and pace controls
 - Background refresh with configurable intervals
-- Persistent notification with per-service breakdown
+- Persistent notification with per-service breakdown and a time-bound live monitoring mode
+- Dashboard detail sheets with quota windows, reset times, freshness, and pace forecast
 - Push alert when quota resets (fully replenished)
-- Encrypted credential storage
+- DataStore + Android Keystore-backed credential storage
 - Material 3 with Dynamic Color
 
 ## Download
 
-Pre-built APKs are available on the [Releases](https://github.com/hyunnnchoi/codexbar-android/releases) page. 
+Signed APKs are available on this fork's [Releases](https://github.com/lingmulongtai/CodexBar-android/releases/latest) page.
 
-I do **system software** for a living — I'm not smart enough to sneak viruses into an Android app. 
+For the shortest install path, download the latest [app-release.apk](https://github.com/lingmulongtai/CodexBar-android/releases/latest/download/app-release.apk), transfer it to your Android device, and install it after allowing installs from your browser or file manager.
 
-No backend server — all tokens are processed and stored strictly on-device. 
+No backend server is used. Provider tokens are processed and stored strictly on-device.
 
 ## Security & Backup
 
-Provider credentials are stored in `codexbar_secure_prefs`, an encrypted on-device preferences file. That file is explicitly excluded from Android cloud backup and device-to-device transfer. After restoring or moving to a new device, providers must be linked again instead of reusing undecryptable credential ciphertext from the old device.
+Provider credentials are stored in `codexbar_secure_prefs`, an on-device DataStore whose values are encrypted with Android Keystore-backed AES-GCM keys. That DataStore is explicitly excluded from Android cloud backup and device-to-device transfer. After restoring or moving to a new device, providers must be linked again instead of reusing undecryptable credential ciphertext from the old device.
 
 ## Architecture & Verification
 
@@ -43,8 +43,12 @@ Provider credentials are stored in `codexbar_secure_prefs`, an encrypted on-devi
 
 ## Setup
 
+For normal use, install the signed APK from the latest release and open **Settings** to connect accounts or enter fallback tokens.
+
+For local development:
+
 1. Install [OpenJDK 17](https://formulae.brew.sh/formula/openjdk@17) (or any JDK 17+)
-2. Clone and open in Android Studio
+2. Clone and open the project in Android Studio
 3. Build and install the debug APK
 4. Open the app and go to **Settings** to connect accounts or enter fallback tokens
 
@@ -104,6 +108,12 @@ Use **Connect account** in Settings. The app uses GitHub's device flow and then 
 
 APK output: `app/build/outputs/apk/debug/app-debug.apk`
 
+Recommended local checks before opening a PR:
+
+```bash
+./gradlew --dependency-verification=strict testDebugUnitTest lint assembleDebug
+```
+
 ## Dependency Verification
 
 Gradle Wrapper distribution checksums and dependency verification metadata are committed. When intentionally changing Gradle, plugins, or libraries, regenerate verification metadata with:
@@ -129,7 +139,8 @@ The release workflow publishes signed APK/AAB artifacts, `SHA256SUMS`, a Cyclone
 
 - Kotlin 2.1.0, Jetpack Compose, Material 3
 - Hilt (DI), Retrofit2 + OkHttp (networking)
-- WorkManager (background sync), EncryptedSharedPreferences (security)
+- WorkManager (background sync), DataStore + Android Keystore-backed encryption
+- Glance AppWidget, Quick Settings tile, Android notification/live monitoring APIs
 - KSP, kotlinx.serialization
 
 ## Acknowledgments
