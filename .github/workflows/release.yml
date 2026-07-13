@@ -91,6 +91,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          notes_file="docs/releases/${GITHUB_REF_NAME}.md"
+          test -f "$notes_file"
+          cp "$notes_file" "$RUNNER_TEMP/release-notes.md"
+          printf '\n\nBuild: %s (%s)\n' "$GITHUB_REF_NAME" "$GITHUB_SHA" >> "$RUNNER_TEMP/release-notes.md"
           gh release create "$GITHUB_REF_NAME" build/release/* \
             --title "$GITHUB_REF_NAME" \
-            --notes "Release artifacts are signed from the protected production environment and include checksums, SBOM, and provenance."
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
+            --verify-tag \
+            --latest
