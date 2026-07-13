@@ -57,6 +57,7 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val initialDestination = startDestinationForHost(intent?.data?.host)
         applyScreenPrivacy(prefsManager.getPrivacySettings().screenPrivacyEnabled)
         lifecycleScope.launch {
             prefsManager.warmCache()
@@ -154,7 +155,7 @@ class MainActivity : ComponentActivity() {
                 ) { paddingValues ->
                     NavHost(
                         navController = navController,
-                        startDestination = "dashboard",
+                        startDestination = initialDestination,
                         modifier = Modifier.padding(paddingValues)
                     ) {
                         composable("dashboard") {
@@ -167,7 +168,9 @@ class MainActivity : ComponentActivity() {
                         composable("settings") {
                             SettingsScreen(
                                 onNavigateBack = {
-                                    navController.popBackStack()
+                                    if (!navController.popBackStack()) {
+                                        finish()
+                                    }
                                 },
                                 onScreenPrivacyChanged = { enabled ->
                                     applyScreenPrivacy(enabled)
@@ -190,4 +193,8 @@ class MainActivity : ComponentActivity() {
             window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         }
     }
+}
+
+internal fun startDestinationForHost(host: String?): String {
+    return if (host == "settings") "settings" else "dashboard"
 }
