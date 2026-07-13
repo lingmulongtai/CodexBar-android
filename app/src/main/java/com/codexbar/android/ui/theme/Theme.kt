@@ -26,6 +26,7 @@ fun CodexBarTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         shapes = CodexBarShapes,
+        typography = CodexBarTypography,
         content = content
     )
 }

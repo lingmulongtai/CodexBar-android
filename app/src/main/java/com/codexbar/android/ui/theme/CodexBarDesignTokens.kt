@@ -16,14 +16,16 @@ object CodexBarSpacing {
     val medium = 12.dp
     val large = 16.dp
     val xlarge = 24.dp
+    val xxlarge = 32.dp
+    val huge = 40.dp
 }
 
 val CodexBarShapes = Shapes(
-    extraSmall = RoundedCornerShape(6.dp),
-    small = RoundedCornerShape(10.dp),
-    medium = RoundedCornerShape(16.dp),
-    large = RoundedCornerShape(24.dp),
-    extraLarge = RoundedCornerShape(32.dp)
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(14.dp),
+    medium = RoundedCornerShape(22.dp),
+    large = RoundedCornerShape(30.dp),
+    extraLarge = RoundedCornerShape(40.dp)
 )
 
 object CodexBarStateColors {
@@ -48,44 +50,80 @@ object CodexBarStateColors {
 
 val CodexBarLightColors: ColorScheme
     @Composable get() = androidx.compose.material3.lightColorScheme(
-        primary = Color(0xFF006D5B),
+        primary = Color(0xFF4355B9),
         onPrimary = Color.White,
-        primaryContainer = Color(0xFF8CF8DC),
-        onPrimaryContainer = Color(0xFF002019),
-        secondary = Color(0xFF4B635B),
+        primaryContainer = Color(0xFFDEE0FF),
+        onPrimaryContainer = Color(0xFF0A1764),
+        inversePrimary = Color(0xFFBBC3FF),
+        secondary = Color(0xFF6B5778),
         onSecondary = Color.White,
-        secondaryContainer = Color(0xFFCDE9DD),
-        onSecondaryContainer = Color(0xFF082019),
-        tertiary = Color(0xFF406376),
+        secondaryContainer = Color(0xFFF3DAFF),
+        onSecondaryContainer = Color(0xFF251431),
+        tertiary = Color(0xFF006879),
         onTertiary = Color.White,
-        tertiaryContainer = Color(0xFFC4E7FF),
-        onTertiaryContainer = Color(0xFF001E2C),
+        tertiaryContainer = Color(0xFFA8EDFF),
+        onTertiaryContainer = Color(0xFF001F26),
         error = Color(0xFFBA1A1A),
-        surface = Color(0xFFFBFDF9),
-        onSurface = Color(0xFF191C1A),
-        surfaceVariant = Color(0xFFDCE5DE),
-        onSurfaceVariant = Color(0xFF404943),
-        outline = Color(0xFF707973)
+        onError = Color.White,
+        errorContainer = Color(0xFFFFDAD6),
+        onErrorContainer = Color(0xFF410002),
+        background = Color(0xFFFBF8FF),
+        onBackground = Color(0xFF1B1B21),
+        surface = Color(0xFFFBF8FF),
+        onSurface = Color(0xFF1B1B21),
+        surfaceVariant = Color(0xFFE4E1EC),
+        onSurfaceVariant = Color(0xFF46464F),
+        surfaceTint = Color(0xFF4355B9),
+        inverseSurface = Color(0xFF303036),
+        inverseOnSurface = Color(0xFFF2F0F8),
+        outline = Color(0xFF777680),
+        outlineVariant = Color(0xFFC7C5D0),
+        scrim = Color.Black,
+        surfaceBright = Color(0xFFFBF8FF),
+        surfaceDim = Color(0xFFDBD9E1),
+        surfaceContainerLowest = Color.White,
+        surfaceContainerLow = Color(0xFFF5F2FA),
+        surfaceContainer = Color(0xFFEFECF4),
+        surfaceContainerHigh = Color(0xFFE9E7EF),
+        surfaceContainerHighest = Color(0xFFE4E1E9)
     )
 
 val CodexBarDarkColors: ColorScheme
     @Composable get() = androidx.compose.material3.darkColorScheme(
-        primary = Color(0xFF70DBC1),
-        onPrimary = Color(0xFF00382E),
-        primaryContainer = Color(0xFF005143),
-        onPrimaryContainer = Color(0xFF8CF8DC),
-        secondary = Color(0xFFB1CCC1),
-        onSecondary = Color(0xFF1D352E),
-        secondaryContainer = Color(0xFF334B44),
-        onSecondaryContainer = Color(0xFFCDE9DD),
-        tertiary = Color(0xFFA8CBE1),
-        onTertiary = Color(0xFF0C3446),
-        tertiaryContainer = Color(0xFF274B5D),
-        onTertiaryContainer = Color(0xFFC4E7FF),
+        primary = Color(0xFFBBC3FF),
+        onPrimary = Color(0xFF102978),
+        primaryContainer = Color(0xFF293D9F),
+        onPrimaryContainer = Color(0xFFDEE0FF),
+        inversePrimary = Color(0xFF4355B9),
+        secondary = Color(0xFFDDBEEB),
+        onSecondary = Color(0xFF3B2948),
+        secondaryContainer = Color(0xFF533F60),
+        onSecondaryContainer = Color(0xFFF3DAFF),
+        tertiary = Color(0xFF52D7F0),
+        onTertiary = Color(0xFF00363F),
+        tertiaryContainer = Color(0xFF004E5B),
+        onTertiaryContainer = Color(0xFFA8EDFF),
         error = Color(0xFFFFB4AB),
-        surface = Color(0xFF101411),
-        onSurface = Color(0xFFE0E3DF),
-        surfaceVariant = Color(0xFF404943),
-        onSurfaceVariant = Color(0xFFC0C9C1),
-        outline = Color(0xFF8A938C)
+        onError = Color(0xFF690005),
+        errorContainer = Color(0xFF93000A),
+        onErrorContainer = Color(0xFFFFDAD6),
+        background = Color(0xFF131318),
+        onBackground = Color(0xFFE4E1E9),
+        surface = Color(0xFF131318),
+        onSurface = Color(0xFFE4E1E9),
+        surfaceVariant = Color(0xFF46464F),
+        onSurfaceVariant = Color(0xFFC7C5D0),
+        surfaceTint = Color(0xFFBBC3FF),
+        inverseSurface = Color(0xFFE4E1E9),
+        inverseOnSurface = Color(0xFF303036),
+        outline = Color(0xFF91909A),
+        outlineVariant = Color(0xFF46464F),
+        scrim = Color.Black,
+        surfaceBright = Color(0xFF39383E),
+        surfaceDim = Color(0xFF131318),
+        surfaceContainerLowest = Color(0xFF0E0E13),
+        surfaceContainerLow = Color(0xFF1B1B21),
+        surfaceContainer = Color(0xFF1F1F25),
+        surfaceContainerHigh = Color(0xFF2A292F),
+        surfaceContainerHighest = Color(0xFF35343A)
     )
