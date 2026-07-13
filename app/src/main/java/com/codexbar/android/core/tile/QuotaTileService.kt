@@ -95,9 +95,15 @@ class QuotaTileService : TileService() {
             .mapNotNull { service ->
                 val labels = widgetPrefsManager.getCachedLabels(service)
                 if (labels.isEmpty()) return@mapNotNull null
-                val maxUtilization = widgetPrefsManager.getMaxCachedUtilization(service)
+                val primaryLabel = labels.maxBy { widgetPrefsManager.getCachedUtilization(service, it) }
+                val maxUtilization = widgetPrefsManager.getCachedUtilization(service, primaryLabel)
                 val updatedAt = widgetPrefsManager.getCachedUpdatedAt(service)
-                TileSnapshot(service, maxUtilization, updatedAt)
+                TileSnapshot(
+                    service = service,
+                    utilization = maxUtilization,
+                    updatedAt = updatedAt,
+                    remainingLabel = widgetPrefsManager.getCachedRemainingLabel(service, primaryLabel)
+                )
             }
             .maxByOrNull { it.utilization }
 
@@ -105,9 +111,8 @@ class QuotaTileService : TileService() {
             return services.joinToString(" | ") { it.displayName }
         }
 
-        val remaining = ((1f - cachedService.utilization) * 100).toInt().coerceIn(0, 100)
         val age = formatAge(cachedService.updatedAt)
-        return "${cachedService.service.displayName}: $remaining% left$age"
+        return "${cachedService.service.displayName}: ${cachedService.remainingLabel}$age"
     }
 
     private fun formatAge(updatedAtMillis: Long): String {
@@ -124,6 +129,7 @@ class QuotaTileService : TileService() {
     private data class TileSnapshot(
         val service: AiService,
         val utilization: Float,
-        val updatedAt: Long
+        val updatedAt: Long,
+        val remainingLabel: String
     )
 }
