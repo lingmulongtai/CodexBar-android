@@ -39,6 +39,7 @@ import androidx.glance.unit.ColorProvider
 import com.codexbar.android.MainActivity
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.presentation.QuotaSeverity
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.workmanager.WorkManagerInitializer
 import java.time.Duration
@@ -240,9 +241,13 @@ class QuotaGlanceWidget : GlanceAppWidget() {
         widgetPrefs: WidgetPrefsManager
     ) {
         val utilization = widgetPrefs.getCachedUtilization(service, label)
-        val remaining = ((1f - utilization) * 100).toInt()
-        val resetsAt = widgetPrefs.getCachedResetsAt(service, label)
-        val resetText = resetsAt?.let { formatResetTime(it) } ?: ""
+        val barProgress = widgetPrefs.getCachedBarProgress(service, label)
+        val remainingLabel = widgetPrefs.getCachedRemainingLabel(service, label)
+        val resetText = widgetPrefs.getCachedResetLabel(service, label).orEmpty()
+        val paceText = widgetPrefs.getCachedPaceLabel(service, label).orEmpty()
+        val severity = widgetPrefs.getCachedSeverity(service, label)
+            ?.let { runCatching { QuotaSeverity.valueOf(it) }.getOrNull() }
+            ?: severityForUtilization(utilization)
 
         Column(modifier = GlanceModifier.fillMaxWidth()) {
             // Label + percentage
@@ -259,9 +264,9 @@ class QuotaGlanceWidget : GlanceAppWidget() {
                 )
                 Spacer(modifier = GlanceModifier.defaultWeight())
                 Text(
-                    text = "${remaining}% left",
+                    text = remainingLabel,
                     style = TextStyle(
-                        color = utilizationColor(utilization),
+                        color = severityColor(severity),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -271,15 +276,16 @@ class QuotaGlanceWidget : GlanceAppWidget() {
             Spacer(modifier = GlanceModifier.height(3.dp))
 
             // Progress bar
-            SegmentedProgressBar(utilization)
+            SegmentedProgressBar(barProgress, severity)
 
             // Reset time
-            if (resetText.isNotEmpty()) {
+            val detailText = listOf(resetText, paceText).filter { it.isNotBlank() }.joinToString(" · ")
+            if (detailText.isNotEmpty()) {
                 Spacer(modifier = GlanceModifier.height(2.dp))
                 Row(modifier = GlanceModifier.fillMaxWidth()) {
                     Spacer(modifier = GlanceModifier.defaultWeight())
                     Text(
-                        text = "Resets in $resetText",
+                        text = detailText,
                         style = TextStyle(
                             color = ColorProvider(Color.White.copy(alpha = 0.4f)),
                             fontSize = 10.sp
@@ -291,10 +297,10 @@ class QuotaGlanceWidget : GlanceAppWidget() {
     }
 
     @Composable
-    private fun SegmentedProgressBar(utilization: Float) {
+    private fun SegmentedProgressBar(barProgress: Float, severity: QuotaSeverity) {
         val totalSegments = 24
-        val filledSegments = ((1f - utilization) * totalSegments).roundToInt().coerceIn(0, totalSegments)
-        val fillColor = utilizationColor(utilization)
+        val filledSegments = (barProgress * totalSegments).roundToInt().coerceIn(0, totalSegments)
+        val fillColor = severityColor(severity)
         val trackColor = ColorProvider(Color.White.copy(alpha = 0.1f))
 
         Row(
@@ -317,9 +323,23 @@ class QuotaGlanceWidget : GlanceAppWidget() {
 
     companion object {
         fun utilizationColor(utilization: Float): ColorProvider {
+            return severityColor(severityForUtilization(utilization))
+        }
+
+        fun severityForUtilization(utilization: Float): QuotaSeverity {
+            return when {
+                utilization >= 0.85f -> QuotaSeverity.Critical
+                utilization >= 0.60f -> QuotaSeverity.Warning
+                else -> QuotaSeverity.Good
+            }
+        }
+
+        fun severityColor(severity: QuotaSeverity): ColorProvider {
             val color = when {
-                utilization >= 0.85f -> Color(0xFFEF5350)
-                utilization >= 0.60f -> Color(0xFFFFB74D)
+                severity == QuotaSeverity.Critical -> Color(0xFFEF5350)
+                severity == QuotaSeverity.Warning -> Color(0xFFFFB74D)
+                severity == QuotaSeverity.Redacted -> Color.White.copy(alpha = 0.35f)
+                severity == QuotaSeverity.Unknown -> Color.White.copy(alpha = 0.45f)
                 else -> Color(0xFF81C784)
             }
             return ColorProvider(color)

@@ -3,6 +3,8 @@ package com.codexbar.android.core.widget
 import android.content.Context
 import android.content.SharedPreferences
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.presentation.QuotaMetricPresentation
+import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -77,6 +79,37 @@ class WidgetPrefsManager @Inject constructor(
         editor.apply()
     }
 
+    fun cachePresentation(service: ServiceQuotaPresentation) {
+        val prefix = "cache_${service.service.name}"
+        val editor = prefs.edit()
+        prefs.all.keys.filter { it.startsWith(prefix) }.forEach { editor.remove(it) }
+
+        val labels = service.metrics.map { it.label }
+        editor.putString("${prefix}_labels", labels.joinToString(","))
+        editor.putLong("${prefix}_updated_at", System.currentTimeMillis())
+        editor.putString("${prefix}_status", service.status.name)
+        editor.putString("${prefix}_freshness", service.freshness.ageLabel)
+
+        service.tier?.let { editor.putString("${prefix}_tier", it) }
+
+        for (metric in service.metrics) {
+            editor.cacheMetric(prefix, metric)
+        }
+        editor.apply()
+    }
+
+    private fun SharedPreferences.Editor.cacheMetric(prefix: String, metric: QuotaMetricPresentation) {
+        val label = metric.label
+        putFloat("${prefix}_${label}_util", (metric.usedFraction ?: 0.0).toFloat())
+        putFloat("${prefix}_${label}_bar", metric.barProgress)
+        putString("${prefix}_${label}_remaining_label", metric.remainingLabel)
+        putString("${prefix}_${label}_used_label", metric.usedLabel)
+        putString("${prefix}_${label}_reset_label", metric.resetLabel)
+        putString("${prefix}_${label}_pace_label", metric.pace.label)
+        putString("${prefix}_${label}_severity", metric.severity.name)
+        metric.resetsAt?.let { putLong("${prefix}_${label}_resets", it.epochSecond) }
+    }
+
     fun getCachedLabels(service: AiService): List<String> {
         val raw = prefs.getString("cache_${service.name}_labels", null) ?: return emptyList()
         return raw.split(",").filter { it.isNotEmpty() }
@@ -84,6 +117,31 @@ class WidgetPrefsManager @Inject constructor(
 
     fun getCachedUtilization(service: AiService, label: String): Float {
         return prefs.getFloat("cache_${service.name}_${label}_util", 0f)
+    }
+
+    fun getCachedBarProgress(service: AiService, label: String): Float {
+        return prefs.getFloat("cache_${service.name}_${label}_bar", (1f - getCachedUtilization(service, label)).coerceIn(0f, 1f))
+    }
+
+    fun getCachedRemainingLabel(service: AiService, label: String): String {
+        return prefs.getString("cache_${service.name}_${label}_remaining_label", null)
+            ?: "${((1f - getCachedUtilization(service, label)) * 100).toInt().coerceIn(0, 100)}% left"
+    }
+
+    fun getCachedResetLabel(service: AiService, label: String): String? {
+        return prefs.getString("cache_${service.name}_${label}_reset_label", null)
+    }
+
+    fun getCachedPaceLabel(service: AiService, label: String): String? {
+        return prefs.getString("cache_${service.name}_${label}_pace_label", null)
+    }
+
+    fun getCachedSeverity(service: AiService, label: String): String? {
+        return prefs.getString("cache_${service.name}_${label}_severity", null)
+    }
+
+    fun getCachedFreshness(service: AiService): String? {
+        return prefs.getString("cache_${service.name}_freshness", null)
     }
 
     fun getCachedResetsAt(service: AiService, label: String): Long? {

@@ -13,6 +13,7 @@ import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.notification.QuotaNotificationService
 import com.codexbar.android.core.presentation.PrivacyPresentation
+import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.QuotaPresentationMapper
 import com.codexbar.android.core.presentation.RefreshSourcePresentation
 import com.codexbar.android.core.security.EncryptedPrefsManager
@@ -73,24 +74,34 @@ class QuotaRefreshWorker @AssistedInject constructor(
             }
 
             if (successfulQuotas.isNotEmpty()) {
+                val privacySettings = prefsManager.getPrivacySettings()
+                val snapshot = presentationMapper.map(
+                    quotas = successfulQuotas,
+                    generatedAt = Instant.now(),
+                    privacy = PrivacyPresentation(
+                        redactSensitiveValues = false,
+                        lockScreenRedacted = privacySettings.lockScreenRedactionEnabled,
+                        widgetRedacted = privacySettings.widgetRedactionEnabled
+                    ),
+                    source = RefreshSourcePresentation.Trigger(
+                        inputData.getString(WorkManagerInitializer.KEY_REFRESH_SOURCE) ?: "periodic"
+                    )
+                )
                 // Cache quota data for widgets
-                cacheQuotaData(successfulQuotas)
+                cacheQuotaData(snapshot)
 
                 if (prefsManager.isNotificationsEnabled()) {
-                    val privacySettings = prefsManager.getPrivacySettings()
-                    val snapshot = presentationMapper.map(
-                        quotas = successfulQuotas,
-                        generatedAt = Instant.now(),
-                        privacy = PrivacyPresentation(
-                            redactSensitiveValues = privacySettings.notificationRedactionEnabled,
-                            lockScreenRedacted = privacySettings.lockScreenRedactionEnabled,
-                            widgetRedacted = privacySettings.widgetRedactionEnabled
-                        ),
-                        source = RefreshSourcePresentation.Trigger(
-                            inputData.getString(WorkManagerInitializer.KEY_REFRESH_SOURCE) ?: "periodic"
+                    val notificationSnapshot = if (privacySettings.notificationRedactionEnabled) {
+                        presentationMapper.map(
+                            quotas = successfulQuotas,
+                            generatedAt = snapshot.generatedAt,
+                            privacy = snapshot.privacy.copy(redactSensitiveValues = true),
+                            source = snapshot.source
                         )
-                    )
-                    notificationService.showQuotaNotification(snapshot)
+                    } else {
+                        snapshot
+                    }
+                    notificationService.showQuotaNotification(notificationSnapshot)
                     checkForResets(successfulQuotas)
                 }
 
@@ -114,17 +125,9 @@ class QuotaRefreshWorker @AssistedInject constructor(
         }
     }
 
-    private fun cacheQuotaData(quotas: List<QuotaInfo>) {
-        for (quota in quotas) {
-            val windows = quota.windows.map { window ->
-                Triple(
-                    window.label,
-                    window.utilization,
-                    window.resetsAt?.epochSecond
-                )
-            }
-            widgetPrefsManager.cacheAllQuotaData(quota.service, windows)
-            widgetPrefsManager.cacheTier(quota.service, quota.tier)
+    private fun cacheQuotaData(snapshot: QuotaPresentationSnapshot) {
+        for (service in snapshot.services) {
+            widgetPrefsManager.cachePresentation(service)
         }
     }
 
