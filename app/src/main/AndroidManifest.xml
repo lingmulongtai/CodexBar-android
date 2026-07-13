@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
@@ -61,6 +62,15 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="com.codexbar.android.ACTION_REFRESH" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Live monitoring session actions -->
+        <receiver
+            android:name=".core.monitoring.MonitoringActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.codexbar.android.ACTION_STOP_MONITORING" />
             </intent-filter>
         </receiver>
 

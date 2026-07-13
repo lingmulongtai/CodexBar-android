@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
@@ -41,12 +43,23 @@ fun DashboardScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val isMonitoring by viewModel.isMonitoring.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("CodexBar") },
                 actions = {
+                    IconButton(
+                        onClick = {
+                            if (isMonitoring) viewModel.stopMonitoring() else viewModel.startMonitoring()
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (isMonitoring) Icons.Default.Close else Icons.Default.PlayArrow,
+                            contentDescription = if (isMonitoring) "Stop monitoring" else "Start monitoring"
+                        )
+                    }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }

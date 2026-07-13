@@ -12,6 +12,8 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkManagerInitializer as AndroidWorkManagerInitializer
 import androidx.work.workDataOf
+import com.codexbar.android.core.monitoring.MonitoringSession
+import com.codexbar.android.core.monitoring.MonitoringSessionStore
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +35,7 @@ class WorkManagerInitializer : Initializer<Unit> {
         private const val QUOTA_WORK_NAME = "quota_periodic_refresh"
         private const val TOKEN_WORK_NAME = "token_periodic_refresh"
         private const val MANUAL_QUOTA_WORK_NAME = "quota_manual_refresh"
+        private const val MONITORING_QUOTA_WORK_NAME = "quota_monitoring_refresh"
         const val KEY_REFRESH_SOURCE = "refresh_source"
 
         fun applyRefreshPolicy(context: Context, intervalMinutes: Long) {
@@ -126,6 +129,45 @@ class WorkManagerInitializer : Initializer<Unit> {
             WorkManager.getInstance(context).enqueueUniqueWork(
                 MANUAL_QUOTA_WORK_NAME,
                 ExistingWorkPolicy.KEEP,
+                request
+            )
+        }
+
+        fun startMonitoringSession(
+            context: Context,
+            durationMinutes: Long = MonitoringSessionStore.DEFAULT_DURATION_MINUTES,
+            cadenceMinutes: Long = MonitoringSessionStore.DEFAULT_CADENCE_MINUTES
+        ): MonitoringSession {
+            val session = MonitoringSessionStore(context.applicationContext)
+                .start(durationMinutes = durationMinutes, cadenceMinutes = cadenceMinutes)
+            enqueueManualQuotaRefresh(context, source = "monitoring_start")
+            return session
+        }
+
+        fun stopMonitoringSession(context: Context) {
+            val appContext = context.applicationContext
+            MonitoringSessionStore(appContext).stop()
+            WorkManager.getInstance(appContext).cancelUniqueWork(MONITORING_QUOTA_WORK_NAME)
+        }
+
+        fun scheduleNextMonitoringRefresh(context: Context) {
+            val appContext = context.applicationContext
+            val session = MonitoringSessionStore(appContext).activeSession() ?: return
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val request = OneTimeWorkRequestBuilder<QuotaRefreshWorker>()
+                .setInitialDelay(session.cadenceMinutes, TimeUnit.MINUTES)
+                .setConstraints(constraints)
+                .setInputData(workDataOf(KEY_REFRESH_SOURCE to "monitoring"))
+                .addTag("quota_refresh")
+                .addTag("quota_refresh_monitoring")
+                .build()
+
+            WorkManager.getInstance(appContext).enqueueUniqueWork(
+                MONITORING_QUOTA_WORK_NAME,
+                ExistingWorkPolicy.REPLACE,
                 request
             )
         }

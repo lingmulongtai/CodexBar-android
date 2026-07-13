@@ -2,6 +2,7 @@ package com.codexbar.android.core.security
 
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
+import com.codexbar.android.core.monitoring.MonitoringSessionStore
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -55,6 +56,12 @@ class BackupRulesTest {
             excludes.any { exclude ->
                 exclude.getAttribute("domain") == "sharedpref" &&
                     exclude.getAttribute("path") == TokenRefreshStateStore.BACKUP_PATH
+            }
+        )
+        assertTrue(
+            excludes.any { exclude ->
+                exclude.getAttribute("domain") == "sharedpref" &&
+                    exclude.getAttribute("path") == MonitoringSessionStore.BACKUP_PATH
             }
         )
         assertTrue(

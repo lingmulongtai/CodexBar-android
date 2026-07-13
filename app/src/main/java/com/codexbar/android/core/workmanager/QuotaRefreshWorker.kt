@@ -12,6 +12,7 @@ import com.codexbar.android.core.data.QuotaHistoryStore
 import com.codexbar.android.core.domain.model.QuotaInfo
 import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.domain.repository.QuotaRepository
+import com.codexbar.android.core.monitoring.MonitoringSessionStore
 import com.codexbar.android.core.notification.QuotaNotificationService
 import com.codexbar.android.core.presentation.PrivacyPresentation
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
@@ -46,7 +47,8 @@ class QuotaRefreshWorker @AssistedInject constructor(
     private val prefsManager: EncryptedPrefsManager,
     private val notificationService: QuotaNotificationService,
     private val widgetPrefsManager: WidgetPrefsManager,
-    private val quotaHistoryStore: QuotaHistoryStore
+    private val quotaHistoryStore: QuotaHistoryStore,
+    private val monitoringSessionStore: MonitoringSessionStore
 ) : CoroutineWorker(context, workerParams) {
 
     private val presentationMapper = QuotaPresentationMapper()
@@ -108,7 +110,13 @@ class QuotaRefreshWorker @AssistedInject constructor(
                     } else {
                         snapshot
                     }
-                    notificationService.showQuotaNotification(notificationSnapshot)
+                    val monitoringSession = monitoringSessionStore.activeSession()
+                    if (monitoringSession != null) {
+                        notificationService.showMonitoringNotification(notificationSnapshot, monitoringSession)
+                    } else {
+                        notificationService.cancelMonitoringNotification()
+                        notificationService.showQuotaNotification(notificationSnapshot)
+                    }
                     checkForResets(successfulQuotas)
                 }
 
@@ -121,6 +129,8 @@ class QuotaRefreshWorker @AssistedInject constructor(
                 applicationContext,
                 ComponentName(applicationContext, QuotaTileService::class.java)
             )
+
+            WorkManagerInitializer.scheduleNextMonitoringRefresh(applicationContext)
 
             if (successfulQuotas.isEmpty()) {
                 Result.retry()

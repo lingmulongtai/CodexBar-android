@@ -1,13 +1,19 @@
 package com.codexbar.android.core.notification
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.drawable.Icon
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.monitoring.MonitoringActionReceiver
+import com.codexbar.android.core.monitoring.MonitoringSession
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.core.security.EncryptedPrefsManager
@@ -27,6 +33,7 @@ class QuotaNotificationService @Inject constructor(
         const val CHANNEL_ID = "quota_monitor"
         const val RESET_CHANNEL_ID = "quota_reset_alert"
         const val NOTIFICATION_ID = 1001
+        const val MONITORING_NOTIFICATION_ID = 1002
         const val RESET_NOTIFICATION_ID_BASE = 2000
         const val ACTION_REFRESH = "com.codexbar.android.ACTION_REFRESH"
     }
@@ -88,26 +95,6 @@ class QuotaNotificationService @Inject constructor(
                 }
         }
 
-        // Refresh action
-        val refreshIntent = Intent(context, RefreshReceiver::class.java).apply {
-            action = ACTION_REFRESH
-        }
-        val refreshPendingIntent = PendingIntent.getBroadcast(
-            context, 0, refreshIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        // Dashboard tap intent
-        val dashboardIntent = Intent().apply {
-            action = Intent.ACTION_VIEW
-            data = android.net.Uri.parse("codexbar://dashboard")
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-        val dashboardPendingIntent = PendingIntent.getActivity(
-            context, 0, dashboardIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_quota)
             .setContentTitle("AI quota status")
@@ -115,7 +102,7 @@ class QuotaNotificationService @Inject constructor(
             .setSubText("Updated $elapsed")
             .setStyle(style)
             .setProgress(100, if (privacySettings.notificationRedactionEnabled) 0 else mostUsedProgress, false)
-            .setContentIntent(dashboardPendingIntent)
+            .setContentIntent(dashboardPendingIntent())
             .setOngoing(true)
             .setSilent(true)
             .setOnlyAlertOnce(true)
@@ -126,25 +113,75 @@ class QuotaNotificationService @Inject constructor(
                 redactedTitle = "AI quota status",
                 redactedText = "Quota details hidden"
             )
-            .addAction(R.drawable.ic_refresh, "Refresh", refreshPendingIntent)
+            .addAction(R.drawable.ic_refresh, "Refresh", refreshPendingIntent())
             .build()
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(NOTIFICATION_ID, notification)
     }
 
+    fun showMonitoringNotification(snapshot: QuotaPresentationSnapshot, session: MonitoringSession) {
+        val privacySettings = prefsManager.getPrivacySettings()
+        val primaryService = snapshot.services
+            .maxByOrNull { service -> service.primaryMetric?.usedPercent ?: -1 }
+        val primaryMetric = primaryService?.primaryMetric
+        val progress = if (privacySettings.notificationRedactionEnabled) {
+            0
+        } else {
+            primaryMetric?.barProgress?.times(100)?.toInt()?.coerceIn(0, 100) ?: 0
+        }
+        val remaining = session.remainingMinutes()
+        val title = "Quota monitoring"
+        val text = if (privacySettings.notificationRedactionEnabled || primaryService == null || primaryMetric == null) {
+            "$remaining min left - quota details hidden"
+        } else {
+            "${primaryService.service.displayName}: ${formatRemaining(primaryService)}"
+        }
+        val subText = "Live session - $remaining min left"
+        val notification = if (Build.VERSION.SDK_INT >= 36) {
+            buildPlatformMonitoringNotification(
+                title = title,
+                text = text,
+                subText = subText,
+                progress = progress,
+                primaryService = primaryService,
+                privacySettings = privacySettings
+            )
+        } else {
+            NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_quota)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setSubText(subText)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+                .setProgress(100, progress, primaryMetric == null)
+                .setContentIntent(dashboardPendingIntent())
+                .setOngoing(true)
+                .setSilent(true)
+                .setOnlyAlertOnce(true)
+                .setShowWhen(false)
+                .applyPrivacy(
+                    privacySettings = privacySettings,
+                    channelId = CHANNEL_ID,
+                    redactedTitle = title,
+                    redactedText = "Quota details hidden"
+                )
+                .addAction(R.drawable.ic_refresh, "Refresh", refreshPendingIntent())
+                .addAction(R.drawable.ic_quota, "Stop", stopMonitoringPendingIntent())
+                .build()
+        }
+
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(MONITORING_NOTIFICATION_ID, notification)
+    }
+
+    fun cancelMonitoringNotification() {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.cancel(MONITORING_NOTIFICATION_ID)
+    }
+
     fun showResetNotification(service: AiService, windowLabel: String) {
         val privacySettings = prefsManager.getPrivacySettings()
-        val dashboardIntent = Intent().apply {
-            action = Intent.ACTION_VIEW
-            data = android.net.Uri.parse("codexbar://dashboard")
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-        val dashboardPendingIntent = PendingIntent.getActivity(
-            context, 0, dashboardIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
         val contentTitle = if (privacySettings.notificationRedactionEnabled) {
             "Quota reset"
         } else {
@@ -160,7 +197,7 @@ class QuotaNotificationService @Inject constructor(
             .setSmallIcon(R.drawable.ic_quota)
             .setContentTitle(contentTitle)
             .setContentText(contentText)
-            .setContentIntent(dashboardPendingIntent)
+            .setContentIntent(dashboardPendingIntent())
             .setAutoCancel(true)
             .applyPrivacy(
                 privacySettings = privacySettings,
@@ -173,6 +210,91 @@ class QuotaNotificationService @Inject constructor(
         val notificationId = RESET_NOTIFICATION_ID_BASE + "${service.name}_$windowLabel".hashCode().and(0xFFFF)
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(notificationId, notification)
+    }
+
+    private fun buildPlatformMonitoringNotification(
+        title: String,
+        text: String,
+        subText: String,
+        progress: Int,
+        primaryService: ServiceQuotaPresentation?,
+        privacySettings: PrivacySettings
+    ): Notification {
+        val progressStyle = Notification.ProgressStyle()
+            .setStyledByProgress(true)
+            .setProgress(progress)
+            .addProgressSegment(
+                Notification.ProgressStyle.Segment(100)
+                    .setColor(primaryService?.service?.brandColor?.toInt() ?: Color.GRAY)
+            )
+
+        val publicVersion = Notification.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_quota)
+            .setContentTitle(title)
+            .setContentText("Quota details hidden")
+            .setShowWhen(false)
+            .build()
+
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        return Notification.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_quota)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setSubText(subText)
+            .setStyle(progressStyle)
+            .setContentIntent(dashboardPendingIntent())
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setShowWhen(false)
+            .setFlag(Notification.FLAG_PROMOTED_ONGOING, manager.canPostPromotedNotifications())
+            .setPublicVersion(publicVersion.takeIf { privacySettings.lockScreenRedactionEnabled })
+            .addAction(
+                Notification.Action.Builder(
+                    Icon.createWithResource(context, R.drawable.ic_refresh),
+                    "Refresh",
+                    refreshPendingIntent()
+                ).build()
+            )
+            .addAction(
+                Notification.Action.Builder(
+                    Icon.createWithResource(context, R.drawable.ic_quota),
+                    "Stop",
+                    stopMonitoringPendingIntent()
+                ).build()
+            )
+            .build()
+    }
+
+    private fun refreshPendingIntent(): PendingIntent {
+        val refreshIntent = Intent(context, RefreshReceiver::class.java).apply {
+            action = ACTION_REFRESH
+        }
+        return PendingIntent.getBroadcast(
+            context, 0, refreshIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    private fun stopMonitoringPendingIntent(): PendingIntent {
+        val intent = Intent(context, MonitoringActionReceiver::class.java).apply {
+            action = MonitoringActionReceiver.ACTION_STOP_MONITORING
+        }
+        return PendingIntent.getBroadcast(
+            context, 1, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    private fun dashboardPendingIntent(): PendingIntent {
+        val dashboardIntent = Intent().apply {
+            action = Intent.ACTION_VIEW
+            data = android.net.Uri.parse("codexbar://dashboard")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        return PendingIntent.getActivity(
+            context, 0, dashboardIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
     }
 
     private fun formatRemaining(service: ServiceQuotaPresentation): String {
