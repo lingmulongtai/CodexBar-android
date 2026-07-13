@@ -3,4 +3,11 @@
     <string name="app_name">CodexBar</string>
     <string name="tile_label">CodexBar</string>
     <string name="widget_description">Monitor AI service quota usage at a glance</string>
+    <string name="settings_title">Settings</string>
+    <string name="action_back">Back</string>
+    <string name="language_title">App language</string>
+    <string name="language_description">Choose the language used throughout CodexBar.</string>
+    <string name="language_system">System</string>
+    <string name="language_english">English</string>
+    <string name="language_japanese">日本語</string>
 </resources>

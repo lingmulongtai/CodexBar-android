@@ -49,6 +49,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.Switch
@@ -65,6 +68,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -75,6 +79,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.security.PrivacySettings
 import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
@@ -93,6 +98,7 @@ fun SettingsScreen(
     var notificationsAllowed by remember { mutableStateOf(context.canPostNotifications()) }
     var promotedUpdatesAllowed by remember { mutableStateOf(context.canPostPromotedNotifications()) }
     var enableNotificationsAfterSettings by remember { mutableStateOf(false) }
+    var selectedLanguage by remember { mutableStateOf(AppLanguage.current()) }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -129,10 +135,13 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back)
+                        )
                     }
                 }
             )
@@ -177,6 +186,14 @@ fun SettingsScreen(
                     openAppNotificationSettings(context)
                 },
                 onOpenPromotionSettings = { openPromotionSettings(context) }
+            )
+
+            LanguageSection(
+                selectedLanguage = selectedLanguage,
+                onLanguageSelected = { language ->
+                    selectedLanguage = language
+                    language.apply()
+                }
             )
 
             PrivacySection(
@@ -234,6 +251,48 @@ fun SettingsScreen(
             onConfirm = { viewModel.disconnectService(service) },
             onDismiss = { viewModel.dismissDisconnectConfirmDialog() }
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LanguageSection(
+    selectedLanguage: AppLanguage,
+    onLanguageSelected: (AppLanguage) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.language_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(R.string.language_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                AppLanguage.entries.forEachIndexed { index, language ->
+                    SegmentedButton(
+                        selected = selectedLanguage == language,
+                        onClick = { onLanguageSelected(language) },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = AppLanguage.entries.size
+                        )
+                    ) {
+                        Text(stringResource(language.labelRes))
+                    }
+                }
+            }
+        }
     }
 }
 
