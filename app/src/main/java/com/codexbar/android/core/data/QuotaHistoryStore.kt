@@ -100,8 +100,9 @@ class QuotaHistoryStore @Inject constructor(
         }.getOrNull()
     }
 
-    private companion object {
+    internal companion object {
         const val PREFS_NAME = "codexbar_quota_history"
-        const val MAX_SAMPLES_PER_WINDOW = 96
+        const val BACKUP_PATH = "$PREFS_NAME.xml"
+        private const val MAX_SAMPLES_PER_WINDOW = 96
     }
 }

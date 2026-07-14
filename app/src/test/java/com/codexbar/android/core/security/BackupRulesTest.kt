@@ -2,6 +2,7 @@ package com.codexbar.android.core.security
 
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
+import com.codexbar.android.core.data.QuotaHistoryStore
 import com.codexbar.android.core.monitoring.MonitoringSessionStore
 import com.codexbar.android.core.widget.WidgetPrefsManager
 import org.junit.Assert.assertEquals
@@ -69,6 +70,12 @@ class BackupRulesTest {
             excludes.any { exclude ->
                 exclude.getAttribute("domain") == "sharedpref" &&
                     exclude.getAttribute("path") == WidgetPrefsManager.BACKUP_PATH
+            }
+        )
+        assertTrue(
+            excludes.any { exclude ->
+                exclude.getAttribute("domain") == "sharedpref" &&
+                    exclude.getAttribute("path") == QuotaHistoryStore.BACKUP_PATH
             }
         )
         assertTrue(
