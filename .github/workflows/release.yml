@@ -71,13 +71,12 @@ jobs:
             exit 1
           fi
 
-          if ! certificate_output="$("$apksigner" verify --verbose --print-certs "${release_apks[0]}" 2>&1)"; then
+          if ! certificate_output="$("$apksigner" verify --verbose --print-certs-pem "${release_apks[0]}" 2>&1)"; then
             printf '::error::apksigner rejected the release APK.\n'
             printf '%s\n' "$certificate_output"
             exit 1
           fi
-          signer_count="$(awk -F': ' '/Number of signers:/ { print $2; exit }' <<< "$certificate_output")"
-          actual_sha256="$(awk -F': ' '/Signer #1 certificate SHA-256 digest:/ { print tolower($2); exit }' <<< "$certificate_output")"
+          signer_count="$(awk '/^-----BEGIN CERTIFICATE-----$/ { count++ } END { print count + 0 }' <<< "$certificate_output")"
           expected_sha256="$(tr '[:upper:]' '[:lower:]' < .github/release-signing-cert-sha256.txt | tr -d '[:space:]')"
 
           if ! [[ "$expected_sha256" =~ ^[0-9a-f]{64}$ ]]; then
@@ -88,6 +87,17 @@ jobs:
             printf '::error::Expected one APK signer, detected %s.\n' "${signer_count:-none}"
             exit 1
           fi
+
+          certificate_base64="$(awk '
+            /^-----BEGIN CERTIFICATE-----$/ { in_certificate = 1; next }
+            /^-----END CERTIFICATE-----$/ { if (in_certificate) exit }
+            in_certificate { print }
+          ' <<< "$certificate_output")"
+          if [ -z "$certificate_base64" ]; then
+            printf '::error::Could not extract the APK signing certificate.\n'
+            exit 1
+          fi
+          actual_sha256="$(printf '%s' "$certificate_base64" | base64 --decode | sha256sum | awk '{ print tolower($1) }')"
 
           printf 'Release signer SHA-256: %s\n' "${actual_sha256:-unavailable}"
           if [ "$actual_sha256" != "$expected_sha256" ]; then
