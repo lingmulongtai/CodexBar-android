@@ -18,8 +18,9 @@ class ReleaseSigningContinuityTest {
 
         assertEquals(EXPECTED_RELEASE_CERTIFICATE_SHA256, fingerprint)
         assertTrue(workflow.contains("Verify release signing identity"))
-        assertTrue(workflow.contains("apksigner\" verify --verbose --print-certs"))
-        assertTrue(workflow.contains("Number of signers:"))
+        assertTrue(workflow.contains("apksigner\" verify --verbose --print-certs-pem"))
+        assertTrue(workflow.contains("-----BEGIN CERTIFICATE-----"))
+        assertTrue(workflow.contains("base64 --decode | sha256sum"))
         assertTrue(workflow.contains("release-signing-cert-sha256.txt"))
     }
 
