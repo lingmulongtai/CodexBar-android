@@ -58,6 +58,7 @@
     <string name="action_connect_account">Connect account</string>
     <string name="action_reconnect_account">Reconnect account</string>
     <string name="action_copy">Copy</string>
+    <string name="action_copy_sign_in_code">Copy paste-ready code</string>
     <string name="action_copied">Copied</string>
     <string name="action_copy_command">Copy command</string>
     <string name="action_delete">Delete</string>
@@ -95,6 +96,7 @@
     <string name="account_manual_setup">Manual token setup</string>
     <string name="account_manual_setup_description">Advanced fallback only. Prefer account sign-in above; never paste tokens into screenshots, logs, notes, or issue reports.</string>
     <string name="account_link_enter_code">Enter this code on the sign-in page:</string>
+    <string name="account_link_copy_first_hint">Copy the code before opening the browser. Separators are removed so the full code can be pasted into the first split field.</string>
     <string name="account_link_expires">Expires: %1$s</string>
     <string name="clipboard_sign_in_code">Sign-in code</string>
     <string name="clipboard_setup_command">Setup command</string>
@@ -136,6 +138,7 @@
     <string name="validation_required_fields">Required credential fields are incomplete</string>
     <string name="validation_account_link_failed">Account link failed</string>
     <string name="validation_account_link_failed_detail">Account link failed: %1$s</string>
+    <string name="validation_account_link_dns_failed">Couldn’t resolve the %1$s authentication server. Check Private DNS, VPN, ad blockers, and your network, then retry.</string>
     <string name="validation_unknown">Unknown</string>
     <string name="validation_network_error">Network error: %1$s</string>
     <string name="validation_authentication_required">Authentication failed (sign in again)</string>
@@ -232,11 +235,18 @@
     <string name="pace_waiting_next_window">Waiting for next window</string>
     <string name="pace_collecting_history">Collecting pace history</string>
     <string name="pace_stable">Pace stable</string>
+    <string name="pace_room_to_use_more">You can use more</string>
     <string name="pace_reserve">%1$d%% reserve</string>
     <string name="pace_no_recent_increase">No recent increase</string>
     <string name="pace_may_run_out">May run out before reset</string>
-    <string name="pace_at_risk">Pace at risk</string>
-    <string name="pace_on_track">Pace on track</string>
+    <string name="pace_too_fast">Usage pace is too fast</string>
+    <string name="pace_at_risk">A little faster than ideal</string>
+    <string name="pace_on_track">You’re on a good pace</string>
     <string name="pace_unavailable">Pace unavailable</string>
+    <string name="pace_cycle_progress">Used %1$d%% / %2$s%% of window elapsed</string>
+    <string name="pace_usage_rate">Avg %1$s%%/h</string>
+    <string name="pace_multiplier">%1$s× target pace</string>
     <string name="pace_forecast">At this pace: %1$d%% by reset</string>
+    <string name="insight_limit_not_provided_title">%1$d-hour limit isn’t active right now!</string>
+    <string name="insight_limit_not_provided_message">No short-term window was returned, so you can focus on the longer window and keep building.</string>
 </resources>

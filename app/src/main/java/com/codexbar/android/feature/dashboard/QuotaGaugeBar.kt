@@ -125,6 +125,9 @@ fun QuotaGaugeBar(
             metric.resetLabel?.let(::add)
             metric.pace.label.takeIf { it.isNotBlank() }?.let(::add)
             if (showExtendedDetails) {
+                metric.pace.cycleProgressLabel?.let(::add)
+                metric.pace.usageRateLabel?.let(::add)
+                metric.pace.paceMultiplierLabel?.let(::add)
                 metric.pace.reserveLabel?.let(::add)
                 metric.pace.forecastLabel?.let(::add)
             }
@@ -136,7 +139,7 @@ fun QuotaGaugeBar(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.End,
                 modifier = Modifier.fillMaxWidth(),
-                maxLines = if (showExtendedDetails) 2 else 1,
+                maxLines = if (showExtendedDetails) 3 else 1,
                 overflow = TextOverflow.Ellipsis
             )
         }

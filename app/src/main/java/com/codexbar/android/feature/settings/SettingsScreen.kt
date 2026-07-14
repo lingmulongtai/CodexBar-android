@@ -99,6 +99,7 @@ import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
 import com.codexbar.android.ui.components.providerIcon
 import com.codexbar.android.ui.theme.providerVisualStyle
 import kotlinx.coroutines.delay
+import java.util.Locale
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -786,16 +787,7 @@ private fun AccountLinkControls(
     onCopyAccountCode: (String) -> Unit
 ) {
     val prompt = state.accountLinkPrompt
-    var lastOpenedCode by rememberSaveable(service) { mutableStateOf<String?>(null) }
     var copiedCode by rememberSaveable(service) { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(prompt?.userCode) {
-        if (prompt != null && prompt.userCode != lastOpenedCode) {
-            lastOpenedCode = prompt.userCode
-            copiedCode = null
-            onOpenAccountLink(prompt.verificationUrl)
-        }
-    }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Surface(
@@ -854,6 +846,9 @@ private fun AccountLinkControls(
         }
 
         prompt?.let {
+            val clipboardCode = remember(prompt.userCode) {
+                deviceCodeForClipboard(prompt.userCode)
+            }
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
@@ -878,24 +873,34 @@ private fun AccountLinkControls(
                                 color = accent
                             )
                         }
-                        TextButton(
-                            onClick = {
-                                onCopyAccountCode(prompt.userCode)
-                                copiedCode = prompt.userCode
-                            }
-                        ) {
-                            Icon(Icons.Rounded.ContentCopy, contentDescription = null)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                stringResource(
-                                    if (copiedCode == prompt.userCode) {
-                                        R.string.action_copied
-                                    } else {
-                                        R.string.action_copy
-                                    }
-                                )
+                    }
+                    Text(
+                        text = stringResource(R.string.account_link_copy_first_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Button(
+                        onClick = {
+                            onCopyAccountCode(clipboardCode)
+                            copiedCode = clipboardCode
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = accent,
+                            contentColor = onAccent
+                        )
+                    ) {
+                        Icon(Icons.Rounded.ContentCopy, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            stringResource(
+                                if (copiedCode == clipboardCode) {
+                                    R.string.action_copied
+                                } else {
+                                    R.string.action_copy_sign_in_code
+                                }
                             )
-                        }
+                        )
                     }
                     Text(
                         text = stringResource(R.string.account_link_expires, prompt.expiresAtDisplay),
@@ -914,6 +919,12 @@ private fun AccountLinkControls(
             }
         }
     }
+}
+
+internal fun deviceCodeForClipboard(userCode: String): String {
+    return userCode
+        .filter(Char::isLetterOrDigit)
+        .uppercase(Locale.ROOT)
 }
 
 private fun AiService.supportsAccountLink(): Boolean {

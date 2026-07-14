@@ -58,6 +58,7 @@
     <string name="action_connect_account">アカウントを接続</string>
     <string name="action_reconnect_account">アカウントを再接続</string>
     <string name="action_copy">コピー</string>
+    <string name="action_copy_sign_in_code">貼り付け用コードをコピー</string>
     <string name="action_copied">コピー済み</string>
     <string name="action_copy_command">コマンドをコピー</string>
     <string name="action_delete">削除</string>
@@ -95,6 +96,7 @@
     <string name="account_manual_setup">手動トークン設定</string>
     <string name="account_manual_setup_description">上級者向けの代替手段です。上のアカウントログインを優先し、トークンをスクリーンショット、ログ、メモ、Issueへ貼らないでください。</string>
     <string name="account_link_enter_code">ログインページで次のコードを入力してください:</string>
+    <string name="account_link_copy_first_hint">先にコードをコピーしてください。区切り記号を除いてコピーするため、分割された最初の入力欄へコード全体を貼り付けられます。</string>
     <string name="account_link_expires">有効期限: %1$s</string>
     <string name="clipboard_sign_in_code">ログインコード</string>
     <string name="clipboard_setup_command">設定コマンド</string>
@@ -136,6 +138,7 @@
     <string name="validation_required_fields">必要な認証情報が入力されていません</string>
     <string name="validation_account_link_failed">アカウントを接続できませんでした</string>
     <string name="validation_account_link_failed_detail">アカウントを接続できませんでした: %1$s</string>
+    <string name="validation_account_link_dns_failed">%1$sの認証サーバーを名前解決できません。プライベートDNS、VPN、広告ブロッカー、ネットワーク接続を確認してから再試行してください。</string>
     <string name="validation_unknown">不明</string>
     <string name="validation_network_error">ネットワークエラー: %1$s</string>
     <string name="validation_authentication_required">認証に失敗しました（再ログインが必要です）</string>
@@ -232,11 +235,18 @@
     <string name="pace_waiting_next_window">次の使用枠を待っています</string>
     <string name="pace_collecting_history">ペース履歴を収集中</string>
     <string name="pace_stable">安定したペース</string>
+    <string name="pace_room_to_use_more">まだもう少し使えます</string>
     <string name="pace_reserve">予測残量%1$d%%</string>
     <string name="pace_no_recent_increase">最近の使用量増加なし</string>
-    <string name="pace_may_run_out">リセット前に使い切る可能性があります</string>
-    <string name="pace_at_risk">使用ペースに注意</string>
-    <string name="pace_on_track">適正な使用ペース</string>
+    <string name="pace_may_run_out">このままだとリセット前に使い切りそうです</string>
+    <string name="pace_too_fast">使いすぎのペースです</string>
+    <string name="pace_at_risk">少し速めのペースです</string>
+    <string name="pace_on_track">いい調子です</string>
     <string name="pace_unavailable">ペースを計算できません</string>
+    <string name="pace_cycle_progress">使用%1$d%% / 周期%2$s%%経過</string>
+    <string name="pace_usage_rate">平均%1$s%%/時</string>
+    <string name="pace_multiplier">基準ペースの%1$s倍</string>
     <string name="pace_forecast">現在のペースではリセット時に%1$d%%使用</string>
+    <string name="insight_limit_not_provided_title">%1$d時間リミットは現在ありません！</string>
+    <string name="insight_limit_not_provided_message">短期枠を気にせず、長期枠を見ながら開発を進められます。</string>
 </resources>

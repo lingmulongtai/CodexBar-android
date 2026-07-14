@@ -101,6 +101,14 @@ fun ServiceCard(
                 accent = visualStyle.accent
             )
 
+            service.insights.forEach { insight ->
+                Spacer(modifier = Modifier.height(CodexBarSpacing.medium))
+                ServiceInsightBanner(
+                    insight = insight,
+                    accent = visualStyle.accent
+                )
+            }
+
             if (service.status != ServiceQuotaStatus.Fresh &&
                 service.status != ServiceQuotaStatus.Redacted
             ) {
@@ -152,6 +160,9 @@ fun ServiceCard(
                             )
                         }
                         listOfNotNull(
+                            metric.pace.cycleProgressLabel,
+                            metric.pace.usageRateLabel,
+                            metric.pace.paceMultiplierLabel,
                             metric.pace.reserveLabel,
                             metric.pace.forecastLabel
                         ).distinct().takeIf { it.isNotEmpty() }?.let { details ->

@@ -18,8 +18,14 @@ data class ServiceQuotaPresentation(
     val primaryMetric: QuotaMetricPresentation?,
     val metrics: List<QuotaMetricPresentation>,
     val extraUsage: ExtraUsagePresentation?,
+    val insights: List<ServiceInsightPresentation> = emptyList(),
     val freshness: FreshnessPresentation,
     val supportedActions: Set<QuotaAction>
+)
+
+data class ServiceInsightPresentation(
+    val title: String,
+    val message: String
 )
 
 data class QuotaMetricPresentation(
@@ -58,6 +64,9 @@ data class FreshnessPresentation(
 data class PacePresentation(
     val state: PaceState,
     val label: String,
+    val cycleProgressLabel: String? = null,
+    val usageRateLabel: String? = null,
+    val paceMultiplierLabel: String? = null,
     val reserveLabel: String? = null,
     val forecastLabel: String? = null
 )

@@ -172,11 +172,11 @@ class ClaudeRepositoryImpl @Inject constructor(
 
     private fun mapToQuotaInfo(response: ClaudeDto.OAuthUsageResponse, tier: String? = null): QuotaInfo {
         val windows = buildList {
-            response.fiveHour?.let { add(mapWindow("5-Hour", it)) }
-            response.sevenDay?.let { add(mapWindow("7-Day", it)) }
-            response.sevenDayOauthApps?.let { add(mapWindow("OAuth Apps", it)) }
-            response.sevenDayOpus?.let { add(mapWindow("Opus", it)) }
-            response.sevenDaySonnet?.let { add(mapWindow("Sonnet", it)) }
+            response.fiveHour?.let { add(mapWindow("5-Hour", it, FIVE_HOURS_SECONDS)) }
+            response.sevenDay?.let { add(mapWindow("7-Day", it, SEVEN_DAYS_SECONDS)) }
+            response.sevenDayOauthApps?.let { add(mapWindow("OAuth Apps", it, SEVEN_DAYS_SECONDS)) }
+            response.sevenDayOpus?.let { add(mapWindow("Opus", it, SEVEN_DAYS_SECONDS)) }
+            response.sevenDaySonnet?.let { add(mapWindow("Sonnet", it, SEVEN_DAYS_SECONDS)) }
             response.iguanaNecktie?.let { add(mapWindow("Extended", it)) }
         }
 
@@ -199,11 +199,16 @@ class ClaudeRepositoryImpl @Inject constructor(
         )
     }
 
-    private fun mapWindow(label: String, window: ClaudeDto.OAuthUsageWindow): UsageWindow {
+    private fun mapWindow(
+        label: String,
+        window: ClaudeDto.OAuthUsageWindow,
+        windowDurationSeconds: Long? = null
+    ): UsageWindow {
         return UsageWindow(
             label = label,
             utilization = ((window.utilization ?: 0.0) / 100.0).coerceIn(0.0, 1.0),
-            resetsAt = window.resetsAt?.let { parseInstant(it) }
+            resetsAt = window.resetsAt?.let { parseInstant(it) },
+            windowDurationSeconds = windowDurationSeconds
         )
     }
 
@@ -213,5 +218,10 @@ class ClaudeRepositoryImpl @Inject constructor(
         } catch (_: Exception) {
             null
         }
+    }
+
+    private companion object {
+        const val FIVE_HOURS_SECONDS = 5L * 60L * 60L
+        const val SEVEN_DAYS_SECONDS = 7L * 24L * 60L * 60L
     }
 }

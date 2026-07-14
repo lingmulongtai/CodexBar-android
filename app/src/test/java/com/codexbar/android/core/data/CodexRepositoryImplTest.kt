@@ -4,6 +4,7 @@ import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFact
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.Credential
+import com.codexbar.android.core.domain.model.QuotaNotice
 import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
@@ -111,9 +112,40 @@ class CodexRepositoryImplTest {
         assertEquals(2, quotaInfo.windows.size)
         assertEquals("5-Hour", quotaInfo.windows[0].label)
         assertEquals(0.45, quotaInfo.windows[0].utilization, 0.001)
+        assertEquals(18000L, quotaInfo.windows[0].windowDurationSeconds)
         assertEquals("7-Day", quotaInfo.windows[1].label)
         assertEquals(0.20, quotaInfo.windows[1].utilization, 0.001)
+        assertEquals(604800L, quotaInfo.windows[1].windowDurationSeconds)
         assertEquals("Pro", quotaInfo.tier)
+        assertTrue(quotaInfo.notices.isEmpty())
+    }
+
+    @Test
+    fun `weekly-only response reports that the five-hour limit is not provided`() = runTest {
+        val responseJson = """
+        {
+            "plan_type": "pro",
+            "rate_limit": {
+                "primary_window": {
+                    "used_percent": 20,
+                    "reset_at": 1999999999,
+                    "limit_window_seconds": 604800
+                }
+            }
+        }
+        """.trimIndent()
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(responseJson))
+
+        val result = repository.fetchQuota()
+
+        assertTrue(result is Result.Success)
+        val quotaInfo = (result as Result.Success).value
+        assertEquals(1, quotaInfo.windows.size)
+        assertEquals(
+            setOf(QuotaNotice.WindowLimitNotProvided(18000L)),
+            quotaInfo.notices
+        )
     }
 
     @Test

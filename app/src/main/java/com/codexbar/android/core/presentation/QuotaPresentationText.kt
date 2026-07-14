@@ -43,18 +43,25 @@ interface QuotaPresentationText {
     fun noResetTime(): String
     fun waitingForNextWindow(): String
     fun paceStable(): String
+    fun roomToUseMore(): String
     fun reserve(percent: Int): String
     fun noRecentIncrease(): String
     fun mayRunOutBeforeReset(): String
+    fun paceTooFast(): String
     fun paceAtRisk(): String
     fun paceOnTrack(): String
     fun paceUnavailable(): String
+    fun cycleProgress(usedPercent: Int, elapsedPercent: String): String
+    fun usageRate(percentPerHour: String): String
+    fun paceMultiplier(multiplier: String): String
     fun forecastAtReset(projectedPercent: Int): String
+    fun limitNotProvidedTitle(hours: Long): String
+    fun limitNotProvidedMessage(): String
 }
 
 object EnglishQuotaPresentationText : QuotaPresentationText {
     override val locale: Locale
-        get() = Locale.getDefault()
+        get() = Locale.ENGLISH
 
     override fun window(number: Int): String = "Window $number"
     override fun usedHidden(): String = "Used hidden"
@@ -86,14 +93,24 @@ object EnglishQuotaPresentationText : QuotaPresentationText {
     override fun noResetTime(): String = "No reset time"
     override fun waitingForNextWindow(): String = "Waiting for next window"
     override fun paceStable(): String = "Pace stable"
+    override fun roomToUseMore(): String = "You can use more"
     override fun reserve(percent: Int): String = "$percent% reserve"
     override fun noRecentIncrease(): String = "No recent increase"
     override fun mayRunOutBeforeReset(): String = "May run out before reset"
-    override fun paceAtRisk(): String = "Pace at risk"
-    override fun paceOnTrack(): String = "Pace on track"
+    override fun paceTooFast(): String = "Usage pace is too fast"
+    override fun paceAtRisk(): String = "A little faster than ideal"
+    override fun paceOnTrack(): String = "You're on a good pace"
     override fun paceUnavailable(): String = "Pace unavailable"
+    override fun cycleProgress(usedPercent: Int, elapsedPercent: String): String =
+        "Used $usedPercent% / $elapsedPercent% of window elapsed"
+    override fun usageRate(percentPerHour: String): String = "Avg $percentPerHour%/h"
+    override fun paceMultiplier(multiplier: String): String = "$multiplier× target pace"
     override fun forecastAtReset(projectedPercent: Int): String =
         "At this pace: $projectedPercent% by reset"
+    override fun limitNotProvidedTitle(hours: Long): String =
+        "$hours-hour limit isn't active right now!"
+    override fun limitNotProvidedMessage(): String =
+        "No short-term window was returned, so you can focus on the longer window and keep building."
 }
 
 class AndroidQuotaPresentationText(
@@ -145,14 +162,26 @@ class AndroidQuotaPresentationText(
     override fun noResetTime(): String = string(R.string.pace_no_reset_time)
     override fun waitingForNextWindow(): String = string(R.string.pace_waiting_next_window)
     override fun paceStable(): String = string(R.string.pace_stable)
+    override fun roomToUseMore(): String = string(R.string.pace_room_to_use_more)
     override fun reserve(percent: Int): String = string(R.string.pace_reserve, percent)
     override fun noRecentIncrease(): String = string(R.string.pace_no_recent_increase)
     override fun mayRunOutBeforeReset(): String = string(R.string.pace_may_run_out)
+    override fun paceTooFast(): String = string(R.string.pace_too_fast)
     override fun paceAtRisk(): String = string(R.string.pace_at_risk)
     override fun paceOnTrack(): String = string(R.string.pace_on_track)
     override fun paceUnavailable(): String = string(R.string.pace_unavailable)
+    override fun cycleProgress(usedPercent: Int, elapsedPercent: String): String =
+        string(R.string.pace_cycle_progress, usedPercent, elapsedPercent)
+    override fun usageRate(percentPerHour: String): String =
+        string(R.string.pace_usage_rate, percentPerHour)
+    override fun paceMultiplier(multiplier: String): String =
+        string(R.string.pace_multiplier, multiplier)
     override fun forecastAtReset(projectedPercent: Int): String =
         string(R.string.pace_forecast, projectedPercent)
+    override fun limitNotProvidedTitle(hours: Long): String =
+        string(R.string.insight_limit_not_provided_title, hours)
+    override fun limitNotProvidedMessage(): String =
+        string(R.string.insight_limit_not_provided_message)
 
     private fun string(@StringRes resourceId: Int, vararg formatArgs: Any): String {
         return languageContext.getString(resourceId, *formatArgs)

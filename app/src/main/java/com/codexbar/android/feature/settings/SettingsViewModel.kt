@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.net.UnknownHostException
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -273,12 +274,21 @@ class SettingsViewModel @Inject constructor(
                             isAccountLinking = false,
                             accountLinkPrompt = null,
                             validationResult = ValidationResult.Failure(
-                                e.message?.let {
+                                if (e.hasUnknownHostCause()) {
                                     appContext.getString(
-                                        R.string.validation_account_link_failed_detail,
-                                        it
+                                        R.string.validation_account_link_dns_failed,
+                                        service.displayName
                                     )
-                                } ?: appContext.getString(R.string.validation_account_link_failed)
+                                } else {
+                                    e.message?.let {
+                                        appContext.getString(
+                                            R.string.validation_account_link_failed_detail,
+                                            it
+                                        )
+                                    } ?: appContext.getString(
+                                        R.string.validation_account_link_failed
+                                    )
+                                }
                             ),
                             isConnected = current.isConnected
                         ))
@@ -496,4 +506,14 @@ class SettingsViewModel @Inject constructor(
             )
         }
     }
+}
+
+internal fun Throwable.hasUnknownHostCause(): Boolean {
+    val visited = mutableSetOf<Throwable>()
+    var current: Throwable? = this
+    while (current != null && visited.add(current)) {
+        if (current is UnknownHostException) return true
+        current = current.cause
+    }
+    return false
 }

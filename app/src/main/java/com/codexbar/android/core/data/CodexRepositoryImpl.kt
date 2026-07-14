@@ -4,6 +4,7 @@ import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.domain.model.QuotaInfo
+import com.codexbar.android.core.domain.model.QuotaNotice
 import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.domain.model.UsageWindow
 import com.codexbar.android.core.domain.repository.QuotaRepository
@@ -170,14 +171,30 @@ class CodexRepositoryImpl @Inject constructor(
             windows = windows,
             extraUsage = null,
             tier = response.planType?.replaceFirstChar { it.uppercase() },
-            fetchedAt = Instant.now()
+            fetchedAt = Instant.now(),
+            notices = availabilityNotices(response)
         )
+    }
+
+    private fun availabilityNotices(response: CodexDto.UsageResponse): Set<QuotaNotice> {
+        val knownDurations = listOfNotNull(
+            response.rateLimit?.primaryWindow?.limitWindowSeconds,
+            response.rateLimit?.secondaryWindow?.limitWindowSeconds
+        ).filter { it > 0L }
+        val hasLongTermWindow = knownDurations.any { it >= SEVEN_DAYS_SECONDS }
+        val hasFiveHourOrTighterWindow = knownDurations.any { it in 1L..FIVE_HOURS_SECONDS }
+
+        return if (hasLongTermWindow && !hasFiveHourOrTighterWindow) {
+            setOf(QuotaNotice.WindowLimitNotProvided(FIVE_HOURS_SECONDS))
+        } else {
+            emptySet()
+        }
     }
 
     private fun mapRateLimitWindow(type: String, window: CodexDto.RateLimitWindow): UsageWindow {
         val label = when (window.limitWindowSeconds) {
-            18000L -> "5-Hour"
-            604800L -> "7-Day"
+            FIVE_HOURS_SECONDS -> "5-Hour"
+            SEVEN_DAYS_SECONDS -> "7-Day"
             else -> {
                 val seconds = window.limitWindowSeconds ?: 0L
                 if (seconds > 0) "${seconds / 3600}h" else type.replaceFirstChar { it.uppercase() }
@@ -187,11 +204,15 @@ class CodexRepositoryImpl @Inject constructor(
         return UsageWindow(
             label = label,
             utilization = window.usedPercent / 100.0,
-            resetsAt = window.resetAt?.let { Instant.ofEpochSecond(it) }
+            resetsAt = window.resetAt?.let { Instant.ofEpochSecond(it) },
+            windowDurationSeconds = window.limitWindowSeconds?.takeIf { it > 0L }
         )
     }
 
     companion object {
+        private const val FIVE_HOURS_SECONDS = 5L * 60L * 60L
+        private const val SEVEN_DAYS_SECONDS = 7L * 24L * 60L * 60L
+
         fun parseBalance(element: kotlinx.serialization.json.JsonElement?): Double? {
             if (element == null) return null
             return when (element) {

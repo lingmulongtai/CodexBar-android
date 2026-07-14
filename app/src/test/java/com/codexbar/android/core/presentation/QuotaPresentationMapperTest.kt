@@ -4,6 +4,7 @@ import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.ExtraUsage
 import com.codexbar.android.core.domain.model.QuotaInfo
+import com.codexbar.android.core.domain.model.QuotaNotice
 import com.codexbar.android.core.domain.model.UsageWindow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -91,5 +92,27 @@ class QuotaPresentationMapperTest {
         assertEquals("Remaining hidden", metric.remainingLabel)
         assertEquals(QuotaSeverity.Redacted, metric.severity)
         assertEquals("Used hidden", service.extraUsage!!.usedCreditsLabel)
+    }
+
+    @Test
+    fun `maps a missing short-term window into a positive dashboard insight`() {
+        val snapshot = mapper.map(
+            quotas = listOf(
+                QuotaInfo(
+                    service = AiService.CODEX,
+                    windows = listOf(UsageWindow("7-Day", 0.24, now.plusSeconds(172800))),
+                    extraUsage = null,
+                    fetchedAt = now,
+                    notices = setOf(QuotaNotice.WindowLimitNotProvided(18000L))
+                )
+            )
+        )
+
+        val insight = snapshot.services.single().insights.single()
+        assertEquals("5-hour limit isn't active right now!", insight.title)
+        assertEquals(
+            "No short-term window was returned, so you can focus on the longer window and keep building.",
+            insight.message
+        )
     }
 }
