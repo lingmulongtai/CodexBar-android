@@ -25,6 +25,7 @@ import com.codexbar.android.di.CopilotRepository
 import com.codexbar.android.di.GeminiRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -224,6 +225,7 @@ class SettingsViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
+                val hadPreviousCredential = prefsManager.loadCredential(service) != null
                 val current = _uiState.value.serviceStates[service] ?: ServiceCredentialState()
                 val session = accountLinkManager.requestDeviceCode(
                     service = service,
@@ -232,30 +234,37 @@ class SettingsViewModel @Inject constructor(
                 _uiState.updateAccountLinkPrompt(service, session)
 
                 val credential = accountLinkManager.completeDeviceCode(session)
-                prefsManager.saveCredential(service, credential)
-
-                val validationResult = when (val result = repositoryFor(service).validateCredential()) {
-                    is Result.Success -> ValidationResult.Success
-                    is Result.Failure -> {
-                        prefsManager.deleteCredential(service)
-                        ValidationResult.Failure(formatAppError(result.error))
+                val validationResult = when (
+                    val result = repositoryFor(service).validateCredential(credential)
+                ) {
+                    is Result.Success -> {
+                        prefsManager.saveCredential(service, credential)
+                        ValidationResult.Success
                     }
+                    is Result.Failure -> ValidationResult.Failure(formatAppError(result.error))
                 }
+                val validationSucceeded = validationResult is ValidationResult.Success
 
                 _uiState.update { state ->
                     val current = state.serviceStates[service] ?: ServiceCredentialState()
                     state.copy(
                         serviceStates = state.serviceStates + (service to current.copy(
-                            accessToken = credential.accessToken,
-                            refreshToken = credential.refreshToken ?: "",
+                            accessToken = if (validationSucceeded) credential.accessToken else current.accessToken,
+                            refreshToken = if (validationSucceeded) {
+                                credential.refreshToken ?: ""
+                            } else {
+                                current.refreshToken
+                            },
                             isAccountLinking = false,
                             accountLinkPrompt = null,
                             validationResult = validationResult,
-                            isConnected = validationResult is ValidationResult.Success,
+                            isConnected = validationSucceeded || hadPreviousCredential,
                             hasUnsavedChanges = false
                         ))
                     )
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { state ->
                     val current = state.serviceStates[service] ?: ServiceCredentialState()

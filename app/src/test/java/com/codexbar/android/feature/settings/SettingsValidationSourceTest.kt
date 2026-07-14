@@ -27,4 +27,34 @@ class SettingsValidationSourceTest {
         assertTrue("manual validation must not save from the failure branch", failureBranch == -1 || saveCredential < failureBranch)
         assertFalse(source.contains("val result = repo.validateCredential()\n"))
     }
+
+    @Test
+    fun `device account linking validates transient credential before persistence`() {
+        val source = File(
+            appDir,
+            "src/main/java/com/codexbar/android/feature/settings/SettingsViewModel.kt"
+        ).readText().replace("\r\n", "\n")
+        val deviceFlow = source
+            .substringAfter("fun startAccountLink(service: AiService)")
+            .substringBefore("\n    fun setRefreshInterval")
+
+        val transientValidation = deviceFlow.indexOf(
+            "repositoryFor(service).validateCredential(credential)"
+        )
+        val successBranch = deviceFlow.indexOf("is Result.Success -> {", transientValidation)
+        val persistence = deviceFlow.indexOf(
+            "prefsManager.saveCredential(service, credential)",
+            successBranch
+        )
+        val cancellationCatch = deviceFlow.indexOf("catch (e: CancellationException)")
+        val generalCatch = deviceFlow.indexOf("catch (e: Exception)")
+
+        assertTrue(transientValidation >= 0)
+        assertTrue(successBranch > transientValidation)
+        assertTrue(persistence > successBranch)
+        assertTrue(cancellationCatch > persistence)
+        assertTrue(generalCatch > cancellationCatch)
+        assertFalse(deviceFlow.contains("repositoryFor(service).validateCredential()"))
+        assertFalse(deviceFlow.contains("prefsManager.deleteCredential(service)"))
+    }
 }
