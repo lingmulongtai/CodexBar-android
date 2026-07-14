@@ -19,7 +19,10 @@ class ServiceDetailFormattingTest {
             zoneId = ZoneId.of("UTC")
         )
 
-        assertEquals("7/14/26, 4:00 AM", formatted)
+        assertEquals("7/14/26, 4:00 AM", formatted.normalizeUnicodeSpaces())
         assertNotEquals(instant.toString(), formatted)
     }
+
+    private fun String.normalizeUnicodeSpaces(): String =
+        replace(Regex("\\p{Zs}+"), " ")
 }
