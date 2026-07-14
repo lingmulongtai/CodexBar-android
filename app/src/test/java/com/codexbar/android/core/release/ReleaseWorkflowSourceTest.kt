@@ -35,4 +35,23 @@ class ReleaseWorkflowSourceTest {
         assertTrue(buildStep.contains("chmod 600 \"\$keystore_path\""))
         assertFalse(workflow.contains("GITHUB_ENV"))
     }
+
+    @Test
+    fun `signed release is cold started before publication`() {
+        val workflow = File(repoDir, ".github/workflows/release.yml").readText()
+        val smokeStep = workflow
+            .substringAfter("- name: Smoke test signed release APK")
+            .substringBefore("- name: Prepare release bundle")
+
+        assertTrue(smokeStep.contains("ReactiveCircus/android-emulator-runner@"))
+        assertTrue(smokeStep.contains("api-level: 36"))
+        assertTrue(smokeStep.contains("adb install"))
+        assertTrue(smokeStep.contains("adb shell am start -W"))
+        assertTrue(smokeStep.contains("adb shell pidof"))
+        assertTrue(smokeStep.contains("adb logcat -b crash -d"))
+        assertTrue(
+            workflow.indexOf("- name: Smoke test signed release APK") <
+                workflow.indexOf("- name: Publish GitHub Release")
+        )
+    }
 }

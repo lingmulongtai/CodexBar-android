@@ -20,7 +20,6 @@ import androidx.lifecycle.lifecycleScope
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.update.AvailableUpdate
 import com.codexbar.android.core.update.GitHubReleaseUpdateChecker
-import com.codexbar.android.core.workmanager.WorkManagerInitializer
 import com.codexbar.android.ui.theme.CodexBarTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -42,10 +41,6 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             prefsManager.warmCache()
             applyScreenPrivacy(prefsManager.getPrivacySettings().screenPrivacyEnabled)
-            WorkManagerInitializer.applyRefreshPolicy(
-                this@MainActivity,
-                prefsManager.getRefreshInterval()
-            )
         }
         enableEdgeToEdge()
 

@@ -1,7 +1,6 @@
 package com.codexbar.android.core.workmanager
 
 import android.content.Context
-import androidx.startup.Initializer
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -20,16 +19,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
-class WorkManagerInitializer : Initializer<Unit> {
-
-    override fun create(context: Context) {
-        applySavedRefreshPolicyAsync(context)
-    }
-
-    override fun dependencies(): List<Class<out Initializer<*>>> {
-        return emptyList()
-    }
-
+class WorkManagerInitializer private constructor() {
     companion object {
         private const val QUOTA_WORK_NAME = "quota_periodic_refresh"
         private const val TOKEN_WORK_NAME = "token_periodic_refresh"

@@ -19,7 +19,18 @@ class HiltWorkManagerConfigurationTest {
     }
 
     @Test
-    fun `default WorkManager initializer is removed`() {
+    fun `application schedules refresh only after Hilt injection`() {
+        val application = sourceFile("com/codexbar/android/CodexBarApplication.kt")
+
+        assertInOrder(
+            application,
+            "super.onCreate()",
+            "WorkManagerInitializer.applySavedRefreshPolicyAsync(this)"
+        )
+    }
+
+    @Test
+    fun `startup provider cannot schedule refresh before application creation`() {
         val manifest = File(appDir, "src/main/AndroidManifest.xml")
             .readText()
             .replace("\r\n", "\n")
@@ -29,8 +40,21 @@ class HiltWorkManagerConfigurationTest {
 
         assertTrue(manifest.contains("android:name=\"androidx.work.WorkManagerInitializer\""))
         assertTrue(manifest.contains("tools:node=\"remove\""))
-        assertTrue(initializer.contains("return emptyList()"))
+        assertFalse(
+            manifest.contains(
+                "android:name=\"com.codexbar.android.core.workmanager.WorkManagerInitializer\""
+            )
+        )
+        assertFalse(initializer.contains("Initializer<Unit>"))
+        assertFalse(initializer.contains("override fun create"))
+        assertFalse(initializer.contains("override fun dependencies"))
         assertFalse(initializer.contains("AndroidWorkManagerInitializer"))
+    }
+
+    private fun assertInOrder(source: String, first: String, second: String) {
+        val firstIndex = source.indexOf(first)
+        val secondIndex = source.indexOf(second)
+        assertTrue("Expected '$first' before '$second'", firstIndex >= 0 && secondIndex > firstIndex)
     }
 
     private fun sourceFile(relativePath: String): String {

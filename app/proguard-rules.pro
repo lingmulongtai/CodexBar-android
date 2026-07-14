@@ -46,6 +46,12 @@
     public <init>(android.content.Context, androidx.work.WorkerParameters);
 }
 
+# Room 2.5 keeps generated database classes, but R8 9 can still remove the
+# no-argument constructor that Room invokes reflectively.
+-keep class * extends androidx.room.RoomDatabase {
+    public <init>();
+}
+
 # ===== Glance =====
 -keep class * extends androidx.glance.appwidget.GlanceAppWidget { *; }
 -keep class * extends androidx.glance.appwidget.GlanceAppWidgetReceiver { *; }
