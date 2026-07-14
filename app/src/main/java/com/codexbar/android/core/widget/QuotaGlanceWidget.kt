@@ -63,7 +63,9 @@ class QuotaGlanceWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val widgetPrefs = WidgetPrefsManager(context)
-        val privacySettings = EncryptedPrefsManager(context).getPrivacySettings()
+        val prefsManager = EncryptedPrefsManager(context)
+        prefsManager.warmCache()
+        val privacySettings = prefsManager.getPrivacySettings()
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val config = widgetPrefs.getWidgetConfig(appWidgetId)
         val strings = WidgetStrings(ContextCompat.getContextForLanguage(context))

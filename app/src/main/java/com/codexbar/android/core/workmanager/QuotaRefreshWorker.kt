@@ -59,6 +59,7 @@ class QuotaRefreshWorker @AssistedInject constructor(
     )
 
     override suspend fun doWork(): Result {
+        prefsManager.warmCache()
         val repos = buildList {
             if (prefsManager.loadCredential(AiService.CLAUDE) != null) add(AiService.CLAUDE to claudeRepository)
             if (prefsManager.loadCredential(AiService.CODEX) != null) add(AiService.CODEX to codexRepository)

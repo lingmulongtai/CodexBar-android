@@ -35,6 +35,10 @@ import kotlinx.coroutines.launch
 
 private const val SECURE_DATASTORE_NAME = "codexbar_secure_prefs"
 private const val DEFAULT_REFRESH_INTERVAL_MINUTES = 30L
+private val FAIL_CLOSED_PRIVACY_SETTINGS = PrivacySettings(
+    notificationRedactionEnabled = true,
+    widgetRedactionEnabled = true
+)
 private val Context.secureDataStore: DataStore<Preferences> by preferencesDataStore(
     name = SECURE_DATASTORE_NAME
 )
@@ -59,8 +63,12 @@ class EncryptedPrefsManager @Inject constructor(
     }
 
     suspend fun warmCache() {
-        val prefs = readPreferences()
-        updateCache(prefs)
+        val prefs = readPreferencesOrNull()
+        if (prefs == null) {
+            cachedSettings = CachedSettings()
+        } else {
+            updateCache(prefs)
+        }
     }
 
     suspend fun saveCredential(service: AiService, credential: Credential) {
@@ -214,14 +222,18 @@ class EncryptedPrefsManager @Inject constructor(
     }
 
     private suspend fun readPreferences(): Preferences {
+        return readPreferencesOrNull() ?: emptyPreferences()
+    }
+
+    private suspend fun readPreferencesOrNull(): Preferences? {
         return try {
             dataStore.data.first()
         } catch (_: IOException) {
-            emptyPreferences()
+            null
         } catch (_: GeneralSecurityException) {
-            emptyPreferences()
+            null
         } catch (_: IllegalStateException) {
-            emptyPreferences()
+            null
         }
     }
 
@@ -313,7 +325,7 @@ class EncryptedPrefsManager @Inject constructor(
         val credentialServices: Set<AiService> = emptySet(),
         val refreshIntervalMinutes: Long = DEFAULT_REFRESH_INTERVAL_MINUTES,
         val notificationsEnabled: Boolean = true,
-        val privacySettings: PrivacySettings = PrivacySettings()
+        val privacySettings: PrivacySettings = FAIL_CLOSED_PRIVACY_SETTINGS
     )
 
     companion object {
