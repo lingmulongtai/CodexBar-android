@@ -1,6 +1,7 @@
 name: Android Release
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - 'v*'
@@ -56,18 +57,46 @@ jobs:
 
       - name: Verify release signing identity
         run: |
-          mapfile -t release_apks < <(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk')
-          test "${#release_apks[@]}" -eq 1
-          apksigner="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"
-          test -x "$apksigner"
-          certificate_output="$("$apksigner" verify --verbose --print-certs "${release_apks[0]}")"
+          set -euo pipefail
+          mapfile -t release_apks < <(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print | sort)
+          if [ "${#release_apks[@]}" -ne 1 ]; then
+            printf '::error::Expected exactly one release APK, found %s.\n' "${#release_apks[@]}"
+            printf 'Candidate: %s\n' "${release_apks[@]:-<none>}"
+            exit 1
+          fi
+
+          apksigner="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name apksigner -print | sort -V | tail -n 1)"
+          if [ -z "$apksigner" ] || [ ! -x "$apksigner" ]; then
+            printf '::error::Could not locate an executable apksigner under ANDROID_HOME.\n'
+            exit 1
+          fi
+
+          if ! certificate_output="$("$apksigner" verify --verbose --print-certs "${release_apks[0]}" 2>&1)"; then
+            printf '::error::apksigner rejected the release APK.\n'
+            printf '%s\n' "$certificate_output"
+            exit 1
+          fi
           signer_count="$(awk -F': ' '/Number of signers:/ { print $2; exit }' <<< "$certificate_output")"
           actual_sha256="$(awk -F': ' '/Signer #1 certificate SHA-256 digest:/ { print tolower($2); exit }' <<< "$certificate_output")"
-          expected_sha256="$(tr -d '[:space:]' < .github/release-signing-cert-sha256.txt)"
-          test "$signer_count" = "1"
-          test "$actual_sha256" = "$expected_sha256"
+          expected_sha256="$(tr '[:upper:]' '[:lower:]' < .github/release-signing-cert-sha256.txt | tr -d '[:space:]')"
+
+          if ! [[ "$expected_sha256" =~ ^[0-9a-f]{64}$ ]]; then
+            printf '::error::Pinned release certificate SHA-256 is malformed.\n'
+            exit 1
+          fi
+          if [ "$signer_count" != "1" ]; then
+            printf '::error::Expected one APK signer, detected %s.\n' "${signer_count:-none}"
+            exit 1
+          fi
+
+          printf 'Release signer SHA-256: %s\n' "${actual_sha256:-unavailable}"
+          if [ "$actual_sha256" != "$expected_sha256" ]; then
+            printf '::error::Release APK signer does not match the pinned production certificate.\n'
+            exit 1
+          fi
 
       - name: Prepare release bundle
+        if: github.ref_type == 'tag'
         run: |
           mkdir -p build/release
           cp app/build/outputs/apk/release/*.apk build/release/
@@ -87,11 +116,13 @@ jobs:
           (cd build/release && sha256sum * > SHA256SUMS)
 
       - name: Attest release artifacts
+        if: github.ref_type == 'tag'
         uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4
         with:
           subject-path: 'build/release/*'
 
       - name: Publish GitHub Release
+        if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
