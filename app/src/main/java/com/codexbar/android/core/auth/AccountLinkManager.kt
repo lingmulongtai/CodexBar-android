@@ -11,6 +11,7 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.delay
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 @Singleton
 class AccountLinkManager @Inject constructor(
@@ -114,7 +115,9 @@ class AccountLinkManager @Inject constructor(
         val body = response.body() ?: throw IOException("GitHub device-code response was empty")
         return DeviceAuthSession(
             service = AiService.COPILOT,
-            verificationUrl = body.verificationUriComplete ?: body.verificationUri,
+            verificationUrl = trustedGitHubDeviceVerificationUrl(body.verificationUriComplete)
+                ?: trustedGitHubDeviceVerificationUrl(body.verificationUri)
+                ?: GitHubDeviceAuthService.GITHUB_DEVICE_VERIFICATION_URL,
             userCode = body.userCode,
             deviceCode = body.deviceCode,
             intervalSeconds = safePollIntervalSeconds(body.interval.toLong()),
@@ -134,7 +137,9 @@ class AccountLinkManager @Inject constructor(
         val body = response.body() ?: throw IOException("Google device-code response was empty")
         return DeviceAuthSession(
             service = AiService.GEMINI,
-            verificationUrl = body.effectiveVerificationUrl,
+            verificationUrl = trustedGoogleDeviceVerificationUrl(body.verificationUrl)
+                ?: trustedGoogleDeviceVerificationUrl(body.verificationUri)
+                ?: GoogleDeviceAuthService.GOOGLE_DEVICE_VERIFICATION_URL,
             userCode = body.userCode,
             deviceCode = body.deviceCode,
             intervalSeconds = safePollIntervalSeconds(body.interval.toLong()),
@@ -242,3 +247,18 @@ internal fun pollDelayMillis(intervalSeconds: Long): Long {
 private const val MIN_POLL_INTERVAL_SECONDS = 5L
 private const val MILLIS_PER_SECOND = 1_000L
 private const val MAX_SAFE_POLL_INTERVAL_SECONDS = Long.MAX_VALUE / MILLIS_PER_SECOND
+
+internal fun trustedGitHubDeviceVerificationUrl(rawUrl: String?): String? {
+    val url = rawUrl?.toHttpUrlOrNull() ?: return null
+    return rawUrl.takeIf {
+        url.isHttps &&
+            url.host == "github.com" &&
+            url.encodedPath == "/login/device"
+    }
+}
+
+internal fun trustedGoogleDeviceVerificationUrl(rawUrl: String?): String? {
+    val url = rawUrl?.toHttpUrlOrNull() ?: return null
+    val isGoogleHost = url.host == "google.com" || url.host.endsWith(".google.com")
+    return rawUrl.takeIf { url.isHttps && isGoogleHost }
+}

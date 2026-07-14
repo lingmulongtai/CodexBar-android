@@ -24,6 +24,7 @@ interface GitHubDeviceAuthService {
 
     companion object {
         const val BASE_URL = "https://github.com/"
+        const val GITHUB_DEVICE_VERIFICATION_URL = "https://github.com/login/device"
         const val GITHUB_COPILOT_CLIENT_ID = "Iv1.b507a08c87ecfe98"
         const val GITHUB_COPILOT_SCOPE = "read:user"
         private const val GITHUB_DEVICE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code"

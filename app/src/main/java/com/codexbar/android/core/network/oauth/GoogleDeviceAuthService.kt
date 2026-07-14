@@ -24,6 +24,7 @@ interface GoogleDeviceAuthService {
 
     companion object {
         const val BASE_URL = "https://oauth2.googleapis.com/"
+        const val GOOGLE_DEVICE_VERIFICATION_URL = "https://www.google.com/device"
         const val GOOGLE_CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
         private const val GOOGLE_DEVICE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code"
     }

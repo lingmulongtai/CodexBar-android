@@ -174,6 +174,52 @@ class AccountLinkManagerTest {
         assertEquals(5_000L, pollDelayMillis(Long.MIN_VALUE))
     }
 
+    @Test
+    fun `copilot rejects an untrusted verification URI`() = runTest {
+        `when`(gitHubDeviceAuthService.requestDeviceCode())
+            .thenReturn(
+                Response.success(
+                    DeviceAuthDto.GitHubDeviceCodeResponse(
+                        deviceCode = "device-code",
+                        userCode = "WXYZ-1234",
+                        verificationUri = "intent://phishing",
+                        verificationUriComplete = "https://example.com/login/device",
+                        expiresIn = 900
+                    )
+                )
+            )
+
+        val session = manager.requestDeviceCode(AiService.COPILOT)
+
+        assertEquals(GitHubDeviceAuthService.GITHUB_DEVICE_VERIFICATION_URL, session.verificationUrl)
+    }
+
+    @Test
+    fun `gemini accepts only an HTTPS Google verification URI`() = runTest {
+        `when`(googleDeviceAuthService.requestDeviceCode(clientId = "gemini-client-id"))
+            .thenReturn(
+                Response.success(
+                    DeviceAuthDto.GeminiDeviceCodeResponse(
+                        deviceCode = "google-device-code",
+                        userCode = "GEMI-NI12",
+                        verificationUrl = "file:///data/local/tmp/phishing.html",
+                        verificationUri = "https://example.com/device",
+                        expiresIn = 900
+                    )
+                )
+            )
+
+        val session = manager.requestDeviceCode(AiService.GEMINI, "gemini-client-id")
+
+        assertEquals(GoogleDeviceAuthService.GOOGLE_DEVICE_VERIFICATION_URL, session.verificationUrl)
+        assertEquals(
+            "https://accounts.google.com/o/oauth2/device/usercode?user_code=ABCD",
+            trustedGoogleDeviceVerificationUrl(
+                "https://accounts.google.com/o/oauth2/device/usercode?user_code=ABCD"
+            )
+        )
+    }
+
     private companion object {
         const val CODEX_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
     }
