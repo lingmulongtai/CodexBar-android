@@ -138,6 +138,7 @@
     <string name="validation_required_fields">Required credential fields are incomplete</string>
     <string name="validation_account_link_failed">Account link failed</string>
     <string name="validation_account_link_failed_detail">Account link failed: %1$s</string>
+    <string name="validation_account_link_dns_failed">Couldn’t resolve the %1$s authentication server. Check Private DNS, VPN, ad blockers, and your network, then retry.</string>
     <string name="validation_unknown">Unknown</string>
     <string name="validation_network_error">Network error: %1$s</string>
     <string name="validation_authentication_required">Authentication failed (sign in again)</string>

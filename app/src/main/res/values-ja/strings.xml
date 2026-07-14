@@ -138,6 +138,7 @@
     <string name="validation_required_fields">必要な認証情報が入力されていません</string>
     <string name="validation_account_link_failed">アカウントを接続できませんでした</string>
     <string name="validation_account_link_failed_detail">アカウントを接続できませんでした: %1$s</string>
+    <string name="validation_account_link_dns_failed">%1$sの認証サーバーを名前解決できません。プライベートDNS、VPN、広告ブロッカー、ネットワーク接続を確認してから再試行してください。</string>
     <string name="validation_unknown">不明</string>
     <string name="validation_network_error">ネットワークエラー: %1$s</string>
     <string name="validation_authentication_required">認証に失敗しました（再ログインが必要です）</string>
