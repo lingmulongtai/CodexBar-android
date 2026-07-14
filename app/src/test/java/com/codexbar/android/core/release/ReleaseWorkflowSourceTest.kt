@@ -58,4 +58,20 @@ class ReleaseWorkflowSourceTest {
                 workflow.indexOf("- name: Publish GitHub Release")
         )
     }
+
+    @Test
+    fun `release runner enables hardware acceleration before emulator startup`() {
+        val workflow = File(repoDir, ".github/workflows/release.yml").readText()
+        val kvmStep = workflow
+            .substringAfter("- name: Enable KVM access")
+            .substringBefore("- name: Smoke test signed release APK")
+
+        assertTrue(kvmStep.contains("sudo chmod 666 /dev/kvm"))
+        assertTrue(kvmStep.contains("test -r /dev/kvm"))
+        assertTrue(kvmStep.contains("test -w /dev/kvm"))
+        assertTrue(
+            workflow.indexOf("- name: Enable KVM access") <
+                workflow.indexOf("- name: Smoke test signed release APK")
+        )
+    }
 }
