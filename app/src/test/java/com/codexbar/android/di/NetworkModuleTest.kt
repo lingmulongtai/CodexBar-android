@@ -9,6 +9,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import com.codexbar.android.core.network.ResponseSizeLimitInterceptor
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -85,6 +86,34 @@ class NetworkModuleTest {
 
         tokenClients.forEach { client ->
             assertTrue(client.interceptors.none { it is HttpLoggingInterceptor })
+            assertFalse(client.followRedirects)
+            assertFalse(client.followSslRedirects)
+        }
+    }
+
+    @Test
+    fun `credential request body is not replayed to a redirect target`() {
+        val redirectTarget = MockWebServer()
+        redirectTarget.start()
+        try {
+            server.enqueue(
+                MockResponse()
+                    .setResponseCode(307)
+                    .setHeader("Location", redirectTarget.url("/capture"))
+            )
+            val request = Request.Builder()
+                .url(server.url("/token"))
+                .post("{\"refresh_token\":\"sentinel\"}".toRequestBody("application/json".toMediaType()))
+                .build()
+
+            NetworkModule.provideCodexTokenOkHttpClient()
+                .newCall(request)
+                .execute()
+                .use { response -> assertEquals(307, response.code) }
+
+            assertEquals(0, redirectTarget.requestCount)
+        } finally {
+            redirectTarget.shutdown()
         }
     }
 

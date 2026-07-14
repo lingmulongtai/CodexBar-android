@@ -91,6 +91,12 @@ object NetworkModule {
         return builder
     }
 
+    private fun credentialOkHttpBuilder(): OkHttpClient.Builder {
+        return baseOkHttpBuilder(includeDebugLogging = false)
+            .followRedirects(false)
+            .followSslRedirects(false)
+    }
+
     internal fun createMetadataLoggingInterceptor(
         logger: HttpLoggingInterceptor.Logger = HttpLoggingInterceptor.Logger.DEFAULT
     ): HttpLoggingInterceptor = HttpLoggingInterceptor(logger).apply {
@@ -125,7 +131,7 @@ object NetworkModule {
     @Provides
     @Singleton
     @ClaudeTokenClient
-    fun provideClaudeTokenOkHttpClient(): OkHttpClient = baseOkHttpBuilder(includeDebugLogging = false).build()
+    fun provideClaudeTokenOkHttpClient(): OkHttpClient = credentialOkHttpBuilder().build()
 
     @Provides
     @Singleton
@@ -165,7 +171,7 @@ object NetworkModule {
     @Provides
     @Singleton
     @CodexTokenClient
-    fun provideCodexTokenOkHttpClient(): OkHttpClient = baseOkHttpBuilder(includeDebugLogging = false).build()
+    fun provideCodexTokenOkHttpClient(): OkHttpClient = credentialOkHttpBuilder().build()
 
     @Provides
     @Singleton
@@ -184,7 +190,7 @@ object NetworkModule {
     @Provides
     @Singleton
     @CodexDeviceAuthClient
-    fun provideCodexDeviceAuthOkHttpClient(): OkHttpClient = baseOkHttpBuilder(includeDebugLogging = false).build()
+    fun provideCodexDeviceAuthOkHttpClient(): OkHttpClient = credentialOkHttpBuilder().build()
 
     @Provides
     @Singleton
@@ -224,7 +230,7 @@ object NetworkModule {
     @Provides
     @Singleton
     @GeminiTokenClient
-    fun provideGeminiTokenOkHttpClient(): OkHttpClient = baseOkHttpBuilder(includeDebugLogging = false).build()
+    fun provideGeminiTokenOkHttpClient(): OkHttpClient = credentialOkHttpBuilder().build()
 
     @Provides
     @Singleton
@@ -278,7 +284,7 @@ object NetworkModule {
     @Provides
     @Singleton
     @GitHubDeviceAuthClient
-    fun provideGitHubDeviceAuthOkHttpClient(): OkHttpClient = baseOkHttpBuilder(includeDebugLogging = false).build()
+    fun provideGitHubDeviceAuthOkHttpClient(): OkHttpClient = credentialOkHttpBuilder().build()
 
     @Provides
     @Singleton
