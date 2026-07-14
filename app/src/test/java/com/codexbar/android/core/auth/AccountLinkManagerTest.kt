@@ -154,6 +154,26 @@ class AccountLinkManagerTest {
         assertEquals("gemini-client-id", credential.oauthClientId)
     }
 
+    @Test
+    fun `codex device-code interval is bounded before millisecond conversion`() = runTest {
+        `when`(codexDeviceAuthService.requestUserCode(DeviceAuthDto.CodexUserCodeRequest(CODEX_CLIENT_ID)))
+            .thenReturn(
+                Response.success(
+                    DeviceAuthDto.CodexUserCodeResponse(
+                        deviceAuthId = "device-auth-id",
+                        userCode = "ABCD-EFGH",
+                        interval = JsonPrimitive(Long.MAX_VALUE.toString())
+                    )
+                )
+            )
+
+        val session = manager.requestDeviceCode(AiService.CODEX)
+
+        assertEquals(Long.MAX_VALUE / 1_000L, session.intervalSeconds)
+        assertTrue(pollDelayMillis(session.intervalSeconds) > 0L)
+        assertEquals(5_000L, pollDelayMillis(Long.MIN_VALUE))
+    }
+
     private companion object {
         const val CODEX_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
     }

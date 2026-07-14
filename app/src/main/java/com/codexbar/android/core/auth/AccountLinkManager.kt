@@ -61,7 +61,7 @@ class AccountLinkManager @Inject constructor(
             verificationUrl = CodexDeviceAuthService.CODEX_DEVICE_VERIFICATION_URL,
             userCode = userCode,
             deviceCode = body.deviceAuthId,
-            intervalSeconds = body.intervalSeconds.coerceAtLeast(MIN_POLL_INTERVAL_SECONDS),
+            intervalSeconds = safePollIntervalSeconds(body.intervalSeconds),
             expiresAtEpochMs = System.currentTimeMillis() + CODEX_DEVICE_EXPIRY_MS
         )
     }
@@ -97,7 +97,7 @@ class AccountLinkManager @Inject constructor(
             }
 
             when (response.code()) {
-                403, 404 -> delay(session.intervalSeconds * 1000L)
+                403, 404 -> delay(pollDelayMillis(session.intervalSeconds))
                 else -> throw IOException("Codex device-code polling failed with HTTP ${response.code()}")
             }
         }
@@ -117,7 +117,7 @@ class AccountLinkManager @Inject constructor(
             verificationUrl = body.verificationUriComplete ?: body.verificationUri,
             userCode = body.userCode,
             deviceCode = body.deviceCode,
-            intervalSeconds = body.interval.toLong().coerceAtLeast(MIN_POLL_INTERVAL_SECONDS),
+            intervalSeconds = safePollIntervalSeconds(body.interval.toLong()),
             expiresAtEpochMs = System.currentTimeMillis() + body.expiresIn * 1000L
         )
     }
@@ -137,16 +137,16 @@ class AccountLinkManager @Inject constructor(
             verificationUrl = body.effectiveVerificationUrl,
             userCode = body.userCode,
             deviceCode = body.deviceCode,
-            intervalSeconds = body.interval.toLong().coerceAtLeast(MIN_POLL_INTERVAL_SECONDS),
+            intervalSeconds = safePollIntervalSeconds(body.interval.toLong()),
             expiresAtEpochMs = System.currentTimeMillis() + body.expiresIn * 1000L,
             oauthClientId = clientId
         )
     }
 
     private suspend fun completeCopilotDeviceCode(session: DeviceAuthSession): Credential.CopilotCredential {
-        var intervalSeconds = session.intervalSeconds
+        var intervalSeconds = safePollIntervalSeconds(session.intervalSeconds)
         while (System.currentTimeMillis() < session.expiresAtEpochMs) {
-            delay(intervalSeconds * 1000L)
+            delay(pollDelayMillis(intervalSeconds))
             val response = gitHubDeviceAuthService.pollForAccessToken(deviceCode = session.deviceCode)
             if (!response.isSuccessful) {
                 throw IOException("GitHub token polling failed with HTTP ${response.code()}")
@@ -160,7 +160,9 @@ class AccountLinkManager @Inject constructor(
                     return Credential.CopilotCredential(accessToken = token)
                 }
                 "authorization_pending" -> Unit
-                "slow_down" -> intervalSeconds += SLOW_DOWN_INCREMENT_SECONDS
+                "slow_down" -> intervalSeconds = safePollIntervalSeconds(
+                    intervalSeconds + SLOW_DOWN_INCREMENT_SECONDS
+                )
                 "expired_token" -> throw IOException("GitHub device-code login expired")
                 else -> throw IOException(body.errorDescription ?: "GitHub device-code login failed: ${body.error}")
             }
@@ -172,10 +174,10 @@ class AccountLinkManager @Inject constructor(
     private suspend fun completeGeminiDeviceCode(session: DeviceAuthSession): Credential.GeminiCredential {
         val clientId = session.oauthClientId
             ?: throw IllegalArgumentException("Gemini OAuth Client ID is required")
-        var intervalSeconds = session.intervalSeconds
+        var intervalSeconds = safePollIntervalSeconds(session.intervalSeconds)
 
         while (System.currentTimeMillis() < session.expiresAtEpochMs) {
-            delay(intervalSeconds * 1000L)
+            delay(pollDelayMillis(intervalSeconds))
             val response = googleDeviceAuthService.pollForToken(
                 clientId = clientId,
                 deviceCode = session.deviceCode
@@ -200,7 +202,9 @@ class AccountLinkManager @Inject constructor(
                     )
                 }
                 "authorization_pending" -> Unit
-                "slow_down" -> intervalSeconds += SLOW_DOWN_INCREMENT_SECONDS
+                "slow_down" -> intervalSeconds = safePollIntervalSeconds(
+                    intervalSeconds + SLOW_DOWN_INCREMENT_SECONDS
+                )
                 "expired_token" -> throw IOException("Google device-code login expired")
                 "access_denied" -> throw IOException("Google device-code login was denied")
                 else -> throw IOException(body.errorDescription ?: "Google device-code login failed: ${body.error}")
@@ -212,7 +216,6 @@ class AccountLinkManager @Inject constructor(
 
     companion object {
         const val CODEX_DEVICE_EXPIRY_MS = 15 * 60 * 1000L
-        private const val MIN_POLL_INTERVAL_SECONDS = 5L
         private const val SLOW_DOWN_INCREMENT_SECONDS = 5L
         private const val DEFAULT_GOOGLE_TOKEN_EXPIRY_SECONDS = 3600
     }
@@ -227,3 +230,15 @@ data class DeviceAuthSession(
     val expiresAtEpochMs: Long,
     val oauthClientId: String? = null
 )
+
+internal fun safePollIntervalSeconds(intervalSeconds: Long): Long {
+    return intervalSeconds.coerceIn(MIN_POLL_INTERVAL_SECONDS, MAX_SAFE_POLL_INTERVAL_SECONDS)
+}
+
+internal fun pollDelayMillis(intervalSeconds: Long): Long {
+    return safePollIntervalSeconds(intervalSeconds) * MILLIS_PER_SECOND
+}
+
+private const val MIN_POLL_INTERVAL_SECONDS = 5L
+private const val MILLIS_PER_SECOND = 1_000L
+private const val MAX_SAFE_POLL_INTERVAL_SECONDS = Long.MAX_VALUE / MILLIS_PER_SECOND
