@@ -8,6 +8,7 @@ import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
+import com.codexbar.android.MainActivity
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.security.EncryptedPrefsManager
@@ -40,7 +41,7 @@ class QuotaTileService : TileService() {
             return
         }
 
-        val intent = Intent().apply {
+        val intent = Intent(this, MainActivity::class.java).apply {
             action = Intent.ACTION_VIEW
             data = android.net.Uri.parse("codexbar://dashboard")
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
