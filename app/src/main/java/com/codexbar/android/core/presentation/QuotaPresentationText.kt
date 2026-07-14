@@ -55,6 +55,8 @@ interface QuotaPresentationText {
     fun usageRate(percentPerHour: String): String
     fun paceMultiplier(multiplier: String): String
     fun forecastAtReset(projectedPercent: Int): String
+    fun limitNotProvidedTitle(hours: Long): String
+    fun limitNotProvidedMessage(): String
 }
 
 object EnglishQuotaPresentationText : QuotaPresentationText {
@@ -105,6 +107,10 @@ object EnglishQuotaPresentationText : QuotaPresentationText {
     override fun paceMultiplier(multiplier: String): String = "$multiplier× target pace"
     override fun forecastAtReset(projectedPercent: Int): String =
         "At this pace: $projectedPercent% by reset"
+    override fun limitNotProvidedTitle(hours: Long): String =
+        "$hours-hour limit isn't active right now!"
+    override fun limitNotProvidedMessage(): String =
+        "No short-term window was returned, so you can focus on the longer window and keep building."
 }
 
 class AndroidQuotaPresentationText(
@@ -172,6 +178,10 @@ class AndroidQuotaPresentationText(
         string(R.string.pace_multiplier, multiplier)
     override fun forecastAtReset(projectedPercent: Int): String =
         string(R.string.pace_forecast, projectedPercent)
+    override fun limitNotProvidedTitle(hours: Long): String =
+        string(R.string.insight_limit_not_provided_title, hours)
+    override fun limitNotProvidedMessage(): String =
+        string(R.string.insight_limit_not_provided_message)
 
     private fun string(@StringRes resourceId: Int, vararg formatArgs: Any): String {
         return languageContext.getString(resourceId, *formatArgs)

@@ -4,6 +4,7 @@ import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.ExtraUsage
 import com.codexbar.android.core.domain.model.QuotaInfo
+import com.codexbar.android.core.domain.model.QuotaNotice
 import com.codexbar.android.core.domain.model.UsageWindow
 import java.time.Clock
 import java.time.Duration
@@ -48,6 +49,7 @@ class QuotaPresentationMapper(
                 primaryMetric = primary,
                 metrics = metrics,
                 extraUsage = quota.extraUsage?.let { mapExtraUsage(it, locale, privacy) },
+                insights = quota.notices.mapNotNull(::mapNotice),
                 freshness = FreshnessPresentation(
                     fetchedAt = quota.fetchedAt,
                     ageLabel = formatAge(quota.fetchedAt, generatedAt),
@@ -205,6 +207,7 @@ class QuotaPresentationMapper(
             primaryMetric = null,
             metrics = emptyList(),
             extraUsage = null,
+            insights = emptyList(),
             freshness = FreshnessPresentation(
                 fetchedAt = null,
                 ageLabel = text.noFreshData(),
@@ -219,6 +222,22 @@ class QuotaPresentationMapper(
                 QuotaAction.Disconnect
             )
         )
+    }
+
+    private fun mapNotice(notice: QuotaNotice): ServiceInsightPresentation? {
+        return when (notice) {
+            is QuotaNotice.WindowLimitNotProvided -> {
+                val hours = notice.windowDurationSeconds / SECONDS_PER_HOUR
+                if (hours <= 0L || notice.windowDurationSeconds % SECONDS_PER_HOUR != 0L) {
+                    null
+                } else {
+                    ServiceInsightPresentation(
+                        title = text.limitNotProvidedTitle(hours),
+                        message = text.limitNotProvidedMessage()
+                    )
+                }
+            }
+        }
     }
 
     private fun AppError.toPresentationMessage(): String {
@@ -267,5 +286,6 @@ class QuotaPresentationMapper(
 
         private const val WARNING_USED_FRACTION = 0.60
         private const val CRITICAL_USED_FRACTION = 0.85
+        private const val SECONDS_PER_HOUR = 3600L
     }
 }

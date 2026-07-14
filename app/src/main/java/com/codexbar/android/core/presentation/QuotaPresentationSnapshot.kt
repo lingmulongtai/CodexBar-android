@@ -18,8 +18,14 @@ data class ServiceQuotaPresentation(
     val primaryMetric: QuotaMetricPresentation?,
     val metrics: List<QuotaMetricPresentation>,
     val extraUsage: ExtraUsagePresentation?,
+    val insights: List<ServiceInsightPresentation> = emptyList(),
     val freshness: FreshnessPresentation,
     val supportedActions: Set<QuotaAction>
+)
+
+data class ServiceInsightPresentation(
+    val title: String,
+    val message: String
 )
 
 data class QuotaMetricPresentation(

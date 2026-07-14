@@ -101,6 +101,14 @@ fun ServiceCard(
                 accent = visualStyle.accent
             )
 
+            service.insights.forEach { insight ->
+                Spacer(modifier = Modifier.height(CodexBarSpacing.medium))
+                ServiceInsightBanner(
+                    insight = insight,
+                    accent = visualStyle.accent
+                )
+            }
+
             if (service.status != ServiceQuotaStatus.Fresh &&
                 service.status != ServiceQuotaStatus.Redacted
             ) {

@@ -7,8 +7,15 @@ data class QuotaInfo(
     val windows: List<UsageWindow>,
     val extraUsage: ExtraUsage?,
     val tier: String? = null,
-    val fetchedAt: Instant
+    val fetchedAt: Instant,
+    val notices: Set<QuotaNotice> = emptySet()
 )
+
+sealed interface QuotaNotice {
+    data class WindowLimitNotProvided(
+        val windowDurationSeconds: Long
+    ) : QuotaNotice
+}
 
 data class UsageWindow(
     val label: String,

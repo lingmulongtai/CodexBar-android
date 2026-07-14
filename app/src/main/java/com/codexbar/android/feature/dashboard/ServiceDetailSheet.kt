@@ -118,6 +118,9 @@ private fun ServiceDetailContent(
     ) {
         ServiceDetailHeader(service, accent)
         ServiceStateSummary(service, accent)
+        service.insights.forEach { insight ->
+            ServiceInsightBanner(insight = insight, accent = accent)
+        }
 
         if (service.metrics.isNotEmpty()) {
             SectionTitle(stringResource(R.string.quota_windows))

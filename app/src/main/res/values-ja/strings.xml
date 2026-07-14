@@ -244,4 +244,6 @@
     <string name="pace_usage_rate">平均%1$s%%/時</string>
     <string name="pace_multiplier">基準ペースの%1$s倍</string>
     <string name="pace_forecast">現在のペースではリセット時に%1$d%%使用</string>
+    <string name="insight_limit_not_provided_title">%1$d時間リミットは現在ありません！</string>
+    <string name="insight_limit_not_provided_message">短期枠を気にせず、長期枠を見ながら開発を進められます。</string>
 </resources>
