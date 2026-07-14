@@ -36,6 +36,18 @@ class WidgetRefreshSourceTest {
     }
 
     @Test
+    fun `widget receiver is not exposed to untrusted application broadcasts`() {
+        val manifest = File(appDir, "src/main/AndroidManifest.xml")
+            .readText()
+            .replace("\r\n", "\n")
+        val receiver = manifest
+            .substringAfter("android:name=\".core.widget.QuotaWidgetReceiver\"")
+            .substringBefore("</receiver>")
+
+        assertTrue(receiver.contains("android:exported=\"false\""))
+    }
+
+    @Test
     fun `explicit widget refresh supersedes stale manual work`() {
         val source = File(
             appDir,
