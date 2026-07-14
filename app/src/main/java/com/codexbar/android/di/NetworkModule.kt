@@ -4,6 +4,7 @@ import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFact
 import com.codexbar.android.BuildConfig
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.network.RetryInterceptor
+import com.codexbar.android.core.network.ResponseSizeLimitInterceptor
 import com.codexbar.android.core.network.claude.ClaudeApiService
 import com.codexbar.android.core.network.claude.ClaudeTokenRefreshService
 import com.codexbar.android.core.network.codex.CodexApiService
@@ -81,6 +82,7 @@ object NetworkModule {
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .addInterceptor(RetryInterceptor())
+            .addInterceptor(ResponseSizeLimitInterceptor())
 
         if (BuildConfig.IS_DEBUG && includeDebugLogging) {
             builder.addInterceptor(createMetadataLoggingInterceptor())

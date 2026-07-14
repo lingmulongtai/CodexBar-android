@@ -7,6 +7,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import com.codexbar.android.core.network.ResponseSizeLimitInterceptor
 import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -84,6 +85,25 @@ class NetworkModuleTest {
 
         tokenClients.forEach { client ->
             assertTrue(client.interceptors.none { it is HttpLoggingInterceptor })
+        }
+    }
+
+    @Test
+    fun `all provider clients enforce a response size limit`() {
+        val providerClients = listOf(
+            NetworkModule.provideClaudeOkHttpClient(),
+            NetworkModule.provideClaudeTokenOkHttpClient(),
+            NetworkModule.provideCodexOkHttpClient(),
+            NetworkModule.provideCodexTokenOkHttpClient(),
+            NetworkModule.provideCodexDeviceAuthOkHttpClient(),
+            NetworkModule.provideGeminiOkHttpClient(),
+            NetworkModule.provideGeminiTokenOkHttpClient(),
+            NetworkModule.provideCopilotOkHttpClient(),
+            NetworkModule.provideGitHubDeviceAuthOkHttpClient()
+        )
+
+        providerClients.forEach { client ->
+            assertTrue(client.interceptors.any { it is ResponseSizeLimitInterceptor })
         }
     }
 }
