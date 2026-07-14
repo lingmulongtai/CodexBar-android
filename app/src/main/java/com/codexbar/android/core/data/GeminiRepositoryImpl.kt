@@ -12,9 +12,10 @@ import com.codexbar.android.core.network.gemini.GeminiDto
 import com.codexbar.android.core.network.gemini.GeminiTokenRefreshService
 import com.codexbar.android.core.network.RetryAfter
 import com.codexbar.android.core.security.EncryptedPrefsManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import java.io.IOException
 import java.time.Instant
 import javax.inject.Inject
@@ -70,6 +71,9 @@ class GeminiRepositoryImpl @Inject constructor(
             ?: return Result.Failure(AppError.ParseError("Empty loadCodeAssist response"))
 
         val projectId = extractProjectId(loadBody)
+        if (loadBody.cloudaicompanionProject != null && projectId == null) {
+            return Result.Failure(AppError.ParseError("Invalid Gemini project ID"))
+        }
         val tierRaw = loadBody.currentTier?.id
         val tier = mapTier(tierRaw)
 
@@ -103,9 +107,17 @@ class GeminiRepositoryImpl @Inject constructor(
         val typed = credential as? Credential.GeminiCredential
             ?: return Result.Failure(AppError.AuthError(AiService.GEMINI, isTerminal = true))
 
-        return when (val result = fetchQuotaWithToken(typed)) {
-            is Result.Success -> Result.Success(Unit)
-            is Result.Failure -> Result.Failure(result.error)
+        return try {
+            when (val result = fetchQuotaWithToken(typed)) {
+                is Result.Success -> Result.Success(Unit)
+                is Result.Failure -> Result.Failure(result.error)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: IOException) {
+            Result.Failure(AppError.NetworkError(e.message ?: "Network error", e))
+        } catch (e: Exception) {
+            Result.Failure(AppError.ParseError("${e::class.simpleName}: ${e.message}", e))
         }
     }
 
@@ -113,8 +125,8 @@ class GeminiRepositoryImpl @Inject constructor(
         val element = response.cloudaicompanionProject ?: return null
         // cloudaicompanionProject can be String or Object {"id": "..."}
         return when (element) {
-            is JsonPrimitive -> element.content
-            is JsonObject -> element["id"]?.jsonPrimitive?.content
+            is JsonPrimitive -> element.contentOrNull
+            is JsonObject -> (element["id"] as? JsonPrimitive)?.contentOrNull
             else -> null
         }
     }

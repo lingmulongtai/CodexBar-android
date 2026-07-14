@@ -137,6 +137,25 @@ class GeminiRepositoryImplTest {
     }
 
     @Test
+    fun `manual validation rejects a non primitive nested projectId without throwing`() = runTest {
+        mockWebServer.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """
+                {
+                    "cloudaicompanionProject": { "id": { "nested": true } },
+                    "currentTier": { "id": "free-tier" }
+                }
+                """.trimIndent()
+            )
+        )
+
+        val result = repository.validateCredential(testCredential)
+
+        assertTrue(result is Result.Failure)
+        assertTrue((result as Result.Failure).error is AppError.ParseError)
+    }
+
+    @Test
     fun `fetchQuota deduplicates buckets by modelId`() = runTest {
         val loadResponse = """
         {
