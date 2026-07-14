@@ -58,6 +58,7 @@
     <string name="action_connect_account">Connect account</string>
     <string name="action_reconnect_account">Reconnect account</string>
     <string name="action_copy">Copy</string>
+    <string name="action_copy_sign_in_code">Copy paste-ready code</string>
     <string name="action_copied">Copied</string>
     <string name="action_copy_command">Copy command</string>
     <string name="action_delete">Delete</string>
@@ -95,6 +96,7 @@
     <string name="account_manual_setup">Manual token setup</string>
     <string name="account_manual_setup_description">Advanced fallback only. Prefer account sign-in above; never paste tokens into screenshots, logs, notes, or issue reports.</string>
     <string name="account_link_enter_code">Enter this code on the sign-in page:</string>
+    <string name="account_link_copy_first_hint">Copy the code before opening the browser. Separators are removed so the full code can be pasted into the first split field.</string>
     <string name="account_link_expires">Expires: %1$s</string>
     <string name="clipboard_sign_in_code">Sign-in code</string>
     <string name="clipboard_setup_command">Setup command</string>

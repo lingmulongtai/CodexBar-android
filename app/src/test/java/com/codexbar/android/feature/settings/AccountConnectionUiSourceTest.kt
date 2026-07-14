@@ -1,6 +1,7 @@
 package com.codexbar.android.feature.settings
 
 import java.io.File
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -13,10 +14,17 @@ class AccountConnectionUiSourceTest {
         val source = settingsSource()
 
         assertTrue(source.contains("SelectionContainer(modifier = Modifier.weight(1f))"))
-        assertTrue(source.contains("onCopyAccountCode(prompt.userCode)"))
-        assertTrue(source.contains("copiedCode = prompt.userCode"))
-        assertTrue(source.contains("LaunchedEffect(prompt?.userCode)"))
+        assertTrue(source.contains("deviceCodeForClipboard(prompt.userCode)"))
+        assertTrue(source.contains("onCopyAccountCode(clipboardCode)"))
+        assertTrue(source.contains("copiedCode = clipboardCode"))
         assertTrue(source.contains("onOpenAccountLink(prompt.verificationUrl)"))
+        assertFalse(source.contains("lastOpenedCode"))
+        assertFalse(source.contains("LaunchedEffect(prompt?.userCode)"))
+
+        val promptCard = source.indexOf("prompt?.let")
+        val copyAction = source.indexOf("onCopyAccountCode(clipboardCode)", promptCard)
+        val openAction = source.indexOf("onOpenAccountLink(prompt.verificationUrl)", copyAction)
+        assertTrue("copy action must be presented before browser navigation", copyAction in 0..<openAction)
     }
 
     @Test

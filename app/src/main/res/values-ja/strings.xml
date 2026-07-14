@@ -58,6 +58,7 @@
     <string name="action_connect_account">アカウントを接続</string>
     <string name="action_reconnect_account">アカウントを再接続</string>
     <string name="action_copy">コピー</string>
+    <string name="action_copy_sign_in_code">貼り付け用コードをコピー</string>
     <string name="action_copied">コピー済み</string>
     <string name="action_copy_command">コマンドをコピー</string>
     <string name="action_delete">削除</string>
@@ -95,6 +96,7 @@
     <string name="account_manual_setup">手動トークン設定</string>
     <string name="account_manual_setup_description">上級者向けの代替手段です。上のアカウントログインを優先し、トークンをスクリーンショット、ログ、メモ、Issueへ貼らないでください。</string>
     <string name="account_link_enter_code">ログインページで次のコードを入力してください:</string>
+    <string name="account_link_copy_first_hint">先にコードをコピーしてください。区切り記号を除いてコピーするため、分割された最初の入力欄へコード全体を貼り付けられます。</string>
     <string name="account_link_expires">有効期限: %1$s</string>
     <string name="clipboard_sign_in_code">ログインコード</string>
     <string name="clipboard_setup_command">設定コマンド</string>
