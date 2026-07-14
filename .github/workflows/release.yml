@@ -113,21 +113,28 @@ jobs:
           arch: x86_64
           profile: pixel_6
           script: |
-            set -euo pipefail
-            mapfile -t release_apks < <(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print | sort)
-            if [ "${#release_apks[@]}" -ne 1 ]; then
+            set -eu
+            release_apk=''
+            release_apk_count=0
+            for candidate in app/build/outputs/apk/release/*.apk; do
+              [ -f "$candidate" ] || continue
+              release_apk="$candidate"
+              release_apk_count=$((release_apk_count + 1))
+            done
+            if [ "$release_apk_count" -ne 1 ]; then
               printf '::error::Expected exactly one release APK for startup smoke testing.\n'
               exit 1
             fi
 
             package_name='com.codexbar.android'
-            adb install "${release_apks[0]}"
+            adb install "$release_apk"
             adb logcat -b crash -c
             adb shell am force-stop "$package_name"
             adb shell am start -W -n "$package_name/.MainActivity"
             sleep 5
 
-            app_pid="$(adb shell pidof "$package_name" | tr -d '\r')"
+            app_pid="$(adb shell pidof "$package_name" || true)"
+            app_pid="$(printf '%s' "$app_pid" | tr -d '\r')"
             if [ -z "$app_pid" ]; then
               printf '::error::Release app process exited during startup.\n'
               adb logcat -b crash -d

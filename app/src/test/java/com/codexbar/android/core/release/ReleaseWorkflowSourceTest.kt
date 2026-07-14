@@ -45,6 +45,10 @@ class ReleaseWorkflowSourceTest {
 
         assertTrue(smokeStep.contains("ReactiveCircus/android-emulator-runner@"))
         assertTrue(smokeStep.contains("api-level: 36"))
+        assertTrue(smokeStep.contains("set -eu"))
+        assertFalse(smokeStep.contains("pipefail"))
+        assertFalse(smokeStep.contains("mapfile"))
+        assertFalse(smokeStep.contains("< <("))
         assertTrue(smokeStep.contains("adb install"))
         assertTrue(smokeStep.contains("adb shell am start -W"))
         assertTrue(smokeStep.contains("adb shell pidof"))
