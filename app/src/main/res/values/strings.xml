@@ -232,11 +232,16 @@
     <string name="pace_waiting_next_window">Waiting for next window</string>
     <string name="pace_collecting_history">Collecting pace history</string>
     <string name="pace_stable">Pace stable</string>
+    <string name="pace_room_to_use_more">You can use more</string>
     <string name="pace_reserve">%1$d%% reserve</string>
     <string name="pace_no_recent_increase">No recent increase</string>
     <string name="pace_may_run_out">May run out before reset</string>
-    <string name="pace_at_risk">Pace at risk</string>
-    <string name="pace_on_track">Pace on track</string>
+    <string name="pace_too_fast">Usage pace is too fast</string>
+    <string name="pace_at_risk">A little faster than ideal</string>
+    <string name="pace_on_track">You’re on a good pace</string>
     <string name="pace_unavailable">Pace unavailable</string>
+    <string name="pace_cycle_progress">Used %1$d%% / %2$s%% of window elapsed</string>
+    <string name="pace_usage_rate">Avg %1$s%%/h</string>
+    <string name="pace_multiplier">%1$s× target pace</string>
     <string name="pace_forecast">At this pace: %1$d%% by reset</string>
 </resources>

@@ -272,6 +272,9 @@ private fun MetricDetailCard(metric: QuotaMetricPresentation, accent: Color) {
                 DetailChip(metric.usedLabel)
                 DetailChip(metric.remainingLabel)
                 metric.resetLabel?.let { DetailChip(it) }
+                metric.pace.cycleProgressLabel?.let { DetailChip(it) }
+                metric.pace.usageRateLabel?.let { DetailChip(it) }
+                metric.pace.paceMultiplierLabel?.let { DetailChip(it) }
                 metric.pace.reserveLabel?.let { DetailChip(it) }
             }
 

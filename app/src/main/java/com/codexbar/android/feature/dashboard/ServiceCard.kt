@@ -152,6 +152,9 @@ fun ServiceCard(
                             )
                         }
                         listOfNotNull(
+                            metric.pace.cycleProgressLabel,
+                            metric.pace.usageRateLabel,
+                            metric.pace.paceMultiplierLabel,
                             metric.pace.reserveLabel,
                             metric.pace.forecastLabel
                         ).distinct().takeIf { it.isNotEmpty() }?.let { details ->

@@ -58,6 +58,9 @@ data class FreshnessPresentation(
 data class PacePresentation(
     val state: PaceState,
     val label: String,
+    val cycleProgressLabel: String? = null,
+    val usageRateLabel: String? = null,
+    val paceMultiplierLabel: String? = null,
     val reserveLabel: String? = null,
     val forecastLabel: String? = null
 )

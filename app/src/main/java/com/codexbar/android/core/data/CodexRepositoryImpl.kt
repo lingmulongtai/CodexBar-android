@@ -187,7 +187,8 @@ class CodexRepositoryImpl @Inject constructor(
         return UsageWindow(
             label = label,
             utilization = window.usedPercent / 100.0,
-            resetsAt = window.resetAt?.let { Instant.ofEpochSecond(it) }
+            resetsAt = window.resetAt?.let { Instant.ofEpochSecond(it) },
+            windowDurationSeconds = window.limitWindowSeconds?.takeIf { it > 0L }
         )
     }
 

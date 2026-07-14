@@ -13,7 +13,8 @@ data class QuotaInfo(
 data class UsageWindow(
     val label: String,
     val utilization: Double, // 0.0 ~ 1.0
-    val resetsAt: Instant?
+    val resetsAt: Instant?,
+    val windowDurationSeconds: Long? = null
 )
 
 data class ExtraUsage(

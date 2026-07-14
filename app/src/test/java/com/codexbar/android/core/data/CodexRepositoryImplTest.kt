@@ -111,8 +111,10 @@ class CodexRepositoryImplTest {
         assertEquals(2, quotaInfo.windows.size)
         assertEquals("5-Hour", quotaInfo.windows[0].label)
         assertEquals(0.45, quotaInfo.windows[0].utilization, 0.001)
+        assertEquals(18000L, quotaInfo.windows[0].windowDurationSeconds)
         assertEquals("7-Day", quotaInfo.windows[1].label)
         assertEquals(0.20, quotaInfo.windows[1].utilization, 0.001)
+        assertEquals(604800L, quotaInfo.windows[1].windowDurationSeconds)
         assertEquals("Pro", quotaInfo.tier)
     }
 

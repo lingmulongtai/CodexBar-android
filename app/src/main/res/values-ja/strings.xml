@@ -232,11 +232,16 @@
     <string name="pace_waiting_next_window">次の使用枠を待っています</string>
     <string name="pace_collecting_history">ペース履歴を収集中</string>
     <string name="pace_stable">安定したペース</string>
+    <string name="pace_room_to_use_more">まだもう少し使えます</string>
     <string name="pace_reserve">予測残量%1$d%%</string>
     <string name="pace_no_recent_increase">最近の使用量増加なし</string>
-    <string name="pace_may_run_out">リセット前に使い切る可能性があります</string>
-    <string name="pace_at_risk">使用ペースに注意</string>
-    <string name="pace_on_track">適正な使用ペース</string>
+    <string name="pace_may_run_out">このままだとリセット前に使い切りそうです</string>
+    <string name="pace_too_fast">使いすぎのペースです</string>
+    <string name="pace_at_risk">少し速めのペースです</string>
+    <string name="pace_on_track">いい調子です</string>
     <string name="pace_unavailable">ペースを計算できません</string>
+    <string name="pace_cycle_progress">使用%1$d%% / 周期%2$s%%経過</string>
+    <string name="pace_usage_rate">平均%1$s%%/時</string>
+    <string name="pace_multiplier">基準ペースの%1$s倍</string>
     <string name="pace_forecast">現在のペースではリセット時に%1$d%%使用</string>
 </resources>
