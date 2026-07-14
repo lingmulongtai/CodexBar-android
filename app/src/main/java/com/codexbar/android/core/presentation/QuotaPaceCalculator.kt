@@ -27,12 +27,12 @@ class QuotaPaceCalculator(
         currentWindow.windowDurationSeconds
             ?.takeIf { it > 0L }
             ?.let { durationSeconds ->
-                return calculateFromCycle(
+                calculateFromCycle(
                     currentUsed = currentUsed,
                     resetAt = resetAt,
                     durationSeconds = durationSeconds,
                     now = now
-                )
+                )?.let { return it }
             }
 
         return calculateFromHistory(
@@ -48,8 +48,10 @@ class QuotaPaceCalculator(
         resetAt: Instant,
         durationSeconds: Long,
         now: Instant
-    ): PacePresentation {
-        val cycleStartedAt = resetAt.minusSeconds(durationSeconds)
+    ): PacePresentation? {
+        val cycleStartedAt = runCatching { resetAt.minusSeconds(durationSeconds) }
+            .getOrNull()
+            ?: return null
         val elapsedSeconds = Duration.between(cycleStartedAt, now).seconds
         if (elapsedSeconds < MIN_SAMPLE_SPACING_SECONDS || elapsedSeconds >= durationSeconds) {
             return collecting(text.collectingPaceHistory())

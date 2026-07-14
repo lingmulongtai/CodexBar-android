@@ -92,6 +92,23 @@ class QuotaPaceCalculatorTest {
     }
 
     @Test
+    fun `falls back safely when provider window duration overflows the reset cycle`() {
+        val pace = calculator.calculate(
+            samples = emptyList(),
+            currentWindow = UsageWindow(
+                label = "invalid",
+                utilization = 0.40,
+                resetsAt = resetAt,
+                windowDurationSeconds = Long.MAX_VALUE
+            ),
+            now = now
+        )
+
+        assertEquals(PaceState.CollectingHistory, pace.state)
+        assertEquals("Collecting pace history", pace.label)
+    }
+
+    @Test
     fun `does not connect samples across reset windows`() {
         val pace = calculator.calculate(
             samples = listOf(
