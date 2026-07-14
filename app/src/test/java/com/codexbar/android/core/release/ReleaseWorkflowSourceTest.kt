@@ -21,4 +21,18 @@ class ReleaseWorkflowSourceTest {
         assertTrue(workflow.contains("--latest"))
         assertFalse(workflow.contains("--prerelease"))
     }
+
+    @Test
+    fun `release signing material is scoped to the build step and deleted`() {
+        val workflow = File(repoDir, ".github/workflows/release.yml").readText()
+        val buildStep = workflow
+            .substringAfter("- name: Build signed release artifacts")
+            .substringBefore("- name: Verify release signing identity")
+
+        assertTrue(buildStep.contains("ANDROID_KEYSTORE_BASE64: \${{ secrets.ANDROID_KEYSTORE_BASE64 }}"))
+        assertTrue(buildStep.contains("trap cleanup EXIT"))
+        assertTrue(buildStep.contains("rm -f \"\$keystore_path\""))
+        assertTrue(buildStep.contains("chmod 600 \"\$keystore_path\""))
+        assertFalse(workflow.contains("GITHUB_ENV"))
+    }
 }
