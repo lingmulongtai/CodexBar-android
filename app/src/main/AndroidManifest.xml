@@ -112,7 +112,7 @@
             </intent-filter>
         </receiver>
 
-        <!-- WorkManager Initializer via App Startup -->
+        <!-- WorkManager uses the Hilt configuration after Application.onCreate. -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
@@ -121,9 +121,6 @@
             <meta-data
                 android:name="androidx.work.WorkManagerInitializer"
                 tools:node="remove" />
-            <meta-data
-                android:name="com.codexbar.android.core.workmanager.WorkManagerInitializer"
-                android:value="androidx.startup" />
         </provider>
 
     </application>
