@@ -105,6 +105,16 @@ jobs:
             exit 1
           fi
 
+      - name: Enable KVM access
+        run: |
+          if [ ! -e /dev/kvm ]; then
+            printf '::error::The release runner does not expose /dev/kvm.\n'
+            exit 1
+          fi
+          sudo chmod 666 /dev/kvm
+          test -r /dev/kvm
+          test -w /dev/kvm
+
       - name: Smoke test signed release APK
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
