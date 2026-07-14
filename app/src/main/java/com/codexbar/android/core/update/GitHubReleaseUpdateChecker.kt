@@ -54,10 +54,9 @@ class GitHubReleaseUpdateChecker internal constructor(
                     val releasePageUrl = trustedReleaseUrl(release.htmlUrl)
                         ?: LATEST_RELEASE_PAGE_URL
                     val downloadUrl = release.assets
-                        .sortedByDescending { it.name == RELEASE_APK_NAME }
                         .firstNotNullOfOrNull { asset ->
                             asset.browserDownloadUrl
-                                .takeIf { asset.name.endsWith(".apk", ignoreCase = true) }
+                                .takeIf { asset.name == RELEASE_APK_NAME }
                                 ?.let(::trustedReleaseUrl)
                         }
                         ?: releasePageUrl

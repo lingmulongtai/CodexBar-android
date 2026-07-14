@@ -58,6 +58,21 @@ class GitHubReleaseUpdateCheckerTest {
     }
 
     @Test
+    fun `unexpected apk asset name falls back to trusted release page`() = runTest {
+        server.enqueue(
+            releaseResponse(
+                tag = "v1.0.0",
+                assetUrl = TRUSTED_APK_URL.replace("app-release.apk", "debug.apk"),
+                assetName = "debug.apk"
+            )
+        )
+
+        val update = checker().checkForUpdate("0.2.1")
+
+        assertEquals(TRUSTED_RELEASE_URL, update?.downloadUrl)
+    }
+
+    @Test
     fun `same version and prerelease tags do not prompt`() = runTest {
         server.enqueue(releaseResponse(tag = "v0.2.1", assetUrl = TRUSTED_APK_URL))
         server.enqueue(releaseResponse(tag = "v0.3.0-beta", assetUrl = TRUSTED_APK_URL))
@@ -83,7 +98,11 @@ class GitHubReleaseUpdateCheckerTest {
         )
     }
 
-    private fun releaseResponse(tag: String, assetUrl: String): MockResponse {
+    private fun releaseResponse(
+        tag: String,
+        assetUrl: String,
+        assetName: String = "app-release.apk"
+    ): MockResponse {
         return MockResponse()
             .setResponseCode(200)
             .setHeader("Content-Type", "application/json")
@@ -96,7 +115,7 @@ class GitHubReleaseUpdateCheckerTest {
                   "prerelease": false,
                   "assets": [
                     {
-                      "name": "app-release.apk",
+                      "name": "$assetName",
                       "browser_download_url": "$assetUrl"
                     }
                   ]
