@@ -151,7 +151,15 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                     ) {
                                         OutlinedButton(
                                             onClick = {
-                                                setResult(RESULT_CANCELED)
+                                                setResult(
+                                                    RESULT_CANCELED,
+                                                    Intent().apply {
+                                                        putExtra(
+                                                            AppWidgetManager.EXTRA_APPWIDGET_ID,
+                                                            appWidgetId
+                                                        )
+                                                    }
+                                                )
                                                 finish()
                                             },
                                             modifier = Modifier.weight(1f)

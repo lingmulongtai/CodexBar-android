@@ -51,6 +51,7 @@ class WidgetRefreshSourceTest {
 
         assertTrue("RESULT_CANCELED must include the allocated App Widget ID", resultCanceled >= 0)
         assertTrue(widgetIdExtra > resultCanceled)
+        assertFalse(source.contains("setResult(RESULT_CANCELED)"))
     }
 
     @Test
