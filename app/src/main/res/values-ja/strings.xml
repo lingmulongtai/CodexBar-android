@@ -172,6 +172,7 @@
     <string name="widget_setup_data_hint">保存後に使用枠データを読み込みます。ウィジェットの更新ボタンからいつでも再取得できます。</string>
     <string name="widget_setup_save">保存</string>
     <string name="widget_setup_add">ウィジェットを追加</string>
+    <string name="widget_setup_update_failed">ウィジェットを初期化できませんでした。この画面を閉じずに、もう一度お試しください。</string>
     <string name="widget_more_services">ほか%1$d件</string>
     <string name="widget_no_services">サービスが設定されていません</string>
     <string name="widget_quota_hidden">使用枠を非表示</string>

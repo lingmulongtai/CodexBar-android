@@ -172,6 +172,7 @@
     <string name="widget_setup_data_hint">Quota data loads after you save. You can also tap Refresh on the widget at any time.</string>
     <string name="widget_setup_save">Save</string>
     <string name="widget_setup_add">Add widget</string>
+    <string name="widget_setup_update_failed">Couldn’t initialize the widget. Keep this screen open and try again.</string>
     <string name="widget_more_services">+%1$d more</string>
     <string name="widget_no_services">No services configured</string>
     <string name="widget_quota_hidden">Quota hidden</string>

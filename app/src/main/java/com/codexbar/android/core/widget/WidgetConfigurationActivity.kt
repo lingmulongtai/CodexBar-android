@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.enableEdgeToEdge
@@ -72,6 +73,8 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     @Inject
     lateinit var widgetPrefsManager: WidgetPrefsManager
 
+    private var isCompletingConfiguration = false
+
     private val appWidgetId: Int by lazy {
         intent?.extras?.getInt(
             AppWidgetManager.EXTRA_APPWIDGET_ID,
@@ -83,8 +86,14 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Default result is CANCELED — if user backs out, widget isn't added
-        setResult(RESULT_CANCELED)
+        // Default result is CANCELED — if user backs out, widget isn't added.
+        // Some launchers require the allocated ID even for cancellation.
+        setResult(
+            RESULT_CANCELED,
+            Intent().apply {
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            }
+        )
 
         if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
             finish()
@@ -328,7 +337,12 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     }
 
     private fun openAppSettings() {
-        setResult(RESULT_CANCELED)
+        setResult(
+            RESULT_CANCELED,
+            Intent().apply {
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            }
+        )
         startActivity(
             Intent(this, MainActivity::class.java).apply {
                 data = Uri.parse("codexbar://settings")
@@ -344,6 +358,9 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         showFreshness: Boolean,
         maxRows: Int
     ) {
+        if (isCompletingConfiguration) return
+        isCompletingConfiguration = true
+
         val selectedServices = checkedState
             .filter { it.value }
             .keys
@@ -360,27 +377,33 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             )
         )
 
-        // Return RESULT_OK first so the launcher places the widget
-        val resultValue = Intent().apply {
-            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-        }
-        setResult(RESULT_OK, resultValue)
-
-        WorkManagerInitializer.enqueueManualQuotaRefresh(
-            context = this,
-            source = "widget_config"
-        )
-
-        // Trigger widget update asynchronously to avoid main-thread deadlock
+        // Configuration widgets do not receive their initial onUpdate broadcast.
+        // Render once before reporting success so the launcher never keeps the XML loading view.
         lifecycleScope.launch {
             try {
                 val glanceId = GlanceAppWidgetManager(this@WidgetConfigurationActivity)
-                    .getGlanceIdBy(appWidgetId)
+                    .getGlanceIdBy(intent)
+                    ?: error("Widget configuration did not include an App Widget ID")
                 QuotaGlanceWidget().update(this@WidgetConfigurationActivity, glanceId)
+
+                WorkManagerInitializer.enqueueManualQuotaRefresh(
+                    context = this@WidgetConfigurationActivity,
+                    source = "widget_config"
+                )
+
+                val resultValue = Intent().apply {
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                }
+                setResult(RESULT_OK, resultValue)
+                finish()
             } catch (_: Exception) {
-                // Widget will pick up saved config on next periodic update
+                isCompletingConfiguration = false
+                Toast.makeText(
+                    this@WidgetConfigurationActivity,
+                    R.string.widget_setup_update_failed,
+                    Toast.LENGTH_LONG
+                ).show()
             }
-            finish()
         }
     }
 }
