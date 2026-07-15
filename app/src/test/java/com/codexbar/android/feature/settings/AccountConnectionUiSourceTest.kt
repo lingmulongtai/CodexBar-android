@@ -39,6 +39,27 @@ class AccountConnectionUiSourceTest {
         assertTrue(source.contains("R.string.account_security_note"))
     }
 
+    @Test
+    fun `device-code prompt explains the complete safe sign-in sequence`() {
+        val source = settingsSource()
+
+        assertTrue(source.contains("R.string.account_link_steps_title"))
+        assertTrue(source.contains("R.string.account_link_step_copy"))
+        assertTrue(source.contains("R.string.account_link_step_open"))
+        assertTrue(source.contains("R.string.account_link_step_authorize"))
+        assertTrue(source.contains("R.string.account_link_step_return"))
+        assertTrue(source.contains("R.string.account_link_retry_hint"))
+        assertTrue(source.contains("R.string.account_link_code_safety"))
+
+        val copyStep = source.indexOf("R.string.account_link_step_copy")
+        val openStep = source.indexOf("R.string.account_link_step_open", copyStep)
+        val authorizeStep = source.indexOf("R.string.account_link_step_authorize", openStep)
+        val returnStep = source.indexOf("R.string.account_link_step_return", authorizeStep)
+        assertTrue(copyStep in 0..<openStep)
+        assertTrue(openStep < authorizeStep)
+        assertTrue(authorizeStep < returnStep)
+    }
+
     private fun settingsSource(): String {
         return File(
             appDir,
