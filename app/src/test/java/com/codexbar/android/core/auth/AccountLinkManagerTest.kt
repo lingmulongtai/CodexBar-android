@@ -6,6 +6,7 @@ import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
 import com.codexbar.android.core.network.oauth.DeviceAuthDto
 import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
 import com.codexbar.android.core.network.oauth.GoogleDeviceAuthService
+import java.net.UnknownHostException
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
@@ -13,6 +14,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.times
+import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import retrofit2.Response
 
@@ -77,6 +80,59 @@ class AccountLinkManagerTest {
         credential as Credential.CodexCredential
         assertEquals("access-token", credential.accessToken)
         assertEquals("refresh-token", credential.refreshToken)
+    }
+
+    @Test
+    fun `codex device-code flow retries transient DNS failures after browser sign-in`() = runTest {
+        val pollRequest = DeviceAuthDto.CodexTokenPollRequest("device-auth-id", "ABCD-EFGH")
+        `when`(codexDeviceAuthService.requestUserCode(DeviceAuthDto.CodexUserCodeRequest(CODEX_CLIENT_ID)))
+            .thenReturn(
+                Response.success(
+                    DeviceAuthDto.CodexUserCodeResponse(
+                        deviceAuthId = "device-auth-id",
+                        userCode = "ABCD-EFGH",
+                        interval = JsonPrimitive("5")
+                    )
+                )
+            )
+        `when`(codexDeviceAuthService.pollForAuthorizationCode(pollRequest))
+            .thenAnswer { throw UnknownHostException("auth.openai.com") }
+            .thenReturn(
+                Response.success(
+                    DeviceAuthDto.CodexAuthorizationCodeResponse(
+                        authorizationCode = "authorization-code",
+                        codeVerifier = "code-verifier"
+                    )
+                )
+            )
+        `when`(
+            codexDeviceAuthService.exchangeAuthorizationCode(
+                code = "authorization-code",
+                clientId = CODEX_CLIENT_ID,
+                codeVerifier = "code-verifier"
+            )
+        )
+            .thenAnswer { throw UnknownHostException("auth.openai.com") }
+            .thenReturn(
+                Response.success(
+                    DeviceAuthDto.CodexTokenExchangeResponse(
+                        accessToken = "access-token",
+                        refreshToken = "refresh-token"
+                    )
+                )
+            )
+
+        val session = manager.requestDeviceCode(AiService.CODEX)
+        val credential = manager.completeDeviceCode(session) as Credential.CodexCredential
+
+        assertEquals("access-token", credential.accessToken)
+        assertEquals("refresh-token", credential.refreshToken)
+        verify(codexDeviceAuthService, times(2)).pollForAuthorizationCode(pollRequest)
+        verify(codexDeviceAuthService, times(2)).exchangeAuthorizationCode(
+            code = "authorization-code",
+            clientId = CODEX_CLIENT_ID,
+            codeVerifier = "code-verifier"
+        )
     }
 
     @Test
