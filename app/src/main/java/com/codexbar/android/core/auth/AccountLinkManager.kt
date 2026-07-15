@@ -8,6 +8,7 @@ import com.codexbar.android.core.network.oauth.DeviceAuthDto
 import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
 import com.codexbar.android.core.network.oauth.GoogleDeviceAuthService
 import java.io.IOException
+import java.net.UnknownHostException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.delay
@@ -68,23 +69,33 @@ class AccountLinkManager @Inject constructor(
     }
 
     private suspend fun completeCodexDeviceCode(session: DeviceAuthSession): Credential.CodexCredential {
-        val deadline = System.currentTimeMillis() + CODEX_DEVICE_EXPIRY_MS
+        val deadline = session.expiresAtEpochMs
         while (System.currentTimeMillis() < deadline) {
-            val response = codexDeviceAuthService.pollForAuthorizationCode(
-                DeviceAuthDto.CodexTokenPollRequest(
-                    deviceAuthId = session.deviceCode,
-                    userCode = session.userCode
+            val response = retryCodexDnsFailureUntil(
+                deadlineEpochMs = deadline,
+                intervalSeconds = session.intervalSeconds
+            ) {
+                codexDeviceAuthService.pollForAuthorizationCode(
+                    DeviceAuthDto.CodexTokenPollRequest(
+                        deviceAuthId = session.deviceCode,
+                        userCode = session.userCode
+                    )
                 )
-            )
+            }
 
             if (response.isSuccessful) {
                 val code = response.body()
                     ?: throw IOException("Codex authorization-code response was empty")
-                val tokenResponse = codexDeviceAuthService.exchangeAuthorizationCode(
-                    code = code.authorizationCode,
-                    clientId = CodexDto.CODEX_CLIENT_ID,
-                    codeVerifier = code.codeVerifier
-                )
+                val tokenResponse = retryCodexDnsFailureUntil(
+                    deadlineEpochMs = deadline,
+                    intervalSeconds = session.intervalSeconds
+                ) {
+                    codexDeviceAuthService.exchangeAuthorizationCode(
+                        code = code.authorizationCode,
+                        clientId = CodexDto.CODEX_CLIENT_ID,
+                        codeVerifier = code.codeVerifier
+                    )
+                }
                 if (!tokenResponse.isSuccessful) {
                     throw IOException("Codex token exchange failed with HTTP ${tokenResponse.code()}")
                 }
@@ -98,12 +109,37 @@ class AccountLinkManager @Inject constructor(
             }
 
             when (response.code()) {
-                403, 404 -> delay(pollDelayMillis(session.intervalSeconds))
+                403, 404 -> delayUntilNextCodexAttempt(deadline, session.intervalSeconds)
                 else -> throw IOException("Codex device-code polling failed with HTTP ${response.code()}")
             }
         }
 
         throw IOException("Codex device-code login timed out")
+    }
+
+    private suspend fun <T> retryCodexDnsFailureUntil(
+        deadlineEpochMs: Long,
+        intervalSeconds: Long,
+        request: suspend () -> T
+    ): T {
+        while (true) {
+            try {
+                return request()
+            } catch (error: UnknownHostException) {
+                if (System.currentTimeMillis() >= deadlineEpochMs) throw error
+                delayUntilNextCodexAttempt(deadlineEpochMs, intervalSeconds)
+            }
+        }
+    }
+
+    private suspend fun delayUntilNextCodexAttempt(
+        deadlineEpochMs: Long,
+        intervalSeconds: Long
+    ) {
+        val remainingMillis = (deadlineEpochMs - System.currentTimeMillis()).coerceAtLeast(0L)
+        if (remainingMillis > 0L) {
+            delay(minOf(pollDelayMillis(intervalSeconds), remainingMillis))
+        }
     }
 
     private suspend fun requestCopilotDeviceCode(): DeviceAuthSession {

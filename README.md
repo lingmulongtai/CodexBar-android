@@ -43,7 +43,27 @@ Monitor your AI service quotas from your Android device. Track remaining usage f
 
 Signed APKs are available on this fork's [Releases](https://github.com/lingmulongtai/CodexBar-android/releases/latest) page.
 
-For the shortest install path, download the latest [app-release.apk](https://github.com/lingmulongtai/CodexBar-android/releases/latest/download/app-release.apk), transfer it to your Android device, and install it after allowing installs from your browser or file manager.
+### Install the release APK
+
+1. Download [**app-release.apk**](https://github.com/lingmulongtai/CodexBar-android/releases/latest/download/app-release.apk) from the latest GitHub Release. Do not install a source archive or a debug APK from an untrusted location.
+2. For an integrity check, download `SHA256SUMS` from the same Release and compare the APK hash on your computer:
+
+   ```powershell
+   # Windows PowerShell
+   (Get-FileHash .\app-release.apk -Algorithm SHA256).Hash
+   ```
+
+   ```bash
+   # macOS or Linux
+   sha256sum app-release.apk
+   ```
+
+3. Transfer the APK to the Android device if it was downloaded elsewhere, then open it from the browser or file manager.
+4. If Android blocks the installer, allow **Install unknown apps** only for the browser or file manager currently opening the APK. The exact Settings path varies by device manufacturer.
+5. Choose **Install**. For an update, install over the existing app so encrypted settings and provider connections remain in place.
+6. After installation, turn off the temporary **Install unknown apps** permission again.
+
+If Android reports a signature conflict, first confirm that both APKs came from this repository's Releases. Uninstalling the existing app is a last resort because it deletes locally encrypted credentials, settings, and cached usage data.
 
 No backend server is used. Provider tokens are processed and stored strictly on-device.
 
@@ -70,6 +90,34 @@ For local development:
 
 ## Connecting Accounts
 
+### Device-code sign-in: exact flow
+
+Codex, Gemini, and GitHub Copilot use a device-code flow. The app intentionally shows the code before opening a browser so it can be copied safely:
+
+1. Open **Settings**, expand the provider, and tap **Connect account**.
+2. Wait for the one-time code card. The browser does not open automatically.
+3. Tap **Copy paste-ready code**. The copied value removes spaces and separators so the entire code can be pasted into the first field, including pages that display split code boxes.
+4. Tap **Open sign-in page** and verify the browser address before entering the code.
+5. Paste the complete code, sign in to the intended account, and approve the connection.
+6. When the website reports success, return to the same Settings screen before the displayed expiry time. Do not force-close the app.
+7. Wait for the app to validate the returned credential and show the connected state. Browser success alone does not mean the on-device validation and encrypted save have finished.
+8. If the code expires or the app reports a failure, tap **Connect account** again and use the newly issued code. Do not reuse an old code.
+
+| Provider | Expected sign-in host | Before starting |
+| --- | --- | --- |
+| Codex | `auth.openai.com` | Use the ChatGPT account whose Codex usage you want to monitor. |
+| Gemini | `google.com` or a `*.google.com` subdomain | Enter a public/native Google OAuth Client ID; never enter a client secret. |
+| GitHub Copilot | `github.com` | Use the GitHub account whose Copilot usage you want to monitor. |
+
+Treat a sign-in code as a short-lived credential. Enter it only on the page opened by the app, and never include codes or tokens in screenshots, logs, notes, or GitHub issues. The app never asks for the provider password; password and multi-factor authentication remain in the provider's browser page.
+
+Troubleshooting:
+
+- **No code card appears:** confirm the app is current, retry on a working network, and record only the app version and non-secret error text. Never attach the response body if it contains a device code.
+- **The website says complete but the app is still waiting:** return to the app, keep the network connected, and allow several seconds for polling and credential validation. If the displayed expiry passes, request a new code.
+- **A DNS error appears:** check Private DNS, VPN, ad blockers, and network access. Codex sign-in retries transient DNS failures until the current code expires.
+- **Sign-in succeeds but quota validation fails:** confirm that the selected account has access to the provider product and usage data being monitored.
+
 ### Claude (Anthropic)
 
 Claude does not expose a supported Android device-code flow for third-party apps. Use Claude Code's long-lived setup token instead:
@@ -82,7 +130,7 @@ Paste the generated OAuth token into the Claude **Access Token** field in Settin
 
 ### Codex (OpenAI / ChatGPT)
 
-Use **Connect account** in Settings. The app uses Codex's device-code login: it shows a one-time code, opens the OpenAI sign-in page, polls for completion, and saves the returned tokens only after validation.
+Follow the device-code steps above. The app opens `https://auth.openai.com/codex/device` only after you press **Open sign-in page**, polls for completion, and saves the returned tokens only after validation.
 
 Manual fallback, if needed:
 
@@ -98,7 +146,7 @@ Do not extract bearer tokens from browser DevTools unless you are debugging loca
 
 ### Gemini (Google)
 
-Use **Connect account** in Settings after entering a Google OAuth Client ID for a public/native client. The app uses Google's device authorization grant with the `https://www.googleapis.com/auth/cloud-platform` scope, then stores the access token, refresh token, and client ID encrypted on-device. Client secrets are not accepted, stored, or sent because native Android apps cannot keep them confidential.
+Enter a Google OAuth Client ID for a public/native client, then follow the device-code steps above. The app uses Google's device authorization grant with the `https://www.googleapis.com/auth/cloud-platform` scope, then stores the access token, refresh token, and client ID encrypted on-device. Client secrets are not accepted, stored, or sent because native Android apps cannot keep them confidential.
 
 Manual fallback, if needed:
 
@@ -114,7 +162,7 @@ Paste the access token, refresh token, and OAuth Client ID into Settings only wh
 
 ### GitHub Copilot
 
-Use **Connect account** in Settings. The app uses GitHub's device flow and then fetches Copilot quota data from GitHub's Copilot user endpoint.
+Follow the device-code steps above. The app opens `https://github.com/login/device` only after you press **Open sign-in page**, then fetches Copilot quota data after GitHub authorization and on-device credential validation complete.
 
 ## Build
 

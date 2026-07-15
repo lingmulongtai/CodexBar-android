@@ -849,6 +849,9 @@ private fun AccountLinkControls(
             val clipboardCode = remember(prompt.userCode) {
                 deviceCodeForClipboard(prompt.userCode)
             }
+            val verificationHost = remember(prompt.verificationUrl) {
+                Uri.parse(prompt.verificationUrl).host ?: prompt.verificationUrl
+            }
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
@@ -859,6 +862,16 @@ private fun AccountLinkControls(
                     modifier = Modifier.padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    Text(
+                        text = stringResource(R.string.account_link_steps_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = accent
+                    )
+                    AccountLinkInstructionStep(
+                        number = 1,
+                        text = stringResource(R.string.account_link_step_copy),
+                        accent = accent
+                    )
                     Text(
                         text = stringResource(R.string.account_link_enter_code),
                         style = MaterialTheme.typography.bodySmall
@@ -874,11 +887,6 @@ private fun AccountLinkControls(
                             )
                         }
                     }
-                    Text(
-                        text = stringResource(R.string.account_link_copy_first_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                     Button(
                         onClick = {
                             onCopyAccountCode(clipboardCode)
@@ -902,10 +910,13 @@ private fun AccountLinkControls(
                             )
                         )
                     }
-                    Text(
-                        text = stringResource(R.string.account_link_expires, prompt.expiresAtDisplay),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    AccountLinkInstructionStep(
+                        number = 2,
+                        text = stringResource(
+                            R.string.account_link_step_open,
+                            verificationHost
+                        ),
+                        accent = accent
                     )
                     OutlinedButton(
                         onClick = { onOpenAccountLink(prompt.verificationUrl) },
@@ -915,9 +926,75 @@ private fun AccountLinkControls(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(stringResource(R.string.action_open_sign_in_page))
                     }
+                    AccountLinkInstructionStep(
+                        number = 3,
+                        text = stringResource(R.string.account_link_step_authorize),
+                        accent = accent
+                    )
+                    AccountLinkInstructionStep(
+                        number = 4,
+                        text = stringResource(R.string.account_link_step_return),
+                        accent = accent
+                    )
+                    Text(
+                        text = stringResource(R.string.account_link_expires, prompt.expiresAtDisplay),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = stringResource(R.string.account_link_retry_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    HorizontalDivider(color = accent.copy(alpha = 0.2f))
+                    Row(verticalAlignment = Alignment.Top) {
+                        Icon(
+                            imageVector = Icons.Rounded.Security,
+                            contentDescription = null,
+                            tint = accent,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.account_link_code_safety),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun AccountLinkInstructionStep(
+    number: Int,
+    text: String,
+    accent: Color
+) {
+    Row(verticalAlignment = Alignment.Top) {
+        Surface(
+            modifier = Modifier.size(24.dp),
+            shape = MaterialTheme.shapes.extraSmall,
+            color = accent.copy(alpha = 0.16f)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = number.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = accent
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
