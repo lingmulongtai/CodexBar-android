@@ -3,11 +3,13 @@ package com.codexbar.android.core.network.oauth
 import retrofit2.Response
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
+import retrofit2.http.Headers
 import retrofit2.http.POST
 
 interface GitHubDeviceAuthService {
 
     @FormUrlEncoded
+    @Headers("Accept: application/json")
     @POST("login/device/code")
     suspend fun requestDeviceCode(
         @Field("client_id") clientId: String = GITHUB_COPILOT_CLIENT_ID,
@@ -15,6 +17,7 @@ interface GitHubDeviceAuthService {
     ): Response<DeviceAuthDto.GitHubDeviceCodeResponse>
 
     @FormUrlEncoded
+    @Headers("Accept: application/json")
     @POST("login/oauth/access_token")
     suspend fun pollForAccessToken(
         @Field("client_id") clientId: String = GITHUB_COPILOT_CLIENT_ID,
