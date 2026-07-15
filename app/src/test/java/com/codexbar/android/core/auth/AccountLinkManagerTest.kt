@@ -6,6 +6,7 @@ import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
 import com.codexbar.android.core.network.oauth.DeviceAuthDto
 import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
 import com.codexbar.android.core.network.oauth.GoogleDeviceAuthService
+import java.io.IOException
 import java.net.UnknownHostException
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonPrimitive
@@ -166,6 +167,45 @@ class AccountLinkManagerTest {
 
         assertTrue(credential is Credential.CopilotCredential)
         assertEquals("github-token", credential.accessToken)
+    }
+
+    @Test
+    fun `copilot device-code flow retries transient DNS failures after browser sign-in`() = runTest {
+        `when`(gitHubDeviceAuthService.requestDeviceCode())
+            .thenReturn(
+                Response.success(
+                    DeviceAuthDto.GitHubDeviceCodeResponse(
+                        deviceCode = "device-code",
+                        userCode = "WXYZ-1234",
+                        verificationUri = "https://github.com/login/device",
+                        expiresIn = 900,
+                        interval = 5
+                    )
+                )
+            )
+        `when`(gitHubDeviceAuthService.pollForAccessToken(deviceCode = "device-code"))
+            .thenAnswer {
+                throw IOException(
+                    "temporary GitHub DNS failure",
+                    UnknownHostException("github.com")
+                )
+            }
+            .thenReturn(
+                Response.success(
+                    DeviceAuthDto.GitHubAccessTokenResponse(
+                        accessToken = "github-token",
+                        tokenType = "bearer",
+                        scope = "read:user"
+                    )
+                )
+            )
+
+        val session = manager.requestDeviceCode(AiService.COPILOT)
+        val credential = manager.completeDeviceCode(session) as Credential.CopilotCredential
+
+        assertEquals("github-token", credential.accessToken)
+        verify(gitHubDeviceAuthService, times(2))
+            .pollForAccessToken(deviceCode = "device-code")
     }
 
     @Test

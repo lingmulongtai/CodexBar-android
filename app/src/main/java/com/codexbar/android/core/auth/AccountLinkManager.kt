@@ -71,7 +71,7 @@ class AccountLinkManager @Inject constructor(
     private suspend fun completeCodexDeviceCode(session: DeviceAuthSession): Credential.CodexCredential {
         val deadline = session.expiresAtEpochMs
         while (System.currentTimeMillis() < deadline) {
-            val response = retryCodexDnsFailureUntil(
+            val response = retryDnsFailureUntil(
                 deadlineEpochMs = deadline,
                 intervalSeconds = session.intervalSeconds
             ) {
@@ -86,7 +86,7 @@ class AccountLinkManager @Inject constructor(
             if (response.isSuccessful) {
                 val code = response.body()
                     ?: throw IOException("Codex authorization-code response was empty")
-                val tokenResponse = retryCodexDnsFailureUntil(
+                val tokenResponse = retryDnsFailureUntil(
                     deadlineEpochMs = deadline,
                     intervalSeconds = session.intervalSeconds
                 ) {
@@ -109,7 +109,7 @@ class AccountLinkManager @Inject constructor(
             }
 
             when (response.code()) {
-                403, 404 -> delayUntilNextCodexAttempt(deadline, session.intervalSeconds)
+                403, 404 -> delayUntilNextAttempt(deadline, session.intervalSeconds)
                 else -> throw IOException("Codex device-code polling failed with HTTP ${response.code()}")
             }
         }
@@ -117,7 +117,7 @@ class AccountLinkManager @Inject constructor(
         throw IOException("Codex device-code login timed out")
     }
 
-    private suspend fun <T> retryCodexDnsFailureUntil(
+    private suspend fun <T> retryDnsFailureUntil(
         deadlineEpochMs: Long,
         intervalSeconds: Long,
         request: suspend () -> T
@@ -125,14 +125,16 @@ class AccountLinkManager @Inject constructor(
         while (true) {
             try {
                 return request()
-            } catch (error: UnknownHostException) {
-                if (System.currentTimeMillis() >= deadlineEpochMs) throw error
-                delayUntilNextCodexAttempt(deadlineEpochMs, intervalSeconds)
+            } catch (error: Exception) {
+                if (!error.hasUnknownHostCause() || System.currentTimeMillis() >= deadlineEpochMs) {
+                    throw error
+                }
+                delayUntilNextAttempt(deadlineEpochMs, intervalSeconds)
             }
         }
     }
 
-    private suspend fun delayUntilNextCodexAttempt(
+    private suspend fun delayUntilNextAttempt(
         deadlineEpochMs: Long,
         intervalSeconds: Long
     ) {
@@ -188,7 +190,12 @@ class AccountLinkManager @Inject constructor(
         var intervalSeconds = safePollIntervalSeconds(session.intervalSeconds)
         while (System.currentTimeMillis() < session.expiresAtEpochMs) {
             delay(pollDelayMillis(intervalSeconds))
-            val response = gitHubDeviceAuthService.pollForAccessToken(deviceCode = session.deviceCode)
+            val response = retryDnsFailureUntil(
+                deadlineEpochMs = session.expiresAtEpochMs,
+                intervalSeconds = intervalSeconds
+            ) {
+                gitHubDeviceAuthService.pollForAccessToken(deviceCode = session.deviceCode)
+            }
             if (!response.isSuccessful) {
                 throw IOException("GitHub token polling failed with HTTP ${response.code()}")
             }
@@ -278,6 +285,16 @@ internal fun safePollIntervalSeconds(intervalSeconds: Long): Long {
 
 internal fun pollDelayMillis(intervalSeconds: Long): Long {
     return safePollIntervalSeconds(intervalSeconds) * MILLIS_PER_SECOND
+}
+
+private fun Throwable.hasUnknownHostCause(): Boolean {
+    val visited = mutableSetOf<Throwable>()
+    var current: Throwable? = this
+    while (current != null && visited.add(current)) {
+        if (current is UnknownHostException) return true
+        current = current.cause
+    }
+    return false
 }
 
 private const val MIN_POLL_INTERVAL_SECONDS = 5L
