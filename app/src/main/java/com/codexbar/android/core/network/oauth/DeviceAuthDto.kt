@@ -69,30 +69,6 @@ object DeviceAuthDto {
         @SerialName("error_description") val errorDescription: String? = null
     )
 
-    @Serializable
-    data class GeminiDeviceCodeResponse(
-        @SerialName("device_code") val deviceCode: String,
-        @SerialName("user_code") val userCode: String,
-        @SerialName("verification_url") val verificationUrl: String? = null,
-        @SerialName("verification_uri") val verificationUri: String? = null,
-        @SerialName("expires_in") val expiresIn: Int,
-        val interval: Int = DEFAULT_GEMINI_INTERVAL_SECONDS
-    ) {
-        val effectiveVerificationUrl: String
-            get() = verificationUrl ?: verificationUri ?: GOOGLE_DEVICE_VERIFICATION_URL
-    }
-
-    @Serializable
-    data class GeminiDeviceTokenResponse(
-        @SerialName("access_token") val accessToken: String? = null,
-        @SerialName("refresh_token") val refreshToken: String? = null,
-        @SerialName("expires_in") val expiresIn: Int? = null,
-        @SerialName("token_type") val tokenType: String? = null,
-        val scope: String? = null,
-        val error: String? = null,
-        @SerialName("error_description") val errorDescription: String? = null
-    )
-
     private fun JsonElement?.longValueOrNull(): Long? {
         val primitive = this as? JsonPrimitive ?: return null
         return primitive.longOrNull
@@ -102,6 +78,4 @@ object DeviceAuthDto {
 
     private const val DEFAULT_CODEX_INTERVAL_SECONDS = 5L
     private const val DEFAULT_GITHUB_INTERVAL_SECONDS = 5
-    private const val DEFAULT_GEMINI_INTERVAL_SECONDS = 5
-    private const val GOOGLE_DEVICE_VERIFICATION_URL = "https://www.google.com/device"
 }

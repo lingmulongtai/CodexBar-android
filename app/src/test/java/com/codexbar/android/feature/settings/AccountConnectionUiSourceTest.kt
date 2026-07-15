@@ -60,6 +60,18 @@ class AccountConnectionUiSourceTest {
         assertTrue(authorizeStep < returnStep)
     }
 
+    @Test
+    fun `gemini fails closed and directs users to the official CLI stats command`() {
+        val source = settingsSource()
+
+        assertTrue(source.contains("service == AiService.GEMINI -> GeminiUnavailableNotice("))
+        assertTrue(source.contains("R.string.credential_gemini_unavailable_body"))
+        assertTrue(source.contains("GEMINI_STATS_COMMAND = \"/stats model\""))
+        assertTrue(source.contains("if (service != AiService.GEMINI)"))
+        assertFalse(source.contains("R.string.credential_google_client_support"))
+        assertFalse(source.contains("R.string.credential_oauth_client_id"))
+    }
+
     private fun settingsSource(): String {
         return File(
             appDir,

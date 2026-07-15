@@ -92,10 +92,6 @@ class SettingsViewModel @Inject constructor(
                     isConnected = true
                 )
                 is Credential.GeminiCredential -> ServiceCredentialState(
-                    accessToken = credential.accessToken,
-                    refreshToken = credential.refreshToken,
-                    oauthClientId = credential.oauthClientId,
-                    expiresAtDisplay = formatExpiryMs(credential.expiresAtMs),
                     isConnected = true
                 )
                 is Credential.CopilotCredential -> ServiceCredentialState(
@@ -116,7 +112,6 @@ class SettingsViewModel @Inject constructor(
                 "accessToken" -> current.copy(accessToken = value, validationResult = null, hasUnsavedChanges = true)
                 "refreshToken" -> current.copy(refreshToken = value, validationResult = null, hasUnsavedChanges = true)
                 "accountId" -> current.copy(accountId = value, validationResult = null, hasUnsavedChanges = true)
-                "oauthClientId" -> current.copy(oauthClientId = value, validationResult = null, hasUnsavedChanges = true)
                 else -> current
             }
             state.copy(serviceStates = state.serviceStates + (service to updated))
@@ -139,17 +134,7 @@ class SettingsViewModel @Inject constructor(
                     accountId = state.accountId.ifBlank { null }
                 )
             }
-            AiService.GEMINI -> {
-                if (state.refreshToken.isBlank() || state.oauthClientId.isBlank()) {
-                    return null
-                }
-                Credential.GeminiCredential(
-                    accessToken = state.accessToken,
-                    refreshToken = state.refreshToken,
-                    expiresAtMs = System.currentTimeMillis() + 3600_000, // default 1h
-                    oauthClientId = state.oauthClientId
-                )
-            }
+            AiService.GEMINI -> null
             AiService.COPILOT -> Credential.CopilotCredential(
                 accessToken = state.accessToken
             )
@@ -227,11 +212,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val hadPreviousCredential = prefsManager.loadCredential(service) != null
-                val current = _uiState.value.serviceStates[service] ?: ServiceCredentialState()
-                val session = accountLinkManager.requestDeviceCode(
-                    service = service,
-                    oauthClientId = current.oauthClientId
-                )
+                val session = accountLinkManager.requestDeviceCode(service)
                 _uiState.updateAccountLinkPrompt(service, session)
 
                 val credential = accountLinkManager.completeDeviceCode(session)
@@ -456,7 +437,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     private fun AiService.supportsDeviceAccountLink(): Boolean {
-        return this == AiService.CODEX || this == AiService.COPILOT || this == AiService.GEMINI
+        return this == AiService.CODEX || this == AiService.COPILOT
     }
 
     private fun MutableStateFlow<SettingsUiState>.updateAccountLinkPrompt(

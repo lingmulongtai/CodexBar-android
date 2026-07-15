@@ -14,7 +14,6 @@ import com.codexbar.android.core.network.gemini.GeminiApiService
 import com.codexbar.android.core.network.gemini.GeminiTokenRefreshService
 import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
 import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
-import com.codexbar.android.core.network.oauth.GoogleDeviceAuthService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -244,20 +243,6 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(GeminiTokenRefreshService::class.java)
-    }
-
-    @Provides
-    @Singleton
-    fun provideGoogleDeviceAuthService(
-        @GeminiTokenClient client: OkHttpClient,
-        json: Json
-    ): GoogleDeviceAuthService {
-        return Retrofit.Builder()
-            .baseUrl(GoogleDeviceAuthService.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-            .create(GoogleDeviceAuthService::class.java)
     }
 
     // --- GitHub Copilot ---

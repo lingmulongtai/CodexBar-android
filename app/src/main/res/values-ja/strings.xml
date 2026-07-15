@@ -83,13 +83,13 @@
     <string name="credential_claude_step_paste">2. 生成されたトークンを「手動トークン設定」に貼り付け、検証します。</string>
     <string name="credential_claude_refresh_support">自動更新に必要です（トークンは8時間ごとに期限切れになります）</string>
     <string name="credential_github_oauth_token">GitHub OAuthトークン</string>
-    <string name="credential_google_client_support">公開／ネイティブGoogle OAuthクライアントを使用してください。クライアントシークレットは受け付けません。</string>
-    <string name="credential_oauth_client_id">OAuthクライアントID</string>
+    <string name="credential_gemini_unavailable_title">Geminiの直接接続は現在利用できません</string>
+    <string name="credential_gemini_unavailable_body">GoogleのデバイスコードAPIは通常のAndroid／デスクトップOAuthクライアントをHTTP 401で拒否し、この方式では本接続に必要なcloud-platformスコープも許可されません。また、Gemini CLIの内部サービスへ第三者アプリから直接アクセスする方式はGoogleのサポート対象外です。そのため、このアプリはGemini OAuthの新規接続やGemini CLIトークンの取り込みを行いません。</string>
+    <string name="credential_gemini_stats_step">当面は公式Gemini CLIを開き、次を実行してください:</string>
+    <string name="credential_gemini_future_path">Googleが公開の使用枠APIを提供するか、準拠したコンパニオン同期を実装できた時点でモバイル監視を再開します。既存の暗号化済み認証情報は自動削除せず、「接続解除」から削除できます。</string>
     <string name="credential_refresh_token">更新トークン</string>
-    <string name="credential_token_expiry">トークンの有効期限</string>
     <string name="credential_changes_pending">検証に成功するまで変更は反映されません。</string>
     <string name="account_link_codex_description">「アカウントを接続」で一回限りのコードを発行します。OpenAIのログインページを開く前にコードをコピーしてください。トークンは検証後だけ保存されます。</string>
-    <string name="account_link_gemini_description">先に上の公開／ネイティブOAuthクライアントIDを入力し、「アカウントを接続」を押します。Googleのログインページを開く前にコードをコピーしてください。</string>
     <string name="account_link_copilot_description">「アカウントを接続」で一回限りのコードを発行します。GitHubのログインページを開く前にコードをコピーしてください。トークンは検証後だけ保存されます。</string>
     <string name="account_connect_recommended">推奨される安全なログイン</string>
     <string name="account_security_note">認証情報はこの端末のAndroid Keystoreで暗号化され、検証に成功した後だけ保存されます。</string>

@@ -22,7 +22,7 @@ enum class AiService(
         displayName = "Gemini",
         brandColor = 0xFF4285F4,
         baseUrl = "https://cloudcode-pa.googleapis.com/",
-        requiresManualCredentials = true
+        requiresManualCredentials = false
     ),
     COPILOT(
         displayName = "GitHub Copilot",

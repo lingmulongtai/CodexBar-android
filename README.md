@@ -2,7 +2,7 @@
 
 > Android port of [**CodexBar**](https://github.com/steipete/CodexBar) by [@steipete](https://github.com/steipete) — the macOS menu bar app for monitoring AI service quotas.
 
-Monitor your AI service quotas from your Android device. Track remaining usage for Claude, Codex (ChatGPT), Gemini, and GitHub Copilot in one place.
+Monitor supported AI service quotas from your Android device. Track remaining usage for Claude, Codex (ChatGPT), and GitHub Copilot in one place; the Gemini card documents the currently unavailable direct integration.
 
 <p align="center">
   <img src="docs/images/dashboard-light.png" width="320" alt="Material 3 Expressive dashboard in light mode" />
@@ -14,14 +14,14 @@ Monitor your AI service quotas from your Android device. Track remaining usage f
 
 ## Features
 
-- Unified quota monitoring for Claude, Codex, Gemini, and GitHub Copilot
+- Unified quota monitoring for Claude, Codex, and GitHub Copilot, with a fail-closed Gemini status card
 - Material 3 Expressive provider cards with animated rings, bars, exact values, reset countdowns, and pace forecasts
 - Adaptive phone navigation and a two-pane large-screen dashboard
 - Quick Settings tile for at-a-glance status
 - Per-widget Android home screen customization for providers, quota windows, reset time, freshness, and pace
 - Configurable background refresh plus explicit refresh actions that supersede stale queued work
 - API 36 promoted Live Update with progress, remaining quota, reset, pace, Refresh, and Stop; compatible ongoing notification on older Android versions
-- Secure device-code account connection for Codex, Gemini, and GitHub Copilot, with a validated Claude setup-token fallback
+- Secure device-code account connection for Codex and GitHub Copilot, with a validated Claude setup-token fallback
 - Push alert when quota resets (fully replenished)
 - DataStore + Android Keystore-backed credential storage
 - English and Japanese per-app language selection
@@ -92,7 +92,7 @@ For local development:
 
 ### Device-code sign-in: exact flow
 
-Codex, Gemini, and GitHub Copilot use a device-code flow. The app intentionally shows the code before opening a browser so it can be copied safely:
+Codex and GitHub Copilot use a device-code flow. The app intentionally shows the code before opening a browser so it can be copied safely:
 
 1. Open **Settings**, expand the provider, and tap **Connect account**.
 2. Wait for the one-time code card. The browser does not open automatically.
@@ -106,7 +106,6 @@ Codex, Gemini, and GitHub Copilot use a device-code flow. The app intentionally 
 | Provider | Expected sign-in host | Before starting |
 | --- | --- | --- |
 | Codex | `auth.openai.com` | Use the ChatGPT account whose Codex usage you want to monitor. |
-| Gemini | `google.com` or a `*.google.com` subdomain | Enter a public/native Google OAuth Client ID; never enter a client secret. |
 | GitHub Copilot | `github.com` | Use the GitHub account whose Copilot usage you want to monitor. |
 
 Treat a sign-in code as a short-lived credential. Enter it only on the page opened by the app, and never include codes or tokens in screenshots, logs, notes, or GitHub issues. The app never asks for the provider password; password and multi-factor authentication remain in the provider's browser page.
@@ -115,7 +114,7 @@ Troubleshooting:
 
 - **No code card appears:** confirm the app is current, retry on a working network, and record only the app version and non-secret error text. Never attach the response body if it contains a device code.
 - **The website says complete but the app is still waiting:** return to the app, keep the network connected, and allow several seconds for polling and credential validation. If the displayed expiry passes, request a new code.
-- **A DNS error appears:** check Private DNS, VPN, ad blockers, and network access. Codex sign-in retries transient DNS failures until the current code expires.
+- **A DNS error appears:** check Private DNS, VPN, ad blockers, and network access. Codex and GitHub Copilot sign-in retry transient DNS failures until the current code expires.
 - **Sign-in succeeds but quota validation fails:** confirm that the selected account has access to the provider product and usage data being monitored.
 
 ### Claude (Anthropic)
@@ -146,19 +145,17 @@ Do not extract bearer tokens from browser DevTools unless you are debugging loca
 
 ### Gemini (Google)
 
-Enter a Google OAuth Client ID for a public/native client, then follow the device-code steps above. The app uses Google's device authorization grant with the `https://www.googleapis.com/auth/cloud-platform` scope, then stores the access token, refresh token, and client ID encrypted on-device. Client secrets are not accepted, stored, or sent because native Android apps cannot keep them confidential.
+Direct Gemini account connection is disabled. The previous implementation sent normal Android or desktop client IDs to Google's TV/limited-input device endpoint, which returns HTTP 401 for the wrong client type. More importantly, Google's device flow does not allow the `https://www.googleapis.com/auth/cloud-platform` scope needed by that connector. Google's current Gemini CLI terms also say third-party software must not directly access the internal services powering Gemini CLI. Switching OAuth client types, copying Gemini CLI tokens, or importing a client secret would therefore replace one failure with an unsupported and potentially account-risking flow.
 
-Manual fallback, if needed:
+For now, check usage from the official Gemini CLI:
 
 ```bash
-# 1. Access token
-python3 -c "import json; print(json.load(open('$HOME/.gemini/oauth_creds.json'))['access_token'])"
-
-# 2. Refresh token
-python3 -c "import json; print(json.load(open('$HOME/.gemini/oauth_creds.json'))['refresh_token'])"
+gemini
+# Then run inside Gemini CLI:
+/stats model
 ```
 
-Paste the access token, refresh token, and OAuth Client ID into Settings only when you cannot use the in-app account link flow. Do not paste a Google OAuth client secret; this app rejects that pattern.
+CodexBar will restore mobile Gemini monitoring only through a documented public quota API or a compliant companion sync. Existing encrypted Gemini credentials from older releases are retained until you choose **Disconnect**; the app no longer offers a new OAuth or manual-token import path. See Google's [device-flow requirements](https://developers.google.com/identity/protocols/oauth2/limited-input-device) and the official Gemini CLI [terms and privacy notice](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/tos-privacy.md).
 
 ### GitHub Copilot
 

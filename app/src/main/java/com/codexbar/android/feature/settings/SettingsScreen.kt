@@ -463,22 +463,12 @@ private fun ServiceCredentialSection(
                 }
             }
 
-            if (service == AiService.GEMINI) {
-                OutlinedTextField(
-                    value = state.oauthClientId,
-                    onValueChange = { onFieldChange("oauthClientId", it) },
-                    label = { Text(stringResource(R.string.credential_oauth_client_id)) },
-                    supportingText = {
-                        Text(stringResource(R.string.credential_google_client_support))
-                    },
-                    keyboardOptions = secretKeyboardOptions(),
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+            when {
+                service == AiService.GEMINI -> GeminiUnavailableNotice(
+                    accent = visualStyle.accent,
+                    onCopySetupCommand = onCopySetupCommand
                 )
-            }
-
-            if (service.supportsAccountLink()) {
-                AccountLinkControls(
+                service.supportsAccountLink() -> AccountLinkControls(
                     service = service,
                     state = state,
                     accent = visualStyle.accent,
@@ -487,35 +477,36 @@ private fun ServiceCredentialSection(
                     onOpenAccountLink = onOpenAccountLink,
                     onCopyAccountCode = onCopyAccountCode
                 )
-            } else {
-                ClaudeSetupGuide(
+                else -> ClaudeSetupGuide(
                     accent = visualStyle.accent,
                     onCopySetupCommand = onCopySetupCommand
                 )
             }
 
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.small,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.76f)
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.Top
+            if (service != AiService.GEMINI) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.76f)
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Security,
-                        contentDescription = null,
-                        tint = visualStyle.accent,
-                        modifier = Modifier.size(19.dp)
-                    )
-                    Text(
-                        text = stringResource(R.string.account_security_note),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Security,
+                            contentDescription = null,
+                            tint = visualStyle.accent,
+                            modifier = Modifier.size(19.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.account_security_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 
@@ -527,37 +518,39 @@ private fun ServiceCredentialSection(
 
             HorizontalDivider(color = visualStyle.accent.copy(alpha = 0.2f))
 
-            TextButton(
-                onClick = { showManualSetup = !showManualSetup },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = if (showManualSetup) {
-                        Icons.Rounded.ExpandLess
-                    } else {
-                        Icons.Rounded.ExpandMore
-                    },
-                    contentDescription = null
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.account_manual_setup),
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            if (service != AiService.GEMINI) {
+                TextButton(
+                    onClick = { showManualSetup = !showManualSetup },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = if (showManualSetup) {
+                            Icons.Rounded.ExpandLess
+                        } else {
+                            Icons.Rounded.ExpandMore
+                        },
+                        contentDescription = null
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.account_manual_setup),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
 
-            if (showManualSetup) {
-                Text(
-                    text = stringResource(R.string.account_manual_setup_description),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                ManualCredentialFields(
-                    service = service,
-                    state = state,
-                    onFieldChange = onFieldChange,
-                    onValidate = onValidate
-                )
+                if (showManualSetup) {
+                    Text(
+                        text = stringResource(R.string.account_manual_setup_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    ManualCredentialFields(
+                        service = service,
+                        state = state,
+                        onFieldChange = onFieldChange,
+                        onValidate = onValidate
+                    )
+                }
             }
 
             if (state.isConnected) {
@@ -584,6 +577,74 @@ private fun ServiceCredentialSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun GeminiUnavailableNotice(
+    accent: Color,
+    onCopySetupCommand: (String) -> Unit
+) {
+    var copied by rememberSaveable { mutableStateOf(false) }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = accent.copy(alpha = 0.11f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.credential_gemini_unavailable_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = accent
+            )
+            Text(
+                text = stringResource(R.string.credential_gemini_unavailable_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = stringResource(R.string.credential_gemini_stats_step),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SelectionContainer(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = GEMINI_STATS_COMMAND,
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontFamily = FontFamily.Monospace
+                        ),
+                        color = accent
+                    )
+                }
+                OutlinedButton(
+                    onClick = {
+                        onCopySetupCommand(GEMINI_STATS_COMMAND)
+                        copied = true
+                    }
+                ) {
+                    Icon(Icons.Rounded.ContentCopy, contentDescription = null)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        stringResource(
+                            if (copied) R.string.action_copied else R.string.action_copy_command
+                        )
+                    )
+                }
+            }
+            Text(
+                text = stringResource(R.string.credential_gemini_future_path),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -699,18 +760,6 @@ private fun ManualCredentialFields(
             )
         }
 
-        if (service == AiService.GEMINI && state.expiresAtDisplay.isNotBlank()) {
-            OutlinedTextField(
-                value = state.expiresAtDisplay,
-                onValueChange = {},
-                label = { Text(stringResource(R.string.credential_token_expiry)) },
-                modifier = Modifier.fillMaxWidth(),
-                readOnly = true,
-                enabled = false,
-                singleLine = true
-            )
-        }
-
         OutlinedButton(
             onClick = onValidate,
             enabled = !state.isValidating && state.accessToken.isNotBlank(),
@@ -804,7 +853,7 @@ private fun AccountLinkControls(
         Text(
             text = when (service) {
                 AiService.CODEX -> stringResource(R.string.account_link_codex_description)
-                AiService.GEMINI -> stringResource(R.string.account_link_gemini_description)
+                AiService.GEMINI -> stringResource(R.string.credential_gemini_unavailable_body)
                 AiService.COPILOT -> stringResource(R.string.account_link_copilot_description)
                 AiService.CLAUDE -> stringResource(R.string.credential_claude_instructions)
             },
@@ -815,8 +864,7 @@ private fun AccountLinkControls(
         Button(
             onClick = onStartAccountLink,
             enabled = !state.isAccountLinking &&
-                !state.isValidating &&
-                (service != AiService.GEMINI || state.oauthClientId.isNotBlank()),
+                !state.isValidating,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
                 containerColor = accent,
@@ -1005,7 +1053,7 @@ internal fun deviceCodeForClipboard(userCode: String): String {
 }
 
 private fun AiService.supportsAccountLink(): Boolean {
-    return this == AiService.CODEX || this == AiService.GEMINI || this == AiService.COPILOT
+    return this == AiService.CODEX || this == AiService.COPILOT
 }
 
 internal fun accountGuideUrl(service: AiService): String {
@@ -1097,6 +1145,7 @@ private fun copyToClipboard(
 }
 
 private const val CLAUDE_SETUP_COMMAND = "claude setup-token"
+private const val GEMINI_STATS_COMMAND = "/stats model"
 private const val ACCOUNT_GUIDE_BASE_URL =
     "https://github.com/lingmulongtai/CodexBar-android"
 

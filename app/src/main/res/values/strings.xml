@@ -83,13 +83,13 @@
     <string name="credential_claude_step_paste">2. Paste the generated token under Manual token setup, then validate it.</string>
     <string name="credential_claude_refresh_support">Required for auto-refresh (tokens expire every 8 hours)</string>
     <string name="credential_github_oauth_token">GitHub OAuth Token</string>
-    <string name="credential_google_client_support">Use a public/native Google OAuth client. Client secrets are not accepted.</string>
-    <string name="credential_oauth_client_id">OAuth Client ID</string>
+    <string name="credential_gemini_unavailable_title">Direct Gemini connection unavailable</string>
+    <string name="credential_gemini_unavailable_body">Google’s device-code endpoint rejects normal Android and desktop OAuth clients with HTTP 401, and that flow does not permit the cloud-platform scope this connector requires. Google also does not support third-party direct access to Gemini CLI’s internal service, so this app will not start a new Gemini OAuth link or import Gemini CLI tokens.</string>
+    <string name="credential_gemini_stats_step">For now, open the official Gemini CLI and run:</string>
+    <string name="credential_gemini_future_path">Mobile monitoring can return when Google provides a documented public quota API or a compliant companion sync. Existing encrypted credentials are not deleted automatically and can be removed with Disconnect.</string>
     <string name="credential_refresh_token">Refresh Token</string>
-    <string name="credential_token_expiry">Token Expiry</string>
     <string name="credential_changes_pending">Changes are not active until validation succeeds.</string>
     <string name="account_link_codex_description">Tap Connect account to generate a one-time code. Copy it before opening the OpenAI sign-in page; tokens are saved only after validation.</string>
-    <string name="account_link_gemini_description">Enter your public/native OAuth Client ID above, then tap Connect account. Copy the one-time code before opening the Google sign-in page.</string>
     <string name="account_link_copilot_description">Tap Connect account to generate a one-time code. Copy it before opening the GitHub sign-in page; the token is saved only after validation.</string>
     <string name="account_connect_recommended">Recommended secure sign-in</string>
     <string name="account_security_note">Credentials are encrypted with Android Keystore on this device and are saved only after validation succeeds.</string>
