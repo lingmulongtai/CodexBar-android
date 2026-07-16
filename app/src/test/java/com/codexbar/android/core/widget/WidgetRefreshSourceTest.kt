@@ -28,16 +28,23 @@ class WidgetRefreshSourceTest {
         val functionIndex = source.indexOf("private fun confirmSelection(")
         assertTrue("confirmSelection must exist", functionIndex >= 0)
         val confirmSelection = source.substring(functionIndex)
+        val nativePlaceholder = confirmSelection.indexOf(
+            "AppWidgetManager.getInstance(this@WidgetConfigurationActivity).updateAppWidget("
+        )
         val initialRender = confirmSelection.indexOf("QuotaGlanceWidget().update(")
         val successfulResult = confirmSelection.indexOf("setResult(RESULT_OK, resultValue)")
 
+        assertTrue("the launcher loading layout must be replaced immediately", nativePlaceholder >= 0)
         assertTrue("the initial Glance render must run", initialRender >= 0)
+        assertTrue("the native placeholder must precede Glance composition", initialRender > nativePlaceholder)
         assertTrue(
             "RESULT_OK must only be returned after the initial render succeeds",
             successfulResult > initialRender
         )
         assertTrue(confirmSelection.contains("R.string.widget_setup_update_failed"))
         assertTrue(confirmSelection.contains("isCompletingConfiguration = false"))
+        assertTrue(confirmSelection.contains(".getGlanceIdBy(appWidgetId)"))
+        assertFalse(confirmSelection.contains(".getGlanceIdBy(intent)"))
     }
 
     @Test
@@ -66,20 +73,15 @@ class WidgetRefreshSourceTest {
     }
 
     @Test
-    fun `launcher widget updates request fresh data`() {
+    fun `launcher widget updates cannot trigger provider network traffic`() {
         val source = sourceFile("QuotaWidgetReceiver.kt")
-        val functionIndex = source.indexOf("override fun onUpdate(")
-        assertTrue("onUpdate must exist", functionIndex >= 0)
-        val onUpdate = source.substring(functionIndex)
 
-        assertTrue(
-            onUpdate.contains("WorkManagerInitializer.enqueueManualQuotaRefresh(") &&
-                onUpdate.contains("source = \"widget_update\"")
-        )
+        assertFalse(source.contains("enqueueManualQuotaRefresh"))
+        assertFalse(source.contains("override fun onUpdate("))
     }
 
     @Test
-    fun `widget receiver is not exposed to untrusted application broadcasts`() {
+    fun `widget receiver is exported for standards compliant launchers`() {
         val manifest = File(appDir, "src/main/AndroidManifest.xml")
             .readText()
             .replace("\r\n", "\n")
@@ -87,7 +89,20 @@ class WidgetRefreshSourceTest {
             .substringAfter("android:name=\".core.widget.QuotaWidgetReceiver\"")
             .substringBefore("</receiver>")
 
-        assertTrue(receiver.contains("android:exported=\"false\""))
+        assertTrue(receiver.contains("android:exported=\"true\""))
+    }
+
+    @Test
+    fun `widget preview only uses RemoteViews compatible containers`() {
+        val preview = File(appDir, "src/main/res/layout/widget_preview.xml")
+            .readText()
+            .replace("\r\n", "\n")
+
+        assertFalse(
+            "RemoteViews cannot inflate the base android View class",
+            Regex("<View(?:\\s|/|>)").containsMatchIn(preview)
+        )
+        assertTrue(preview.contains("<FrameLayout"))
     }
 
     @Test
