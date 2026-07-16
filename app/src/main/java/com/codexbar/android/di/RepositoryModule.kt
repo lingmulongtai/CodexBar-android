@@ -5,6 +5,7 @@ import com.codexbar.android.core.data.ChutesRepositoryImpl
 import com.codexbar.android.core.data.CodexRepositoryImpl
 import com.codexbar.android.core.data.CopilotRepositoryImpl
 import com.codexbar.android.core.data.CursorRepositoryImpl
+import com.codexbar.android.core.data.DeepSeekRepositoryImpl
 import com.codexbar.android.core.data.ElevenLabsRepositoryImpl
 import com.codexbar.android.core.data.GeminiRepositoryImpl
 import com.codexbar.android.core.data.KimiRepositoryImpl
@@ -21,6 +22,7 @@ import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.copilot.CopilotApiService
 import com.codexbar.android.core.network.cursor.CursorApiService
+import com.codexbar.android.core.network.deepseek.DeepSeekApiService
 import com.codexbar.android.core.network.elevenlabs.ElevenLabsApiService
 import com.codexbar.android.core.network.gemini.GeminiCompanionClient
 import com.codexbar.android.core.network.kimi.KimiApiService
@@ -155,4 +157,13 @@ object RepositoryModule {
         apiService: ChutesApiService,
         prefsManager: EncryptedPrefsManager
     ): QuotaRepository = ChutesRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.DEEPSEEK)
+    fun provideDeepSeekRepository(
+        apiService: DeepSeekApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = DeepSeekRepositoryImpl(apiService, prefsManager)
 }

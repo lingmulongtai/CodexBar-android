@@ -107,6 +107,12 @@ object ProviderCatalog {
             authMode = ProviderAuthMode.API_KEY,
             aliases = setOf("chutes ai", "bittensor", "serverless inference"),
             guideAnchor = "chutes"
+        ),
+        AiService.DEEPSEEK to ProviderMetadata(
+            category = ProviderCategory.MODEL_API,
+            authMode = ProviderAuthMode.API_KEY,
+            aliases = setOf("deep seek", "deepseek api", "deepseek coder"),
+            guideAnchor = "deepseek"
         )
     )
 

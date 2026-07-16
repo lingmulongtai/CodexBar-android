@@ -13,6 +13,7 @@ import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.SsidChart
+import androidx.compose.material.icons.rounded.Water
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.codexbar.android.core.domain.model.AiService
 
@@ -30,5 +31,6 @@ fun AiService.providerIcon(): ImageVector {
         AiService.OPENROUTER -> Icons.AutoMirrored.Rounded.AltRoute
         AiService.SYNTHETIC -> Icons.Rounded.Science
         AiService.CHUTES -> Icons.Rounded.SsidChart
+        AiService.DEEPSEEK -> Icons.Rounded.Water
     }
 }

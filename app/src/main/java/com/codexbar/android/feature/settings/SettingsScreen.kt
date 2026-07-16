@@ -767,6 +767,11 @@ private fun ServiceCredentialSection(
                         body = stringResource(R.string.credential_chutes_setup_body),
                         accent = visualStyle.accent
                     )
+                    service == AiService.DEEPSEEK -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_deepseek_setup_title),
+                        body = stringResource(R.string.credential_deepseek_setup_body),
+                        accent = visualStyle.accent
+                    )
                 }
 
             if (service != AiService.GEMINI) {
@@ -1192,6 +1197,7 @@ private fun AccountLinkControls(
                 AiService.OPENROUTER -> stringResource(R.string.credential_openrouter_setup_body)
                 AiService.SYNTHETIC -> stringResource(R.string.credential_synthetic_setup_body)
                 AiService.CHUTES -> stringResource(R.string.credential_chutes_setup_body)
+                AiService.DEEPSEEK -> stringResource(R.string.credential_deepseek_setup_body)
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant

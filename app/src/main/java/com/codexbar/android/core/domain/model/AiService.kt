@@ -77,5 +77,11 @@ enum class AiService(
         brandColor = 0xFF21A179,
         baseUrl = "https://api.chutes.ai/",
         requiresManualCredentials = true
+    ),
+    DEEPSEEK(
+        displayName = "DeepSeek",
+        brandColor = 0xFF4D6BFE,
+        baseUrl = "https://api.deepseek.com/",
+        requiresManualCredentials = true
     )
 }

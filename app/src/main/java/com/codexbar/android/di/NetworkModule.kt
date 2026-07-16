@@ -12,6 +12,7 @@ import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.copilot.CopilotApiService
 import com.codexbar.android.core.network.cursor.CursorApiService
+import com.codexbar.android.core.network.deepseek.DeepSeekApiService
 import com.codexbar.android.core.network.elevenlabs.ElevenLabsApiService
 import com.codexbar.android.core.network.kimi.KimiApiService
 import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
@@ -378,5 +379,21 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(ChutesApiService::class.java)
+    }
+
+    // --- DeepSeek ---
+
+    @Provides
+    @Singleton
+    fun provideDeepSeekApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): DeepSeekApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.DEEPSEEK.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(DeepSeekApiService::class.java)
     }
 }
