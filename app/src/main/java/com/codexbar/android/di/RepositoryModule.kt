@@ -4,6 +4,7 @@ import com.codexbar.android.core.data.ClaudeRepositoryImpl
 import com.codexbar.android.core.data.CodexRepositoryImpl
 import com.codexbar.android.core.data.CopilotRepositoryImpl
 import com.codexbar.android.core.data.GeminiRepositoryImpl
+import com.codexbar.android.core.data.ZenMuxRepositoryImpl
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.network.claude.ClaudeApiService
@@ -12,6 +13,7 @@ import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.copilot.CopilotApiService
 import com.codexbar.android.core.network.gemini.GeminiCompanionClient
+import com.codexbar.android.core.network.zenmux.ZenMuxApiService
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.TokenRefreshCoordinator
 import dagger.Module
@@ -67,4 +69,13 @@ object RepositoryModule {
         apiService: CopilotApiService,
         prefsManager: EncryptedPrefsManager
     ): QuotaRepository = CopilotRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.ZENMUX)
+    fun provideZenMuxRepository(
+        apiService: ZenMuxApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = ZenMuxRepositoryImpl(apiService, prefsManager)
 }

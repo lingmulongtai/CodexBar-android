@@ -91,6 +91,9 @@
     <string name="credential_gemini_pairing_code">Companion pairing code</string>
     <string name="credential_gemini_pairing_hint">Starts with codexbar://gemini-pair. Treat it like a local-device password.</string>
     <string name="credential_gemini_companion_security">No Google access token, refresh token, OAuth client ID, prompt, file, email address, or CLI session content is transferred to Android. The pairing key is encrypted with Android Keystore.</string>
+    <string name="credential_zenmux_setup_title">ZenMux Management API</string>
+    <string name="credential_zenmux_setup_body">Create a Management API key at zenmux.ai/platform/management. Standard inference API keys do not work. CodexBar requests only subscription quota details and never reads prompts or request logs.</string>
+    <string name="credential_zenmux_management_key">Management API key</string>
     <string name="credential_refresh_token">Refresh Token</string>
     <string name="credential_changes_pending">Changes are not active until validation succeeds.</string>
     <string name="account_link_codex_description">Tap Connect account to generate a one-time code. Copy it before opening the OpenAI sign-in page; tokens are saved only after validation.</string>

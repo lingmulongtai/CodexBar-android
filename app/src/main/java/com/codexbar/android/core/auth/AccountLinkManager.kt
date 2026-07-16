@@ -24,7 +24,8 @@ class AccountLinkManager @Inject constructor(
             AiService.CODEX -> requestCodexDeviceCode()
             AiService.COPILOT -> requestCopilotDeviceCode()
             AiService.CLAUDE,
-            AiService.GEMINI -> throw UnsupportedOperationException(
+            AiService.GEMINI,
+            AiService.ZENMUX -> throw UnsupportedOperationException(
                 "${service.displayName} does not expose a supported Android device-code flow."
             )
         }
@@ -35,7 +36,8 @@ class AccountLinkManager @Inject constructor(
             AiService.CODEX -> completeCodexDeviceCode(session)
             AiService.COPILOT -> completeCopilotDeviceCode(session)
             AiService.CLAUDE,
-            AiService.GEMINI -> throw UnsupportedOperationException(
+            AiService.GEMINI,
+            AiService.ZENMUX -> throw UnsupportedOperationException(
                 "${session.service.displayName} does not expose a supported Android device-code flow."
             )
         }

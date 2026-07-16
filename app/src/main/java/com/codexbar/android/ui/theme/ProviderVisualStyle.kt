@@ -26,6 +26,7 @@ fun providerVisualStyle(service: AiService): ProviderVisualStyle {
         AiService.CODEX -> if (isDark) Color(0xFF63DBB6) else Color(0xFF006B53)
         AiService.GEMINI -> if (isDark) Color(0xFFBBC3FF) else Color(0xFF3559C7)
         AiService.COPILOT -> if (isDark) Color(0xFFC6C5D0) else Color(0xFF555E6D)
+        AiService.ZENMUX -> if (isDark) Color(0xFFD0BCFF) else Color(0xFF6750A4)
     }
     val tintAlpha = if (isDark) 0.16f else 0.09f
     val shape = when (service) {
@@ -48,6 +49,12 @@ fun providerVisualStyle(service: AiService): ProviderVisualStyle {
             bottomStart = 30.dp
         )
         AiService.COPILOT -> RoundedCornerShape(24.dp)
+        AiService.ZENMUX -> RoundedCornerShape(
+            topStart = 24.dp,
+            topEnd = 24.dp,
+            bottomEnd = 8.dp,
+            bottomStart = 24.dp
+        )
     }
     return ProviderVisualStyle(
         accent = accent,

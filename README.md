@@ -2,7 +2,7 @@
 
 > Android port of [**CodexBar**](https://github.com/steipete/CodexBar) by [@steipete](https://github.com/steipete) — the macOS menu bar app for monitoring AI service quotas.
 
-Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, and Gemini usage in one place; Gemini uses an optional private companion that keeps Google authentication inside the official Gemini CLI.
+Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, and ZenMux usage in one place; Gemini uses an optional private companion that keeps Google authentication inside the official Gemini CLI.
 
 <p align="center">
   <img src="docs/images/dashboard-light.png" width="320" alt="Material 3 Expressive dashboard in light mode" />
@@ -14,7 +14,7 @@ Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT
 
 ## Features
 
-- Unified quota monitoring for Claude, Codex, GitHub Copilot, and Gemini through a token-free local CLI companion
+- Unified quota monitoring for Claude, Codex, GitHub Copilot, Gemini, and ZenMux
 - Material 3 Expressive provider cards with animated rings, bars, exact values, reset countdowns, and pace forecasts
 - Adaptive phone navigation and a two-pane large-screen dashboard
 - Quick Settings tile for at-a-glance status
@@ -178,6 +178,12 @@ This design follows the official Gemini CLI's documented [usage and quota comman
 ### GitHub Copilot
 
 Follow the device-code steps above. The app opens `https://github.com/login/device` only after you press **Open sign-in page**, then fetches Copilot quota data after GitHub authorization and on-device credential validation complete.
+
+### ZenMux
+
+Create a **Management API key** at `https://zenmux.ai/platform/management`, then paste it into the ZenMux card in Settings and select **Validate & connect**. A normal ZenMux inference API key is not accepted by the management quota endpoints.
+
+The app sends the key only as a bearer credential to `https://zenmux.ai/api/v1/management/subscription/detail`. It displays the rolling 5-hour and 7-day flow quotas from the documented response. The key is encrypted with Android Keystore after validation; prompts, inference requests, and request logs are never requested.
 
 ## Build
 

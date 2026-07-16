@@ -412,7 +412,7 @@ private fun ServiceCredentialSection(
 ) {
     val visualStyle = providerVisualStyle(service)
     var showManualSetup by rememberSaveable(service) {
-        mutableStateOf(service == AiService.CLAUDE)
+        mutableStateOf(service.requiresManualCredentials || service == AiService.CLAUDE)
     }
     LaunchedEffect(state.hasUnsavedChanges) {
         if (state.hasUnsavedChanges) showManualSetup = true
@@ -492,9 +492,14 @@ private fun ServiceCredentialSection(
                     onOpenAccountLink = onOpenAccountLink,
                     onCopyAccountCode = onCopyAccountCode
                 )
-                else -> ClaudeSetupGuide(
+                service == AiService.CLAUDE -> ClaudeSetupGuide(
                     accent = visualStyle.accent,
                     onCopySetupCommand = onCopySetupCommand
+                )
+                service == AiService.ZENMUX -> ProviderSecretSetupGuide(
+                    title = stringResource(R.string.credential_zenmux_setup_title),
+                    body = stringResource(R.string.credential_zenmux_setup_body),
+                    accent = visualStyle.accent
                 )
             }
 
@@ -732,6 +737,32 @@ private fun ClaudeSetupGuide(
 }
 
 @Composable
+private fun ProviderSecretSetupGuide(
+    title: String,
+    body: String,
+    accent: Color
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = accent.copy(alpha = 0.11f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(text = title, style = MaterialTheme.typography.titleSmall, color = accent)
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
 private fun ManualCredentialFields(
     service: AiService,
     state: ServiceCredentialState,
@@ -745,10 +776,10 @@ private fun ManualCredentialFields(
             label = {
                 Text(
                     stringResource(
-                        if (service == AiService.COPILOT) {
-                            R.string.credential_github_oauth_token
-                        } else {
-                            R.string.credential_access_token
+                        when (service) {
+                            AiService.COPILOT -> R.string.credential_github_oauth_token
+                            AiService.ZENMUX -> R.string.credential_zenmux_management_key
+                            else -> R.string.credential_access_token
                         }
                     )
                 )
@@ -759,7 +790,7 @@ private fun ManualCredentialFields(
             singleLine = true
         )
 
-        if (service != AiService.COPILOT) {
+        if (service == AiService.CLAUDE || service == AiService.CODEX) {
             OutlinedTextField(
                 value = state.refreshToken,
                 onValueChange = { onFieldChange("refreshToken", it) },
@@ -880,6 +911,7 @@ private fun AccountLinkControls(
                 AiService.GEMINI -> stringResource(R.string.credential_gemini_companion_body)
                 AiService.COPILOT -> stringResource(R.string.account_link_copilot_description)
                 AiService.CLAUDE -> stringResource(R.string.credential_claude_instructions)
+                AiService.ZENMUX -> stringResource(R.string.credential_zenmux_setup_body)
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1086,6 +1118,7 @@ internal fun accountGuideUrl(service: AiService): String {
         AiService.CODEX -> "codex-openai--chatgpt"
         AiService.GEMINI -> "gemini-google"
         AiService.COPILOT -> "github-copilot"
+        AiService.ZENMUX -> "zenmux"
     }
     return "$ACCOUNT_GUIDE_BASE_URL#$anchor"
 }

@@ -91,6 +91,9 @@
     <string name="credential_gemini_pairing_code">コンパニオンのペアリングコード</string>
     <string name="credential_gemini_pairing_hint">codexbar://gemini-pair から始まります。ローカル端末用のパスワードとして安全に扱ってください。</string>
     <string name="credential_gemini_companion_security">Googleのアクセストークン、更新トークン、OAuthクライアントID、プロンプト、ファイル、メールアドレス、CLIセッション内容はAndroidへ送信しません。ペアリング鍵はAndroid Keystoreで暗号化します。</string>
+    <string name="credential_zenmux_setup_title">ZenMux Management API</string>
+    <string name="credential_zenmux_setup_body">zenmux.ai/platform/management でManagement APIキーを作成してください。通常の推論用APIキーは利用できません。CodexBarが取得するのは契約の使用枠だけで、プロンプトやリクエストログは読み取りません。</string>
+    <string name="credential_zenmux_management_key">Management APIキー</string>
     <string name="credential_refresh_token">更新トークン</string>
     <string name="credential_changes_pending">検証に成功するまで変更は反映されません。</string>
     <string name="account_link_codex_description">「アカウントを接続」で一回限りのコードを発行します。OpenAIのログインページを開く前にコードをコピーしてください。トークンは検証後だけ保存されます。</string>

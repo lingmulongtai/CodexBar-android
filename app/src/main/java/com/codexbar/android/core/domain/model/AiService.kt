@@ -29,5 +29,11 @@ enum class AiService(
         brandColor = 0xFF6E7681,
         baseUrl = "https://api.github.com/",
         requiresManualCredentials = false
+    ),
+    ZENMUX(
+        displayName = "ZenMux",
+        brandColor = 0xFF6750A4,
+        baseUrl = "https://zenmux.ai/api/v1/management/",
+        requiresManualCredentials = true
     )
 }

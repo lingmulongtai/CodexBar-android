@@ -75,12 +75,13 @@ class NetworkModuleTest {
     }
 
     @Test
-    fun `token exchange clients do not install HTTP logging interceptors`() {
+    fun `credential clients do not install HTTP logging interceptors`() {
         val tokenClients = listOf(
             NetworkModule.provideClaudeTokenOkHttpClient(),
             NetworkModule.provideCodexTokenOkHttpClient(),
             NetworkModule.provideCodexDeviceAuthOkHttpClient(),
-            NetworkModule.provideGitHubDeviceAuthOkHttpClient()
+            NetworkModule.provideGitHubDeviceAuthOkHttpClient(),
+            NetworkModule.provideZenMuxOkHttpClient()
         )
 
         tokenClients.forEach { client ->
@@ -125,7 +126,8 @@ class NetworkModuleTest {
             NetworkModule.provideCodexTokenOkHttpClient(),
             NetworkModule.provideCodexDeviceAuthOkHttpClient(),
             NetworkModule.provideCopilotOkHttpClient(),
-            NetworkModule.provideGitHubDeviceAuthOkHttpClient()
+            NetworkModule.provideGitHubDeviceAuthOkHttpClient(),
+            NetworkModule.provideZenMuxOkHttpClient()
         )
 
         providerClients.forEach { client ->

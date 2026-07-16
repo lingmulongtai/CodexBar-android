@@ -15,6 +15,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.Credential
+import com.codexbar.android.core.domain.model.ProviderSecretKind
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import java.nio.charset.StandardCharsets
@@ -79,6 +80,10 @@ class EncryptedPrefsManager @Inject constructor(
     }
 
     suspend fun saveCredential(service: AiService, credential: Credential) {
+        require(
+            credential !is Credential.ProviderSecretCredential || credential.service == service
+        ) { "Provider credential does not match ${service.name}" }
+
         val updated = dataStore.edit { prefs ->
             prefs.removeServiceEntries(service)
             val prefix = service.name
@@ -121,6 +126,10 @@ class EncryptedPrefsManager @Inject constructor(
 
                 is Credential.CopilotCredential -> {
                     // Access-token only; GitHub's device flow used here does not issue refresh tokens.
+                }
+
+                is Credential.ProviderSecretCredential -> {
+                    prefs.putEncryptedString("${prefix}_secret_kind", credential.kind.name)
                 }
             }
         }
@@ -319,6 +328,19 @@ class EncryptedPrefsManager @Inject constructor(
             AiService.COPILOT -> {
                 val accessToken = prefs.getEncryptedString("${prefix}_access_token") ?: return null
                 Credential.CopilotCredential(accessToken = accessToken)
+            }
+
+            AiService.ZENMUX -> {
+                val accessToken = prefs.getEncryptedString("${prefix}_access_token") ?: return null
+                val kind = prefs.getEncryptedString("${prefix}_secret_kind")
+                    ?.let { runCatching { ProviderSecretKind.valueOf(it) }.getOrNull() }
+                    ?: ProviderSecretKind.API_KEY
+                if (kind != ProviderSecretKind.API_KEY) return null
+                Credential.ProviderSecretCredential(
+                    service = service,
+                    kind = kind,
+                    accessToken = accessToken
+                )
             }
         }
     }

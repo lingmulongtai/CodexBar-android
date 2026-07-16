@@ -12,7 +12,8 @@ class SettingsHelpLinksTest {
             AiService.CLAUDE to "claude-anthropic",
             AiService.CODEX to "codex-openai--chatgpt",
             AiService.GEMINI to "gemini-google",
-            AiService.COPILOT to "github-copilot"
+            AiService.COPILOT to "github-copilot",
+            AiService.ZENMUX to "zenmux"
         )
 
         expectedAnchors.forEach { (service, anchor) ->

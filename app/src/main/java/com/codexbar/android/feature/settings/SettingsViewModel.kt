@@ -11,6 +11,7 @@ import com.codexbar.android.core.data.QuotaRepositoryRegistry
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.Credential
+import com.codexbar.android.core.domain.model.ProviderSecretKind
 import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.monitoring.MonitoringSessionStore
 import com.codexbar.android.core.network.gemini.GeminiCompanionPairing
@@ -92,6 +93,10 @@ class SettingsViewModel @Inject constructor(
                     accessToken = credential.accessToken,
                     isConnected = true
                 )
+                is Credential.ProviderSecretCredential -> ServiceCredentialState(
+                    accessToken = credential.accessToken,
+                    isConnected = true
+                )
             }
             _uiState.update {
                 it.copy(serviceStates = it.serviceStates + (service to state))
@@ -131,6 +136,11 @@ class SettingsViewModel @Inject constructor(
             AiService.GEMINI -> null
             AiService.COPILOT -> Credential.CopilotCredential(
                 accessToken = state.accessToken
+            )
+            AiService.ZENMUX -> Credential.ProviderSecretCredential(
+                service = service,
+                kind = ProviderSecretKind.API_KEY,
+                accessToken = state.accessToken.trim()
             )
         }
     }

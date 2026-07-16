@@ -12,6 +12,7 @@ import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.copilot.CopilotApiService
 import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
 import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
+import com.codexbar.android.core.network.zenmux.ZenMuxApiService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -52,6 +53,10 @@ annotation class CodexDeviceAuthClient
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class GitHubDeviceAuthClient
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class ZenMuxClient
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -233,5 +238,26 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(GitHubDeviceAuthService::class.java)
+    }
+
+    // --- ZenMux ---
+
+    @Provides
+    @Singleton
+    @ZenMuxClient
+    fun provideZenMuxOkHttpClient(): OkHttpClient = credentialOkHttpBuilder().build()
+
+    @Provides
+    @Singleton
+    fun provideZenMuxApiService(
+        @ZenMuxClient client: OkHttpClient,
+        json: Json
+    ): ZenMuxApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.ZENMUX.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(ZenMuxApiService::class.java)
     }
 }

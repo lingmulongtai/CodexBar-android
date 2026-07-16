@@ -65,6 +65,12 @@ class TokenRefreshStateStore @Inject constructor(
             )
 
             is Credential.CopilotCredential -> listOf(credential.accessToken)
+
+            is Credential.ProviderSecretCredential -> listOf(
+                credential.service.name,
+                credential.kind.name,
+                credential.accessToken
+            )
         }.joinToString(separator = "\u001F")
 
         return "${service.name}:${subject.sha256Hex()}"
