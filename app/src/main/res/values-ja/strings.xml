@@ -225,6 +225,7 @@
     <string name="widget_open_details">詳細はCodexBarで確認してください</string>
     <string name="widget_updated">%1$sに更新</string>
     <string name="widget_waiting_for_data">データを取得しています…</string>
+    <string name="widget_no_bounded_quota">接続済み — 上限付きの使用枠はありません</string>
     <string name="widget_preparing">ウィジェットを準備しています…</string>
     <string name="widget_not_connected">CodexBarを開いて、このサービスを再接続してください。</string>
     <string name="widget_refresh_failed">更新できませんでした。更新ボタンを押すか、CodexBarを開いてください。</string>
