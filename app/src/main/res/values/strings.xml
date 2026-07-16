@@ -131,6 +131,8 @@
     <string name="credential_openrouter_setup_body">Create a dedicated OpenRouter API key and set a daily, weekly, or monthly credit limit for the most useful progress bar. CodexBar reads only the current key’s limit and usage from openrouter.ai/api/v1/key. A management key is not required.</string>
     <string name="credential_synthetic_setup_title">Synthetic API quota</string>
     <string name="credential_synthetic_setup_body">Create a dedicated Synthetic API key and paste it below. CodexBar calls the quota-only endpoint at api.synthetic.new/v2/quotas; Synthetic documents that this request does not count against subscription limits.</string>
+    <string name="credential_chutes_setup_title">Chutes subscription usage</string>
+    <string name="credential_chutes_setup_body">Create a dedicated scoped Chutes API key in the dashboard and paste it below. CodexBar reads only the authenticated user’s 4-hour and monthly subscription caps from api.chutes.ai. Use the minimum read scope that permits subscription usage.</string>
     <string name="credential_zenmux_management_key">Management API key</string>
     <string name="credential_refresh_token">Refresh Token</string>
     <string name="credential_changes_pending">Changes are not active until validation succeeds.</string>

@@ -131,6 +131,8 @@
     <string name="credential_openrouter_setup_body">OpenRouterで専用APIキーを作成し、日次・週次・月次のいずれかのクレジット上限を設定すると、進捗バーを最も有効に使えます。CodexBarはopenrouter.ai/api/v1/keyから現在のキーの上限と使用量だけを取得します。Managementキーは不要です。</string>
     <string name="credential_synthetic_setup_title">Synthetic API使用枠</string>
     <string name="credential_synthetic_setup_body">Syntheticの専用APIキーを作成し、下へ貼り付けてください。CodexBarはapi.synthetic.new/v2/quotasの使用枠専用エンドポイントだけを呼び出します。Syntheticの公式説明では、このリクエストはサブスクリプション枠を消費しません。</string>
+    <string name="credential_chutes_setup_title">Chutesサブスクリプション使用量</string>
+    <string name="credential_chutes_setup_body">Chutesダッシュボードで専用のスコープ付きAPIキーを作成し、下へ貼り付けてください。CodexBarはapi.chutes.aiから認証ユーザーの4時間枠と月間枠だけを取得します。サブスクリプション使用量を読める最小権限を使用してください。</string>
     <string name="credential_zenmux_management_key">Management APIキー</string>
     <string name="credential_refresh_token">更新トークン</string>
     <string name="credential_changes_pending">検証に成功するまで変更は反映されません。</string>

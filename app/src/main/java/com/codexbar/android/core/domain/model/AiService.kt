@@ -71,5 +71,11 @@ enum class AiService(
         brandColor = 0xFFEF5DA8,
         baseUrl = "https://api.synthetic.new/",
         requiresManualCredentials = true
+    ),
+    CHUTES(
+        displayName = "Chutes",
+        brandColor = 0xFF21A179,
+        baseUrl = "https://api.chutes.ai/",
+        requiresManualCredentials = true
     )
 }

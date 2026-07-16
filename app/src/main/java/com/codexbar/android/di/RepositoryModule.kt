@@ -1,6 +1,7 @@
 package com.codexbar.android.di
 
 import com.codexbar.android.core.data.ClaudeRepositoryImpl
+import com.codexbar.android.core.data.ChutesRepositoryImpl
 import com.codexbar.android.core.data.CodexRepositoryImpl
 import com.codexbar.android.core.data.CopilotRepositoryImpl
 import com.codexbar.android.core.data.CursorRepositoryImpl
@@ -15,6 +16,7 @@ import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.network.claude.ClaudeApiService
 import com.codexbar.android.core.network.claude.ClaudeTokenRefreshService
+import com.codexbar.android.core.network.chutes.ChutesApiService
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.copilot.CopilotApiService
@@ -144,4 +146,13 @@ object RepositoryModule {
         apiService: SyntheticApiService,
         prefsManager: EncryptedPrefsManager
     ): QuotaRepository = SyntheticRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.CHUTES)
+    fun provideChutesRepository(
+        apiService: ChutesApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = ChutesRepositoryImpl(apiService, prefsManager)
 }

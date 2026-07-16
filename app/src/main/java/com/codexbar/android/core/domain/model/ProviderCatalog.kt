@@ -101,6 +101,12 @@ object ProviderCatalog {
             authMode = ProviderAuthMode.API_KEY,
             aliases = setOf("synthetic new", "hf inference", "api quota"),
             guideAnchor = "synthetic"
+        ),
+        AiService.CHUTES to ProviderMetadata(
+            category = ProviderCategory.MODEL_API,
+            authMode = ProviderAuthMode.API_KEY,
+            aliases = setOf("chutes ai", "bittensor", "serverless inference"),
+            guideAnchor = "chutes"
         )
     )
 

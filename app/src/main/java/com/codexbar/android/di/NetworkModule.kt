@@ -7,6 +7,7 @@ import com.codexbar.android.core.network.RetryInterceptor
 import com.codexbar.android.core.network.ResponseSizeLimitInterceptor
 import com.codexbar.android.core.network.claude.ClaudeApiService
 import com.codexbar.android.core.network.claude.ClaudeTokenRefreshService
+import com.codexbar.android.core.network.chutes.ChutesApiService
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.copilot.CopilotApiService
@@ -361,5 +362,21 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(SyntheticApiService::class.java)
+    }
+
+    // --- Chutes ---
+
+    @Provides
+    @Singleton
+    fun provideChutesApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): ChutesApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.CHUTES.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(ChutesApiService::class.java)
     }
 }

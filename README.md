@@ -2,7 +2,7 @@
 
 > Android port of [**CodexBar**](https://github.com/steipete/CodexBar) by [@steipete](https://github.com/steipete) — the macOS menu bar app for monitoring AI service quotas.
 
-Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi, ElevenLabs, OpenRouter, and Synthetic usage in one place; Gemini uses an optional private companion that keeps Google authentication inside the official Gemini CLI.
+Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi, ElevenLabs, OpenRouter, Synthetic, and Chutes usage in one place; Gemini uses an optional private companion that keeps Google authentication inside the official Gemini CLI.
 
 <p align="center">
   <img src="docs/images/dashboard-light.png" width="320" alt="Material 3 Expressive dashboard in light mode" />
@@ -14,7 +14,7 @@ Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT
 
 ## Features
 
-- Unified quota monitoring for Claude, Codex, GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi, ElevenLabs, OpenRouter, and Synthetic
+- Unified quota monitoring for Claude, Codex, GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi, ElevenLabs, OpenRouter, Synthetic, and Chutes
 - Material 3 Expressive provider cards with animated rings, bars, exact values, reset countdowns, and pace forecasts
 - Adaptive phone navigation and a two-pane large-screen dashboard
 - Quick Settings tile for at-a-glance status
@@ -222,6 +222,12 @@ If no key limit is configured, the account remains connected and the dashboard/w
 Create a dedicated Synthetic API key, paste it into the Synthetic card, and select **Validate & connect**. The app calls only `https://api.synthetic.new/v2/quotas`, maps subscription requests against the documented limit, and shows the renewal timestamp. Synthetic documents that quota checks do not consume subscription limits.
 
 The key is sent only as a bearer credential to the fixed Synthetic HTTPS host, redirects and HTTP logging are disabled, and it is encrypted with Android Keystore after validation. Prompts, model responses, and request history are not fetched.
+
+### Chutes
+
+Create a dedicated scoped Chutes API key, paste it into the Chutes card, and select **Validate & connect**. The app first calls `https://api.chutes.ai/users/me/subscription_usage`, whose official API description returns monthly and 4-hour usage versus caps, and falls back to the documented `/users/me/quotas` response when necessary.
+
+The parser accepts the currently documented flexible quota payload without trusting arbitrary endpoints. The key is sent only as a bearer credential to the fixed Chutes HTTPS host, redirects and HTTP logging are disabled, and it is encrypted with Android Keystore after validation. Chute code, prompts, invocations, and request history are not fetched.
 
 ## Build
 
