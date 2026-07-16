@@ -17,7 +17,8 @@ class GeminiPairingDeepLinkSourceTest {
             "src/main/java/com/codexbar/android/MainActivity.kt"
         ).readText().replace("\r\n", "\n")
 
-        assertTrue(manifest.contains("android:scheme=\"codexbar\" android:host=\"gemini-pair\""))
+        assertTrue(manifest.contains("<data android:scheme=\"codexbar\" />"))
+        assertTrue(manifest.contains("<data android:host=\"gemini-pair\" />"))
         assertTrue(activity.contains("geminiPairingUriOrNull(launchUri)"))
         assertTrue(activity.contains("intent?.data = null"))
         assertTrue(activity.contains("intent.data = null"))

@@ -46,9 +46,10 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="codexbar" android:host="dashboard" />
-                <data android:scheme="codexbar" android:host="settings" />
-                <data android:scheme="codexbar" android:host="gemini-pair" />
+                <data android:scheme="codexbar" />
+                <data android:host="dashboard" />
+                <data android:host="settings" />
+                <data android:host="gemini-pair" />
             </intent-filter>
         </activity>
 
