@@ -67,7 +67,16 @@ class QuotaRefreshWorker @AssistedInject constructor(
             if (prefsManager.loadCredential(AiService.COPILOT) != null) add(AiService.COPILOT to copilotRepository)
         }
 
-        if (repos.isEmpty()) return Result.success()
+        if (repos.isEmpty()) {
+            // A widget can outlive its selected account. Always replace the provider's
+            // initial loading layout even when there is no network work to perform.
+            try {
+                QuotaGlanceWidget().updateAll(applicationContext)
+            } catch (_: Exception) {
+                // Widget rendering cannot turn a no-op account refresh into retry work.
+            }
+            return Result.success()
+        }
 
         return try {
             val refreshResults = coroutineScope {
