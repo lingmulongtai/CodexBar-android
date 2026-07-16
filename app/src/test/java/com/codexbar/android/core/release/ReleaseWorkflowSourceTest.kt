@@ -78,4 +78,20 @@ class ReleaseWorkflowSourceTest {
                 workflow.indexOf("- name: Smoke test signed release APK")
         )
     }
+
+    @Test
+    fun `Gemini companion is tested and shipped with an SBOM`() {
+        val continuousIntegration = File(repoDir, ".github/workflows/android.yml").readText()
+        val release = File(repoDir, ".github/workflows/release.yml").readText()
+        val bundleStep = release
+            .substringAfter("- name: Prepare release bundle")
+            .substringBefore("- name: Attest release artifacts")
+
+        assertTrue(continuousIntegration.contains("gemini-companion:"))
+        assertTrue(continuousIntegration.contains("npm audit --omit=dev"))
+        assertTrue(release.contains("- name: Verify Gemini companion"))
+        assertTrue(bundleStep.contains("CodexBar-Gemini-Companion-\${GITHUB_REF_NAME}.zip"))
+        assertTrue(bundleStep.contains("npm sbom --omit=dev --sbom-format=cyclonedx"))
+        assertTrue(bundleStep.contains("gemini-companion-sbom.cdx.json"))
+    }
 }
