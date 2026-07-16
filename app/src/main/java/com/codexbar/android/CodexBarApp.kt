@@ -66,6 +66,8 @@ private enum class AppDestination(
 @Composable
 fun CodexBarApp(
     initialDestination: String,
+    initialGeminiPairingUri: String? = null,
+    onGeminiPairingConsumed: () -> Unit = {},
     onScreenPrivacyChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -81,6 +83,14 @@ fun CodexBarApp(
                 navController.navigate(SettingsRoute) {
                     launchSingleTop = true
                 }
+            }
+        }
+    }
+
+    LaunchedEffect(initialGeminiPairingUri) {
+        if (initialGeminiPairingUri != null) {
+            navController.navigate(SettingsRoute) {
+                launchSingleTop = true
             }
         }
     }
@@ -130,6 +140,8 @@ fun CodexBarApp(
                 VerticalDivider()
                 AppNavHost(
                     navController = navController,
+                    initialGeminiPairingUri = initialGeminiPairingUri,
+                    onGeminiPairingConsumed = onGeminiPairingConsumed,
                     onScreenPrivacyChanged = onScreenPrivacyChanged,
                     modifier = Modifier.weight(1f)
                 )
@@ -159,6 +171,8 @@ fun CodexBarApp(
             ) { paddingValues ->
                 AppNavHost(
                     navController = navController,
+                    initialGeminiPairingUri = initialGeminiPairingUri,
+                    onGeminiPairingConsumed = onGeminiPairingConsumed,
                     onScreenPrivacyChanged = onScreenPrivacyChanged,
                     modifier = Modifier.padding(paddingValues)
                 )
@@ -170,6 +184,8 @@ fun CodexBarApp(
 @Composable
 private fun AppNavHost(
     navController: NavHostController,
+    initialGeminiPairingUri: String?,
+    onGeminiPairingConsumed: () -> Unit,
     onScreenPrivacyChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -191,6 +207,8 @@ private fun AppNavHost(
                     navController.navigateTopLevel(DashboardRoute)
                 },
                 showBackButton = false,
+                initialGeminiPairingUri = initialGeminiPairingUri,
+                onGeminiPairingConsumed = onGeminiPairingConsumed,
                 onScreenPrivacyChanged = onScreenPrivacyChanged
             )
         }

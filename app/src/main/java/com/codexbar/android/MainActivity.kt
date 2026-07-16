@@ -28,6 +28,8 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
+    private var pendingGeminiPairingUri by mutableStateOf<String?>(null)
+
     @Inject
     lateinit var prefsManager: EncryptedPrefsManager
 
@@ -36,7 +38,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val initialDestination = startDestinationForHost(intent?.data?.host)
+        val launchUri = intent?.data
+        val initialDestination = startDestinationForHost(launchUri?.host)
+        pendingGeminiPairingUri = geminiPairingUriOrNull(launchUri)
+        if (pendingGeminiPairingUri != null) intent?.data = null
         applyScreenPrivacy(prefsManager.getPrivacySettings().screenPrivacyEnabled)
         lifecycleScope.launch {
             prefsManager.warmCache()
@@ -84,10 +89,22 @@ class MainActivity : AppCompatActivity() {
 
                 CodexBarApp(
                     initialDestination = initialDestination,
+                    initialGeminiPairingUri = pendingGeminiPairingUri,
+                    onGeminiPairingConsumed = { pendingGeminiPairingUri = null },
                     onScreenPrivacyChanged = ::applyScreenPrivacy
                 )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val pairingUri = geminiPairingUriOrNull(intent.data)
+        if (pairingUri != null) {
+            pendingGeminiPairingUri = pairingUri
+            intent.data = null
+        }
+        setIntent(intent)
     }
 
     private fun applyScreenPrivacy(enabled: Boolean) {
@@ -116,5 +133,13 @@ class MainActivity : AppCompatActivity() {
 }
 
 internal fun startDestinationForHost(host: String?): String {
-    return if (host == "settings") "settings" else "dashboard"
+    return if (host == "settings" || host == "gemini-pair") "settings" else "dashboard"
+}
+
+internal fun geminiPairingUriOrNull(uri: Uri?): String? {
+    if (uri == null || uri.toString().length > 2048) return null
+    return uri.toString().takeIf {
+        uri.scheme.equals("codexbar", ignoreCase = true) &&
+            uri.host.equals("gemini-pair", ignoreCase = true)
+    }
 }

@@ -2,7 +2,7 @@
 
 > Android port of [**CodexBar**](https://github.com/steipete/CodexBar) by [@steipete](https://github.com/steipete) — the macOS menu bar app for monitoring AI service quotas.
 
-Monitor your AI service quotas from your Android device. Track remaining usage for Claude, Codex (ChatGPT), Gemini, and GitHub Copilot in one place.
+Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, and Gemini usage in one place; Gemini uses an optional private companion that keeps Google authentication inside the official Gemini CLI.
 
 <p align="center">
   <img src="docs/images/dashboard-light.png" width="320" alt="Material 3 Expressive dashboard in light mode" />
@@ -14,14 +14,15 @@ Monitor your AI service quotas from your Android device. Track remaining usage f
 
 ## Features
 
-- Unified quota monitoring for Claude, Codex, Gemini, and GitHub Copilot
+- Unified quota monitoring for Claude, Codex, GitHub Copilot, and Gemini through a token-free local CLI companion
 - Material 3 Expressive provider cards with animated rings, bars, exact values, reset countdowns, and pace forecasts
 - Adaptive phone navigation and a two-pane large-screen dashboard
 - Quick Settings tile for at-a-glance status
 - Per-widget Android home screen customization for providers, quota windows, reset time, freshness, and pace
 - Configurable background refresh plus explicit refresh actions that supersede stale queued work
-- API 36 promoted Live Update with progress, remaining quota, reset, pace, Refresh, and Stop; compatible ongoing notification on older Android versions
-- Secure device-code account connection for Codex, Gemini, and GitHub Copilot, with a validated Claude setup-token fallback
+- Independently configurable persistent notification and time-bounded API 36 promoted Live Update, both synchronized with every dashboard refresh
+- Live progress, remaining quota, reset, pace, Refresh, and Stop on eligible Android 16 / One UI surfaces, with a compatible ongoing notification elsewhere
+- Secure device-code account connection for Codex and GitHub Copilot, with a validated Claude setup-token fallback
 - Push alert when quota resets (fully replenished)
 - DataStore + Android Keystore-backed credential storage
 - English and Japanese per-app language selection
@@ -65,7 +66,7 @@ Signed APKs are available on this fork's [Releases](https://github.com/lingmulon
 
 If Android reports a signature conflict, first confirm that both APKs came from this repository's Releases. Uninstalling the existing app is a last resort because it deletes locally encrypted credentials, settings, and cached usage data.
 
-No backend server is used. Provider tokens are processed and stored strictly on-device.
+No hosted CodexBar backend is used. Provider tokens stay on-device; the optional Gemini companion is a local-network process on your own computer whose code does not read, copy, store, or serve Google tokens.
 
 ## Security & Backup
 
@@ -92,7 +93,7 @@ For local development:
 
 ### Device-code sign-in: exact flow
 
-Codex, Gemini, and GitHub Copilot use a device-code flow. The app intentionally shows the code before opening a browser so it can be copied safely:
+Codex and GitHub Copilot use a device-code flow. The app intentionally shows the code before opening a browser so it can be copied safely:
 
 1. Open **Settings**, expand the provider, and tap **Connect account**.
 2. Wait for the one-time code card. The browser does not open automatically.
@@ -106,7 +107,6 @@ Codex, Gemini, and GitHub Copilot use a device-code flow. The app intentionally 
 | Provider | Expected sign-in host | Before starting |
 | --- | --- | --- |
 | Codex | `auth.openai.com` | Use the ChatGPT account whose Codex usage you want to monitor. |
-| Gemini | `google.com` or a `*.google.com` subdomain | Enter a public/native Google OAuth Client ID; never enter a client secret. |
 | GitHub Copilot | `github.com` | Use the GitHub account whose Copilot usage you want to monitor. |
 
 Treat a sign-in code as a short-lived credential. Enter it only on the page opened by the app, and never include codes or tokens in screenshots, logs, notes, or GitHub issues. The app never asks for the provider password; password and multi-factor authentication remain in the provider's browser page.
@@ -115,7 +115,7 @@ Troubleshooting:
 
 - **No code card appears:** confirm the app is current, retry on a working network, and record only the app version and non-secret error text. Never attach the response body if it contains a device code.
 - **The website says complete but the app is still waiting:** return to the app, keep the network connected, and allow several seconds for polling and credential validation. If the displayed expiry passes, request a new code.
-- **A DNS error appears:** check Private DNS, VPN, ad blockers, and network access. Codex sign-in retries transient DNS failures until the current code expires.
+- **A DNS error appears:** check Private DNS, VPN, ad blockers, and network access. Codex and GitHub Copilot sign-in retry transient DNS failures until the current code expires.
 - **Sign-in succeeds but quota validation fails:** confirm that the selected account has access to the provider product and usage data being monitored.
 
 ### Claude (Anthropic)
@@ -146,19 +146,34 @@ Do not extract bearer tokens from browser DevTools unless you are debugging loca
 
 ### Gemini (Google)
 
-Enter a Google OAuth Client ID for a public/native client, then follow the device-code steps above. The app uses Google's device authorization grant with the `https://www.googleapis.com/auth/cloud-platform` scope, then stores the access token, refresh token, and client ID encrypted on-device. Client secrets are not accepted, stored, or sent because native Android apps cannot keep them confidential.
+Direct Gemini OAuth inside the Android app remains disabled. CodexBar does not copy Gemini CLI credentials, embed a Google client secret, or call the internal `cloudcode-pa` service. Instead, the v0.4.0 companion drives the official Gemini CLI's documented `/stats` view and sends only a sanitized quota snapshot over your trusted local network.
 
-Manual fallback, if needed:
+#### Install and pair the private companion
+
+1. Install Node.js 20 or newer and the current official Gemini CLI on a computer:
 
 ```bash
-# 1. Access token
-python3 -c "import json; print(json.load(open('$HOME/.gemini/oauth_creds.json'))['access_token'])"
-
-# 2. Refresh token
-python3 -c "import json; print(json.load(open('$HOME/.gemini/oauth_creds.json'))['refresh_token'])"
+npm install -g @google/gemini-cli@latest
+gemini
 ```
 
-Paste the access token, refresh token, and OAuth Client ID into Settings only when you cannot use the in-app account link flow. Do not paste a Google OAuth client secret; this app rejects that pattern.
+2. Complete Google's sign-in in that official CLI, then exit it.
+3. Download `CodexBar-Gemini-Companion-v0.4.0.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
+4. On Windows, double-click `start-windows.cmd`. On macOS or Linux, run `./start-macos-linux.sh`. The first launch installs only the versions pinned in `package-lock.json`.
+5. Keep the phone and computer on the same trusted Wi-Fi. If the computer firewall prompts, permit private networks only.
+6. Scan the displayed QR code with the phone and choose CodexBar, or paste the complete `codexbar://gemini-pair?...` value into the Gemini card.
+7. Review the screen, then tap **Pair & verify companion**. Scanning or pasting never connects or saves the key automatically.
+8. Keep the companion running while Gemini monitoring is needed. If the computer's local IP address changes, start it again and replace the pairing.
+
+The pairing key is a local-device password: do not post it in screenshots, logs, or issues. Requests are authenticated with HMAC-SHA256, replay-protected, rate-limited, and responses are encrypted with AES-256-GCM. Android accepts only numeric local/private addresses and encrypts the pairing details with Android Keystore. The snapshot contains model labels, used percentages, reset times, tier, CLI version label, and freshness—never Google access/refresh tokens, client secrets, prompts, files, email addresses, or CLI session content.
+
+Troubleshooting:
+
+- **Pairing verification fails:** confirm the companion still says it is ready, both devices use the same Wi-Fi, private-network firewall access is allowed, and both clocks use automatic time.
+- **The companion cannot collect quota:** open the official `gemini` command normally, finish sign-in or any first-run prompts, verify `/stats` shows model usage, exit, and restart the companion.
+- **Android stops refreshing Gemini:** the computer may be asleep, its IP may have changed, or the Wi-Fi may isolate clients. Restart and re-pair; do not expose the port through router forwarding or a public tunnel.
+
+This design follows the official Gemini CLI's documented [usage and quota command](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/quota-and-pricing.md) without using its OAuth credential to access Google's backend from a third-party client. Direct Android OAuth remains fail-closed because Google's [limited-input device flow](https://developers.google.com/identity/protocols/oauth2/limited-input-device) is not a general Android authorization mechanism and does not make Gemini CLI's internal quota service a supported API.
 
 ### GitHub Copilot
 
@@ -197,7 +212,7 @@ Public releases are built only from `v*` Git tags by the protected release workf
 - `ANDROID_KEY_ALIAS`
 - `ANDROID_KEY_PASSWORD`
 
-The release workflow publishes signed APK/AAB artifacts, `SHA256SUMS`, a CycloneDX dependency SBOM, a build provenance JSON file, and GitHub artifact attestations. Debug APKs from CI are short-lived test artifacts only.
+The release workflow publishes signed APK/AAB artifacts, the versioned Gemini companion ZIP, Android and companion CycloneDX SBOMs, `SHA256SUMS`, a build provenance JSON file, and GitHub artifact attestations. Debug APKs from CI are short-lived test artifacts only.
 
 ## Tech Stack
 
@@ -205,6 +220,7 @@ The release workflow publishes signed APK/AAB artifacts, `SHA256SUMS`, a Cyclone
 - Hilt (DI), Retrofit2 + OkHttp (networking)
 - WorkManager (background sync), DataStore + Android Keystore-backed encryption
 - Glance AppWidget, Quick Settings tile, Android notification/live monitoring APIs
+- Node.js companion with the official Gemini CLI, authenticated local snapshots, and no Google credential export
 - KSP, kotlinx.serialization
 
 ## Acknowledgments

@@ -10,11 +10,15 @@ This repository now uses layered verification because the app spans credentials,
 | Backup/data transfer | `BackupRulesTest` verifies DataStore credentials, token refresh state, monitoring session state, and widget display cache are excluded from legacy backup and Android 12+ extraction rules. |
 | Secure storage | `SecurePreferencesImplementationTest` verifies DataStore plus Android Keystore value encryption and absence of `EncryptedSharedPreferences`. |
 | Gemini secret removal | `GeminiClientSecretRemovalTest` fails if main source reintroduces Gemini `client_secret` handling. |
+| Gemini local pairing | `GeminiCompanionPairingTest`, `GeminiCompanionClientTest`, and `GeminiPairingDeepLinkSourceTest` cover strict private-address parsing, HMAC/AES-GCM exchange, freshness, tamper rejection, and explicit user confirmation. |
+| Gemini desktop companion | Node tests cover CLI-output sanitization, persistent identity, private-address binding, authenticated socket exchange, encryption, and nonce replay rejection; CI also runs `npm audit` against the pinned lockfile. |
 | Retry-After parsing | `RetryAfterTest` and `RetryInterceptorTest` cover malformed, negative, overflow, date, and capped retry behavior. |
 | Token refresh races | `TokenRefreshRetryPolicyTest` covers provider/account-scoped retry state, terminal failure behavior, and account-fingerprint changes. |
 | Presentation snapshot | `QuotaPresentationMapperTest` covers shared labels, bars, freshness, privacy, and extra usage mapping. |
 | Pace/history | `QuotaPaceCalculatorTest` covers sparse samples, reserve, reset windows, and forecast states. |
 | Monitoring session | `MonitoringSessionTest` covers explicit start/end and remaining-duration math. |
+| Notification synchronization | `DashboardNotificationSyncSourceTest`, `LiveNotificationSourceTest`, and `LiveMonitoringSettingsSourceTest` verify same-snapshot dashboard publication, independent persistent/live toggles, and API 36 promoted-progress construction. |
+| Widget startup/recovery | `WidgetRefreshSourceTest` and `WidgetConfigurationUiSourceTest` cover immediate refresh, loading-state recovery, cache fallback, and correct canceled-configuration results. |
 
 ## Manual release smoke checklist
 
@@ -26,8 +30,9 @@ Before publishing a non-beta tag:
 4. Build debug and release APKs.
 5. Build release AAB.
 6. Generate release SBOM.
-7. Confirm no debug APK is attached as the normal release asset.
-8. Confirm release notes identify the exact git tag and commit.
+7. Run companion syntax/tests/audit and generate its release ZIP and SBOM.
+8. Confirm no debug APK is attached as the normal release asset.
+9. Confirm release notes identify the exact git tag and commit.
 
 ## Visual/integration coverage still requiring devices
 

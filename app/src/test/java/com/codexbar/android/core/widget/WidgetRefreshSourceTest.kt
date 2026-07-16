@@ -23,6 +23,49 @@ class WidgetRefreshSourceTest {
     }
 
     @Test
+    fun `widget configuration renders before reporting success`() {
+        val source = sourceFile("WidgetConfigurationActivity.kt")
+        val functionIndex = source.indexOf("private fun confirmSelection(")
+        assertTrue("confirmSelection must exist", functionIndex >= 0)
+        val confirmSelection = source.substring(functionIndex)
+        val initialRender = confirmSelection.indexOf("QuotaGlanceWidget().update(")
+        val successfulResult = confirmSelection.indexOf("setResult(RESULT_OK, resultValue)")
+
+        assertTrue("the initial Glance render must run", initialRender >= 0)
+        assertTrue(
+            "RESULT_OK must only be returned after the initial render succeeds",
+            successfulResult > initialRender
+        )
+        assertTrue(confirmSelection.contains("R.string.widget_setup_update_failed"))
+        assertTrue(confirmSelection.contains("isCompletingConfiguration = false"))
+    }
+
+    @Test
+    fun `widget cancellation returns the allocated widget id`() {
+        val source = sourceFile("WidgetConfigurationActivity.kt")
+        val resultCanceled = source.indexOf("RESULT_CANCELED,")
+        val widgetIdExtra = source.indexOf(
+            "putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)",
+            resultCanceled
+        )
+
+        assertTrue("RESULT_CANCELED must include the allocated App Widget ID", resultCanceled >= 0)
+        assertTrue(widgetIdExtra > resultCanceled)
+        assertFalse(source.contains("setResult(RESULT_CANCELED)"))
+    }
+
+    @Test
+    fun `app startup repairs widgets left on their loading layout`() {
+        val source = sourceFileFromCore("workmanager/WorkManagerInitializer.kt")
+        val functionIndex = source.indexOf("fun applySavedRefreshPolicyAsync(")
+        val functionEnd = source.indexOf("fun schedulePeriodicRefresh(", functionIndex)
+        assertTrue("applySavedRefreshPolicyAsync must exist", functionIndex >= 0 && functionEnd > functionIndex)
+        val initializer = source.substring(functionIndex, functionEnd)
+
+        assertTrue(initializer.contains("QuotaGlanceWidget().updateAll(appContext)"))
+    }
+
+    @Test
     fun `launcher widget updates request fresh data`() {
         val source = sourceFile("QuotaWidgetReceiver.kt")
         val functionIndex = source.indexOf("override fun onUpdate(")

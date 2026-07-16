@@ -1,6 +1,7 @@
 package com.codexbar.android.feature.settings
 
 import java.io.File
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -9,14 +10,16 @@ class LiveMonitoringSettingsSourceTest {
         .first { File(it, "src/main/AndroidManifest.xml").isFile }
 
     @Test
-    fun `disabling notifications stops monitoring and clears posted notifications`() {
+    fun `persistent notification toggle does not stop an active live monitor`() {
         val source = sourceFile("SettingsViewModel.kt")
-        val toggleIndex = source.indexOf("fun setNotificationsEnabled(enabled: Boolean)")
+        val toggleIndex = source.indexOf("fun setPersistentNotificationEnabled(enabled: Boolean)")
         assertTrue("notification toggle must exist", toggleIndex >= 0)
-        val toggle = source.substring(toggleIndex)
+        val nextFunctionIndex = source.indexOf("\n    fun ", toggleIndex + 8)
+        val toggle = source.substring(toggleIndex, nextFunctionIndex)
 
-        assertTrue(toggle.contains("WorkManagerInitializer.stopMonitoringSession(appContext)"))
-        assertTrue(toggle.contains("notificationService.cancelAllNotifications()"))
+        assertTrue(toggle.contains("notificationService.cancelQuotaNotification()"))
+        assertFalse(toggle.contains("stopMonitoringSession"))
+        assertFalse(toggle.contains("cancelAllNotifications"))
     }
 
     @Test

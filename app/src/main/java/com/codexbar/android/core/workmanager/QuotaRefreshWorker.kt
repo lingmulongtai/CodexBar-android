@@ -116,28 +116,16 @@ class QuotaRefreshWorker @AssistedInject constructor(
             cacheQuotaData(snapshot)
             QuotaGlanceWidget().updateAll(applicationContext)
 
-            if (successfulQuotas.isNotEmpty()) {
-                if (prefsManager.isNotificationsEnabled()) {
-                    val notificationSnapshot = if (privacySettings.notificationRedactionEnabled) {
-                        presentationMapper.map(
-                            quotas = successfulQuotas,
-                            generatedAt = snapshot.generatedAt,
-                            privacy = snapshot.privacy.copy(redactSensitiveValues = true),
-                            source = snapshot.source,
-                            paceByMetricKey = paceByMetricKey
-                        )
-                    } else {
-                        snapshot
-                    }
-                    val monitoringSession = monitoringSessionStore.activeSession()
-                    if (monitoringSession != null) {
-                        notificationService.showMonitoringNotification(notificationSnapshot, monitoringSession)
-                    } else {
-                        notificationService.cancelMonitoringNotification()
-                        notificationService.showQuotaNotification(notificationSnapshot)
-                    }
-                    checkForResets(successfulQuotas)
-                }
+            notificationService.publishSnapshot(
+                snapshot = snapshot,
+                monitoringSession = monitoringSessionStore.activeSession()
+            )
+
+            if (
+                successfulQuotas.isNotEmpty() &&
+                prefsManager.isPersistentNotificationEnabled()
+            ) {
+                checkForResets(successfulQuotas)
             }
 
             // Request tile update

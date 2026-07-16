@@ -7,93 +7,26 @@ import com.codexbar.android.core.domain.model.QuotaInfo
 import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.domain.model.UsageWindow
 import com.codexbar.android.core.domain.repository.QuotaRepository
-import com.codexbar.android.core.network.gemini.GeminiApiService
-import com.codexbar.android.core.network.gemini.GeminiDto
-import com.codexbar.android.core.network.gemini.GeminiTokenRefreshService
-import com.codexbar.android.core.network.RetryAfter
+import com.codexbar.android.core.network.gemini.GeminiCompanionAuthenticationException
+import com.codexbar.android.core.network.gemini.GeminiCompanionClient
+import com.codexbar.android.core.network.gemini.GeminiCompanionProtocolException
+import com.codexbar.android.core.network.gemini.GeminiCompanionSnapshot
 import com.codexbar.android.core.security.EncryptedPrefsManager
-import kotlinx.coroutines.CancellationException
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
 import java.io.IOException
 import java.time.Instant
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 
 class GeminiRepositoryImpl @Inject constructor(
-    private val apiService: GeminiApiService,
-    private val tokenRefreshService: GeminiTokenRefreshService,
+    private val companionClient: GeminiCompanionClient,
     private val prefsManager: EncryptedPrefsManager
 ) : QuotaRepository {
 
     override suspend fun fetchQuota(): Result<QuotaInfo, AppError> {
         val credential = prefsManager.loadCredential(AiService.GEMINI)
-            as? Credential.GeminiCredential
+            as? Credential.GeminiCompanionCredential
             ?: return Result.Failure(AppError.CredentialNotFound(AiService.GEMINI))
-
-        val workingCredential = ensureValidToken(credential)
-            ?: return Result.Failure(AppError.AuthError(AiService.GEMINI, isTerminal = true))
-
-        return try {
-            val result = fetchQuotaWithToken(workingCredential)
-            if (result is Result.Failure && result.error is AppError.AuthError) {
-                // Token might be expired despite expiresAtMs — try refresh once
-                val refreshed = refreshToken(workingCredential)
-                if (refreshed != null) {
-                    fetchQuotaWithToken(refreshed)
-                } else {
-                    Result.Failure(AppError.AuthError(AiService.GEMINI, isTerminal = true))
-                }
-            } else {
-                result
-            }
-        } catch (e: IOException) {
-            Result.Failure(AppError.NetworkError(e.message ?: "Network error", e))
-        } catch (e: Exception) {
-            Result.Failure(AppError.ParseError("${e::class.simpleName}: ${e.message}", e))
-        }
-    }
-
-    private suspend fun fetchQuotaWithToken(
-        credential: Credential.GeminiCredential
-    ): Result<QuotaInfo, AppError> {
-        // Step 1: loadCodeAssist to get projectId and tier
-        val loadResponse = apiService.loadCodeAssist(
-            authorization = "Bearer ${credential.accessToken}",
-            body = GeminiDto.LoadCodeAssistRequest()
-        )
-
-        if (!loadResponse.isSuccessful) {
-            return handleErrorResponse(loadResponse.code(), loadResponse.headers()["Retry-After"])
-        }
-
-        val loadBody = loadResponse.body()
-            ?: return Result.Failure(AppError.ParseError("Empty loadCodeAssist response"))
-
-        val projectId = extractProjectId(loadBody)
-        if (loadBody.cloudaicompanionProject != null && projectId == null) {
-            return Result.Failure(AppError.ParseError("Invalid Gemini project ID"))
-        }
-        val tierRaw = loadBody.currentTier?.id
-        val tier = mapTier(tierRaw)
-
-        // Step 2: retrieveUserQuota
-        val quotaRequest = GeminiDto.RetrieveUserQuotaRequest(
-            project = projectId ?: ""
-        )
-        val quotaResponse = apiService.retrieveUserQuota(
-            authorization = "Bearer ${credential.accessToken}",
-            body = quotaRequest
-        )
-
-        if (!quotaResponse.isSuccessful) {
-            return handleErrorResponse(quotaResponse.code(), quotaResponse.headers()["Retry-After"])
-        }
-
-        val quotaBody = quotaResponse.body()
-            ?: return Result.Failure(AppError.ParseError("Empty quota response"))
-
-        return Result.Success(mapToQuotaInfo(quotaBody, tier))
+        return fetchWithCredential(credential)
     }
 
     override suspend fun validateCredential(): Result<Unit, AppError> {
@@ -104,122 +37,65 @@ class GeminiRepositoryImpl @Inject constructor(
     }
 
     override suspend fun validateCredential(credential: Credential): Result<Unit, AppError> {
-        val typed = credential as? Credential.GeminiCredential
-            ?: return Result.Failure(AppError.AuthError(AiService.GEMINI, isTerminal = true))
+        val companionCredential = credential as? Credential.GeminiCompanionCredential
+            ?: return Result.Failure(
+                AppError.AuthError(AiService.GEMINI, isTerminal = true)
+            )
+        return when (val result = fetchWithCredential(companionCredential)) {
+            is Result.Success -> Result.Success(Unit)
+            is Result.Failure -> Result.Failure(result.error)
+        }
+    }
 
+    private suspend fun fetchWithCredential(
+        credential: Credential.GeminiCompanionCredential
+    ): Result<QuotaInfo, AppError> {
         return try {
-            when (val result = fetchQuotaWithToken(typed)) {
-                is Result.Success -> Result.Success(Unit)
-                is Result.Failure -> Result.Failure(result.error)
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: IOException) {
-            Result.Failure(AppError.NetworkError(e.message ?: "Network error", e))
-        } catch (e: Exception) {
-            Result.Failure(AppError.ParseError("${e::class.simpleName}: ${e.message}", e))
-        }
-    }
-
-    private fun extractProjectId(response: GeminiDto.LoadCodeAssistResponse): String? {
-        val element = response.cloudaicompanionProject ?: return null
-        // cloudaicompanionProject can be String or Object {"id": "..."}
-        return when (element) {
-            is JsonPrimitive -> element.contentOrNull
-            is JsonObject -> (element["id"] as? JsonPrimitive)?.contentOrNull
-            else -> null
-        }
-    }
-
-    private fun mapTier(tierId: String?): String? {
-        return when (tierId) {
-            "free-tier" -> "Free"
-            "standard-tier" -> "Paid"
-            "legacy-tier" -> "Legacy"
-            null -> null
-            else -> tierId
-        }
-    }
-
-    private fun mapToQuotaInfo(response: GeminiDto.QuotaResponse, tier: String?): QuotaInfo {
-        // Group all buckets into "Flash" vs "Pro" categories
-        val groups = response.buckets.groupBy { bucket ->
-            if (bucket.modelId.contains("flash", ignoreCase = true)) "Flash" else "Pro"
-        }
-
-        // Per group: worst-case utilization, earliest reset time
-        val windows = listOfNotNull(
-            groups["Pro"]?.let { buckets ->
-                UsageWindow(
-                    label = "Pro",
-                    utilization = buckets.maxOf { 1.0 - it.remainingFraction },
-                    resetsAt = buckets.mapNotNull { it.resetTime?.let { ts -> parseInstant(ts) } }.minOrNull()
+            Result.Success(companionClient.fetchSnapshot(credential).toQuotaInfo())
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: GeminiCompanionAuthenticationException) {
+            Result.Failure(
+                AppError.AuthError(
+                    service = AiService.GEMINI,
+                    isTerminal = true,
+                    message = error.message.orEmpty()
                 )
-            },
-            groups["Flash"]?.let { buckets ->
-                UsageWindow(
-                    label = "Flash",
-                    utilization = buckets.maxOf { 1.0 - it.remainingFraction },
-                    resetsAt = buckets.mapNotNull { it.resetTime?.let { ts -> parseInstant(ts) } }.minOrNull()
+            )
+        } catch (error: GeminiCompanionProtocolException) {
+            Result.Failure(AppError.ParseError(error.message.orEmpty(), error))
+        } catch (error: IllegalArgumentException) {
+            Result.Failure(AppError.ParseError(error.message.orEmpty(), error))
+        } catch (error: IOException) {
+            Result.Failure(
+                AppError.NetworkError(
+                    message = error.message ?: "Gemini companion unavailable",
+                    cause = error
                 )
-            }
-        )
+            )
+        } catch (error: Exception) {
+            Result.Failure(
+                AppError.NetworkError(
+                    message = error.message ?: "Gemini companion unavailable",
+                    cause = error
+                )
+            )
+        }
+    }
 
+    private fun GeminiCompanionSnapshot.toQuotaInfo(): QuotaInfo {
         return QuotaInfo(
             service = AiService.GEMINI,
-            windows = windows,
+            windows = windows.map { window ->
+                UsageWindow(
+                    label = window.label,
+                    utilization = window.usedFraction,
+                    resetsAt = window.resetsAtEpochSeconds?.let(Instant::ofEpochSecond)
+                )
+            },
             extraUsage = null,
             tier = tier,
-            fetchedAt = Instant.now()
+            fetchedAt = Instant.ofEpochSecond(generatedAtEpochSeconds)
         )
-    }
-
-    private suspend fun ensureValidToken(credential: Credential.GeminiCredential): Credential.GeminiCredential? {
-        if (System.currentTimeMillis() < credential.expiresAtMs - 60_000) {
-            return credential
-        }
-        return refreshToken(credential)
-    }
-
-    private suspend fun refreshToken(credential: Credential.GeminiCredential): Credential.GeminiCredential? {
-        return try {
-            val response = tokenRefreshService.refreshToken(
-                refreshToken = credential.refreshToken,
-                clientId = credential.oauthClientId
-            )
-            if (response.isSuccessful) {
-                val body = response.body() ?: return null
-                val expiresIn = body.expiresIn ?: 3600
-                val newCredential = Credential.GeminiCredential(
-                    accessToken = body.accessToken,
-                    refreshToken = body.refreshToken ?: credential.refreshToken,
-                    expiresAtMs = System.currentTimeMillis() + (expiresIn * 1000L),
-                    oauthClientId = credential.oauthClientId
-                )
-                prefsManager.saveCredential(AiService.GEMINI, newCredential)
-                newCredential
-            } else {
-                null
-            }
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    private fun <T> handleErrorResponse(code: Int, retryAfter: String? = null): Result<T, AppError> {
-        return when (code) {
-            401 -> Result.Failure(AppError.AuthError(AiService.GEMINI, isTerminal = false))
-            429 -> Result.Failure(AppError.RateLimited(RetryAfter.parseRetryAt(retryAfter)))
-            503 -> Result.Failure(AppError.ServiceUnavailable)
-            else -> Result.Failure(AppError.NetworkError("HTTP $code"))
-        }
-    }
-
-    private fun parseInstant(isoString: String): Instant? {
-        return try {
-            Instant.parse(isoString)
-        } catch (_: Exception) {
-            null
-        }
     }
 }

@@ -8,7 +8,7 @@ data class SettingsUiState(
         ServiceCredentialState()
     },
     val refreshIntervalMinutes: Long = 30L,
-    val notificationsEnabled: Boolean = true,
+    val persistentNotificationEnabled: Boolean = true,
     val isMonitoring: Boolean = false,
     val monitoringDurationMinutes: Long = 60L,
     val monitoringRemainingMinutes: Long? = null,
@@ -21,8 +21,7 @@ data class ServiceCredentialState(
     val accessToken: String = "",
     val refreshToken: String = "",
     val accountId: String = "", // Codex only
-    val oauthClientId: String = "", // Gemini only
-    val expiresAtDisplay: String = "", // Gemini only (read-only)
+    val geminiPairingCode: String = "",
     val isValidating: Boolean = false,
     val isAccountLinking: Boolean = false,
     val accountLinkPrompt: AccountLinkPrompt? = null,

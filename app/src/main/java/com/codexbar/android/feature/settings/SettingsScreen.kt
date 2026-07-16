@@ -107,6 +107,8 @@ import kotlin.math.roundToInt
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     showBackButton: Boolean = true,
+    initialGeminiPairingUri: String? = null,
+    onGeminiPairingConsumed: () -> Unit = {},
     onScreenPrivacyChanged: (Boolean) -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
@@ -114,29 +116,29 @@ fun SettingsScreen(
     val context = LocalContext.current
     var notificationsAllowed by remember { mutableStateOf(context.canPostNotifications()) }
     var promotedUpdatesAllowed by remember { mutableStateOf(context.canPostPromotedNotifications()) }
-    var enableNotificationsAfterSettings by remember { mutableStateOf(false) }
+    var enablePersistentAfterSettings by remember { mutableStateOf(false) }
+    var enablePersistentAfterPermission by remember { mutableStateOf(false) }
     var selectedLanguage by remember { mutableStateOf(AppLanguage.current()) }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         val allowed = granted && context.canPostNotifications()
         notificationsAllowed = allowed
-        viewModel.setNotificationsEnabled(allowed)
+        if (allowed && enablePersistentAfterPermission) {
+            viewModel.setPersistentNotificationEnabled(true)
+        }
+        enablePersistentAfterPermission = false
     }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         val allowed = context.canPostNotifications()
         notificationsAllowed = allowed
         promotedUpdatesAllowed = context.canPostPromotedNotifications()
-        if (enableNotificationsAfterSettings) {
-            enableNotificationsAfterSettings = false
+        if (enablePersistentAfterSettings) {
+            enablePersistentAfterSettings = false
             if (allowed) {
-                viewModel.setNotificationsEnabled(true)
-            } else if (uiState.notificationsEnabled) {
-                viewModel.setNotificationsEnabled(false)
+                viewModel.setPersistentNotificationEnabled(true)
             }
-        } else if (!allowed && uiState.notificationsEnabled) {
-            viewModel.setNotificationsEnabled(false)
         }
         viewModel.syncMonitoringState()
     }
@@ -146,6 +148,13 @@ fun SettingsScreen(
         while (true) {
             delay(60_000L)
             viewModel.syncMonitoringState()
+        }
+    }
+
+    LaunchedEffect(initialGeminiPairingUri) {
+        if (initialGeminiPairingUri != null) {
+            viewModel.importGeminiPairingCode(initialGeminiPairingUri)
+            onGeminiPairingConsumed()
         }
     }
 
@@ -211,6 +220,8 @@ fun SettingsScreen(
                                 sensitive = false
                             )
                         },
+                        onGeminiPairingCodeChange = viewModel::updateGeminiPairingCode,
+                        onConnectGeminiCompanion = viewModel::connectGeminiCompanion,
                         onOpenSetupGuide = {
                             openAuthUrl(context, accountGuideUrl(service))
                         },
@@ -225,34 +236,34 @@ fun SettingsScreen(
                 )
 
                 NotificationsSection(
-                    enabled = uiState.notificationsEnabled,
+                    persistentEnabled = uiState.persistentNotificationEnabled,
                     notificationsAllowed = notificationsAllowed,
                     isMonitoring = uiState.isMonitoring,
                     durationMinutes = uiState.monitoringDurationMinutes,
                     remainingMinutes = uiState.monitoringRemainingMinutes,
                     hasConnectedService = uiState.serviceStates.values.any { it.isConnected },
                     promotedUpdatesAllowed = promotedUpdatesAllowed,
-                    onToggle = { requested ->
+                    onPersistentToggle = { requested ->
                         when {
-                            !requested -> viewModel.setNotificationsEnabled(false)
+                            !requested -> viewModel.setPersistentNotificationEnabled(false)
                             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                                 !context.hasNotificationPermission() -> {
+                                enablePersistentAfterPermission = true
                                 notificationPermissionLauncher.launch(
                                     Manifest.permission.POST_NOTIFICATIONS
                                 )
                             }
                             !context.canPostNotifications() -> {
-                                enableNotificationsAfterSettings = true
+                                enablePersistentAfterSettings = true
                                 openAppNotificationSettings(context)
                             }
-                            else -> viewModel.setNotificationsEnabled(true)
+                            else -> viewModel.setPersistentNotificationEnabled(true)
                         }
                     },
                     onDurationChange = viewModel::setMonitoringDuration,
                     onStartMonitoring = viewModel::startMonitoring,
                     onStopMonitoring = viewModel::stopMonitoring,
                     onOpenNotificationSettings = {
-                        enableNotificationsAfterSettings = true
                         openAppNotificationSettings(context)
                     },
                     onOpenPromotionSettings = { openPromotionSettings(context) }
@@ -393,6 +404,8 @@ private fun ServiceCredentialSection(
     onOpenAccountLink: (String) -> Unit,
     onCopyAccountCode: (String) -> Unit,
     onCopySetupCommand: (String) -> Unit,
+    onGeminiPairingCodeChange: (String) -> Unit,
+    onConnectGeminiCompanion: () -> Unit,
     onOpenSetupGuide: () -> Unit,
     onValidate: () -> Unit,
     onDisconnect: () -> Unit
@@ -463,22 +476,14 @@ private fun ServiceCredentialSection(
                 }
             }
 
-            if (service == AiService.GEMINI) {
-                OutlinedTextField(
-                    value = state.oauthClientId,
-                    onValueChange = { onFieldChange("oauthClientId", it) },
-                    label = { Text(stringResource(R.string.credential_oauth_client_id)) },
-                    supportingText = {
-                        Text(stringResource(R.string.credential_google_client_support))
-                    },
-                    keyboardOptions = secretKeyboardOptions(),
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+            when {
+                service == AiService.GEMINI -> GeminiCompanionSetup(
+                    state = state,
+                    accent = visualStyle.accent,
+                    onPairingCodeChange = onGeminiPairingCodeChange,
+                    onConnect = onConnectGeminiCompanion
                 )
-            }
-
-            if (service.supportsAccountLink()) {
-                AccountLinkControls(
+                service.supportsAccountLink() -> AccountLinkControls(
                     service = service,
                     state = state,
                     accent = visualStyle.accent,
@@ -487,35 +492,36 @@ private fun ServiceCredentialSection(
                     onOpenAccountLink = onOpenAccountLink,
                     onCopyAccountCode = onCopyAccountCode
                 )
-            } else {
-                ClaudeSetupGuide(
+                else -> ClaudeSetupGuide(
                     accent = visualStyle.accent,
                     onCopySetupCommand = onCopySetupCommand
                 )
             }
 
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.small,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.76f)
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.Top
+            if (service != AiService.GEMINI) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.76f)
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Security,
-                        contentDescription = null,
-                        tint = visualStyle.accent,
-                        modifier = Modifier.size(19.dp)
-                    )
-                    Text(
-                        text = stringResource(R.string.account_security_note),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Security,
+                            contentDescription = null,
+                            tint = visualStyle.accent,
+                            modifier = Modifier.size(19.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.account_security_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 
@@ -527,37 +533,39 @@ private fun ServiceCredentialSection(
 
             HorizontalDivider(color = visualStyle.accent.copy(alpha = 0.2f))
 
-            TextButton(
-                onClick = { showManualSetup = !showManualSetup },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = if (showManualSetup) {
-                        Icons.Rounded.ExpandLess
-                    } else {
-                        Icons.Rounded.ExpandMore
-                    },
-                    contentDescription = null
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.account_manual_setup),
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            if (service != AiService.GEMINI) {
+                TextButton(
+                    onClick = { showManualSetup = !showManualSetup },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = if (showManualSetup) {
+                            Icons.Rounded.ExpandLess
+                        } else {
+                            Icons.Rounded.ExpandMore
+                        },
+                        contentDescription = null
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.account_manual_setup),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
 
-            if (showManualSetup) {
-                Text(
-                    text = stringResource(R.string.account_manual_setup_description),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                ManualCredentialFields(
-                    service = service,
-                    state = state,
-                    onFieldChange = onFieldChange,
-                    onValidate = onValidate
-                )
+                if (showManualSetup) {
+                    Text(
+                        text = stringResource(R.string.account_manual_setup_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    ManualCredentialFields(
+                        service = service,
+                        state = state,
+                        onFieldChange = onFieldChange,
+                        onValidate = onValidate
+                    )
+                }
             }
 
             if (state.isConnected) {
@@ -586,6 +594,83 @@ private fun ServiceCredentialSection(
             }
         }
     }
+}
+
+@Composable
+private fun GeminiCompanionSetup(
+    state: ServiceCredentialState,
+    accent: Color,
+    onPairingCodeChange: (String) -> Unit,
+    onConnect: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = accent.copy(alpha = 0.11f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.credential_gemini_companion_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = accent
+            )
+            Text(
+                text = stringResource(R.string.credential_gemini_companion_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = stringResource(R.string.credential_gemini_companion_steps),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            OutlinedTextField(
+                value = state.geminiPairingCode,
+                onValueChange = onPairingCodeChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.credential_gemini_pairing_code)) },
+                supportingText = {
+                    Text(stringResource(R.string.credential_gemini_pairing_hint))
+                },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = secretKeyboardOptions()
+            )
+            Button(
+                onClick = onConnect,
+                enabled = state.geminiPairingCode.isNotBlank() && !state.isValidating,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (state.isValidating) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text(
+                    stringResource(
+                        if (state.isConnected) {
+                            R.string.action_repair_gemini_companion
+                        } else {
+                            R.string.action_pair_gemini_companion
+                        }
+                    )
+                )
+            }
+            Text(
+                text = stringResource(R.string.credential_gemini_companion_security),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+
 }
 
 @Composable
@@ -699,18 +784,6 @@ private fun ManualCredentialFields(
             )
         }
 
-        if (service == AiService.GEMINI && state.expiresAtDisplay.isNotBlank()) {
-            OutlinedTextField(
-                value = state.expiresAtDisplay,
-                onValueChange = {},
-                label = { Text(stringResource(R.string.credential_token_expiry)) },
-                modifier = Modifier.fillMaxWidth(),
-                readOnly = true,
-                enabled = false,
-                singleLine = true
-            )
-        }
-
         OutlinedButton(
             onClick = onValidate,
             enabled = !state.isValidating && state.accessToken.isNotBlank(),
@@ -804,7 +877,7 @@ private fun AccountLinkControls(
         Text(
             text = when (service) {
                 AiService.CODEX -> stringResource(R.string.account_link_codex_description)
-                AiService.GEMINI -> stringResource(R.string.account_link_gemini_description)
+                AiService.GEMINI -> stringResource(R.string.credential_gemini_companion_body)
                 AiService.COPILOT -> stringResource(R.string.account_link_copilot_description)
                 AiService.CLAUDE -> stringResource(R.string.credential_claude_instructions)
             },
@@ -815,8 +888,7 @@ private fun AccountLinkControls(
         Button(
             onClick = onStartAccountLink,
             enabled = !state.isAccountLinking &&
-                !state.isValidating &&
-                (service != AiService.GEMINI || state.oauthClientId.isNotBlank()),
+                !state.isValidating,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
                 containerColor = accent,
@@ -1005,7 +1077,7 @@ internal fun deviceCodeForClipboard(userCode: String): String {
 }
 
 private fun AiService.supportsAccountLink(): Boolean {
-    return this == AiService.CODEX || this == AiService.GEMINI || this == AiService.COPILOT
+    return this == AiService.CODEX || this == AiService.COPILOT
 }
 
 internal fun accountGuideUrl(service: AiService): String {
@@ -1201,14 +1273,14 @@ private fun RefreshIntervalSection(
 
 @Composable
 private fun NotificationsSection(
-    enabled: Boolean,
+    persistentEnabled: Boolean,
     notificationsAllowed: Boolean,
     isMonitoring: Boolean,
     durationMinutes: Long,
     remainingMinutes: Long?,
     hasConnectedService: Boolean,
     promotedUpdatesAllowed: Boolean,
-    onToggle: (Boolean) -> Unit,
+    onPersistentToggle: (Boolean) -> Unit,
     onDurationChange: (Long) -> Unit,
     onStartMonitoring: () -> Unit,
     onStopMonitoring: () -> Unit,
@@ -1231,6 +1303,17 @@ private fun NotificationsSection(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            Text(
+                text = stringResource(R.string.notifications_title),
+                style = MaterialTheme.typography.titleLarge
+            )
+            Text(
+                text = stringResource(R.string.notifications_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1238,18 +1321,18 @@ private fun NotificationsSection(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(R.string.notifications_title),
+                        text = stringResource(R.string.notifications_persistent_title),
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
-                        text = stringResource(R.string.notifications_description),
+                        text = stringResource(R.string.notifications_persistent_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Switch(
-                    checked = enabled && notificationsAllowed,
-                    onCheckedChange = onToggle
+                    checked = persistentEnabled,
+                    onCheckedChange = onPersistentToggle
                 )
             }
 
@@ -1274,8 +1357,11 @@ private fun NotificationsSection(
                         }
                         stringResource(R.string.notifications_live_running, remaining)
                     }
-                    enabled && notificationsAllowed -> stringResource(R.string.notifications_ready)
-                    else -> stringResource(R.string.notifications_off)
+                    persistentEnabled && notificationsAllowed -> {
+                        stringResource(R.string.notifications_persistent_on)
+                    }
+                    persistentEnabled -> stringResource(R.string.notifications_permission_needed)
+                    else -> stringResource(R.string.notifications_persistent_off)
                 },
                 style = MaterialTheme.typography.labelLarge,
                 color = if (isMonitoring) {
@@ -1322,7 +1408,7 @@ private fun NotificationsSection(
             } else {
                 Button(
                     onClick = onStartMonitoring,
-                    enabled = enabled && notificationsAllowed && hasConnectedService,
+                    enabled = notificationsAllowed && hasConnectedService,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(stringResource(R.string.action_start_live_monitor))
