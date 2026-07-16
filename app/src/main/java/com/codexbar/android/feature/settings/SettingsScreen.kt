@@ -742,6 +742,11 @@ private fun ServiceCredentialSection(
                         body = stringResource(R.string.credential_zenmux_setup_body),
                         accent = visualStyle.accent
                     )
+                    service == AiService.KIMI -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_kimi_setup_title),
+                        body = stringResource(R.string.credential_kimi_setup_body),
+                        accent = visualStyle.accent
+                    )
                 }
 
             if (service != AiService.GEMINI) {
@@ -1162,6 +1167,7 @@ private fun AccountLinkControls(
                 AiService.CURSOR -> stringResource(R.string.credential_cursor_setup_body)
                 AiService.ZAI -> stringResource(R.string.credential_zai_setup_body)
                 AiService.ZENMUX -> stringResource(R.string.credential_zenmux_setup_body)
+                AiService.KIMI -> stringResource(R.string.credential_kimi_setup_body)
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant

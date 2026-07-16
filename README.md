@@ -2,7 +2,7 @@
 
 > Android port of [**CodexBar**](https://github.com/steipete/CodexBar) by [@steipete](https://github.com/steipete) — the macOS menu bar app for monitoring AI service quotas.
 
-Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, Cursor, z.ai, and ZenMux usage in one place; Gemini uses an optional private companion that keeps Google authentication inside the official Gemini CLI.
+Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, and Kimi usage in one place; Gemini uses an optional private companion that keeps Google authentication inside the official Gemini CLI.
 
 <p align="center">
   <img src="docs/images/dashboard-light.png" width="320" alt="Material 3 Expressive dashboard in light mode" />
@@ -14,7 +14,7 @@ Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT
 
 ## Features
 
-- Unified quota monitoring for Claude, Codex, GitHub Copilot, Gemini, Cursor, z.ai, and ZenMux
+- Unified quota monitoring for Claude, Codex, GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, and Kimi
 - Material 3 Expressive provider cards with animated rings, bars, exact values, reset countdowns, and pace forecasts
 - Adaptive phone navigation and a two-pane large-screen dashboard
 - Quick Settings tile for at-a-glance status
@@ -198,6 +198,12 @@ The token is sent only as a bearer credential to `api.z.ai`, never across redire
 Create a **Management API key** at `https://zenmux.ai/platform/management`, then paste it into the ZenMux card in Settings and select **Validate & connect**. A normal ZenMux inference API key is not accepted by the management quota endpoints.
 
 The app sends the key only as a bearer credential to `https://zenmux.ai/api/v1/management/subscription/detail`. It displays the rolling 5-hour and 7-day flow quotas from the documented response. The key is encrypted with Android Keystore after validation; prompts, inference requests, and request logs are never requested.
+
+### Kimi
+
+Create a Kimi Code API key in the Kimi Code console, paste it into the Kimi card in Settings, and select **Validate & connect**. The app calls only `https://api.kimi.com/coding/v1/usages` and displays the short rolling window (normally 5 hours) together with the 7-day coding quota.
+
+The API key is sent only as a bearer credential to the fixed HTTPS host, never follows redirects, never enters HTTP logs, and is encrypted with Android Keystore only after validation. The app does not request prompts, inference responses, or browser session cookies.
 
 ## Build
 

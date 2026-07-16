@@ -11,6 +11,7 @@ import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.copilot.CopilotApiService
 import com.codexbar.android.core.network.cursor.CursorApiService
+import com.codexbar.android.core.network.kimi.KimiApiService
 import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
 import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
 import com.codexbar.android.core.network.zai.ZaiApiService
@@ -293,5 +294,21 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(ZenMuxApiService::class.java)
+    }
+
+    // --- Kimi ---
+
+    @Provides
+    @Singleton
+    fun provideKimiApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): KimiApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.KIMI.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(KimiApiService::class.java)
     }
 }

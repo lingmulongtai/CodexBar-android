@@ -77,6 +77,12 @@ object ProviderCatalog {
             authMode = ProviderAuthMode.API_KEY,
             aliases = setOf("zen mux", "model router", "gateway"),
             guideAnchor = "zenmux"
+        ),
+        AiService.KIMI to ProviderMetadata(
+            category = ProviderCategory.CODING,
+            authMode = ProviderAuthMode.API_KEY,
+            aliases = setOf("kimi code", "moonshot ai coding"),
+            guideAnchor = "kimi"
         )
     )
 

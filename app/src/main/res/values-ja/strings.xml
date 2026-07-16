@@ -123,6 +123,8 @@
     <string name="credential_zai_api_key">z.ai APIトークン</string>
     <string name="credential_zenmux_setup_title">ZenMux Management API</string>
     <string name="credential_zenmux_setup_body">zenmux.ai/platform/management でManagement APIキーを作成してください。通常の推論用APIキーは利用できません。CodexBarが取得するのは契約の使用枠だけで、プロンプトやリクエストログは読み取りません。</string>
+    <string name="credential_kimi_setup_title">Kimi Code API</string>
+    <string name="credential_kimi_setup_body">Kimi CodeコンソールでAPIキーを作成し、下へ貼り付けてください。CodexBarはローリング枠と週間枠を取得するため、api.kimi.com/coding/v1/usagesだけへ送信します。プロンプトや推論履歴は要求しません。</string>
     <string name="credential_zenmux_management_key">Management APIキー</string>
     <string name="credential_refresh_token">更新トークン</string>
     <string name="credential_changes_pending">検証に成功するまで変更は反映されません。</string>

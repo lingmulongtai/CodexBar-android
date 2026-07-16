@@ -47,5 +47,11 @@ enum class AiService(
         brandColor = 0xFF6750A4,
         baseUrl = "https://zenmux.ai/api/v1/management/",
         requiresManualCredentials = true
+    ),
+    KIMI(
+        displayName = "Kimi",
+        brandColor = 0xFF00B8A9,
+        baseUrl = "https://api.kimi.com/",
+        requiresManualCredentials = true
     )
 }

@@ -20,6 +20,10 @@ class ProviderCatalogTest {
             AiService.ZAI.providerMetadata.secretKind
         )
         assertEquals(
+            ProviderSecretKind.API_KEY,
+            AiService.KIMI.providerMetadata.secretKind
+        )
+        assertEquals(
             ProviderSecretKind.COOKIE_HEADER,
             AiService.CURSOR.providerMetadata.secretKind
         )
