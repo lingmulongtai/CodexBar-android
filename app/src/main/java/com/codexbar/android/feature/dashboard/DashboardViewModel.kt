@@ -1,6 +1,7 @@
 package com.codexbar.android.feature.dashboard
 
 import android.content.Context
+import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codexbar.android.core.data.QuotaHistoryStore
@@ -13,7 +14,10 @@ import com.codexbar.android.core.notification.QuotaNotificationService
 import com.codexbar.android.core.presentation.AndroidQuotaPresentationText
 import com.codexbar.android.core.presentation.PrivacyPresentation
 import com.codexbar.android.core.presentation.QuotaPresentationMapper
+import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.security.EncryptedPrefsManager
+import com.codexbar.android.core.widget.QuotaGlanceWidget
+import com.codexbar.android.core.widget.WidgetPrefsManager
 import com.codexbar.android.di.ClaudeRepository
 import com.codexbar.android.di.CodexRepository
 import com.codexbar.android.di.CopilotRepository
@@ -38,7 +42,8 @@ class DashboardViewModel @Inject constructor(
     private val quotaHistoryStore: QuotaHistoryStore,
     private val monitoringSessionStore: MonitoringSessionStore,
     private val notificationService: QuotaNotificationService,
-    @ApplicationContext appContext: Context
+    private val widgetPrefsManager: WidgetPrefsManager,
+    @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     private val presentationMapper = QuotaPresentationMapper(
@@ -73,11 +78,7 @@ class DashboardViewModel @Inject constructor(
                         emptyList(),
                         generatedAt = Instant.now()
                     )
-                    _uiState.value = DashboardUiState.Content(snapshot)
-                    notificationService.publishSnapshot(
-                        snapshot = snapshot,
-                        monitoringSession = monitoringSessionStore.activeSession()
-                    )
+                    publishSnapshot(snapshot)
                     return@launch
                 }
 
@@ -118,14 +119,27 @@ class DashboardViewModel @Inject constructor(
                     privacy = privacy,
                     paceByMetricKey = paceByMetricKey
                 )
-                _uiState.value = DashboardUiState.Content(snapshot)
-                notificationService.publishSnapshot(
-                    snapshot = snapshot,
-                    monitoringSession = monitoringSessionStore.activeSession()
-                )
+                publishSnapshot(snapshot)
             } finally {
                 _isRefreshing.value = false
             }
+        }
+    }
+
+    private suspend fun publishSnapshot(snapshot: QuotaPresentationSnapshot) {
+        _uiState.value = DashboardUiState.Content(snapshot)
+        notificationService.publishSnapshot(
+            snapshot = snapshot,
+            monitoringSession = monitoringSessionStore.activeSession()
+        )
+
+        // The dashboard already owns the freshest provider response. Persist and render that
+        // exact snapshot instead of waiting for a second WorkManager network request.
+        try {
+            snapshot.services.forEach(widgetPrefsManager::cachePresentation)
+            QuotaGlanceWidget().updateAll(appContext)
+        } catch (_: Exception) {
+            // Widget rendering must not turn a successful dashboard refresh into an app error.
         }
     }
 }

@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.widget.RemoteViews
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
@@ -389,9 +390,17 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         // Render once before reporting success so the launcher never keeps the XML loading view.
         lifecycleScope.launch {
             try {
+                // Replace the provider XML immediately. This gives launchers a real RemoteViews
+                // update before Glance starts its asynchronous composition worker.
+                AppWidgetManager.getInstance(this@WidgetConfigurationActivity).updateAppWidget(
+                    appWidgetId,
+                    RemoteViews(packageName, R.layout.widget_loading).apply {
+                        setTextViewText(R.id.widget_loading_text, getString(R.string.widget_waiting_for_data))
+                    }
+                )
+
                 val glanceId = GlanceAppWidgetManager(this@WidgetConfigurationActivity)
-                    .getGlanceIdBy(intent)
-                    ?: error("Widget configuration did not include an App Widget ID")
+                    .getGlanceIdBy(appWidgetId)
                 QuotaGlanceWidget().update(this@WidgetConfigurationActivity, glanceId)
 
                 WorkManagerInitializer.enqueueManualQuotaRefresh(

@@ -13,7 +13,7 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <View
+        <FrameLayout
             android:layout_width="10dp"
             android:layout_height="10dp"
             android:background="#FFD4A574" />
@@ -73,7 +73,7 @@
     </LinearLayout>
 
     <!-- Divider -->
-    <View
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="8dp"
@@ -87,7 +87,7 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <View
+        <FrameLayout
             android:layout_width="10dp"
             android:layout_height="10dp"
             android:background="#FF10A37F" />

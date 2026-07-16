@@ -97,7 +97,7 @@
         <!-- Home Screen Widget -->
         <receiver
             android:name=".core.widget.QuotaWidgetReceiver"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
