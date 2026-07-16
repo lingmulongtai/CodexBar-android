@@ -13,6 +13,7 @@ import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.monitoring.MonitoringSessionStore
+import com.codexbar.android.core.network.gemini.GeminiCompanionPairing
 import com.codexbar.android.core.notification.QuotaNotificationService
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.PrivacySettings
@@ -436,6 +437,110 @@ class SettingsViewModel @Inject constructor(
         return this == AiService.CODEX || this == AiService.COPILOT
     }
 
+    fun updateGeminiPairingCode(value: String) {
+        _uiState.update { state ->
+            val current = state.serviceStates[AiService.GEMINI] ?: ServiceCredentialState()
+            state.copy(
+                serviceStates = state.serviceStates + (
+                    AiService.GEMINI to current.copy(
+                        geminiPairingCode = value.take(MAX_PAIRING_CODE_LENGTH),
+                        validationResult = null,
+                        hasUnsavedChanges = true
+                    )
+                )
+            )
+        }
+    }
+
+    fun importGeminiPairingCode(value: String) {
+        updateGeminiPairingCode(value)
+    }
+
+    fun connectGeminiCompanion() {
+        val state = _uiState.value.serviceStates[AiService.GEMINI] ?: return
+        val credential = runCatching {
+            GeminiCompanionPairing.parse(state.geminiPairingCode)
+        }.getOrElse { error ->
+            updateGeminiValidation(
+                isValidating = false,
+                validationResult = ValidationResult.Failure(
+                    appContext.getString(
+                        R.string.validation_gemini_pairing_invalid,
+                        error.message ?: appContext.getString(R.string.validation_unknown)
+                    )
+                ),
+                keepExistingConnection = true
+            )
+            return
+        }
+
+        updateGeminiValidation(
+            isValidating = true,
+            validationResult = null,
+            keepExistingConnection = true
+        )
+        viewModelScope.launch {
+            val hadPreviousConnection = prefsManager.loadCredential(AiService.GEMINI) != null
+            val result = geminiRepository.validateCredential(credential)
+            when (result) {
+                is Result.Success -> {
+                    prefsManager.saveCredential(AiService.GEMINI, credential)
+                    updateGeminiValidation(
+                        isValidating = false,
+                        validationResult = ValidationResult.Success,
+                        keepExistingConnection = false,
+                        connected = true,
+                        clearPairingCode = true
+                    )
+                    WorkManagerInitializer.enqueueManualQuotaRefresh(
+                        appContext,
+                        source = "gemini_companion_connected"
+                    )
+                }
+                is Result.Failure -> {
+                    updateGeminiValidation(
+                        isValidating = false,
+                        validationResult = ValidationResult.Failure(
+                            appContext.getString(
+                                R.string.validation_gemini_companion_failed,
+                                formatAppError(result.error)
+                            )
+                        ),
+                        keepExistingConnection = true,
+                        connected = hadPreviousConnection
+                    )
+                }
+            }
+        }
+    }
+
+    private fun updateGeminiValidation(
+        isValidating: Boolean,
+        validationResult: ValidationResult?,
+        keepExistingConnection: Boolean,
+        connected: Boolean = false,
+        clearPairingCode: Boolean = false
+    ) {
+        _uiState.update { state ->
+            val current = state.serviceStates[AiService.GEMINI] ?: ServiceCredentialState()
+            state.copy(
+                serviceStates = state.serviceStates + (
+                    AiService.GEMINI to current.copy(
+                        geminiPairingCode = if (clearPairingCode) "" else current.geminiPairingCode,
+                        isValidating = isValidating,
+                        validationResult = validationResult,
+                        isConnected = if (keepExistingConnection) {
+                            current.isConnected || connected
+                        } else {
+                            connected
+                        },
+                        hasUnsavedChanges = !clearPairingCode && current.geminiPairingCode.isNotBlank()
+                    )
+                )
+            )
+        }
+    }
+
     private fun MutableStateFlow<SettingsUiState>.updateAccountLinkPrompt(
         service: AiService,
         session: DeviceAuthSession
@@ -494,3 +599,5 @@ internal fun Throwable.hasUnknownHostCause(): Boolean {
     }
     return false
 }
+
+private const val MAX_PAIRING_CODE_LENGTH = 2048

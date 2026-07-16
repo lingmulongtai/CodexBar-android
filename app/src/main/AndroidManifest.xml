@@ -48,6 +48,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="codexbar" android:host="dashboard" />
                 <data android:scheme="codexbar" android:host="settings" />
+                <data android:scheme="codexbar" android:host="gemini-pair" />
             </intent-filter>
         </activity>
 

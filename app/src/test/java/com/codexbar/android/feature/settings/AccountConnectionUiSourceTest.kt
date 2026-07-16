@@ -61,13 +61,15 @@ class AccountConnectionUiSourceTest {
     }
 
     @Test
-    fun `gemini fails closed and directs users to the official CLI stats command`() {
+    fun `gemini pairs only with the private companion and never requests Google secrets`() {
         val source = settingsSource()
 
-        assertTrue(source.contains("service == AiService.GEMINI -> GeminiUnavailableNotice("))
-        assertTrue(source.contains("R.string.credential_gemini_unavailable_body"))
-        assertTrue(source.contains("GEMINI_STATS_COMMAND = \"/stats model\""))
+        assertTrue(source.contains("service == AiService.GEMINI -> GeminiCompanionSetup("))
+        assertTrue(source.contains("R.string.credential_gemini_companion_body"))
+        assertTrue(source.contains("R.string.credential_gemini_pairing_code"))
+        assertTrue(source.contains("PasswordVisualTransformation()"))
         assertTrue(source.contains("if (service != AiService.GEMINI)"))
+        assertFalse(source.contains("GEMINI_STATS_COMMAND"))
         assertFalse(source.contains("R.string.credential_google_client_support"))
         assertFalse(source.contains("R.string.credential_oauth_client_id"))
     }

@@ -65,6 +65,8 @@
     <string name="action_disconnect">Disconnect</string>
     <string name="action_open_notification_settings">Open notification settings</string>
     <string name="action_open_sign_in_page">Open sign-in page</string>
+    <string name="action_pair_gemini_companion">Pair &amp; verify companion</string>
+    <string name="action_repair_gemini_companion">Replace companion pairing</string>
     <string name="action_view_setup_guide">View setup guide</string>
     <string name="action_revalidate">Revalidate</string>
     <string name="action_save_changes">Save changes</string>
@@ -83,10 +85,12 @@
     <string name="credential_claude_step_paste">2. Paste the generated token under Manual token setup, then validate it.</string>
     <string name="credential_claude_refresh_support">Required for auto-refresh (tokens expire every 8 hours)</string>
     <string name="credential_github_oauth_token">GitHub OAuth Token</string>
-    <string name="credential_gemini_unavailable_title">Direct Gemini connection unavailable</string>
-    <string name="credential_gemini_unavailable_body">Google’s device-code endpoint rejects normal Android and desktop OAuth clients with HTTP 401, and that flow does not permit the cloud-platform scope this connector requires. Google also does not support third-party direct access to Gemini CLI’s internal service, so this app will not start a new Gemini OAuth link or import Gemini CLI tokens.</string>
-    <string name="credential_gemini_stats_step">For now, open the official Gemini CLI and run:</string>
-    <string name="credential_gemini_future_path">Mobile monitoring can return when Google provides a documented public quota API or a compliant companion sync. Existing encrypted credentials are not deleted automatically and can be removed with Disconnect.</string>
+    <string name="credential_gemini_companion_title">Private Gemini CLI companion</string>
+    <string name="credential_gemini_companion_body">Keep Google sign-in inside the official Gemini CLI on your computer. CodexBar receives only model labels, used percentages, reset times, tier, and freshness over your local network.</string>
+    <string name="credential_gemini_companion_steps">1. Download and start the Gemini companion from this project’s Release on the same Wi-Fi. 2. Scan its QR code with your phone, or paste the pairing code below. 3. Keep the companion running while Gemini monitoring is needed.</string>
+    <string name="credential_gemini_pairing_code">Companion pairing code</string>
+    <string name="credential_gemini_pairing_hint">Starts with codexbar://gemini-pair. Treat it like a local-device password.</string>
+    <string name="credential_gemini_companion_security">No Google access token, refresh token, OAuth client ID, prompt, file, email address, or CLI session content is transferred to Android. The pairing key is encrypted with Android Keystore.</string>
     <string name="credential_refresh_token">Refresh Token</string>
     <string name="credential_changes_pending">Changes are not active until validation succeeds.</string>
     <string name="account_link_codex_description">Tap Connect account to generate a one-time code. Copy it before opening the OpenAI sign-in page; tokens are saved only after validation.</string>
@@ -148,6 +152,8 @@
     <string name="validation_account_link_failed">Account link failed</string>
     <string name="validation_account_link_failed_detail">Account link failed: %1$s</string>
     <string name="validation_account_link_dns_failed">Couldn’t resolve the %1$s authentication server. Check Private DNS, VPN, ad blockers, and your network, then retry.</string>
+    <string name="validation_gemini_pairing_invalid">Invalid Gemini companion pairing: %1$s</string>
+    <string name="validation_gemini_companion_failed">Couldn’t verify the Gemini companion. Keep it running on the same trusted Wi-Fi, allow private-network access in the computer firewall, and check that both device clocks are automatic. Detail: %1$s</string>
     <string name="validation_unknown">Unknown</string>
     <string name="validation_network_error">Network error: %1$s</string>
     <string name="validation_authentication_required">Authentication failed (sign in again)</string>

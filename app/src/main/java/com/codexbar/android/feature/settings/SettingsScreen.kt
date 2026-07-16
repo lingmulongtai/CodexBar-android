@@ -107,6 +107,8 @@ import kotlin.math.roundToInt
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     showBackButton: Boolean = true,
+    initialGeminiPairingUri: String? = null,
+    onGeminiPairingConsumed: () -> Unit = {},
     onScreenPrivacyChanged: (Boolean) -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
@@ -146,6 +148,13 @@ fun SettingsScreen(
         while (true) {
             delay(60_000L)
             viewModel.syncMonitoringState()
+        }
+    }
+
+    LaunchedEffect(initialGeminiPairingUri) {
+        if (initialGeminiPairingUri != null) {
+            viewModel.importGeminiPairingCode(initialGeminiPairingUri)
+            onGeminiPairingConsumed()
         }
     }
 
@@ -211,6 +220,8 @@ fun SettingsScreen(
                                 sensitive = false
                             )
                         },
+                        onGeminiPairingCodeChange = viewModel::updateGeminiPairingCode,
+                        onConnectGeminiCompanion = viewModel::connectGeminiCompanion,
                         onOpenSetupGuide = {
                             openAuthUrl(context, accountGuideUrl(service))
                         },
@@ -393,6 +404,8 @@ private fun ServiceCredentialSection(
     onOpenAccountLink: (String) -> Unit,
     onCopyAccountCode: (String) -> Unit,
     onCopySetupCommand: (String) -> Unit,
+    onGeminiPairingCodeChange: (String) -> Unit,
+    onConnectGeminiCompanion: () -> Unit,
     onOpenSetupGuide: () -> Unit,
     onValidate: () -> Unit,
     onDisconnect: () -> Unit
@@ -464,9 +477,11 @@ private fun ServiceCredentialSection(
             }
 
             when {
-                service == AiService.GEMINI -> GeminiUnavailableNotice(
+                service == AiService.GEMINI -> GeminiCompanionSetup(
+                    state = state,
                     accent = visualStyle.accent,
-                    onCopySetupCommand = onCopySetupCommand
+                    onPairingCodeChange = onGeminiPairingCodeChange,
+                    onConnect = onConnectGeminiCompanion
                 )
                 service.supportsAccountLink() -> AccountLinkControls(
                     service = service,
@@ -582,11 +597,12 @@ private fun ServiceCredentialSection(
 }
 
 @Composable
-private fun GeminiUnavailableNotice(
+private fun GeminiCompanionSetup(
+    state: ServiceCredentialState,
     accent: Color,
-    onCopySetupCommand: (String) -> Unit
+    onPairingCodeChange: (String) -> Unit,
+    onConnect: () -> Unit
 ) {
-    var copied by rememberSaveable { mutableStateOf(false) }
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
@@ -598,55 +614,63 @@ private fun GeminiUnavailableNotice(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = stringResource(R.string.credential_gemini_unavailable_title),
+                text = stringResource(R.string.credential_gemini_companion_title),
                 style = MaterialTheme.typography.titleSmall,
                 color = accent
             )
             Text(
-                text = stringResource(R.string.credential_gemini_unavailable_body),
+                text = stringResource(R.string.credential_gemini_companion_body),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = stringResource(R.string.credential_gemini_stats_step),
-                style = MaterialTheme.typography.bodySmall
+                text = stringResource(R.string.credential_gemini_companion_steps),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Row(
+            OutlinedTextField(
+                value = state.geminiPairingCode,
+                onValueChange = onPairingCodeChange,
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                label = { Text(stringResource(R.string.credential_gemini_pairing_code)) },
+                supportingText = {
+                    Text(stringResource(R.string.credential_gemini_pairing_hint))
+                },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = secretKeyboardOptions()
+            )
+            Button(
+                onClick = onConnect,
+                enabled = state.geminiPairingCode.isNotBlank() && !state.isValidating,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                SelectionContainer(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = GEMINI_STATS_COMMAND,
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontFamily = FontFamily.Monospace
-                        ),
-                        color = accent
+                if (state.isValidating) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
-                OutlinedButton(
-                    onClick = {
-                        onCopySetupCommand(GEMINI_STATS_COMMAND)
-                        copied = true
-                    }
-                ) {
-                    Icon(Icons.Rounded.ContentCopy, contentDescription = null)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        stringResource(
-                            if (copied) R.string.action_copied else R.string.action_copy_command
-                        )
+                Text(
+                    stringResource(
+                        if (state.isConnected) {
+                            R.string.action_repair_gemini_companion
+                        } else {
+                            R.string.action_pair_gemini_companion
+                        }
                     )
-                }
+                )
             }
             Text(
-                text = stringResource(R.string.credential_gemini_future_path),
+                text = stringResource(R.string.credential_gemini_companion_security),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
+
 }
 
 @Composable
@@ -853,7 +877,7 @@ private fun AccountLinkControls(
         Text(
             text = when (service) {
                 AiService.CODEX -> stringResource(R.string.account_link_codex_description)
-                AiService.GEMINI -> stringResource(R.string.credential_gemini_unavailable_body)
+                AiService.GEMINI -> stringResource(R.string.credential_gemini_companion_body)
                 AiService.COPILOT -> stringResource(R.string.account_link_copilot_description)
                 AiService.CLAUDE -> stringResource(R.string.credential_claude_instructions)
             },
@@ -1145,7 +1169,6 @@ private fun copyToClipboard(
 }
 
 private const val CLAUDE_SETUP_COMMAND = "claude setup-token"
-private const val GEMINI_STATS_COMMAND = "/stats model"
 private const val ACCOUNT_GUIDE_BASE_URL =
     "https://github.com/lingmulongtai/CodexBar-android"
 
