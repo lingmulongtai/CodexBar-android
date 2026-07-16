@@ -59,5 +59,11 @@ enum class AiService(
         brandColor = 0xFF6C5CE7,
         baseUrl = "https://api.elevenlabs.io/",
         requiresManualCredentials = true
+    ),
+    OPENROUTER(
+        displayName = "OpenRouter",
+        brandColor = 0xFF4D6BFE,
+        baseUrl = "https://openrouter.ai/api/v1/",
+        requiresManualCredentials = true
     )
 }

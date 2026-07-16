@@ -1,6 +1,8 @@
 package com.codexbar.android.feature.settings
 
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.domain.model.ProviderCategory
+import com.codexbar.android.core.domain.model.providerMetadata
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -72,6 +74,10 @@ class ProviderDirectoryTest {
             states
         )
 
-        assertEquals(listOf(AiService.ZENMUX), routers)
+        assertEquals(
+            AiService.entries.filter { it.providerMetadata.category == ProviderCategory.ROUTER },
+            routers
+        )
+        assertTrue(states.getValue(AiService.CURSOR).isConnected)
     }
 }

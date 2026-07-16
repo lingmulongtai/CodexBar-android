@@ -7,6 +7,7 @@ import com.codexbar.android.core.data.CursorRepositoryImpl
 import com.codexbar.android.core.data.ElevenLabsRepositoryImpl
 import com.codexbar.android.core.data.GeminiRepositoryImpl
 import com.codexbar.android.core.data.KimiRepositoryImpl
+import com.codexbar.android.core.data.OpenRouterRepositoryImpl
 import com.codexbar.android.core.data.ZaiRepositoryImpl
 import com.codexbar.android.core.data.ZenMuxRepositoryImpl
 import com.codexbar.android.core.domain.model.AiService
@@ -20,6 +21,7 @@ import com.codexbar.android.core.network.cursor.CursorApiService
 import com.codexbar.android.core.network.elevenlabs.ElevenLabsApiService
 import com.codexbar.android.core.network.gemini.GeminiCompanionClient
 import com.codexbar.android.core.network.kimi.KimiApiService
+import com.codexbar.android.core.network.openrouter.OpenRouterApiService
 import com.codexbar.android.core.network.zai.ZaiApiService
 import com.codexbar.android.core.network.zenmux.ZenMuxApiService
 import com.codexbar.android.core.security.EncryptedPrefsManager
@@ -122,4 +124,13 @@ object RepositoryModule {
         apiService: ElevenLabsApiService,
         prefsManager: EncryptedPrefsManager
     ): QuotaRepository = ElevenLabsRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.OPENROUTER)
+    fun provideOpenRouterRepository(
+        apiService: OpenRouterApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = OpenRouterRepositoryImpl(apiService, prefsManager)
 }

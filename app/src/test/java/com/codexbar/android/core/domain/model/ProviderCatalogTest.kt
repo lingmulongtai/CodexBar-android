@@ -28,6 +28,10 @@ class ProviderCatalogTest {
             AiService.ELEVENLABS.providerMetadata.secretKind
         )
         assertEquals(
+            ProviderSecretKind.API_KEY,
+            AiService.OPENROUTER.providerMetadata.secretKind
+        )
+        assertEquals(
             ProviderSecretKind.COOKIE_HEADER,
             AiService.CURSOR.providerMetadata.secretKind
         )

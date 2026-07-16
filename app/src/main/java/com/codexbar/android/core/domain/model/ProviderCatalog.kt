@@ -89,6 +89,12 @@ object ProviderCatalog {
             authMode = ProviderAuthMode.API_KEY,
             aliases = setOf("eleven labs", "text to speech", "tts", "voice ai"),
             guideAnchor = "elevenlabs"
+        ),
+        AiService.OPENROUTER to ProviderMetadata(
+            category = ProviderCategory.ROUTER,
+            authMode = ProviderAuthMode.API_KEY,
+            aliases = setOf("open router", "llm router", "model gateway"),
+            guideAnchor = "openrouter"
         )
     )
 

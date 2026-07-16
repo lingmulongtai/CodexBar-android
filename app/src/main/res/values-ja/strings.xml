@@ -127,6 +127,8 @@
     <string name="credential_kimi_setup_body">Kimi CodeコンソールでAPIキーを作成し、下へ貼り付けてください。CodexBarはローリング枠と週間枠を取得するため、api.kimi.com/coding/v1/usagesだけへ送信します。プロンプトや推論履歴は要求しません。</string>
     <string name="credential_elevenlabs_setup_title">ElevenLabsのサブスクリプション</string>
     <string name="credential_elevenlabs_setup_body">ElevenLabsで制限付きAPIキーを作成し、User subscriptionの読み取り権限を許可してください。CodexBarはapi.elevenlabs.ioから文字数と音声スロットの使用枠だけを取得し、生成音声、Voice、プロジェクト内容は要求しません。</string>
+    <string name="credential_openrouter_setup_title">OpenRouter APIキー予算</string>
+    <string name="credential_openrouter_setup_body">OpenRouterで専用APIキーを作成し、日次・週次・月次のいずれかのクレジット上限を設定すると、進捗バーを最も有効に使えます。CodexBarはopenrouter.ai/api/v1/keyから現在のキーの上限と使用量だけを取得します。Managementキーは不要です。</string>
     <string name="credential_zenmux_management_key">Management APIキー</string>
     <string name="credential_refresh_token">更新トークン</string>
     <string name="credential_changes_pending">検証に成功するまで変更は反映されません。</string>

@@ -15,6 +15,7 @@ import com.codexbar.android.core.network.elevenlabs.ElevenLabsApiService
 import com.codexbar.android.core.network.kimi.KimiApiService
 import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
 import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
+import com.codexbar.android.core.network.openrouter.OpenRouterApiService
 import com.codexbar.android.core.network.zai.ZaiApiService
 import com.codexbar.android.core.network.zenmux.ZenMuxApiService
 import dagger.Module
@@ -327,5 +328,21 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(ElevenLabsApiService::class.java)
+    }
+
+    // --- OpenRouter ---
+
+    @Provides
+    @Singleton
+    fun provideOpenRouterApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): OpenRouterApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.OPENROUTER.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(OpenRouterApiService::class.java)
     }
 }

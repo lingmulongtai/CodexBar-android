@@ -1,6 +1,7 @@
 package com.codexbar.android.ui.components
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.AltRoute
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Code
@@ -24,5 +25,6 @@ fun AiService.providerIcon(): ImageVector {
         AiService.ZENMUX -> Icons.Rounded.Hub
         AiService.KIMI -> Icons.Rounded.Bolt
         AiService.ELEVENLABS -> Icons.Rounded.RecordVoiceOver
+        AiService.OPENROUTER -> Icons.AutoMirrored.Rounded.AltRoute
     }
 }
