@@ -49,7 +49,7 @@ enum class AiService(
         requiresManualCredentials = true
     ),
     KIMI(
-        displayName = "Kimi",
+        displayName = "Kimi Code",
         brandColor = 0xFF00B8A9,
         baseUrl = "https://api.kimi.com/",
         requiresManualCredentials = true
@@ -88,6 +88,12 @@ enum class AiService(
         displayName = "Venice",
         brandColor = 0xFF7C3AED,
         baseUrl = "https://api.venice.ai/api/v1/",
+        requiresManualCredentials = true
+    ),
+    MOONSHOT(
+        displayName = "Moonshot API (International)",
+        brandColor = 0xFF111827,
+        baseUrl = "https://api.moonshot.ai/",
         requiresManualCredentials = true
     )
 }

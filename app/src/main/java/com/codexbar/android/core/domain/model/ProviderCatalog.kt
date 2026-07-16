@@ -119,6 +119,12 @@ object ProviderCatalog {
             authMode = ProviderAuthMode.API_KEY,
             aliases = setOf("venice ai", "diem", "private inference"),
             guideAnchor = "venice"
+        ),
+        AiService.MOONSHOT to ProviderMetadata(
+            category = ProviderCategory.MODEL_API,
+            authMode = ProviderAuthMode.API_KEY,
+            aliases = setOf("moonshot ai", "kimi api", "kimi k2", "international"),
+            guideAnchor = "moonshot-api-international"
         )
     )
 

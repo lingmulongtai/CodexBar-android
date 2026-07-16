@@ -137,6 +137,8 @@
     <string name="credential_deepseek_setup_body">Create a dedicated DeepSeek API key and paste it below. CodexBar sends it only to api.deepseek.com/user/balance to read API availability and USD/CNY balances; it never requests prompts, chat history, or model responses.</string>
     <string name="credential_venice_setup_title">Venice API balance</string>
     <string name="credential_venice_setup_body">Create a dedicated Venice API key with the narrowest permission that can read billing balance. CodexBar sends it only to api.venice.ai/api/v1/billing/balance to read API availability, DIEM epoch allocation, and USD/DIEM balances; it never requests prompts or inference history.</string>
+    <string name="credential_moonshot_setup_title">Moonshot API balance (International)</string>
+    <string name="credential_moonshot_setup_body">Paste an API key created on the international Moonshot API platform. This is different from a Kimi Code subscription key. CodexBar sends it only to api.moonshot.ai/v1/users/me/balance to read available, cash, and voucher balances; it never requests prompts or model responses.</string>
     <string name="credential_zenmux_management_key">Management API key</string>
     <string name="credential_refresh_token">Refresh Token</string>
     <string name="credential_changes_pending">Changes are not active until validation succeeds.</string>

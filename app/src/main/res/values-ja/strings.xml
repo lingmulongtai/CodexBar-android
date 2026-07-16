@@ -137,6 +137,8 @@
     <string name="credential_deepseek_setup_body">DeepSeekで専用APIキーを作成し、下へ貼り付けてください。CodexBarはAPI利用可否とUSD/CNY残高を取得するため、api.deepseek.com/user/balanceだけへ送信します。プロンプト、チャット履歴、モデル応答は要求しません。</string>
     <string name="credential_venice_setup_title">Venice API残高</string>
     <string name="credential_venice_setup_body">Veniceで、請求残高を読み取れる最小権限の専用APIキーを作成し、下へ貼り付けてください。CodexBarはAPI利用可否、DIEMエポック割当、USD/DIEM残高を取得するため、api.venice.ai/api/v1/billing/balanceだけへ送信します。プロンプトや推論履歴は要求しません。</string>
+    <string name="credential_moonshot_setup_title">Moonshot API残高（国際版）</string>
+    <string name="credential_moonshot_setup_body">Moonshot API国際版プラットフォームで作成したAPIキーを貼り付けてください。Kimi Codeサブスクリプションのキーとは別物です。CodexBarは利用可能残高、現金残高、クーポン残高を取得するため、api.moonshot.ai/v1/users/me/balanceだけへ送信します。プロンプトやモデル応答は要求しません。</string>
     <string name="credential_zenmux_management_key">Management APIキー</string>
     <string name="credential_refresh_token">更新トークン</string>
     <string name="credential_changes_pending">検証に成功するまで変更は反映されません。</string>

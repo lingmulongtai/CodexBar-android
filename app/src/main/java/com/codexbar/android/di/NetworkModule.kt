@@ -15,6 +15,7 @@ import com.codexbar.android.core.network.cursor.CursorApiService
 import com.codexbar.android.core.network.deepseek.DeepSeekApiService
 import com.codexbar.android.core.network.elevenlabs.ElevenLabsApiService
 import com.codexbar.android.core.network.kimi.KimiApiService
+import com.codexbar.android.core.network.moonshot.MoonshotApiService
 import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
 import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
 import com.codexbar.android.core.network.openrouter.OpenRouterApiService
@@ -412,5 +413,21 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(VeniceApiService::class.java)
+    }
+
+    // --- Moonshot API (International) ---
+
+    @Provides
+    @Singleton
+    fun provideMoonshotApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): MoonshotApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.MOONSHOT.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(MoonshotApiService::class.java)
     }
 }

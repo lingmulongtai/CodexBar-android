@@ -9,6 +9,7 @@ import com.codexbar.android.core.data.DeepSeekRepositoryImpl
 import com.codexbar.android.core.data.ElevenLabsRepositoryImpl
 import com.codexbar.android.core.data.GeminiRepositoryImpl
 import com.codexbar.android.core.data.KimiRepositoryImpl
+import com.codexbar.android.core.data.MoonshotRepositoryImpl
 import com.codexbar.android.core.data.OpenRouterRepositoryImpl
 import com.codexbar.android.core.data.SyntheticRepositoryImpl
 import com.codexbar.android.core.data.VeniceRepositoryImpl
@@ -27,6 +28,7 @@ import com.codexbar.android.core.network.deepseek.DeepSeekApiService
 import com.codexbar.android.core.network.elevenlabs.ElevenLabsApiService
 import com.codexbar.android.core.network.gemini.GeminiCompanionClient
 import com.codexbar.android.core.network.kimi.KimiApiService
+import com.codexbar.android.core.network.moonshot.MoonshotApiService
 import com.codexbar.android.core.network.openrouter.OpenRouterApiService
 import com.codexbar.android.core.network.synthetic.SyntheticApiService
 import com.codexbar.android.core.network.venice.VeniceApiService
@@ -177,4 +179,13 @@ object RepositoryModule {
         apiService: VeniceApiService,
         prefsManager: EncryptedPrefsManager
     ): QuotaRepository = VeniceRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.MOONSHOT)
+    fun provideMoonshotRepository(
+        apiService: MoonshotApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = MoonshotRepositoryImpl(apiService, prefsManager)
 }

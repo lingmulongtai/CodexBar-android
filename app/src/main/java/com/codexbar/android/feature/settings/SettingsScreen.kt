@@ -777,6 +777,11 @@ private fun ServiceCredentialSection(
                         body = stringResource(R.string.credential_venice_setup_body),
                         accent = visualStyle.accent
                     )
+                    service == AiService.MOONSHOT -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_moonshot_setup_title),
+                        body = stringResource(R.string.credential_moonshot_setup_body),
+                        accent = visualStyle.accent
+                    )
                 }
 
             if (service != AiService.GEMINI) {
@@ -1204,6 +1209,7 @@ private fun AccountLinkControls(
                 AiService.CHUTES -> stringResource(R.string.credential_chutes_setup_body)
                 AiService.DEEPSEEK -> stringResource(R.string.credential_deepseek_setup_body)
                 AiService.VENICE -> stringResource(R.string.credential_venice_setup_body)
+                AiService.MOONSHOT -> stringResource(R.string.credential_moonshot_setup_body)
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant

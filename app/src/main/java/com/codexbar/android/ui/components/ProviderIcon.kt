@@ -34,5 +34,6 @@ fun AiService.providerIcon(): ImageVector {
         AiService.CHUTES -> Icons.Rounded.SsidChart
         AiService.DEEPSEEK -> Icons.Rounded.Water
         AiService.VENICE -> Icons.Rounded.Explore
+        AiService.MOONSHOT -> Icons.Rounded.AutoAwesome
     }
 }
