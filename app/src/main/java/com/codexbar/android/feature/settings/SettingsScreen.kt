@@ -18,6 +18,7 @@ import androidx.annotation.StringRes
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.KeyboardOptions
@@ -42,8 +44,10 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -52,6 +56,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.HorizontalDivider
@@ -94,6 +99,9 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.domain.model.ProviderAuthMode
+import com.codexbar.android.core.domain.model.ProviderCategory
+import com.codexbar.android.core.domain.model.providerMetadata
 import com.codexbar.android.core.security.PrivacySettings
 import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
 import com.codexbar.android.ui.components.providerIcon
@@ -119,6 +127,26 @@ fun SettingsScreen(
     var enablePersistentAfterSettings by remember { mutableStateOf(false) }
     var enablePersistentAfterPermission by remember { mutableStateOf(false) }
     var selectedLanguage by remember { mutableStateOf(AppLanguage.current()) }
+    var providerSearchQuery by rememberSaveable { mutableStateOf("") }
+    var providerFilterName by rememberSaveable {
+        mutableStateOf(ProviderConnectionFilter.ALL.name)
+    }
+    var providerCategoryName by rememberSaveable {
+        mutableStateOf(ProviderCategoryFilter.ALL.name)
+    }
+    var expandedProviderName by rememberSaveable { mutableStateOf<String?>(null) }
+    val providerFilter = runCatching {
+        ProviderConnectionFilter.valueOf(providerFilterName)
+    }.getOrDefault(ProviderConnectionFilter.ALL)
+    val providerCategory = runCatching {
+        ProviderCategoryFilter.valueOf(providerCategoryName)
+    }.getOrDefault(ProviderCategoryFilter.ALL)
+    val visibleProviders = filterProviders(
+        query = providerSearchQuery,
+        filter = providerFilter,
+        categoryFilter = providerCategory,
+        serviceStates = uiState.serviceStates
+    )
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -194,11 +222,34 @@ fun SettingsScreen(
                     description = stringResource(R.string.settings_accounts_description)
                 )
 
-                AiService.entries.forEach { service ->
+                ProviderDirectoryControls(
+                    query = providerSearchQuery,
+                    onQueryChange = { providerSearchQuery = it },
+                    filter = providerFilter,
+                    onFilterChange = { providerFilterName = it.name },
+                    categoryFilter = providerCategory,
+                    onCategoryFilterChange = { providerCategoryName = it.name },
+                    visibleCount = visibleProviders.size,
+                    totalCount = AiService.entries.size
+                )
+
+                if (visibleProviders.isEmpty()) {
+                    ProviderDirectoryEmptyState()
+                }
+
+                visibleProviders.forEach { service ->
                     val state = uiState.serviceStates[service] ?: ServiceCredentialState()
                     ServiceCredentialSection(
                         service = service,
                         state = state,
+                        expanded = expandedProviderName == service.name,
+                        onToggleExpanded = {
+                            expandedProviderName = if (expandedProviderName == service.name) {
+                                null
+                            } else {
+                                service.name
+                            }
+                        },
                         onFieldChange = { field, value ->
                             viewModel.updateField(service, field, value)
                         },
@@ -396,9 +447,157 @@ private fun LanguageSection(
 }
 
 @Composable
+private fun ProviderDirectoryControls(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    filter: ProviderConnectionFilter,
+    onFilterChange: (ProviderConnectionFilter) -> Unit,
+    categoryFilter: ProviderCategoryFilter,
+    onCategoryFilterChange: (ProviderCategoryFilter) -> Unit,
+    visibleCount: Int,
+    totalCount: Int
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        shape = MaterialTheme.shapes.extraLarge
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = { Text(stringResource(R.string.provider_search_label)) },
+                placeholder = { Text(stringResource(R.string.provider_search_placeholder)) },
+                leadingIcon = {
+                    Icon(Icons.Rounded.Search, contentDescription = null)
+                },
+                trailingIcon = if (query.isNotEmpty()) {
+                    {
+                        IconButton(onClick = { onQueryChange("") }) {
+                            Icon(
+                                Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.action_clear_search)
+                            )
+                        }
+                    }
+                } else {
+                    null
+                }
+            )
+
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                ProviderConnectionFilter.entries.forEachIndexed { index, option ->
+                    SegmentedButton(
+                        selected = option == filter,
+                        onClick = { onFilterChange(option) },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = ProviderConnectionFilter.entries.size
+                        )
+                    ) {
+                        Text(stringResource(option.labelRes()))
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ProviderCategoryFilter.entries.forEach { option ->
+                    FilterChip(
+                        selected = option == categoryFilter,
+                        onClick = { onCategoryFilterChange(option) },
+                        label = { Text(stringResource(option.labelRes())) }
+                    )
+                }
+            }
+
+            Text(
+                text = stringResource(
+                    R.string.provider_result_count,
+                    visibleCount,
+                    totalCount
+                ),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProviderDirectoryEmptyState() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainer
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.provider_empty_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(R.string.provider_empty_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@StringRes
+private fun ProviderConnectionFilter.labelRes(): Int = when (this) {
+    ProviderConnectionFilter.ALL -> R.string.provider_filter_all
+    ProviderConnectionFilter.CONNECTED -> R.string.provider_filter_connected
+    ProviderConnectionFilter.NOT_CONNECTED -> R.string.provider_filter_not_connected
+}
+
+@StringRes
+private fun ProviderCategoryFilter.labelRes(): Int = when (this) {
+    ProviderCategoryFilter.ALL -> R.string.provider_category_all
+    ProviderCategoryFilter.CODING -> R.string.provider_category_coding
+    ProviderCategoryFilter.MODEL_API -> R.string.provider_category_model_api
+    ProviderCategoryFilter.ROUTER -> R.string.provider_category_router
+    ProviderCategoryFilter.MEDIA -> R.string.provider_category_media
+}
+
+@StringRes
+private fun ProviderAuthMode.labelRes(): Int = when (this) {
+    ProviderAuthMode.DEVICE_SIGN_IN -> R.string.provider_auth_sign_in
+    ProviderAuthMode.LOCAL_COMPANION -> R.string.provider_auth_companion
+    ProviderAuthMode.API_KEY -> R.string.provider_auth_api_key
+    ProviderAuthMode.SESSION_COOKIE -> R.string.provider_auth_session_cookie
+    ProviderAuthMode.ACCESS_TOKEN -> R.string.provider_auth_access_token
+}
+
+@StringRes
+private fun ProviderCategory.labelRes(): Int = when (this) {
+    ProviderCategory.CODING -> R.string.provider_category_coding
+    ProviderCategory.MODEL_API -> R.string.provider_category_model_api
+    ProviderCategory.ROUTER -> R.string.provider_category_router
+    ProviderCategory.MEDIA -> R.string.provider_category_media
+}
+
+@Composable
 private fun ServiceCredentialSection(
     service: AiService,
     state: ServiceCredentialState,
+    expanded: Boolean,
+    onToggleExpanded: () -> Unit,
     onFieldChange: (String, String) -> Unit,
     onStartAccountLink: () -> Unit,
     onOpenAccountLink: (String) -> Unit,
@@ -426,10 +625,15 @@ private fun ServiceCredentialSection(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(if (expanded) 20.dp else 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggleExpanded),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Surface(
                     modifier = Modifier.size(46.dp),
                     shape = MaterialTheme.shapes.small,
@@ -450,6 +654,15 @@ private fun ServiceCredentialSection(
                     Text(
                         text = service.displayName,
                         style = MaterialTheme.typography.titleLarge
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.provider_metadata_summary,
+                            stringResource(service.providerMetadata.category.labelRes()),
+                            stringResource(service.providerMetadata.authMode.labelRes())
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 val statusColor = if (state.isConnected) {
@@ -474,44 +687,62 @@ private fun ServiceCredentialSection(
                         color = statusColor
                     )
                 }
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = if (expanded) {
+                        Icons.Rounded.ExpandLess
+                    } else {
+                        Icons.Rounded.ExpandMore
+                    },
+                    contentDescription = stringResource(
+                        if (expanded) {
+                            R.string.action_collapse_provider
+                        } else {
+                            R.string.action_expand_provider
+                        },
+                        service.displayName
+                    ),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
-            when {
-                service == AiService.GEMINI -> GeminiCompanionSetup(
-                    state = state,
-                    accent = visualStyle.accent,
-                    onPairingCodeChange = onGeminiPairingCodeChange,
-                    onConnect = onConnectGeminiCompanion
-                )
-                service.supportsAccountLink() -> AccountLinkControls(
-                    service = service,
-                    state = state,
-                    accent = visualStyle.accent,
-                    onAccent = visualStyle.onAccent,
-                    onStartAccountLink = onStartAccountLink,
-                    onOpenAccountLink = onOpenAccountLink,
-                    onCopyAccountCode = onCopyAccountCode
-                )
-                service == AiService.CLAUDE -> ClaudeSetupGuide(
-                    accent = visualStyle.accent,
-                    onCopySetupCommand = onCopySetupCommand
-                )
-                service == AiService.CURSOR -> ProviderSecretSetupGuide(
-                    title = stringResource(R.string.credential_cursor_setup_title),
-                    body = stringResource(R.string.credential_cursor_setup_body),
-                    accent = visualStyle.accent
-                )
-                service == AiService.ZAI -> ProviderSecretSetupGuide(
-                    title = stringResource(R.string.credential_zai_setup_title),
-                    body = stringResource(R.string.credential_zai_setup_body),
-                    accent = visualStyle.accent
-                )
-                service == AiService.ZENMUX -> ProviderSecretSetupGuide(
-                    title = stringResource(R.string.credential_zenmux_setup_title),
-                    body = stringResource(R.string.credential_zenmux_setup_body),
-                    accent = visualStyle.accent
-                )
-            }
+            if (expanded) {
+                when {
+                    service == AiService.GEMINI -> GeminiCompanionSetup(
+                        state = state,
+                        accent = visualStyle.accent,
+                        onPairingCodeChange = onGeminiPairingCodeChange,
+                        onConnect = onConnectGeminiCompanion
+                    )
+                    service.supportsAccountLink() -> AccountLinkControls(
+                        service = service,
+                        state = state,
+                        accent = visualStyle.accent,
+                        onAccent = visualStyle.onAccent,
+                        onStartAccountLink = onStartAccountLink,
+                        onOpenAccountLink = onOpenAccountLink,
+                        onCopyAccountCode = onCopyAccountCode
+                    )
+                    service == AiService.CLAUDE -> ClaudeSetupGuide(
+                        accent = visualStyle.accent,
+                        onCopySetupCommand = onCopySetupCommand
+                    )
+                    service == AiService.CURSOR -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_cursor_setup_title),
+                        body = stringResource(R.string.credential_cursor_setup_body),
+                        accent = visualStyle.accent
+                    )
+                    service == AiService.ZAI -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_zai_setup_title),
+                        body = stringResource(R.string.credential_zai_setup_body),
+                        accent = visualStyle.accent
+                    )
+                    service == AiService.ZENMUX -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_zenmux_setup_title),
+                        body = stringResource(R.string.credential_zenmux_setup_body),
+                        accent = visualStyle.accent
+                    )
+                }
 
             if (service != AiService.GEMINI) {
                 Surface(
@@ -606,6 +837,7 @@ private fun ServiceCredentialSection(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
             }
         }
     }
@@ -786,11 +1018,15 @@ private fun ManualCredentialFields(
             label = {
                 Text(
                     stringResource(
-                        when (service) {
-                            AiService.COPILOT -> R.string.credential_github_oauth_token
-                            AiService.CURSOR -> R.string.credential_cursor_cookie_header
-                            AiService.ZAI -> R.string.credential_zai_api_key
-                            AiService.ZENMUX -> R.string.credential_zenmux_management_key
+                        when {
+                            service == AiService.COPILOT -> R.string.credential_github_oauth_token
+                            service == AiService.ZENMUX -> R.string.credential_zenmux_management_key
+                            service.providerMetadata.authMode == ProviderAuthMode.SESSION_COOKIE -> {
+                                R.string.credential_provider_session_cookie
+                            }
+                            service.providerMetadata.authMode == ProviderAuthMode.API_KEY -> {
+                                R.string.credential_provider_api_key
+                            }
                             else -> R.string.credential_access_token
                         }
                     )
@@ -1123,20 +1359,11 @@ internal fun deviceCodeForClipboard(userCode: String): String {
 }
 
 private fun AiService.supportsAccountLink(): Boolean {
-    return this == AiService.CODEX || this == AiService.COPILOT
+    return providerMetadata.authMode == ProviderAuthMode.DEVICE_SIGN_IN
 }
 
 internal fun accountGuideUrl(service: AiService): String {
-    val anchor = when (service) {
-        AiService.CLAUDE -> "claude-anthropic"
-        AiService.CODEX -> "codex-openai--chatgpt"
-        AiService.GEMINI -> "gemini-google"
-        AiService.COPILOT -> "github-copilot"
-        AiService.CURSOR -> "cursor"
-        AiService.ZAI -> "zai"
-        AiService.ZENMUX -> "zenmux"
-    }
-    return "$ACCOUNT_GUIDE_BASE_URL#$anchor"
+    return "$ACCOUNT_GUIDE_BASE_URL#${service.providerMetadata.guideAnchor}"
 }
 
 private fun openAuthUrl(context: Context, url: String) {

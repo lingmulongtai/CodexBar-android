@@ -11,8 +11,9 @@ import com.codexbar.android.core.data.QuotaRepositoryRegistry
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.Credential
-import com.codexbar.android.core.domain.model.ProviderSecretKind
+import com.codexbar.android.core.domain.model.ProviderAuthMode
 import com.codexbar.android.core.domain.model.Result
+import com.codexbar.android.core.domain.model.providerMetadata
 import com.codexbar.android.core.monitoring.MonitoringSessionStore
 import com.codexbar.android.core.network.gemini.GeminiCompanionPairing
 import com.codexbar.android.core.notification.QuotaNotificationService
@@ -120,12 +121,12 @@ class SettingsViewModel @Inject constructor(
     private fun buildCredential(service: AiService, state: ServiceCredentialState): Credential? {
         if (state.accessToken.isBlank()) return null
 
-        return when (service) {
-            AiService.CLAUDE -> Credential.ClaudeCredential(
+        return when {
+            service == AiService.CLAUDE -> Credential.ClaudeCredential(
                 accessToken = state.accessToken,
                 refreshToken = state.refreshToken.ifBlank { null }
             )
-            AiService.CODEX -> {
+            service == AiService.CODEX -> {
                 if (state.refreshToken.isBlank()) return null
                 Credential.CodexCredential(
                     accessToken = state.accessToken,
@@ -133,25 +134,16 @@ class SettingsViewModel @Inject constructor(
                     accountId = state.accountId.ifBlank { null }
                 )
             }
-            AiService.GEMINI -> null
-            AiService.COPILOT -> Credential.CopilotCredential(
+            service == AiService.GEMINI -> null
+            service == AiService.COPILOT -> Credential.CopilotCredential(
                 accessToken = state.accessToken
             )
-            AiService.CURSOR -> Credential.ProviderSecretCredential(
+            service.providerMetadata.secretKind != null -> Credential.ProviderSecretCredential(
                 service = service,
-                kind = ProviderSecretKind.COOKIE_HEADER,
+                kind = checkNotNull(service.providerMetadata.secretKind),
                 accessToken = state.accessToken.trim()
             )
-            AiService.ZAI -> Credential.ProviderSecretCredential(
-                service = service,
-                kind = ProviderSecretKind.API_KEY,
-                accessToken = state.accessToken.trim()
-            )
-            AiService.ZENMUX -> Credential.ProviderSecretCredential(
-                service = service,
-                kind = ProviderSecretKind.API_KEY,
-                accessToken = state.accessToken.trim()
-            )
+            else -> null
         }
     }
 
@@ -440,7 +432,7 @@ class SettingsViewModel @Inject constructor(
     private fun repositoryFor(service: AiService) = repositoryRegistry.repositoryFor(service)
 
     private fun AiService.supportsDeviceAccountLink(): Boolean {
-        return this == AiService.CODEX || this == AiService.COPILOT
+        return providerMetadata.authMode == ProviderAuthMode.DEVICE_SIGN_IN
     }
 
     fun updateGeminiPairingCode(value: String) {
