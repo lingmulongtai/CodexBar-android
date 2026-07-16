@@ -148,12 +148,12 @@ class EncryptedPrefsManager @Inject constructor(
         updateCache(updated)
     }
 
-    fun isNotificationsEnabled(): Boolean {
+    fun isPersistentNotificationEnabled(): Boolean {
         refreshCacheAsync()
-        return cachedSettings.notificationsEnabled
+        return cachedSettings.persistentNotificationEnabled
     }
 
-    suspend fun setNotificationsEnabled(enabled: Boolean) {
+    suspend fun setPersistentNotificationEnabled(enabled: Boolean) {
         val updated = dataStore.edit { prefs ->
             prefs[KEY_NOTIFICATIONS_ENABLED] = enabled
         }
@@ -243,7 +243,7 @@ class EncryptedPrefsManager @Inject constructor(
                 .filter { service -> readCredential(prefs, service) != null }
                 .toSet(),
             refreshIntervalMinutes = prefs[KEY_REFRESH_INTERVAL] ?: DEFAULT_REFRESH_INTERVAL_MINUTES,
-            notificationsEnabled = prefs[KEY_NOTIFICATIONS_ENABLED] ?: true,
+            persistentNotificationEnabled = prefs[KEY_NOTIFICATIONS_ENABLED] ?: true,
             privacySettings = PrivacySettings(
                 screenPrivacyEnabled = prefs[KEY_PRIVACY_SCREEN_ENABLED] ?: true,
                 lockScreenRedactionEnabled = prefs[KEY_PRIVACY_LOCK_SCREEN_REDACTION_ENABLED] ?: true,
@@ -324,7 +324,7 @@ class EncryptedPrefsManager @Inject constructor(
     private data class CachedSettings(
         val credentialServices: Set<AiService> = emptySet(),
         val refreshIntervalMinutes: Long = DEFAULT_REFRESH_INTERVAL_MINUTES,
-        val notificationsEnabled: Boolean = true,
+        val persistentNotificationEnabled: Boolean = true,
         val privacySettings: PrivacySettings = FAIL_CLOSED_PRIVACY_SETTINGS
     )
 

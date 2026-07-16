@@ -66,7 +66,7 @@ class SettingsViewModel @Inject constructor(
                     refreshIntervalMinutes = RefreshIntervalPolicy.normalize(
                         prefsManager.getRefreshInterval()
                     ),
-                    notificationsEnabled = prefsManager.isNotificationsEnabled(),
+                    persistentNotificationEnabled = prefsManager.isPersistentNotificationEnabled(),
                     isMonitoring = monitoringSession != null,
                     monitoringDurationMinutes = monitoringSessionStore.preferredDurationMinutes(),
                     monitoringRemainingMinutes = monitoringSession?.remainingMinutes(),
@@ -295,21 +295,19 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
-    fun setNotificationsEnabled(enabled: Boolean) {
+    fun setPersistentNotificationEnabled(enabled: Boolean) {
         _uiState.update {
-            it.copy(
-                notificationsEnabled = enabled,
-                isMonitoring = if (enabled) it.isMonitoring else false,
-                monitoringRemainingMinutes = if (enabled) it.monitoringRemainingMinutes else null
-            )
+            it.copy(persistentNotificationEnabled = enabled)
         }
         viewModelScope.launch {
-            prefsManager.setNotificationsEnabled(enabled)
+            prefsManager.setPersistentNotificationEnabled(enabled)
             if (enabled) {
-                WorkManagerInitializer.enqueueManualQuotaRefresh(appContext, source = "notifications_enabled")
+                WorkManagerInitializer.enqueueManualQuotaRefresh(
+                    appContext,
+                    source = "persistent_notification_enabled"
+                )
             } else {
-                WorkManagerInitializer.stopMonitoringSession(appContext)
-                notificationService.cancelAllNotifications()
+                notificationService.cancelQuotaNotification()
             }
         }
     }
@@ -325,7 +323,6 @@ class SettingsViewModel @Inject constructor(
 
     fun startMonitoring() {
         viewModelScope.launch {
-            prefsManager.setNotificationsEnabled(true)
             val session = WorkManagerInitializer.startMonitoringSession(
                 context = appContext,
                 durationMinutes = _uiState.value.monitoringDurationMinutes
@@ -333,7 +330,6 @@ class SettingsViewModel @Inject constructor(
             notificationService.showMonitoringPlaceholder(session)
             _uiState.update {
                 it.copy(
-                    notificationsEnabled = true,
                     isMonitoring = true,
                     monitoringRemainingMinutes = session.remainingMinutes()
                 )
@@ -400,7 +396,7 @@ class SettingsViewModel @Inject constructor(
         _uiState.update {
             SettingsUiState(
                 refreshIntervalMinutes = it.refreshIntervalMinutes,
-                notificationsEnabled = it.notificationsEnabled,
+                persistentNotificationEnabled = it.persistentNotificationEnabled,
                 isMonitoring = it.isMonitoring,
                 monitoringDurationMinutes = it.monitoringDurationMinutes,
                 monitoringRemainingMinutes = it.monitoringRemainingMinutes,

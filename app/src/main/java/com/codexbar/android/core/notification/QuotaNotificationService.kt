@@ -21,6 +21,7 @@ import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.monitoring.MonitoringActionReceiver
 import com.codexbar.android.core.monitoring.MonitoringSession
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
+import com.codexbar.android.core.presentation.QuotaSeverity
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.PrivacySettings
@@ -37,6 +38,7 @@ class QuotaNotificationService @Inject constructor(
 ) {
     companion object {
         const val CHANNEL_ID = "quota_monitor"
+        const val LIVE_CHANNEL_ID = "quota_live_monitor"
         const val RESET_CHANNEL_ID = "quota_reset_alert"
         const val NOTIFICATION_ID = 1001
         const val MONITORING_NOTIFICATION_ID = 1002
@@ -69,7 +71,37 @@ class QuotaNotificationService @Inject constructor(
             description = localizedString(R.string.notification_channel_reset_description)
         }
 
-        manager.createNotificationChannels(listOf(monitorChannel, resetChannel))
+        val liveChannel = NotificationChannel(
+            LIVE_CHANNEL_ID,
+            localizedString(R.string.notification_channel_live_name),
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = localizedString(R.string.notification_channel_live_description)
+            setShowBadge(false)
+        }
+
+        manager.createNotificationChannels(listOf(monitorChannel, liveChannel, resetChannel))
+    }
+
+    /**
+     * Publishes one immutable presentation snapshot to every enabled notification surface.
+     * The persistent status and the user-started Live Update are intentionally independent.
+     */
+    fun publishSnapshot(
+        snapshot: QuotaPresentationSnapshot,
+        monitoringSession: MonitoringSession?
+    ) {
+        if (prefsManager.isPersistentNotificationEnabled()) {
+            showQuotaNotification(snapshot)
+        } else {
+            cancelQuotaNotification()
+        }
+
+        if (monitoringSession != null) {
+            showMonitoringNotification(snapshot, monitoringSession)
+        } else {
+            cancelMonitoringNotification()
+        }
     }
 
     fun showQuotaNotification(snapshot: QuotaPresentationSnapshot) {
@@ -153,7 +185,7 @@ class QuotaNotificationService @Inject constructor(
         val progress = if (privacySettings.notificationRedactionEnabled) {
             0
         } else {
-            primaryMetric?.barProgress?.times(100)?.toInt()?.coerceIn(0, 100) ?: 0
+            primaryMetric?.usedPercent?.coerceIn(0, 100) ?: 0
         }
         val remaining = session.remainingMinutes()
         val remainingDuration = localizedString(R.string.duration_minutes, remaining)
@@ -186,7 +218,7 @@ class QuotaNotificationService @Inject constructor(
                 endsAtMillis = session.endsAtMillis
             )
         } else {
-            NotificationCompat.Builder(context, CHANNEL_ID)
+            NotificationCompat.Builder(context, LIVE_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_quota)
                 .setContentTitle(title)
                 .setContentText(text)
@@ -203,7 +235,7 @@ class QuotaNotificationService @Inject constructor(
                 .setShowWhen(true)
                 .applyPrivacy(
                     privacySettings = privacySettings,
-                    channelId = CHANNEL_ID,
+                    channelId = LIVE_CHANNEL_ID,
                     redactedTitle = title,
                     redactedText = hiddenText
                 )
@@ -237,6 +269,11 @@ class QuotaNotificationService @Inject constructor(
     fun cancelMonitoringNotification() {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.cancel(MONITORING_NOTIFICATION_ID)
+    }
+
+    fun cancelQuotaNotification() {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.cancel(NOTIFICATION_ID)
     }
 
     fun cancelAllNotifications() {
@@ -287,15 +324,24 @@ class QuotaNotificationService @Inject constructor(
         privacySettings: PrivacySettings,
         endsAtMillis: Long
     ): Notification {
+        val progressColor = when (primaryService?.primaryMetric?.severity) {
+            QuotaSeverity.Good -> Color.rgb(52, 168, 83)
+            QuotaSeverity.Warning -> Color.rgb(251, 188, 4)
+            QuotaSeverity.Critical -> Color.rgb(234, 67, 53)
+            else -> primaryService?.service?.brandColor?.toInt() ?: Color.GRAY
+        }
         val progressStyle = Notification.ProgressStyle()
             .setStyledByProgress(true)
             .setProgress(progress)
             .addProgressSegment(
                 Notification.ProgressStyle.Segment(100)
-                    .setColor(primaryService?.service?.brandColor?.toInt() ?: Color.GRAY)
+                    .setColor(progressColor)
+            )
+            .setProgressTrackerIcon(
+                Icon.createWithResource(context, R.drawable.ic_quota)
             )
 
-        val publicVersion = Notification.Builder(context, CHANNEL_ID)
+        val publicVersion = Notification.Builder(context, LIVE_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_quota)
             .setContentTitle(title)
             .setContentText(localizedString(R.string.notification_quota_hidden))
@@ -307,12 +353,13 @@ class QuotaNotificationService @Inject constructor(
             "$progress%"
         }
 
-        return Notification.Builder(context, CHANNEL_ID)
+        return Notification.Builder(context, LIVE_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_quota)
             .setContentTitle(title)
             .setContentText(text)
             .setSubText(subText)
             .setStyle(progressStyle)
+            .setColor(progressColor)
             .setContentIntent(dashboardPendingIntent())
             .setOngoing(true)
             .setOnlyAlertOnce(true)

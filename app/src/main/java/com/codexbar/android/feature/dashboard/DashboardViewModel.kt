@@ -8,6 +8,8 @@ import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.domain.repository.QuotaRepository
+import com.codexbar.android.core.monitoring.MonitoringSessionStore
+import com.codexbar.android.core.notification.QuotaNotificationService
 import com.codexbar.android.core.presentation.AndroidQuotaPresentationText
 import com.codexbar.android.core.presentation.PrivacyPresentation
 import com.codexbar.android.core.presentation.QuotaPresentationMapper
@@ -34,6 +36,8 @@ class DashboardViewModel @Inject constructor(
     @CopilotRepository private val copilotRepository: QuotaRepository,
     private val prefsManager: EncryptedPrefsManager,
     private val quotaHistoryStore: QuotaHistoryStore,
+    private val monitoringSessionStore: MonitoringSessionStore,
+    private val notificationService: QuotaNotificationService,
     @ApplicationContext appContext: Context
 ) : ViewModel() {
 
@@ -65,8 +69,14 @@ class DashboardViewModel @Inject constructor(
                 }
 
                 if (repos.isEmpty()) {
-                    _uiState.value = DashboardUiState.Content(
-                        presentationMapper.map(emptyList(), generatedAt = Instant.now())
+                    val snapshot = presentationMapper.map(
+                        emptyList(),
+                        generatedAt = Instant.now()
+                    )
+                    _uiState.value = DashboardUiState.Content(snapshot)
+                    notificationService.publishSnapshot(
+                        snapshot = snapshot,
+                        monitoringSession = monitoringSessionStore.activeSession()
                     )
                     return@launch
                 }
@@ -101,14 +111,17 @@ class DashboardViewModel @Inject constructor(
                     widgetRedacted = privacySettings.widgetRedactionEnabled
                 )
 
-                _uiState.value = DashboardUiState.Content(
-                    presentationMapper.map(
-                        quotas = successfulQuotas,
-                        errors = errors,
-                        generatedAt = now,
-                        privacy = privacy,
-                        paceByMetricKey = paceByMetricKey
-                    )
+                val snapshot = presentationMapper.map(
+                    quotas = successfulQuotas,
+                    errors = errors,
+                    generatedAt = now,
+                    privacy = privacy,
+                    paceByMetricKey = paceByMetricKey
+                )
+                _uiState.value = DashboardUiState.Content(snapshot)
+                notificationService.publishSnapshot(
+                    snapshot = snapshot,
+                    monitoringSession = monitoringSessionStore.activeSession()
                 )
             } finally {
                 _isRefreshing.value = false

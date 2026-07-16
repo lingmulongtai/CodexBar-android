@@ -114,29 +114,29 @@ fun SettingsScreen(
     val context = LocalContext.current
     var notificationsAllowed by remember { mutableStateOf(context.canPostNotifications()) }
     var promotedUpdatesAllowed by remember { mutableStateOf(context.canPostPromotedNotifications()) }
-    var enableNotificationsAfterSettings by remember { mutableStateOf(false) }
+    var enablePersistentAfterSettings by remember { mutableStateOf(false) }
+    var enablePersistentAfterPermission by remember { mutableStateOf(false) }
     var selectedLanguage by remember { mutableStateOf(AppLanguage.current()) }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         val allowed = granted && context.canPostNotifications()
         notificationsAllowed = allowed
-        viewModel.setNotificationsEnabled(allowed)
+        if (allowed && enablePersistentAfterPermission) {
+            viewModel.setPersistentNotificationEnabled(true)
+        }
+        enablePersistentAfterPermission = false
     }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         val allowed = context.canPostNotifications()
         notificationsAllowed = allowed
         promotedUpdatesAllowed = context.canPostPromotedNotifications()
-        if (enableNotificationsAfterSettings) {
-            enableNotificationsAfterSettings = false
+        if (enablePersistentAfterSettings) {
+            enablePersistentAfterSettings = false
             if (allowed) {
-                viewModel.setNotificationsEnabled(true)
-            } else if (uiState.notificationsEnabled) {
-                viewModel.setNotificationsEnabled(false)
+                viewModel.setPersistentNotificationEnabled(true)
             }
-        } else if (!allowed && uiState.notificationsEnabled) {
-            viewModel.setNotificationsEnabled(false)
         }
         viewModel.syncMonitoringState()
     }
@@ -225,34 +225,34 @@ fun SettingsScreen(
                 )
 
                 NotificationsSection(
-                    enabled = uiState.notificationsEnabled,
+                    persistentEnabled = uiState.persistentNotificationEnabled,
                     notificationsAllowed = notificationsAllowed,
                     isMonitoring = uiState.isMonitoring,
                     durationMinutes = uiState.monitoringDurationMinutes,
                     remainingMinutes = uiState.monitoringRemainingMinutes,
                     hasConnectedService = uiState.serviceStates.values.any { it.isConnected },
                     promotedUpdatesAllowed = promotedUpdatesAllowed,
-                    onToggle = { requested ->
+                    onPersistentToggle = { requested ->
                         when {
-                            !requested -> viewModel.setNotificationsEnabled(false)
+                            !requested -> viewModel.setPersistentNotificationEnabled(false)
                             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                                 !context.hasNotificationPermission() -> {
+                                enablePersistentAfterPermission = true
                                 notificationPermissionLauncher.launch(
                                     Manifest.permission.POST_NOTIFICATIONS
                                 )
                             }
                             !context.canPostNotifications() -> {
-                                enableNotificationsAfterSettings = true
+                                enablePersistentAfterSettings = true
                                 openAppNotificationSettings(context)
                             }
-                            else -> viewModel.setNotificationsEnabled(true)
+                            else -> viewModel.setPersistentNotificationEnabled(true)
                         }
                     },
                     onDurationChange = viewModel::setMonitoringDuration,
                     onStartMonitoring = viewModel::startMonitoring,
                     onStopMonitoring = viewModel::stopMonitoring,
                     onOpenNotificationSettings = {
-                        enableNotificationsAfterSettings = true
                         openAppNotificationSettings(context)
                     },
                     onOpenPromotionSettings = { openPromotionSettings(context) }
@@ -1250,14 +1250,14 @@ private fun RefreshIntervalSection(
 
 @Composable
 private fun NotificationsSection(
-    enabled: Boolean,
+    persistentEnabled: Boolean,
     notificationsAllowed: Boolean,
     isMonitoring: Boolean,
     durationMinutes: Long,
     remainingMinutes: Long?,
     hasConnectedService: Boolean,
     promotedUpdatesAllowed: Boolean,
-    onToggle: (Boolean) -> Unit,
+    onPersistentToggle: (Boolean) -> Unit,
     onDurationChange: (Long) -> Unit,
     onStartMonitoring: () -> Unit,
     onStopMonitoring: () -> Unit,
@@ -1287,18 +1287,18 @@ private fun NotificationsSection(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(R.string.notifications_title),
+                        text = stringResource(R.string.notifications_persistent_title),
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
-                        text = stringResource(R.string.notifications_description),
+                        text = stringResource(R.string.notifications_persistent_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Switch(
-                    checked = enabled && notificationsAllowed,
-                    onCheckedChange = onToggle
+                    checked = persistentEnabled,
+                    onCheckedChange = onPersistentToggle
                 )
             }
 
@@ -1323,8 +1323,11 @@ private fun NotificationsSection(
                         }
                         stringResource(R.string.notifications_live_running, remaining)
                     }
-                    enabled && notificationsAllowed -> stringResource(R.string.notifications_ready)
-                    else -> stringResource(R.string.notifications_off)
+                    persistentEnabled && notificationsAllowed -> {
+                        stringResource(R.string.notifications_persistent_on)
+                    }
+                    persistentEnabled -> stringResource(R.string.notifications_permission_needed)
+                    else -> stringResource(R.string.notifications_persistent_off)
                 },
                 style = MaterialTheme.typography.labelLarge,
                 color = if (isMonitoring) {
@@ -1371,7 +1374,7 @@ private fun NotificationsSection(
             } else {
                 Button(
                     onClick = onStartMonitoring,
-                    enabled = enabled && notificationsAllowed && hasConnectedService,
+                    enabled = notificationsAllowed && hasConnectedService,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(stringResource(R.string.action_start_live_monitor))
