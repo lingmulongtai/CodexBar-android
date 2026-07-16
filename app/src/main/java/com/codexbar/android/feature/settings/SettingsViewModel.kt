@@ -7,11 +7,11 @@ import com.codexbar.android.R
 import com.codexbar.android.core.auth.AccountLinkManager
 import com.codexbar.android.core.auth.DeviceAuthSession
 import com.codexbar.android.core.data.QuotaHistoryStore
+import com.codexbar.android.core.data.QuotaRepositoryRegistry
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.domain.model.Result
-import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.monitoring.MonitoringSessionStore
 import com.codexbar.android.core.network.gemini.GeminiCompanionPairing
 import com.codexbar.android.core.notification.QuotaNotificationService
@@ -20,10 +20,6 @@ import com.codexbar.android.core.security.PrivacySettings
 import com.codexbar.android.core.widget.WidgetPrefsManager
 import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
 import com.codexbar.android.core.workmanager.WorkManagerInitializer
-import com.codexbar.android.di.ClaudeRepository
-import com.codexbar.android.di.CodexRepository
-import com.codexbar.android.di.CopilotRepository
-import com.codexbar.android.di.GeminiRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -41,10 +37,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    @ClaudeRepository private val claudeRepository: QuotaRepository,
-    @CodexRepository private val codexRepository: QuotaRepository,
-    @GeminiRepository private val geminiRepository: QuotaRepository,
-    @CopilotRepository private val copilotRepository: QuotaRepository,
+    private val repositoryRegistry: QuotaRepositoryRegistry,
     private val accountLinkManager: AccountLinkManager,
     private val prefsManager: EncryptedPrefsManager,
     private val quotaHistoryStore: QuotaHistoryStore,
@@ -424,14 +417,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private fun repositoryFor(service: AiService): QuotaRepository {
-        return when (service) {
-            AiService.CLAUDE -> claudeRepository
-            AiService.CODEX -> codexRepository
-            AiService.GEMINI -> geminiRepository
-            AiService.COPILOT -> copilotRepository
-        }
-    }
+    private fun repositoryFor(service: AiService) = repositoryRegistry.repositoryFor(service)
 
     private fun AiService.supportsDeviceAccountLink(): Boolean {
         return this == AiService.CODEX || this == AiService.COPILOT
@@ -481,7 +467,7 @@ class SettingsViewModel @Inject constructor(
         )
         viewModelScope.launch {
             val hadPreviousConnection = prefsManager.loadCredential(AiService.GEMINI) != null
-            val result = geminiRepository.validateCredential(credential)
+            val result = repositoryFor(AiService.GEMINI).validateCredential(credential)
             when (result) {
                 is Result.Success -> {
                     prefsManager.saveCredential(AiService.GEMINI, credential)

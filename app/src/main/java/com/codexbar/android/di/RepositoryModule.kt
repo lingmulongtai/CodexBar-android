@@ -4,6 +4,7 @@ import com.codexbar.android.core.data.ClaudeRepositoryImpl
 import com.codexbar.android.core.data.CodexRepositoryImpl
 import com.codexbar.android.core.data.CopilotRepositoryImpl
 import com.codexbar.android.core.data.GeminiRepositoryImpl
+import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.network.claude.ClaudeApiService
 import com.codexbar.android.core.network.claude.ClaudeTokenRefreshService
@@ -14,27 +15,15 @@ import com.codexbar.android.core.network.gemini.GeminiCompanionClient
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.TokenRefreshCoordinator
 import dagger.Module
+import dagger.MapKey
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Qualifier
+import dagger.multibindings.IntoMap
 import javax.inject.Singleton
 
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class ClaudeRepository
-
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class CodexRepository
-
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class GeminiRepository
-
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class CopilotRepository
+@MapKey
+annotation class AiServiceKey(val value: AiService)
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -42,7 +31,8 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    @ClaudeRepository
+    @IntoMap
+    @AiServiceKey(AiService.CLAUDE)
     fun provideClaudeRepository(
         apiService: ClaudeApiService,
         tokenRefreshService: ClaudeTokenRefreshService,
@@ -51,7 +41,8 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    @CodexRepository
+    @IntoMap
+    @AiServiceKey(AiService.CODEX)
     fun provideCodexRepository(
         apiService: CodexApiService,
         tokenRefreshService: CodexTokenRefreshService,
@@ -61,7 +52,8 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    @GeminiRepository
+    @IntoMap
+    @AiServiceKey(AiService.GEMINI)
     fun provideGeminiRepository(
         companionClient: GeminiCompanionClient,
         prefsManager: EncryptedPrefsManager
@@ -69,7 +61,8 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    @CopilotRepository
+    @IntoMap
+    @AiServiceKey(AiService.COPILOT)
     fun provideCopilotRepository(
         apiService: CopilotApiService,
         prefsManager: EncryptedPrefsManager
