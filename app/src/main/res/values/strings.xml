@@ -125,6 +125,8 @@
     <string name="credential_zenmux_setup_body">Create a Management API key at zenmux.ai/platform/management. Standard inference API keys do not work. CodexBar requests only subscription quota details and never reads prompts or request logs.</string>
     <string name="credential_kimi_setup_title">Kimi Code API</string>
     <string name="credential_kimi_setup_body">Create an API key in the Kimi Code console and paste it below. CodexBar sends it only to api.kimi.com/coding/v1/usages to read the rolling and weekly coding quotas; it never requests prompts or inference history.</string>
+    <string name="credential_elevenlabs_setup_title">ElevenLabs subscription</string>
+    <string name="credential_elevenlabs_setup_body">Create a restricted API key in ElevenLabs and allow User subscription read access. CodexBar reads character and voice-slot quotas from api.elevenlabs.io; it never requests generated audio, voices, or project content.</string>
     <string name="credential_zenmux_management_key">Management API key</string>
     <string name="credential_refresh_token">Refresh Token</string>
     <string name="credential_changes_pending">Changes are not active until validation succeeds.</string>

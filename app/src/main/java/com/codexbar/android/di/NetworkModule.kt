@@ -11,6 +11,7 @@ import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.copilot.CopilotApiService
 import com.codexbar.android.core.network.cursor.CursorApiService
+import com.codexbar.android.core.network.elevenlabs.ElevenLabsApiService
 import com.codexbar.android.core.network.kimi.KimiApiService
 import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
 import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
@@ -310,5 +311,21 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(KimiApiService::class.java)
+    }
+
+    // --- ElevenLabs ---
+
+    @Provides
+    @Singleton
+    fun provideElevenLabsApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): ElevenLabsApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.ELEVENLABS.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(ElevenLabsApiService::class.java)
     }
 }

@@ -9,6 +9,7 @@ import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material.icons.rounded.Hub
 import androidx.compose.material.icons.rounded.Mouse
+import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.codexbar.android.core.domain.model.AiService
 
@@ -22,5 +23,6 @@ fun AiService.providerIcon(): ImageVector {
         AiService.ZAI -> Icons.Rounded.DataUsage
         AiService.ZENMUX -> Icons.Rounded.Hub
         AiService.KIMI -> Icons.Rounded.Bolt
+        AiService.ELEVENLABS -> Icons.Rounded.RecordVoiceOver
     }
 }

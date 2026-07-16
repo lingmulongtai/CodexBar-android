@@ -53,5 +53,11 @@ enum class AiService(
         brandColor = 0xFF00B8A9,
         baseUrl = "https://api.kimi.com/",
         requiresManualCredentials = true
+    ),
+    ELEVENLABS(
+        displayName = "ElevenLabs",
+        brandColor = 0xFF6C5CE7,
+        baseUrl = "https://api.elevenlabs.io/",
+        requiresManualCredentials = true
     )
 }

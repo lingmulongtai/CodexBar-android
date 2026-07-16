@@ -83,6 +83,12 @@ object ProviderCatalog {
             authMode = ProviderAuthMode.API_KEY,
             aliases = setOf("kimi code", "moonshot ai coding"),
             guideAnchor = "kimi"
+        ),
+        AiService.ELEVENLABS to ProviderMetadata(
+            category = ProviderCategory.MEDIA,
+            authMode = ProviderAuthMode.API_KEY,
+            aliases = setOf("eleven labs", "text to speech", "tts", "voice ai"),
+            guideAnchor = "elevenlabs"
         )
     )
 

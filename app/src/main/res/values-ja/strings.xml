@@ -125,6 +125,8 @@
     <string name="credential_zenmux_setup_body">zenmux.ai/platform/management でManagement APIキーを作成してください。通常の推論用APIキーは利用できません。CodexBarが取得するのは契約の使用枠だけで、プロンプトやリクエストログは読み取りません。</string>
     <string name="credential_kimi_setup_title">Kimi Code API</string>
     <string name="credential_kimi_setup_body">Kimi CodeコンソールでAPIキーを作成し、下へ貼り付けてください。CodexBarはローリング枠と週間枠を取得するため、api.kimi.com/coding/v1/usagesだけへ送信します。プロンプトや推論履歴は要求しません。</string>
+    <string name="credential_elevenlabs_setup_title">ElevenLabsのサブスクリプション</string>
+    <string name="credential_elevenlabs_setup_body">ElevenLabsで制限付きAPIキーを作成し、User subscriptionの読み取り権限を許可してください。CodexBarはapi.elevenlabs.ioから文字数と音声スロットの使用枠だけを取得し、生成音声、Voice、プロジェクト内容は要求しません。</string>
     <string name="credential_zenmux_management_key">Management APIキー</string>
     <string name="credential_refresh_token">更新トークン</string>
     <string name="credential_changes_pending">検証に成功するまで変更は反映されません。</string>
