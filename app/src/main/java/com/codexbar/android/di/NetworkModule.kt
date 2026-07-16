@@ -58,15 +58,7 @@ annotation class GitHubDeviceAuthClient
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
-annotation class CursorClient
-
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class ZaiClient
-
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class ZenMuxClient
+annotation class ProviderCredentialClient
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -250,17 +242,17 @@ object NetworkModule {
             .create(GitHubDeviceAuthService::class.java)
     }
 
+    @Provides
+    @Singleton
+    @ProviderCredentialClient
+    fun provideProviderCredentialOkHttpClient(): OkHttpClient = credentialOkHttpBuilder().build()
+
     // --- Cursor ---
 
     @Provides
     @Singleton
-    @CursorClient
-    fun provideCursorOkHttpClient(): OkHttpClient = credentialOkHttpBuilder().build()
-
-    @Provides
-    @Singleton
     fun provideCursorApiService(
-        @CursorClient client: OkHttpClient,
+        @ProviderCredentialClient client: OkHttpClient,
         json: Json
     ): CursorApiService {
         return Retrofit.Builder()
@@ -275,13 +267,8 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    @ZaiClient
-    fun provideZaiOkHttpClient(): OkHttpClient = credentialOkHttpBuilder().build()
-
-    @Provides
-    @Singleton
     fun provideZaiApiService(
-        @ZaiClient client: OkHttpClient,
+        @ProviderCredentialClient client: OkHttpClient,
         json: Json
     ): ZaiApiService {
         return Retrofit.Builder()
@@ -296,13 +283,8 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    @ZenMuxClient
-    fun provideZenMuxOkHttpClient(): OkHttpClient = credentialOkHttpBuilder().build()
-
-    @Provides
-    @Singleton
     fun provideZenMuxApiService(
-        @ZenMuxClient client: OkHttpClient,
+        @ProviderCredentialClient client: OkHttpClient,
         json: Json
     ): ZenMuxApiService {
         return Retrofit.Builder()
