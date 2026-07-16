@@ -757,6 +757,11 @@ private fun ServiceCredentialSection(
                         body = stringResource(R.string.credential_openrouter_setup_body),
                         accent = visualStyle.accent
                     )
+                    service == AiService.SYNTHETIC -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_synthetic_setup_title),
+                        body = stringResource(R.string.credential_synthetic_setup_body),
+                        accent = visualStyle.accent
+                    )
                 }
 
             if (service != AiService.GEMINI) {
@@ -1180,6 +1185,7 @@ private fun AccountLinkControls(
                 AiService.KIMI -> stringResource(R.string.credential_kimi_setup_body)
                 AiService.ELEVENLABS -> stringResource(R.string.credential_elevenlabs_setup_body)
                 AiService.OPENROUTER -> stringResource(R.string.credential_openrouter_setup_body)
+                AiService.SYNTHETIC -> stringResource(R.string.credential_synthetic_setup_body)
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant

@@ -2,7 +2,7 @@
 
 > Android port of [**CodexBar**](https://github.com/steipete/CodexBar) by [@steipete](https://github.com/steipete) — the macOS menu bar app for monitoring AI service quotas.
 
-Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi, ElevenLabs, and OpenRouter usage in one place; Gemini uses an optional private companion that keeps Google authentication inside the official Gemini CLI.
+Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi, ElevenLabs, OpenRouter, and Synthetic usage in one place; Gemini uses an optional private companion that keeps Google authentication inside the official Gemini CLI.
 
 <p align="center">
   <img src="docs/images/dashboard-light.png" width="320" alt="Material 3 Expressive dashboard in light mode" />
@@ -14,7 +14,7 @@ Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT
 
 ## Features
 
-- Unified quota monitoring for Claude, Codex, GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi, ElevenLabs, and OpenRouter
+- Unified quota monitoring for Claude, Codex, GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi, ElevenLabs, OpenRouter, and Synthetic
 - Material 3 Expressive provider cards with animated rings, bars, exact values, reset countdowns, and pace forecasts
 - Adaptive phone navigation and a two-pane large-screen dashboard
 - Quick Settings tile for at-a-glance status
@@ -216,6 +216,12 @@ Use the narrowest key permissions available. The key is sent only in the `xi-api
 Create a dedicated OpenRouter API key, preferably with a daily, weekly, or monthly credit limit, paste it into the OpenRouter card, and select **Validate & connect**. The app calls `https://openrouter.ai/api/v1/key` and maps the configured key limit, remaining credits, usage, reset cadence, and free-tier state. A management key is not required.
 
 If no key limit is configured, the account remains connected and the dashboard/widget states that there is no spending cap while showing the reported spend. A configured limit adds an exact USD credit summary and a progress bar. The key is sent only as a bearer credential to the fixed OpenRouter HTTPS host, redirects and HTTP logging are disabled, and it is encrypted with Android Keystore after validation.
+
+### Synthetic
+
+Create a dedicated Synthetic API key, paste it into the Synthetic card, and select **Validate & connect**. The app calls only `https://api.synthetic.new/v2/quotas`, maps subscription requests against the documented limit, and shows the renewal timestamp. Synthetic documents that quota checks do not consume subscription limits.
+
+The key is sent only as a bearer credential to the fixed Synthetic HTTPS host, redirects and HTTP logging are disabled, and it is encrypted with Android Keystore after validation. Prompts, model responses, and request history are not fetched.
 
 ## Build
 

@@ -65,5 +65,11 @@ enum class AiService(
         brandColor = 0xFF4D6BFE,
         baseUrl = "https://openrouter.ai/api/v1/",
         requiresManualCredentials = true
+    ),
+    SYNTHETIC(
+        displayName = "Synthetic",
+        brandColor = 0xFFEF5DA8,
+        baseUrl = "https://api.synthetic.new/",
+        requiresManualCredentials = true
     )
 }
