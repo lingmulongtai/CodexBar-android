@@ -44,6 +44,10 @@ class ProviderCatalogTest {
             AiService.DEEPSEEK.providerMetadata.secretKind
         )
         assertEquals(
+            ProviderSecretKind.API_KEY,
+            AiService.VENICE.providerMetadata.secretKind
+        )
+        assertEquals(
             ProviderSecretKind.COOKIE_HEADER,
             AiService.CURSOR.providerMetadata.secretKind
         )

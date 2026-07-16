@@ -19,6 +19,7 @@ import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
 import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
 import com.codexbar.android.core.network.openrouter.OpenRouterApiService
 import com.codexbar.android.core.network.synthetic.SyntheticApiService
+import com.codexbar.android.core.network.venice.VeniceApiService
 import com.codexbar.android.core.network.zai.ZaiApiService
 import com.codexbar.android.core.network.zenmux.ZenMuxApiService
 import dagger.Module
@@ -395,5 +396,21 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(DeepSeekApiService::class.java)
+    }
+
+    // --- Venice ---
+
+    @Provides
+    @Singleton
+    fun provideVeniceApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): VeniceApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.VENICE.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(VeniceApiService::class.java)
     }
 }

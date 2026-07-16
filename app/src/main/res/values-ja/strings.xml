@@ -135,6 +135,8 @@
     <string name="credential_chutes_setup_body">Chutesダッシュボードで専用のスコープ付きAPIキーを作成し、下へ貼り付けてください。CodexBarはapi.chutes.aiから認証ユーザーの4時間枠と月間枠だけを取得します。サブスクリプション使用量を読める最小権限を使用してください。</string>
     <string name="credential_deepseek_setup_title">DeepSeek API残高</string>
     <string name="credential_deepseek_setup_body">DeepSeekで専用APIキーを作成し、下へ貼り付けてください。CodexBarはAPI利用可否とUSD/CNY残高を取得するため、api.deepseek.com/user/balanceだけへ送信します。プロンプト、チャット履歴、モデル応答は要求しません。</string>
+    <string name="credential_venice_setup_title">Venice API残高</string>
+    <string name="credential_venice_setup_body">Veniceで、請求残高を読み取れる最小権限の専用APIキーを作成し、下へ貼り付けてください。CodexBarはAPI利用可否、DIEMエポック割当、USD/DIEM残高を取得するため、api.venice.ai/api/v1/billing/balanceだけへ送信します。プロンプトや推論履歴は要求しません。</string>
     <string name="credential_zenmux_management_key">Management APIキー</string>
     <string name="credential_refresh_token">更新トークン</string>
     <string name="credential_changes_pending">検証に成功するまで変更は反映されません。</string>

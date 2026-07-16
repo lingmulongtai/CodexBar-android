@@ -35,6 +35,7 @@ fun providerVisualStyle(service: AiService): ProviderVisualStyle {
         AiService.SYNTHETIC -> if (isDark) Color(0xFFFFAFD7) else Color(0xFF9B2765)
         AiService.CHUTES -> if (isDark) Color(0xFF75DBB5) else Color(0xFF006B50)
         AiService.DEEPSEEK -> if (isDark) Color(0xFFB9C3FF) else Color(0xFF304BC0)
+        AiService.VENICE -> if (isDark) Color(0xFFD0BCFF) else Color(0xFF6941C6)
     }
     val tintAlpha = if (isDark) 0.16f else 0.09f
     val shape = when (service) {
@@ -109,6 +110,12 @@ fun providerVisualStyle(service: AiService): ProviderVisualStyle {
             topStart = 8.dp,
             topEnd = 24.dp,
             bottomEnd = 24.dp,
+            bottomStart = 24.dp
+        )
+        AiService.VENICE -> RoundedCornerShape(
+            topStart = 24.dp,
+            topEnd = 24.dp,
+            bottomEnd = 8.dp,
             bottomStart = 24.dp
         )
     }

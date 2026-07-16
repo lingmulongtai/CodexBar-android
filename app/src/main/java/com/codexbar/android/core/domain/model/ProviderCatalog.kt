@@ -113,6 +113,12 @@ object ProviderCatalog {
             authMode = ProviderAuthMode.API_KEY,
             aliases = setOf("deep seek", "deepseek api", "deepseek coder"),
             guideAnchor = "deepseek"
+        ),
+        AiService.VENICE to ProviderMetadata(
+            category = ProviderCategory.MODEL_API,
+            authMode = ProviderAuthMode.API_KEY,
+            aliases = setOf("venice ai", "diem", "private inference"),
+            guideAnchor = "venice"
         )
     )
 

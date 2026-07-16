@@ -2,7 +2,7 @@
 
 > Android port of [**CodexBar**](https://github.com/steipete/CodexBar) by [@steipete](https://github.com/steipete) — the macOS menu bar app for monitoring AI service quotas.
 
-Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi, ElevenLabs, OpenRouter, Synthetic, Chutes, and DeepSeek usage in one place; Gemini uses an optional private companion that keeps Google authentication inside the official Gemini CLI.
+Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi, ElevenLabs, OpenRouter, Synthetic, Chutes, DeepSeek, and Venice usage in one place; Gemini uses an optional private companion that keeps Google authentication inside the official Gemini CLI.
 
 <p align="center">
   <img src="docs/images/dashboard-light.png" width="320" alt="Material 3 Expressive dashboard in light mode" />
@@ -14,7 +14,7 @@ Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT
 
 ## Features
 
-- Unified quota monitoring for Claude, Codex, GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi, ElevenLabs, OpenRouter, Synthetic, Chutes, and DeepSeek
+- Unified quota monitoring for Claude, Codex, GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi, ElevenLabs, OpenRouter, Synthetic, Chutes, DeepSeek, and Venice
 - Material 3 Expressive provider cards with animated rings, bars, exact values, reset countdowns, and pace forecasts
 - Adaptive phone navigation and a two-pane large-screen dashboard
 - Quick Settings tile for at-a-glance status
@@ -234,6 +234,12 @@ The parser accepts the currently documented flexible quota payload without trust
 Create a dedicated DeepSeek API key, paste it into the DeepSeek card, and select **Validate & connect**. The app calls only `https://api.deepseek.com/user/balance` and displays whether API calls are currently available together with each reported USD or CNY balance. DeepSeek does not expose a bounded quota in this endpoint, so the app intentionally shows an exact status instead of inventing a utilization bar.
 
 The key is sent only as a bearer credential to the fixed DeepSeek HTTPS host, redirects and HTTP logging are disabled, and it is encrypted with Android Keystore after validation. Prompts, chat history, model responses, and usage records are not fetched.
+
+### Venice
+
+Create a dedicated Venice API key with the narrowest permission that can read billing balance, paste it into the Venice card, and select **Validate & connect**. The app calls only `https://api.venice.ai/api/v1/billing/balance`, shows whether the account can make API calls, and displays USD/DIEM balances. When a DIEM epoch allocation is present, it also derives the consumed fraction for the progress bar from the documented remaining balance and allocation.
+
+The key is sent only as a bearer credential to the fixed Venice HTTPS host, redirects and HTTP logging are disabled, and it is encrypted with Android Keystore after validation. Prompts, model responses, billing history, and inference request details are not fetched.
 
 ## Build
 

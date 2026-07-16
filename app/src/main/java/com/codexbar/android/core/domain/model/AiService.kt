@@ -83,5 +83,11 @@ enum class AiService(
         brandColor = 0xFF4D6BFE,
         baseUrl = "https://api.deepseek.com/",
         requiresManualCredentials = true
+    ),
+    VENICE(
+        displayName = "Venice",
+        brandColor = 0xFF7C3AED,
+        baseUrl = "https://api.venice.ai/api/v1/",
+        requiresManualCredentials = true
     )
 }
