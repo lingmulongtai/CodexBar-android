@@ -13,6 +13,7 @@ class SettingsHelpLinksTest {
             AiService.CODEX to "codex-openai--chatgpt",
             AiService.GEMINI to "gemini-google",
             AiService.COPILOT to "github-copilot",
+            AiService.CURSOR to "cursor",
             AiService.ZENMUX to "zenmux"
         )
 

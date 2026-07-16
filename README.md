@@ -2,7 +2,7 @@
 
 > Android port of [**CodexBar**](https://github.com/steipete/CodexBar) by [@steipete](https://github.com/steipete) — the macOS menu bar app for monitoring AI service quotas.
 
-Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, and ZenMux usage in one place; Gemini uses an optional private companion that keeps Google authentication inside the official Gemini CLI.
+Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, Cursor, and ZenMux usage in one place; Gemini uses an optional private companion that keeps Google authentication inside the official Gemini CLI.
 
 <p align="center">
   <img src="docs/images/dashboard-light.png" width="320" alt="Material 3 Expressive dashboard in light mode" />
@@ -14,7 +14,7 @@ Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT
 
 ## Features
 
-- Unified quota monitoring for Claude, Codex, GitHub Copilot, Gemini, and ZenMux
+- Unified quota monitoring for Claude, Codex, GitHub Copilot, Gemini, Cursor, and ZenMux
 - Material 3 Expressive provider cards with animated rings, bars, exact values, reset countdowns, and pace forecasts
 - Adaptive phone navigation and a two-pane large-screen dashboard
 - Quick Settings tile for at-a-glance status
@@ -178,6 +178,14 @@ This design follows the official Gemini CLI's documented [usage and quota comman
 ### GitHub Copilot
 
 Follow the device-code steps above. The app opens `https://github.com/login/device` only after you press **Open sign-in page**, then fetches Copilot quota data after GitHub authorization and on-device credential validation complete.
+
+### Cursor
+
+Cursor does not currently expose a supported mobile device-code flow. The original macOS CodexBar reads a signed-in desktop browser session or Cursor.app state; Android cannot safely access either store. This port therefore starts with the original project's manual fallback: copy the `Cookie` request header from `https://cursor.com/api/usage-summary` in a signed-in desktop browser, paste it into the Cursor card, and select **Validate & connect**.
+
+The app rejects malformed or multi-line values before network access, sends the cookie only to `https://cursor.com`, refuses HTTP and HTTPS redirects, and encrypts it with Android Keystore only after the usage endpoint accepts it. Never paste this value into an issue or chat. Signing out of Cursor invalidates the session.
+
+Cursor cards show the billing-cycle Total, Auto, and API percentages, legacy request-plan usage when available, the cycle reset, plan name, and capped on-demand USD usage. Team and Enterprise personal/shared-cap fallbacks follow the original CodexBar mapping.
 
 ### ZenMux
 

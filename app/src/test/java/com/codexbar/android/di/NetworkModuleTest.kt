@@ -81,6 +81,7 @@ class NetworkModuleTest {
             NetworkModule.provideCodexTokenOkHttpClient(),
             NetworkModule.provideCodexDeviceAuthOkHttpClient(),
             NetworkModule.provideGitHubDeviceAuthOkHttpClient(),
+            NetworkModule.provideCursorOkHttpClient(),
             NetworkModule.provideZenMuxOkHttpClient()
         )
 
@@ -127,6 +128,7 @@ class NetworkModuleTest {
             NetworkModule.provideCodexDeviceAuthOkHttpClient(),
             NetworkModule.provideCopilotOkHttpClient(),
             NetworkModule.provideGitHubDeviceAuthOkHttpClient(),
+            NetworkModule.provideCursorOkHttpClient(),
             NetworkModule.provideZenMuxOkHttpClient()
         )
 

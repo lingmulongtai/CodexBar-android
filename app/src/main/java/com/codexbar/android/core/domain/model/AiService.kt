@@ -30,6 +30,12 @@ enum class AiService(
         baseUrl = "https://api.github.com/",
         requiresManualCredentials = false
     ),
+    CURSOR(
+        displayName = "Cursor",
+        brandColor = 0xFF00A67E,
+        baseUrl = "https://cursor.com/",
+        requiresManualCredentials = true
+    ),
     ZENMUX(
         displayName = "ZenMux",
         brandColor = 0xFF6750A4,

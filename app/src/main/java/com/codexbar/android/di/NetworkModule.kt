@@ -10,6 +10,7 @@ import com.codexbar.android.core.network.claude.ClaudeTokenRefreshService
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.copilot.CopilotApiService
+import com.codexbar.android.core.network.cursor.CursorApiService
 import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
 import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
 import com.codexbar.android.core.network.zenmux.ZenMuxApiService
@@ -53,6 +54,10 @@ annotation class CodexDeviceAuthClient
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class GitHubDeviceAuthClient
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class CursorClient
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
@@ -238,6 +243,27 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(GitHubDeviceAuthService::class.java)
+    }
+
+    // --- Cursor ---
+
+    @Provides
+    @Singleton
+    @CursorClient
+    fun provideCursorOkHttpClient(): OkHttpClient = credentialOkHttpBuilder().build()
+
+    @Provides
+    @Singleton
+    fun provideCursorApiService(
+        @CursorClient client: OkHttpClient,
+        json: Json
+    ): CursorApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.CURSOR.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(CursorApiService::class.java)
     }
 
     // --- ZenMux ---

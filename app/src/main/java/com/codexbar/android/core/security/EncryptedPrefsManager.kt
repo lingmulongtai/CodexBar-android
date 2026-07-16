@@ -330,6 +330,19 @@ class EncryptedPrefsManager @Inject constructor(
                 Credential.CopilotCredential(accessToken = accessToken)
             }
 
+            AiService.CURSOR -> {
+                val accessToken = prefs.getEncryptedString("${prefix}_access_token") ?: return null
+                val kind = prefs.getEncryptedString("${prefix}_secret_kind")
+                    ?.let { runCatching { ProviderSecretKind.valueOf(it) }.getOrNull() }
+                    ?: ProviderSecretKind.COOKIE_HEADER
+                if (kind != ProviderSecretKind.COOKIE_HEADER) return null
+                Credential.ProviderSecretCredential(
+                    service = service,
+                    kind = kind,
+                    accessToken = accessToken
+                )
+            }
+
             AiService.ZENMUX -> {
                 val accessToken = prefs.getEncryptedString("${prefix}_access_token") ?: return null
                 val kind = prefs.getEncryptedString("${prefix}_secret_kind")

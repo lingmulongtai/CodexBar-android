@@ -91,6 +91,9 @@
     <string name="credential_gemini_pairing_code">Companion pairing code</string>
     <string name="credential_gemini_pairing_hint">Starts with codexbar://gemini-pair. Treat it like a local-device password.</string>
     <string name="credential_gemini_companion_security">No Google access token, refresh token, OAuth client ID, prompt, file, email address, or CLI session content is transferred to Android. The pairing key is encrypted with Android Keystore.</string>
+    <string name="credential_cursor_setup_title">Cursor web session</string>
+    <string name="credential_cursor_setup_body">Cursor does not provide a supported mobile device-code flow. In a desktop browser signed in to cursor.com, copy the Cookie request header from /api/usage-summary and paste it below. Treat it like a password. CodexBar validates it only against cursor.com, never follows redirects, and encrypts it after validation.</string>
+    <string name="credential_cursor_cookie_header">Cursor Cookie header</string>
     <string name="credential_zenmux_setup_title">ZenMux Management API</string>
     <string name="credential_zenmux_setup_body">Create a Management API key at zenmux.ai/platform/management. Standard inference API keys do not work. CodexBar requests only subscription quota details and never reads prompts or request logs.</string>
     <string name="credential_zenmux_management_key">Management API key</string>

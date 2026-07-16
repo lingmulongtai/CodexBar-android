@@ -91,6 +91,9 @@
     <string name="credential_gemini_pairing_code">コンパニオンのペアリングコード</string>
     <string name="credential_gemini_pairing_hint">codexbar://gemini-pair から始まります。ローカル端末用のパスワードとして安全に扱ってください。</string>
     <string name="credential_gemini_companion_security">Googleのアクセストークン、更新トークン、OAuthクライアントID、プロンプト、ファイル、メールアドレス、CLIセッション内容はAndroidへ送信しません。ペアリング鍵はAndroid Keystoreで暗号化します。</string>
+    <string name="credential_cursor_setup_title">Cursor Webセッション</string>
+    <string name="credential_cursor_setup_body">Cursorには対応済みのモバイル向けデバイスコード認証がありません。PCのブラウザでcursor.comへログインし、/api/usage-summaryリクエストのCookieヘッダーをコピーして下へ貼り付けてください。パスワードと同様に扱ってください。CodexBarはcursor.comに対してだけ検証し、リダイレクトせず、検証成功後に暗号化します。</string>
+    <string name="credential_cursor_cookie_header">Cursor Cookieヘッダー</string>
     <string name="credential_zenmux_setup_title">ZenMux Management API</string>
     <string name="credential_zenmux_setup_body">zenmux.ai/platform/management でManagement APIキーを作成してください。通常の推論用APIキーは利用できません。CodexBarが取得するのは契約の使用枠だけで、プロンプトやリクエストログは読み取りません。</string>
     <string name="credential_zenmux_management_key">Management APIキー</string>

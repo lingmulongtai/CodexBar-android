@@ -3,6 +3,7 @@ package com.codexbar.android.di
 import com.codexbar.android.core.data.ClaudeRepositoryImpl
 import com.codexbar.android.core.data.CodexRepositoryImpl
 import com.codexbar.android.core.data.CopilotRepositoryImpl
+import com.codexbar.android.core.data.CursorRepositoryImpl
 import com.codexbar.android.core.data.GeminiRepositoryImpl
 import com.codexbar.android.core.data.ZenMuxRepositoryImpl
 import com.codexbar.android.core.domain.model.AiService
@@ -12,6 +13,7 @@ import com.codexbar.android.core.network.claude.ClaudeTokenRefreshService
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.copilot.CopilotApiService
+import com.codexbar.android.core.network.cursor.CursorApiService
 import com.codexbar.android.core.network.gemini.GeminiCompanionClient
 import com.codexbar.android.core.network.zenmux.ZenMuxApiService
 import com.codexbar.android.core.security.EncryptedPrefsManager
@@ -69,6 +71,15 @@ object RepositoryModule {
         apiService: CopilotApiService,
         prefsManager: EncryptedPrefsManager
     ): QuotaRepository = CopilotRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.CURSOR)
+    fun provideCursorRepository(
+        apiService: CursorApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = CursorRepositoryImpl(apiService, prefsManager)
 
     @Provides
     @Singleton
