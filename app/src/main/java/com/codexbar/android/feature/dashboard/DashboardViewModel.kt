@@ -1,6 +1,7 @@
 package com.codexbar.android.feature.dashboard
 
 import android.content.Context
+import android.util.Log
 import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -129,8 +130,13 @@ class DashboardViewModel @Inject constructor(
         try {
             snapshot.services.forEach(widgetPrefsManager::cachePresentation)
             QuotaGlanceWidget().updateAll(appContext)
-        } catch (_: Exception) {
+        } catch (error: Exception) {
             // Widget rendering must not turn a successful dashboard refresh into an app error.
+            Log.e(TAG, "Widget render failed after dashboard refresh", error)
         }
+    }
+
+    companion object {
+        private const val TAG = "CodexBarDashboard"
     }
 }

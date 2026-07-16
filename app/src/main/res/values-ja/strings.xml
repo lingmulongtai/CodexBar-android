@@ -197,6 +197,10 @@
     <string name="widget_open_details">詳細はCodexBarで確認してください</string>
     <string name="widget_updated">%1$sに更新</string>
     <string name="widget_waiting_for_data">データを取得しています…</string>
+    <string name="widget_preparing">ウィジェットを準備しています…</string>
+    <string name="widget_not_connected">CodexBarを開いて、このサービスを再接続してください。</string>
+    <string name="widget_refresh_failed">更新できませんでした。更新ボタンを押すか、CodexBarを開いてください。</string>
+    <string name="widget_render_error">ウィジェットを表示できませんでした。CodexBarを開いて更新してください。</string>
     <string name="widget_refresh_description">更新</string>
     <string name="widget_loading">読み込み中…</string>
     <string name="widget_preview_five_hour">5時間</string>

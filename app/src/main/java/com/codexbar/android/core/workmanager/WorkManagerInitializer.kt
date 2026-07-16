@@ -27,6 +27,7 @@ class WorkManagerInitializer private constructor() {
         private const val TOKEN_WORK_NAME = "token_periodic_refresh"
         private const val MANUAL_QUOTA_WORK_NAME = "quota_manual_refresh"
         private const val MONITORING_QUOTA_WORK_NAME = "quota_monitoring_refresh"
+        private const val WIDGET_RENDER_WORK_NAME_PREFIX = "widget_render_"
         const val KEY_REFRESH_SOURCE = "refresh_source"
 
         fun applyRefreshPolicy(context: Context, intervalMinutes: Long) {
@@ -121,6 +122,27 @@ class WorkManagerInitializer private constructor() {
 
             WorkManager.getInstance(context).enqueueUniqueWork(
                 MANUAL_QUOTA_WORK_NAME,
+                ExistingWorkPolicy.REPLACE,
+                request
+            )
+        }
+
+        fun enqueueWidgetRender(
+            context: Context,
+            appWidgetId: Int,
+            delayMillis: Long = 1_200L
+        ) {
+            if (appWidgetId == WidgetRenderWorker.INVALID_APP_WIDGET_ID) return
+
+            val request = OneTimeWorkRequestBuilder<WidgetRenderWorker>()
+                .setInitialDelay(delayMillis.coerceAtLeast(0L), TimeUnit.MILLISECONDS)
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
+                .setInputData(workDataOf(WidgetRenderWorker.KEY_APP_WIDGET_ID to appWidgetId))
+                .addTag("widget_render")
+                .build()
+
+            WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
+                "$WIDGET_RENDER_WORK_NAME_PREFIX$appWidgetId",
                 ExistingWorkPolicy.REPLACE,
                 request
             )

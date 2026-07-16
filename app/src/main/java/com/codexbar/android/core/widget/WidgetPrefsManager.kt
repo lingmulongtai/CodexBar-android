@@ -205,6 +205,15 @@ class WidgetPrefsManager @Inject constructor(
         return prefs.getString("cache_${service.name}_status_message", null)
     }
 
+    fun cacheStatusMessageIfEmpty(service: AiService, message: String) {
+        if (getCachedLabels(service).isNotEmpty()) return
+        val prefix = "cache_${service.name}"
+        prefs.edit()
+            .putString("${prefix}_status_message", message)
+            .putLong("${prefix}_updated_at", System.currentTimeMillis())
+            .apply()
+    }
+
     fun getCachedResetsAt(service: AiService, label: String): Long? {
         val value = prefs.getLong("cache_${service.name}_${label}_resets", -1L)
         return if (value > 0) value else null

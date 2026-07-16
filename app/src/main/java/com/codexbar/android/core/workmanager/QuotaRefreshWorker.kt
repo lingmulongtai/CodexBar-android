@@ -3,6 +3,7 @@ package com.codexbar.android.core.workmanager
 import android.content.ComponentName
 import android.content.Context
 import android.service.quicksettings.TileService
+import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
@@ -61,10 +62,18 @@ class QuotaRefreshWorker @AssistedInject constructor(
         if (repos.isEmpty()) {
             // A widget can outlive its selected account. Always replace the provider's
             // initial loading layout even when there is no network work to perform.
+            val languageContext = ContextCompat.getContextForLanguage(applicationContext)
+            AiService.entries.forEach { service ->
+                widgetPrefsManager.cacheStatusMessageIfEmpty(
+                    service,
+                    languageContext.getString(R.string.widget_not_connected)
+                )
+            }
             try {
                 QuotaGlanceWidget().updateAll(applicationContext)
-            } catch (_: Exception) {
+            } catch (error: Exception) {
                 // Widget rendering cannot turn a no-op account refresh into retry work.
+                Log.e(TAG, "Widget render failed after disconnected refresh", error)
             }
             return Result.success()
         }
@@ -141,7 +150,19 @@ class QuotaRefreshWorker @AssistedInject constructor(
             } else {
                 Result.success()
             }
-        } catch (_: Exception) {
+        } catch (error: Exception) {
+            val languageContext = ContextCompat.getContextForLanguage(applicationContext)
+            repos.forEach { (service, _) ->
+                widgetPrefsManager.cacheStatusMessageIfEmpty(
+                    service,
+                    languageContext.getString(R.string.widget_refresh_failed)
+                )
+            }
+            runCatching { QuotaGlanceWidget().updateAll(applicationContext) }
+                .onFailure { renderError ->
+                    Log.e(TAG, "Widget render failed after refresh error", renderError)
+                }
+            Log.e(TAG, "Quota refresh worker failed", error)
             Result.retry()
         }
     }
@@ -181,5 +202,9 @@ class QuotaRefreshWorker @AssistedInject constructor(
             .build()
 
         return ForegroundInfo(QuotaNotificationService.NOTIFICATION_ID + 1, notification)
+    }
+
+    companion object {
+        private const val TAG = "CodexBarRefresh"
     }
 }

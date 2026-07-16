@@ -41,8 +41,9 @@ class WidgetRefreshSourceTest {
             "RESULT_OK must only be returned after the initial render succeeds",
             successfulResult > initialRender
         )
-        assertTrue(confirmSelection.contains("R.string.widget_setup_update_failed"))
-        assertTrue(confirmSelection.contains("isCompletingConfiguration = false"))
+        assertTrue(confirmSelection.contains("WorkManagerInitializer.enqueueWidgetRender("))
+        assertTrue(confirmSelection.contains("if (!hadExistingConfiguration)"))
+        assertTrue(confirmSelection.contains("withTimeoutOrNull(IMMEDIATE_RENDER_TIMEOUT_MILLIS)"))
         assertTrue(confirmSelection.contains(".getGlanceIdBy(appWidgetId)"))
         assertFalse(confirmSelection.contains(".getGlanceIdBy(intent)"))
     }
@@ -77,7 +78,9 @@ class WidgetRefreshSourceTest {
         val source = sourceFile("QuotaWidgetReceiver.kt")
 
         assertFalse(source.contains("enqueueManualQuotaRefresh"))
-        assertFalse(source.contains("override fun onUpdate("))
+        assertTrue(source.contains("override fun onUpdate("))
+        assertTrue(source.contains("super.onUpdate(context, appWidgetManager, appWidgetIds)"))
+        assertTrue(source.contains("WorkManagerInitializer.enqueueWidgetRender(context, appWidgetId)"))
     }
 
     @Test
@@ -131,7 +134,47 @@ class WidgetRefreshSourceTest {
         assertTrue(worker.contains("cacheQuotaData(snapshot)"))
         assertTrue(widgetPrefs.contains("service.freshness.staleReason?.let"))
         assertTrue(widgetPrefs.contains("fun getCachedStatusMessage("))
+        assertTrue(widgetPrefs.contains("fun cacheStatusMessageIfEmpty("))
+        assertTrue(worker.contains("R.string.widget_not_connected"))
         assertTrue(widget.contains("statusMessage ?: strings.waitingForData"))
+    }
+
+    @Test
+    fun `widget uses one exact layout and native progress bars`() {
+        val widget = sourceFile("QuotaGlanceWidget.kt")
+
+        assertTrue(widget.contains("override val sizeMode: SizeMode = SizeMode.Exact"))
+        assertTrue(widget.contains("LinearProgressIndicator("))
+        assertTrue(widget.contains("WidgetRenderPolicy.maxServices("))
+        assertTrue(widget.contains("WidgetRenderPolicy.maxRows("))
+        assertFalse(widget.contains("val totalSegments"))
+        assertFalse(widget.contains("SizeMode.Responsive"))
+    }
+
+    @Test
+    fun `widget composition errors have a localized fallback layout`() {
+        val widget = sourceFile("QuotaGlanceWidget.kt")
+        val errorLayout = File(appDir, "src/main/res/layout/widget_error.xml")
+            .readText()
+            .replace("\r\n", "\n")
+
+        assertTrue(widget.contains("GlanceAppWidget(errorUiLayout = R.layout.widget_error)"))
+        assertTrue(widget.contains("override fun onCompositionError("))
+        assertTrue(widget.contains("super.onCompositionError("))
+        assertTrue(errorLayout.contains("@string/widget_render_error"))
+    }
+
+    @Test
+    fun `delayed widget renderer performs no provider network request`() {
+        val worker = sourceFileFromCore("workmanager/WidgetRenderWorker.kt")
+        val initializer = sourceFileFromCore("workmanager/WorkManagerInitializer.kt")
+
+        assertTrue(worker.contains(".getGlanceIdBy(appWidgetId)"))
+        assertTrue(worker.contains("QuotaGlanceWidget().update(applicationContext, glanceId)"))
+        assertFalse(worker.contains("QuotaRepository"))
+        assertFalse(worker.contains("NetworkType"))
+        assertTrue(initializer.contains("OneTimeWorkRequestBuilder<WidgetRenderWorker>()"))
+        assertTrue(initializer.contains("ExistingWorkPolicy.REPLACE"))
     }
 
     private fun sourceFile(name: String): String {
