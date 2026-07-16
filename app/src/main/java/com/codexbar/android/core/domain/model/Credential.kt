@@ -20,12 +20,19 @@ sealed class Credential {
         val accountId: String? = null
     ) : Credential()
 
-    data class GeminiCredential(
-        override val accessToken: String,
-        override val refreshToken: String,
-        val expiresAtMs: Long,
-        val oauthClientId: String
-    ) : Credential()
+    /**
+     * A local companion pairing. The shared key authenticates encrypted LAN snapshots only;
+     * it is never a Google access token and cannot be used to access a Google account.
+     */
+    data class GeminiCompanionCredential(
+        val host: String,
+        val port: Int,
+        val companionId: String,
+        val sharedKeyBase64Url: String
+    ) : Credential() {
+        override val accessToken: String = sharedKeyBase64Url
+        override val refreshToken: String? = null
+    }
 
     data class CopilotCredential(
         override val accessToken: String

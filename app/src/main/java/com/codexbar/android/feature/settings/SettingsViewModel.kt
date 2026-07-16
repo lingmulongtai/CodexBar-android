@@ -91,7 +91,7 @@ class SettingsViewModel @Inject constructor(
                     accountId = credential.accountId ?: "",
                     isConnected = true
                 )
-                is Credential.GeminiCredential -> ServiceCredentialState(
+                is Credential.GeminiCompanionCredential -> ServiceCredentialState(
                     isConnected = true
                 )
                 is Credential.CopilotCredential -> ServiceCredentialState(

@@ -1,217 +1,85 @@
 package com.codexbar.android.core.data
 
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.domain.model.Result
-import com.codexbar.android.core.network.gemini.GeminiApiService
-import com.codexbar.android.core.network.gemini.GeminiTokenRefreshService
+import com.codexbar.android.core.network.gemini.GeminiCompanionAuthenticationException
+import com.codexbar.android.core.network.gemini.GeminiCompanionClient
+import com.codexbar.android.core.network.gemini.GeminiCompanionSnapshot
+import com.codexbar.android.core.network.gemini.GeminiCompanionWindow
 import com.codexbar.android.core.security.EncryptedPrefsManager
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
-import kotlinx.coroutines.test.runTest
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
-import retrofit2.Retrofit
 
 class GeminiRepositoryImplTest {
-
-    private lateinit var mockWebServer: MockWebServer
-    private lateinit var apiService: GeminiApiService
-    private lateinit var tokenRefreshService: GeminiTokenRefreshService
-    private lateinit var prefsManager: EncryptedPrefsManager
-    private lateinit var repository: GeminiRepositoryImpl
-    private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true; isLenient = true }
-
-    private val testCredential = Credential.GeminiCredential(
-        accessToken = "test-access-token",
-        refreshToken = "test-refresh-token",
-        expiresAtMs = System.currentTimeMillis() + 3600_000,
-        oauthClientId = "test-client-id"
+    private val credential = Credential.GeminiCompanionCredential(
+        host = "127.0.0.1",
+        port = 43821,
+        companionId = "5b017391-6dc4-4ab7-b0ad-2255dada62d7",
+        sharedKeyBase64Url = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
     )
-
-    @Before
-    fun setup() {
-        mockWebServer = MockWebServer()
-        mockWebServer.start()
-
-        val client = OkHttpClient.Builder().build()
-        val contentType = "application/json".toMediaType()
-
-        apiService = Retrofit.Builder()
-            .baseUrl(mockWebServer.url("/"))
-            .client(client)
-            .addConverterFactory(json.asConverterFactory(contentType))
-            .build()
-            .create(GeminiApiService::class.java)
-
-        tokenRefreshService = Retrofit.Builder()
-            .baseUrl(mockWebServer.url("/"))
-            .client(client)
-            .addConverterFactory(json.asConverterFactory(contentType))
-            .build()
-            .create(GeminiTokenRefreshService::class.java)
-
-        prefsManager = mock(EncryptedPrefsManager::class.java)
-        runTest {
-            `when`(prefsManager.loadCredential(AiService.GEMINI)).thenReturn(testCredential)
+    private var companionSnapshot: GeminiCompanionSnapshot? = null
+    private var companionFailure: Throwable? = null
+    private val companionClient = object : GeminiCompanionClient(Json) {
+        override suspend fun fetchSnapshot(
+            credential: Credential.GeminiCompanionCredential,
+            now: java.time.Instant
+        ): GeminiCompanionSnapshot {
+            companionFailure?.let { throw it }
+            return requireNotNull(companionSnapshot)
         }
-
-        repository = GeminiRepositoryImpl(apiService, tokenRefreshService, prefsManager)
     }
-
-    @After
-    fun tearDown() {
-        mockWebServer.shutdown()
-    }
+    private val prefsManager = mock(EncryptedPrefsManager::class.java)
+    private val repository = GeminiRepositoryImpl(companionClient, prefsManager)
 
     @Test
-    fun `fetchQuota with string projectId`() = runTest {
-        val loadResponse = """
-        {
-            "cloudaicompanionProject": "my-project-123",
-            "currentTier": { "id": "free-tier" }
-        }
-        """.trimIndent()
-
-        val quotaResponse = """
-        {
-            "buckets": [
-                { "modelId": "gemini-2.0-flash", "remainingFraction": 0.73, "resetTime": "2025-06-01T12:00:00Z" },
-                { "modelId": "gemini-2.0-pro", "remainingFraction": 0.50, "resetTime": "2025-06-01T12:00:00Z" }
-            ]
-        }
-        """.trimIndent()
-
-        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(loadResponse))
-        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(quotaResponse))
-
-        val result = repository.fetchQuota()
-
-        assertTrue(result is Result.Success)
-        val quotaInfo = (result as Result.Success).value
-        assertEquals(AiService.GEMINI, quotaInfo.service)
-        assertEquals("Free", quotaInfo.tier)
-        assertEquals(2, quotaInfo.windows.size)
-        // Pro first, then Flash
-        assertEquals("Pro", quotaInfo.windows[0].label)
-        assertEquals(0.50, quotaInfo.windows[0].utilization, 0.01)
-        assertEquals("Flash", quotaInfo.windows[1].label)
-        assertEquals(0.27, quotaInfo.windows[1].utilization, 0.01)
-    }
-
-    @Test
-    fun `fetchQuota with object projectId`() = runTest {
-        val loadResponse = """
-        {
-            "cloudaicompanionProject": { "id": "my-project-456" },
-            "currentTier": { "id": "standard-tier" }
-        }
-        """.trimIndent()
-
-        val quotaResponse = """
-        {
-            "buckets": [
-                { "modelId": "gemini-2.0-flash", "remainingFraction": 0.5 }
-            ]
-        }
-        """.trimIndent()
-
-        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(loadResponse))
-        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(quotaResponse))
-
-        val result = repository.fetchQuota()
-
-        assertTrue(result is Result.Success)
-        val quotaInfo = (result as Result.Success).value
-        assertEquals("Paid", quotaInfo.tier)
-    }
-
-    @Test
-    fun `manual validation rejects a non primitive nested projectId without throwing`() = runTest {
-        mockWebServer.enqueue(
-            MockResponse().setResponseCode(200).setBody(
-                """
-                {
-                    "cloudaicompanionProject": { "id": { "nested": true } },
-                    "currentTier": { "id": "free-tier" }
-                }
-                """.trimIndent()
+    fun `fetch maps sanitized companion snapshot to Gemini quota`() = runTest {
+        val generatedAt = 1_750_000_000L
+        `when`(prefsManager.loadCredential(AiService.GEMINI)).thenReturn(credential)
+        companionSnapshot = GeminiCompanionSnapshot(
+            schemaVersion = 1,
+            source = "gemini-cli-terminal",
+            generatedAtEpochSeconds = generatedAt,
+            cliVersion = "0.50.0",
+            tier = "Google AI Pro",
+            windows = listOf(
+                GeminiCompanionWindow("Pro", 0.25, generatedAt + 5_400),
+                GeminiCompanionWindow("Flash", 0.10, generatedAt + 7_200)
             )
         )
 
-        val result = repository.validateCredential(testCredential)
-
-        assertTrue(result is Result.Failure)
-        assertTrue((result as Result.Failure).error is AppError.ParseError)
-    }
-
-    @Test
-    fun `fetchQuota deduplicates buckets by modelId`() = runTest {
-        val loadResponse = """
-        {
-            "cloudaicompanionProject": "proj",
-            "currentTier": { "id": "free-tier" }
-        }
-        """.trimIndent()
-
-        val quotaResponse = """
-        {
-            "buckets": [
-                { "modelId": "gemini-2.0-flash", "remainingFraction": 0.80 },
-                { "modelId": "gemini-2.0-flash", "remainingFraction": 0.30 },
-                { "modelId": "gemini-2.0-pro", "remainingFraction": 0.60 }
-            ]
-        }
-        """.trimIndent()
-
-        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(loadResponse))
-        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(quotaResponse))
-
         val result = repository.fetchQuota()
 
         assertTrue(result is Result.Success)
-        val quotaInfo = (result as Result.Success).value
-        assertEquals(2, quotaInfo.windows.size)
-        // Flash group: max(1-0.80, 1-0.30) = max(0.20, 0.70) = 0.70
-        val flashWindow = quotaInfo.windows.first { it.label == "Flash" }
-        assertEquals(0.70, flashWindow.utilization, 0.01)
-        // Pro group: max(1-0.60) = 0.40
-        val proWindow = quotaInfo.windows.first { it.label == "Pro" }
-        assertEquals(0.40, proWindow.utilization, 0.01)
+        val quota = (result as Result.Success).value
+        assertEquals(AiService.GEMINI, quota.service)
+        assertEquals("Google AI Pro", quota.tier)
+        assertEquals(2, quota.windows.size)
+        assertEquals(0.25, quota.windows.first().utilization, 0.001)
+        assertEquals(generatedAt, quota.fetchedAt.epochSecond)
     }
 
     @Test
-    fun `fetchQuota returns AuthError on 401`() = runTest {
-        mockWebServer.enqueue(MockResponse().setResponseCode(401))
+    fun `wrong companion key requires re-pairing`() = runTest {
+        `when`(prefsManager.loadCredential(AiService.GEMINI)).thenReturn(credential)
+        companionFailure = GeminiCompanionAuthenticationException("authentication failed")
 
         val result = repository.fetchQuota()
 
         assertTrue(result is Result.Failure)
-        assertTrue((result as Result.Failure).error is AppError.AuthError)
+        val error = (result as Result.Failure).error
+        assertTrue(error is AppError.AuthError)
+        assertTrue((error as AppError.AuthError).isTerminal)
     }
 
     @Test
-    fun `fetchQuota returns RateLimited on 429`() = runTest {
-        mockWebServer.enqueue(MockResponse().setResponseCode(429))
-
-        val result = repository.fetchQuota()
-
-        assertTrue(result is Result.Failure)
-        assertTrue((result as Result.Failure).error is AppError.RateLimited)
-    }
-
-    @Test
-    fun `fetchQuota returns CredentialNotFound when no credential`() = runTest {
+    fun `fetch requires a companion pairing`() = runTest {
         `when`(prefsManager.loadCredential(AiService.GEMINI)).thenReturn(null)
 
         val result = repository.fetchQuota()

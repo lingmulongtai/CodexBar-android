@@ -9,7 +9,6 @@ import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.network.claude.ClaudeTokenRefreshService
 import com.codexbar.android.core.network.codex.CodexDto
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
-import com.codexbar.android.core.network.gemini.GeminiTokenRefreshService
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.TokenRefreshAttemptDecision
 import com.codexbar.android.core.security.TokenRefreshCoordinator
@@ -28,7 +27,6 @@ class TokenRefreshWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     private val claudeTokenRefreshService: ClaudeTokenRefreshService,
     private val codexTokenRefreshService: CodexTokenRefreshService,
-    private val geminiTokenRefreshService: GeminiTokenRefreshService,
     private val prefsManager: EncryptedPrefsManager,
     private val tokenRefreshCoordinator: TokenRefreshCoordinator,
     private val tokenRefreshStateStore: TokenRefreshStateStore
@@ -94,7 +92,7 @@ class TokenRefreshWorker @AssistedInject constructor(
         return when (credential) {
             is Credential.ClaudeCredential -> refreshClaude(credential)
             is Credential.CodexCredential -> refreshCodex(credential)
-            is Credential.GeminiCredential -> refreshGemini(credential)
+            is Credential.GeminiCompanionCredential -> RefreshOutcome.NotNeeded
             is Credential.CopilotCredential -> RefreshOutcome.NotNeeded
         }
     }
@@ -178,38 +176,6 @@ class TokenRefreshWorker @AssistedInject constructor(
         return refreshToken == other.refreshToken && accountId == other.accountId
     }
 
-    private suspend fun refreshGemini(credential: Credential.GeminiCredential): RefreshOutcome {
-        // Refresh if within 10 minutes of expiry
-        if (System.currentTimeMillis() < credential.expiresAtMs - REFRESH_BUFFER_SECONDS * 1000) {
-            return RefreshOutcome.NotNeeded
-        }
-
-        return try {
-            val response = geminiTokenRefreshService.refreshToken(
-                refreshToken = credential.refreshToken,
-                clientId = credential.oauthClientId
-            )
-            if (response.isSuccessful) {
-                val body = response.body() ?: return RefreshOutcome.Failure()
-                val expiresIn = body.expiresIn ?: 3600
-                prefsManager.saveCredential(
-                    AiService.GEMINI,
-                    Credential.GeminiCredential(
-                        accessToken = body.accessToken,
-                        refreshToken = body.refreshToken ?: credential.refreshToken,
-                        expiresAtMs = System.currentTimeMillis() + (expiresIn * 1000L),
-                        oauthClientId = credential.oauthClientId
-                    )
-                )
-                RefreshOutcome.Success
-            } else {
-                RefreshOutcome.Failure(terminal = response.code() == 400 || response.code() == 401)
-            }
-        } catch (_: Exception) {
-            RefreshOutcome.Failure()
-        }
-    }
-
     private fun nextRefreshDueMillis(credential: Credential, nowMillis: Long): Long {
         val minimumDue = nowMillis + MIN_REFRESH_GAP_MILLIS
         return when (credential) {
@@ -221,8 +187,7 @@ class TokenRefreshWorker @AssistedInject constructor(
 
             is Credential.CodexCredential -> nowMillis + DEFAULT_PROACTIVE_REFRESH_MILLIS
 
-            is Credential.GeminiCredential -> (credential.expiresAtMs - REFRESH_BUFFER_SECONDS * 1000)
-                .coerceAtLeast(minimumDue)
+            is Credential.GeminiCompanionCredential -> Long.MAX_VALUE
 
             is Credential.CopilotCredential -> Long.MAX_VALUE
         }

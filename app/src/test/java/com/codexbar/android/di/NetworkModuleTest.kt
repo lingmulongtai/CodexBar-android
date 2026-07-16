@@ -79,7 +79,6 @@ class NetworkModuleTest {
         val tokenClients = listOf(
             NetworkModule.provideClaudeTokenOkHttpClient(),
             NetworkModule.provideCodexTokenOkHttpClient(),
-            NetworkModule.provideGeminiTokenOkHttpClient(),
             NetworkModule.provideCodexDeviceAuthOkHttpClient(),
             NetworkModule.provideGitHubDeviceAuthOkHttpClient()
         )
@@ -125,8 +124,6 @@ class NetworkModuleTest {
             NetworkModule.provideCodexOkHttpClient(),
             NetworkModule.provideCodexTokenOkHttpClient(),
             NetworkModule.provideCodexDeviceAuthOkHttpClient(),
-            NetworkModule.provideGeminiOkHttpClient(),
-            NetworkModule.provideGeminiTokenOkHttpClient(),
             NetworkModule.provideCopilotOkHttpClient(),
             NetworkModule.provideGitHubDeviceAuthOkHttpClient()
         )

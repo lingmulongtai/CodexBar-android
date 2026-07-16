@@ -63,7 +63,14 @@ class EncryptedPrefsManager @Inject constructor(
     }
 
     suspend fun warmCache() {
-        val prefs = readPreferencesOrNull()
+        val initialPrefs = readPreferencesOrNull()
+        val prefs = if (initialPrefs?.containsLegacyGeminiTokens() == true) {
+            dataStore.edit { mutablePrefs ->
+                mutablePrefs.removeServiceEntries(AiService.GEMINI)
+            }
+        } else {
+            initialPrefs
+        }
         if (prefs == null) {
             cachedSettings = CachedSettings()
         } else {
@@ -76,9 +83,11 @@ class EncryptedPrefsManager @Inject constructor(
             prefs.removeServiceEntries(service)
             val prefix = service.name
 
-            prefs.putEncryptedString("${prefix}_access_token", credential.accessToken)
-            credential.refreshToken?.let {
-                prefs.putEncryptedString("${prefix}_refresh_token", it)
+            if (credential !is Credential.GeminiCompanionCredential) {
+                prefs.putEncryptedString("${prefix}_access_token", credential.accessToken)
+                credential.refreshToken?.let {
+                    prefs.putEncryptedString("${prefix}_refresh_token", it)
+                }
             }
 
             when (credential) {
@@ -100,9 +109,14 @@ class EncryptedPrefsManager @Inject constructor(
                     }
                 }
 
-                is Credential.GeminiCredential -> {
-                    prefs[longPreferencesKey("${prefix}_expires_at_ms")] = credential.expiresAtMs
-                    prefs.putEncryptedString("${prefix}_oauth_client_id", credential.oauthClientId)
+                is Credential.GeminiCompanionCredential -> {
+                    prefs.putEncryptedString("${prefix}_companion_host", credential.host)
+                    prefs[longPreferencesKey("${prefix}_companion_port")] = credential.port.toLong()
+                    prefs.putEncryptedString("${prefix}_companion_id", credential.companionId)
+                    prefs.putEncryptedString(
+                        "${prefix}_companion_shared_key",
+                        credential.sharedKeyBase64Url
+                    )
                 }
 
                 is Credential.CopilotCredential -> {
@@ -255,10 +269,10 @@ class EncryptedPrefsManager @Inject constructor(
 
     private fun readCredential(prefs: Preferences, service: AiService): Credential? {
         val prefix = service.name
-        val accessToken = prefs.getEncryptedString("${prefix}_access_token") ?: return null
 
         return when (service) {
             AiService.CLAUDE -> {
+                val accessToken = prefs.getEncryptedString("${prefix}_access_token") ?: return null
                 val refreshToken = prefs.getEncryptedString("${prefix}_refresh_token")
                 val expiresAt = prefs[longPreferencesKey("${prefix}_expires_at")]
                     ?.takeIf { it > 0 }
@@ -275,6 +289,7 @@ class EncryptedPrefsManager @Inject constructor(
             }
 
             AiService.CODEX -> {
+                val accessToken = prefs.getEncryptedString("${prefix}_access_token") ?: return null
                 val refreshToken = prefs.getEncryptedString("${prefix}_refresh_token") ?: return null
                 val accountId = prefs.getEncryptedString("${prefix}_account_id")
                 Credential.CodexCredential(
@@ -285,22 +300,34 @@ class EncryptedPrefsManager @Inject constructor(
             }
 
             AiService.GEMINI -> {
-                val refreshToken = prefs.getEncryptedString("${prefix}_refresh_token") ?: return null
-                val expiresAtMs = prefs[longPreferencesKey("${prefix}_expires_at_ms")]
-                    ?.takeIf { it > 0 } ?: return null
-                val clientId = prefs.getEncryptedString("${prefix}_oauth_client_id") ?: return null
-                Credential.GeminiCredential(
-                    accessToken = accessToken,
-                    refreshToken = refreshToken,
-                    expiresAtMs = expiresAtMs,
-                    oauthClientId = clientId
+                val host = prefs.getEncryptedString("${prefix}_companion_host") ?: return null
+                val port = prefs[longPreferencesKey("${prefix}_companion_port")]
+                    ?.takeIf { it in 1..65535 }
+                    ?.toInt()
+                    ?: return null
+                val companionId = prefs.getEncryptedString("${prefix}_companion_id") ?: return null
+                val sharedKey = prefs.getEncryptedString("${prefix}_companion_shared_key")
+                    ?: return null
+                Credential.GeminiCompanionCredential(
+                    host = host,
+                    port = port,
+                    companionId = companionId,
+                    sharedKeyBase64Url = sharedKey
                 )
             }
 
             AiService.COPILOT -> {
+                val accessToken = prefs.getEncryptedString("${prefix}_access_token") ?: return null
                 Credential.CopilotCredential(accessToken = accessToken)
             }
         }
+    }
+
+    private fun Preferences.containsLegacyGeminiTokens(): Boolean {
+        val prefix = "${AiService.GEMINI.name}_"
+        val hasCompanionKey = this[stringPreferencesKey("${prefix}companion_shared_key")] != null
+        if (hasCompanionKey) return false
+        return asMap().keys.any { key -> key.name.startsWith(prefix) }
     }
 
     private fun MutablePreferences.putEncryptedString(keyName: String, value: String) {

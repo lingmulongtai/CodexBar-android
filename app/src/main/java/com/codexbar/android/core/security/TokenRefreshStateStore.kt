@@ -59,9 +59,9 @@ class TokenRefreshStateStore @Inject constructor(
                 credential.accountId.orEmpty()
             )
 
-            is Credential.GeminiCredential -> listOf(
-                credential.refreshToken,
-                credential.oauthClientId
+            is Credential.GeminiCompanionCredential -> listOf(
+                credential.companionId,
+                credential.sharedKeyBase64Url
             )
 
             is Credential.CopilotCredential -> listOf(credential.accessToken)

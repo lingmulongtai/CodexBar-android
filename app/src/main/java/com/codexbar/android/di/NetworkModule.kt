@@ -10,8 +10,6 @@ import com.codexbar.android.core.network.claude.ClaudeTokenRefreshService
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.copilot.CopilotApiService
-import com.codexbar.android.core.network.gemini.GeminiApiService
-import com.codexbar.android.core.network.gemini.GeminiTokenRefreshService
 import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
 import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
 import dagger.Module
@@ -37,19 +35,11 @@ annotation class CodexClient
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
-annotation class GeminiClient
-
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
 annotation class ClaudeTokenClient
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class CodexTokenClient
-
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class GeminiTokenClient
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
@@ -203,46 +193,6 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(CodexDeviceAuthService::class.java)
-    }
-
-    // --- Gemini ---
-
-    @Provides
-    @Singleton
-    @GeminiClient
-    fun provideGeminiOkHttpClient(): OkHttpClient = baseOkHttpBuilder(includeDebugLogging = true).build()
-
-    @Provides
-    @Singleton
-    fun provideGeminiApiService(
-        @GeminiClient client: OkHttpClient,
-        json: Json
-    ): GeminiApiService {
-        return Retrofit.Builder()
-            .baseUrl(AiService.GEMINI.baseUrl)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-            .create(GeminiApiService::class.java)
-    }
-
-    @Provides
-    @Singleton
-    @GeminiTokenClient
-    fun provideGeminiTokenOkHttpClient(): OkHttpClient = credentialOkHttpBuilder().build()
-
-    @Provides
-    @Singleton
-    fun provideGeminiTokenRefreshService(
-        @GeminiTokenClient client: OkHttpClient,
-        json: Json
-    ): GeminiTokenRefreshService {
-        return Retrofit.Builder()
-            .baseUrl(GeminiTokenRefreshService.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-            .create(GeminiTokenRefreshService::class.java)
     }
 
     // --- GitHub Copilot ---

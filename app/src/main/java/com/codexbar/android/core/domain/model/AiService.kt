@@ -21,7 +21,7 @@ enum class AiService(
     GEMINI(
         displayName = "Gemini",
         brandColor = 0xFF4285F4,
-        baseUrl = "https://cloudcode-pa.googleapis.com/",
+        baseUrl = "codexbar://gemini-companion/",
         requiresManualCredentials = false
     ),
     COPILOT(

@@ -10,8 +10,7 @@ import com.codexbar.android.core.network.claude.ClaudeTokenRefreshService
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.copilot.CopilotApiService
-import com.codexbar.android.core.network.gemini.GeminiApiService
-import com.codexbar.android.core.network.gemini.GeminiTokenRefreshService
+import com.codexbar.android.core.network.gemini.GeminiCompanionClient
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.TokenRefreshCoordinator
 import dagger.Module
@@ -64,10 +63,9 @@ object RepositoryModule {
     @Singleton
     @GeminiRepository
     fun provideGeminiRepository(
-        apiService: GeminiApiService,
-        tokenRefreshService: GeminiTokenRefreshService,
+        companionClient: GeminiCompanionClient,
         prefsManager: EncryptedPrefsManager
-    ): QuotaRepository = GeminiRepositoryImpl(apiService, tokenRefreshService, prefsManager)
+    ): QuotaRepository = GeminiRepositoryImpl(companionClient, prefsManager)
 
     @Provides
     @Singleton
