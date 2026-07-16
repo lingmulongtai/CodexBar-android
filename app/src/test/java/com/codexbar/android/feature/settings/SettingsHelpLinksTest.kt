@@ -14,6 +14,7 @@ class SettingsHelpLinksTest {
             AiService.GEMINI to "gemini-google",
             AiService.COPILOT to "github-copilot",
             AiService.CURSOR to "cursor",
+            AiService.ZAI to "zai",
             AiService.ZENMUX to "zenmux"
         )
 

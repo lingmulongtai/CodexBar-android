@@ -501,6 +501,11 @@ private fun ServiceCredentialSection(
                     body = stringResource(R.string.credential_cursor_setup_body),
                     accent = visualStyle.accent
                 )
+                service == AiService.ZAI -> ProviderSecretSetupGuide(
+                    title = stringResource(R.string.credential_zai_setup_title),
+                    body = stringResource(R.string.credential_zai_setup_body),
+                    accent = visualStyle.accent
+                )
                 service == AiService.ZENMUX -> ProviderSecretSetupGuide(
                     title = stringResource(R.string.credential_zenmux_setup_title),
                     body = stringResource(R.string.credential_zenmux_setup_body),
@@ -784,6 +789,7 @@ private fun ManualCredentialFields(
                         when (service) {
                             AiService.COPILOT -> R.string.credential_github_oauth_token
                             AiService.CURSOR -> R.string.credential_cursor_cookie_header
+                            AiService.ZAI -> R.string.credential_zai_api_key
                             AiService.ZENMUX -> R.string.credential_zenmux_management_key
                             else -> R.string.credential_access_token
                         }
@@ -918,6 +924,7 @@ private fun AccountLinkControls(
                 AiService.COPILOT -> stringResource(R.string.account_link_copilot_description)
                 AiService.CLAUDE -> stringResource(R.string.credential_claude_instructions)
                 AiService.CURSOR -> stringResource(R.string.credential_cursor_setup_body)
+                AiService.ZAI -> stringResource(R.string.credential_zai_setup_body)
                 AiService.ZENMUX -> stringResource(R.string.credential_zenmux_setup_body)
             },
             style = MaterialTheme.typography.bodySmall,
@@ -1126,6 +1133,7 @@ internal fun accountGuideUrl(service: AiService): String {
         AiService.GEMINI -> "gemini-google"
         AiService.COPILOT -> "github-copilot"
         AiService.CURSOR -> "cursor"
+        AiService.ZAI -> "zai"
         AiService.ZENMUX -> "zenmux"
     }
     return "$ACCOUNT_GUIDE_BASE_URL#$anchor"

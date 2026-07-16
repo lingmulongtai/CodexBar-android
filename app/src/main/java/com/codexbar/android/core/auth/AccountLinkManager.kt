@@ -26,6 +26,7 @@ class AccountLinkManager @Inject constructor(
             AiService.CLAUDE,
             AiService.GEMINI,
             AiService.CURSOR,
+            AiService.ZAI,
             AiService.ZENMUX -> throw UnsupportedOperationException(
                 "${service.displayName} does not expose a supported Android device-code flow."
             )
@@ -39,6 +40,7 @@ class AccountLinkManager @Inject constructor(
             AiService.CLAUDE,
             AiService.GEMINI,
             AiService.CURSOR,
+            AiService.ZAI,
             AiService.ZENMUX -> throw UnsupportedOperationException(
                 "${session.service.displayName} does not expose a supported Android device-code flow."
             )

@@ -2,7 +2,7 @@
 
 > Android port of [**CodexBar**](https://github.com/steipete/CodexBar) by [@steipete](https://github.com/steipete) — the macOS menu bar app for monitoring AI service quotas.
 
-Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, Cursor, and ZenMux usage in one place; Gemini uses an optional private companion that keeps Google authentication inside the official Gemini CLI.
+Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, Cursor, z.ai, and ZenMux usage in one place; Gemini uses an optional private companion that keeps Google authentication inside the official Gemini CLI.
 
 <p align="center">
   <img src="docs/images/dashboard-light.png" width="320" alt="Material 3 Expressive dashboard in light mode" />
@@ -14,7 +14,7 @@ Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT
 
 ## Features
 
-- Unified quota monitoring for Claude, Codex, GitHub Copilot, Gemini, Cursor, and ZenMux
+- Unified quota monitoring for Claude, Codex, GitHub Copilot, Gemini, Cursor, z.ai, and ZenMux
 - Material 3 Expressive provider cards with animated rings, bars, exact values, reset countdowns, and pace forecasts
 - Adaptive phone navigation and a two-pane large-screen dashboard
 - Quick Settings tile for at-a-glance status
@@ -186,6 +186,12 @@ Cursor does not currently expose a supported mobile device-code flow. The origin
 The app rejects malformed or multi-line values before network access, sends the cookie only to `https://cursor.com`, refuses HTTP and HTTPS redirects, and encrypts it with Android Keystore only after the usage endpoint accepts it. Never paste this value into an issue or chat. Signing out of Cursor invalidates the session.
 
 Cursor cards show the billing-cycle Total, Auto, and API percentages, legacy request-plan usage when available, the cycle reset, plan name, and capped on-demand USD usage. Team and Enterprise personal/shared-cap fallbacks follow the original CodexBar mapping.
+
+### z.ai
+
+Create or copy an API token from the [z.ai Coding Plan dashboard](https://z.ai/manage-apikey/coding-plan/personal/my-plan), paste it into the z.ai card, and select **Validate & connect**. The app reads the personal quota response from the fixed Global endpoint at `https://api.z.ai/api/monitor/usage/quota/limit` and maps the Tokens, MCP/time, and shorter rolling token windows using the original CodexBar rules.
+
+The token is sent only as a bearer credential to `api.z.ai`, never across redirects, never written to HTTP logs, and encrypted with Android Keystore after validation. BigModel China and team mode need additional region, organization, and project selectors; they intentionally remain unavailable rather than silently sending a Global token to a configurable host.
 
 ### ZenMux
 

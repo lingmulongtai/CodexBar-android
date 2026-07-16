@@ -3,6 +3,7 @@ package com.codexbar.android.ui.components
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Code
+import androidx.compose.material.icons.rounded.DataUsage
 import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material.icons.rounded.Hub
@@ -17,6 +18,7 @@ fun AiService.providerIcon(): ImageVector {
         AiService.GEMINI -> Icons.Rounded.AutoAwesome
         AiService.COPILOT -> Icons.Rounded.Code
         AiService.CURSOR -> Icons.Rounded.Mouse
+        AiService.ZAI -> Icons.Rounded.DataUsage
         AiService.ZENMUX -> Icons.Rounded.Hub
     }
 }

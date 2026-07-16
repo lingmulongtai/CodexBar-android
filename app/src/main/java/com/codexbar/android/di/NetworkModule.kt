@@ -13,6 +13,7 @@ import com.codexbar.android.core.network.copilot.CopilotApiService
 import com.codexbar.android.core.network.cursor.CursorApiService
 import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
 import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
+import com.codexbar.android.core.network.zai.ZaiApiService
 import com.codexbar.android.core.network.zenmux.ZenMuxApiService
 import dagger.Module
 import dagger.Provides
@@ -58,6 +59,10 @@ annotation class GitHubDeviceAuthClient
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class CursorClient
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class ZaiClient
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
@@ -264,6 +269,27 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(CursorApiService::class.java)
+    }
+
+    // --- z.ai ---
+
+    @Provides
+    @Singleton
+    @ZaiClient
+    fun provideZaiOkHttpClient(): OkHttpClient = credentialOkHttpBuilder().build()
+
+    @Provides
+    @Singleton
+    fun provideZaiApiService(
+        @ZaiClient client: OkHttpClient,
+        json: Json
+    ): ZaiApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.ZAI.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(ZaiApiService::class.java)
     }
 
     // --- ZenMux ---

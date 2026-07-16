@@ -5,6 +5,7 @@ import com.codexbar.android.core.data.CodexRepositoryImpl
 import com.codexbar.android.core.data.CopilotRepositoryImpl
 import com.codexbar.android.core.data.CursorRepositoryImpl
 import com.codexbar.android.core.data.GeminiRepositoryImpl
+import com.codexbar.android.core.data.ZaiRepositoryImpl
 import com.codexbar.android.core.data.ZenMuxRepositoryImpl
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.repository.QuotaRepository
@@ -15,6 +16,7 @@ import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.copilot.CopilotApiService
 import com.codexbar.android.core.network.cursor.CursorApiService
 import com.codexbar.android.core.network.gemini.GeminiCompanionClient
+import com.codexbar.android.core.network.zai.ZaiApiService
 import com.codexbar.android.core.network.zenmux.ZenMuxApiService
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.TokenRefreshCoordinator
@@ -80,6 +82,15 @@ object RepositoryModule {
         apiService: CursorApiService,
         prefsManager: EncryptedPrefsManager
     ): QuotaRepository = CursorRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.ZAI)
+    fun provideZaiRepository(
+        apiService: ZaiApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = ZaiRepositoryImpl(apiService, prefsManager)
 
     @Provides
     @Singleton

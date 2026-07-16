@@ -36,6 +36,12 @@ enum class AiService(
         baseUrl = "https://cursor.com/",
         requiresManualCredentials = true
     ),
+    ZAI(
+        displayName = "z.ai",
+        brandColor = 0xFFE85A6A,
+        baseUrl = "https://api.z.ai/",
+        requiresManualCredentials = true
+    ),
     ZENMUX(
         displayName = "ZenMux",
         brandColor = 0xFF6750A4,

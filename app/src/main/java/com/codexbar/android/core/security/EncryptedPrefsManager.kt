@@ -343,6 +343,19 @@ class EncryptedPrefsManager @Inject constructor(
                 )
             }
 
+            AiService.ZAI -> {
+                val accessToken = prefs.getEncryptedString("${prefix}_access_token") ?: return null
+                val kind = prefs.getEncryptedString("${prefix}_secret_kind")
+                    ?.let { runCatching { ProviderSecretKind.valueOf(it) }.getOrNull() }
+                    ?: ProviderSecretKind.API_KEY
+                if (kind != ProviderSecretKind.API_KEY) return null
+                Credential.ProviderSecretCredential(
+                    service = service,
+                    kind = kind,
+                    accessToken = accessToken
+                )
+            }
+
             AiService.ZENMUX -> {
                 val accessToken = prefs.getEncryptedString("${prefix}_access_token") ?: return null
                 val kind = prefs.getEncryptedString("${prefix}_secret_kind")

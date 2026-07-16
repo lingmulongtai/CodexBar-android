@@ -27,6 +27,7 @@ fun providerVisualStyle(service: AiService): ProviderVisualStyle {
         AiService.GEMINI -> if (isDark) Color(0xFFBBC3FF) else Color(0xFF3559C7)
         AiService.COPILOT -> if (isDark) Color(0xFFC6C5D0) else Color(0xFF555E6D)
         AiService.CURSOR -> if (isDark) Color(0xFF65DDB8) else Color(0xFF006B53)
+        AiService.ZAI -> if (isDark) Color(0xFFFFB2B8) else Color(0xFF9F273C)
         AiService.ZENMUX -> if (isDark) Color(0xFFD0BCFF) else Color(0xFF6750A4)
     }
     val tintAlpha = if (isDark) 0.16f else 0.09f
@@ -53,6 +54,12 @@ fun providerVisualStyle(service: AiService): ProviderVisualStyle {
         AiService.CURSOR -> RoundedCornerShape(
             topStart = 8.dp,
             topEnd = 24.dp,
+            bottomEnd = 24.dp,
+            bottomStart = 24.dp
+        )
+        AiService.ZAI -> RoundedCornerShape(
+            topStart = 24.dp,
+            topEnd = 8.dp,
             bottomEnd = 24.dp,
             bottomStart = 24.dp
         )

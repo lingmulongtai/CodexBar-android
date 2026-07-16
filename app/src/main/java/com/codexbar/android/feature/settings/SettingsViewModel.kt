@@ -142,6 +142,11 @@ class SettingsViewModel @Inject constructor(
                 kind = ProviderSecretKind.COOKIE_HEADER,
                 accessToken = state.accessToken.trim()
             )
+            AiService.ZAI -> Credential.ProviderSecretCredential(
+                service = service,
+                kind = ProviderSecretKind.API_KEY,
+                accessToken = state.accessToken.trim()
+            )
             AiService.ZENMUX -> Credential.ProviderSecretCredential(
                 service = service,
                 kind = ProviderSecretKind.API_KEY,

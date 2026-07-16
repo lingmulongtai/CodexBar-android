@@ -94,6 +94,9 @@
     <string name="credential_cursor_setup_title">Cursor Webセッション</string>
     <string name="credential_cursor_setup_body">Cursorには対応済みのモバイル向けデバイスコード認証がありません。PCのブラウザでcursor.comへログインし、/api/usage-summaryリクエストのCookieヘッダーをコピーして下へ貼り付けてください。パスワードと同様に扱ってください。CodexBarはcursor.comに対してだけ検証し、リダイレクトせず、検証成功後に暗号化します。</string>
     <string name="credential_cursor_cookie_header">Cursor Cookieヘッダー</string>
+    <string name="credential_zai_setup_title">z.ai Coding Plan</string>
+    <string name="credential_zai_setup_body">z.ai Coding PlanのダッシュボードでAPIトークンを作成またはコピーしてください。このリリースは固定されたGlobalエンドポイント（api.z.ai）だけへ接続します。BigModel中国リージョンとチーム用セレクターは、個別に安全な保存・検証を実装するまで無効です。</string>
+    <string name="credential_zai_api_key">z.ai APIトークン</string>
     <string name="credential_zenmux_setup_title">ZenMux Management API</string>
     <string name="credential_zenmux_setup_body">zenmux.ai/platform/management でManagement APIキーを作成してください。通常の推論用APIキーは利用できません。CodexBarが取得するのは契約の使用枠だけで、プロンプトやリクエストログは読み取りません。</string>
     <string name="credential_zenmux_management_key">Management APIキー</string>
