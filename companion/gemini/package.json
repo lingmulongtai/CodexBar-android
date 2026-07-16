@@ -1,0 +1,20 @@
+{
+  "name": "@codexbar/gemini-companion",
+  "version": "0.4.0",
+  "private": true,
+  "description": "Private local quota bridge between the official Gemini CLI and CodexBar for Android",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test",
+    "check": "node --check src/config.js && node --check src/gemini-cli.js && node --check src/index.js"
+  },
+  "dependencies": {
+    "node-pty": "1.1.0",
+    "qrcode-terminal": "0.12.0"
+  },
+  "license": "MIT"
+}
