@@ -7,11 +7,22 @@ import com.codexbar.android.core.network.RetryInterceptor
 import com.codexbar.android.core.network.ResponseSizeLimitInterceptor
 import com.codexbar.android.core.network.claude.ClaudeApiService
 import com.codexbar.android.core.network.claude.ClaudeTokenRefreshService
+import com.codexbar.android.core.network.chutes.ChutesApiService
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.copilot.CopilotApiService
+import com.codexbar.android.core.network.cursor.CursorApiService
+import com.codexbar.android.core.network.deepseek.DeepSeekApiService
+import com.codexbar.android.core.network.elevenlabs.ElevenLabsApiService
+import com.codexbar.android.core.network.kimi.KimiApiService
+import com.codexbar.android.core.network.moonshot.MoonshotApiService
 import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
 import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
+import com.codexbar.android.core.network.openrouter.OpenRouterApiService
+import com.codexbar.android.core.network.synthetic.SyntheticApiService
+import com.codexbar.android.core.network.venice.VeniceApiService
+import com.codexbar.android.core.network.zai.ZaiApiService
+import com.codexbar.android.core.network.zenmux.ZenMuxApiService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -52,6 +63,10 @@ annotation class CodexDeviceAuthClient
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class GitHubDeviceAuthClient
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class ProviderCredentialClient
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -233,5 +248,186 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(GitHubDeviceAuthService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    @ProviderCredentialClient
+    fun provideProviderCredentialOkHttpClient(): OkHttpClient = credentialOkHttpBuilder().build()
+
+    // --- Cursor ---
+
+    @Provides
+    @Singleton
+    fun provideCursorApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): CursorApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.CURSOR.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(CursorApiService::class.java)
+    }
+
+    // --- z.ai ---
+
+    @Provides
+    @Singleton
+    fun provideZaiApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): ZaiApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.ZAI.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(ZaiApiService::class.java)
+    }
+
+    // --- ZenMux ---
+
+    @Provides
+    @Singleton
+    fun provideZenMuxApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): ZenMuxApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.ZENMUX.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(ZenMuxApiService::class.java)
+    }
+
+    // --- Kimi ---
+
+    @Provides
+    @Singleton
+    fun provideKimiApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): KimiApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.KIMI.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(KimiApiService::class.java)
+    }
+
+    // --- ElevenLabs ---
+
+    @Provides
+    @Singleton
+    fun provideElevenLabsApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): ElevenLabsApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.ELEVENLABS.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(ElevenLabsApiService::class.java)
+    }
+
+    // --- OpenRouter ---
+
+    @Provides
+    @Singleton
+    fun provideOpenRouterApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): OpenRouterApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.OPENROUTER.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(OpenRouterApiService::class.java)
+    }
+
+    // --- Synthetic ---
+
+    @Provides
+    @Singleton
+    fun provideSyntheticApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): SyntheticApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.SYNTHETIC.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(SyntheticApiService::class.java)
+    }
+
+    // --- Chutes ---
+
+    @Provides
+    @Singleton
+    fun provideChutesApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): ChutesApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.CHUTES.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(ChutesApiService::class.java)
+    }
+
+    // --- DeepSeek ---
+
+    @Provides
+    @Singleton
+    fun provideDeepSeekApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): DeepSeekApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.DEEPSEEK.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(DeepSeekApiService::class.java)
+    }
+
+    // --- Venice ---
+
+    @Provides
+    @Singleton
+    fun provideVeniceApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): VeniceApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.VENICE.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(VeniceApiService::class.java)
+    }
+
+    // --- Moonshot API (International) ---
+
+    @Provides
+    @Singleton
+    fun provideMoonshotApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): MoonshotApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.MOONSHOT.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(MoonshotApiService::class.java)
     }
 }

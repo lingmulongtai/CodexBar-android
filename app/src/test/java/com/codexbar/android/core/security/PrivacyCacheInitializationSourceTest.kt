@@ -25,7 +25,11 @@ class PrivacyCacheInitializationSourceTest {
         val worker = sourceFile("workmanager/QuotaRefreshWorker.kt")
 
         assertInOrder(widget, "prefsManager.warmCache()", "prefsManager.getPrivacySettings()")
-        assertInOrder(worker, "prefsManager.warmCache()", "val repos = buildList")
+        assertInOrder(
+            worker,
+            "prefsManager.warmCache()",
+            "val repos = repositoryRegistry.entries()"
+        )
         assertInOrder(worker, "prefsManager.warmCache()", "prefsManager.getPrivacySettings()")
     }
 

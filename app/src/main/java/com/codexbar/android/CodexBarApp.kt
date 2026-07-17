@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.rounded.DonutLarge
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
@@ -33,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -40,9 +42,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.codexbar.android.feature.dashboard.DashboardScreen
+import com.codexbar.android.feature.settings.ConnectionsScreen
 import com.codexbar.android.feature.settings.SettingsScreen
+import com.codexbar.android.feature.settings.SettingsViewModel
 
 private const val DashboardRoute = "dashboard"
+private const val ConnectionsRoute = "connections"
 private const val SettingsRoute = "settings"
 private const val ExpandedNavigationMinWidthDp = 600f
 
@@ -55,6 +60,11 @@ private enum class AppDestination(
         route = DashboardRoute,
         labelRes = R.string.navigation_dashboard,
         icon = Icons.Rounded.DonutLarge
+    ),
+    Connections(
+        route = ConnectionsRoute,
+        labelRes = R.string.connections_title,
+        icon = Icons.AutoMirrored.Rounded.Login
     ),
     Settings(
         route = SettingsRoute,
@@ -72,6 +82,7 @@ fun CodexBarApp(
     modifier: Modifier = Modifier
 ) {
     val navController = rememberNavController()
+    val settingsViewModel: SettingsViewModel = hiltViewModel()
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentEntry?.destination?.route ?: initialDestination
     var initialDestinationHandled by rememberSaveable { mutableStateOf(false) }
@@ -79,8 +90,8 @@ fun CodexBarApp(
     LaunchedEffect(initialDestination, initialDestinationHandled) {
         if (!initialDestinationHandled) {
             initialDestinationHandled = true
-            if (initialDestination == SettingsRoute) {
-                navController.navigate(SettingsRoute) {
+            if (initialDestination == ConnectionsRoute || initialDestination == SettingsRoute) {
+                navController.navigate(initialDestination) {
                     launchSingleTop = true
                 }
             }
@@ -89,7 +100,7 @@ fun CodexBarApp(
 
     LaunchedEffect(initialGeminiPairingUri) {
         if (initialGeminiPairingUri != null) {
-            navController.navigate(SettingsRoute) {
+            navController.navigate(ConnectionsRoute) {
                 launchSingleTop = true
             }
         }
@@ -143,6 +154,7 @@ fun CodexBarApp(
                     initialGeminiPairingUri = initialGeminiPairingUri,
                     onGeminiPairingConsumed = onGeminiPairingConsumed,
                     onScreenPrivacyChanged = onScreenPrivacyChanged,
+                    settingsViewModel = settingsViewModel,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -174,6 +186,7 @@ fun CodexBarApp(
                     initialGeminiPairingUri = initialGeminiPairingUri,
                     onGeminiPairingConsumed = onGeminiPairingConsumed,
                     onScreenPrivacyChanged = onScreenPrivacyChanged,
+                    settingsViewModel = settingsViewModel,
                     modifier = Modifier.padding(paddingValues)
                 )
             }
@@ -187,6 +200,7 @@ private fun AppNavHost(
     initialGeminiPairingUri: String?,
     onGeminiPairingConsumed: () -> Unit,
     onScreenPrivacyChanged: (Boolean) -> Unit,
+    settingsViewModel: SettingsViewModel,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -196,9 +210,20 @@ private fun AppNavHost(
     ) {
         composable(DashboardRoute) {
             DashboardScreen(
-                onNavigateToSettings = {
-                    navController.navigateTopLevel(SettingsRoute)
+                onNavigateToConnections = {
+                    navController.navigateTopLevel(ConnectionsRoute)
                 }
+            )
+        }
+        composable(ConnectionsRoute) {
+            ConnectionsScreen(
+                onNavigateBack = {
+                    navController.navigateTopLevel(DashboardRoute)
+                },
+                showBackButton = false,
+                initialGeminiPairingUri = initialGeminiPairingUri,
+                onGeminiPairingConsumed = onGeminiPairingConsumed,
+                viewModel = settingsViewModel
             )
         }
         composable(SettingsRoute) {
@@ -207,9 +232,8 @@ private fun AppNavHost(
                     navController.navigateTopLevel(DashboardRoute)
                 },
                 showBackButton = false,
-                initialGeminiPairingUri = initialGeminiPairingUri,
-                onGeminiPairingConsumed = onGeminiPairingConsumed,
-                onScreenPrivacyChanged = onScreenPrivacyChanged
+                onScreenPrivacyChanged = onScreenPrivacyChanged,
+                viewModel = settingsViewModel
             )
         }
     }

@@ -1,40 +1,51 @@
 package com.codexbar.android.di
 
 import com.codexbar.android.core.data.ClaudeRepositoryImpl
+import com.codexbar.android.core.data.ChutesRepositoryImpl
 import com.codexbar.android.core.data.CodexRepositoryImpl
 import com.codexbar.android.core.data.CopilotRepositoryImpl
+import com.codexbar.android.core.data.CursorRepositoryImpl
+import com.codexbar.android.core.data.DeepSeekRepositoryImpl
+import com.codexbar.android.core.data.ElevenLabsRepositoryImpl
 import com.codexbar.android.core.data.GeminiRepositoryImpl
+import com.codexbar.android.core.data.KimiRepositoryImpl
+import com.codexbar.android.core.data.MoonshotRepositoryImpl
+import com.codexbar.android.core.data.OpenRouterRepositoryImpl
+import com.codexbar.android.core.data.SyntheticRepositoryImpl
+import com.codexbar.android.core.data.VeniceRepositoryImpl
+import com.codexbar.android.core.data.ZaiRepositoryImpl
+import com.codexbar.android.core.data.ZenMuxRepositoryImpl
+import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.network.claude.ClaudeApiService
 import com.codexbar.android.core.network.claude.ClaudeTokenRefreshService
+import com.codexbar.android.core.network.chutes.ChutesApiService
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.copilot.CopilotApiService
+import com.codexbar.android.core.network.cursor.CursorApiService
+import com.codexbar.android.core.network.deepseek.DeepSeekApiService
+import com.codexbar.android.core.network.elevenlabs.ElevenLabsApiService
 import com.codexbar.android.core.network.gemini.GeminiCompanionClient
+import com.codexbar.android.core.network.kimi.KimiApiService
+import com.codexbar.android.core.network.moonshot.MoonshotApiService
+import com.codexbar.android.core.network.openrouter.OpenRouterApiService
+import com.codexbar.android.core.network.synthetic.SyntheticApiService
+import com.codexbar.android.core.network.venice.VeniceApiService
+import com.codexbar.android.core.network.zai.ZaiApiService
+import com.codexbar.android.core.network.zenmux.ZenMuxApiService
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.TokenRefreshCoordinator
 import dagger.Module
+import dagger.MapKey
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Qualifier
+import dagger.multibindings.IntoMap
 import javax.inject.Singleton
 
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class ClaudeRepository
-
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class CodexRepository
-
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class GeminiRepository
-
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class CopilotRepository
+@MapKey
+annotation class AiServiceKey(val value: AiService)
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -42,7 +53,8 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    @ClaudeRepository
+    @IntoMap
+    @AiServiceKey(AiService.CLAUDE)
     fun provideClaudeRepository(
         apiService: ClaudeApiService,
         tokenRefreshService: ClaudeTokenRefreshService,
@@ -51,7 +63,8 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    @CodexRepository
+    @IntoMap
+    @AiServiceKey(AiService.CODEX)
     fun provideCodexRepository(
         apiService: CodexApiService,
         tokenRefreshService: CodexTokenRefreshService,
@@ -61,7 +74,8 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    @GeminiRepository
+    @IntoMap
+    @AiServiceKey(AiService.GEMINI)
     fun provideGeminiRepository(
         companionClient: GeminiCompanionClient,
         prefsManager: EncryptedPrefsManager
@@ -69,9 +83,109 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    @CopilotRepository
+    @IntoMap
+    @AiServiceKey(AiService.COPILOT)
     fun provideCopilotRepository(
         apiService: CopilotApiService,
         prefsManager: EncryptedPrefsManager
     ): QuotaRepository = CopilotRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.CURSOR)
+    fun provideCursorRepository(
+        apiService: CursorApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = CursorRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.ZAI)
+    fun provideZaiRepository(
+        apiService: ZaiApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = ZaiRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.ZENMUX)
+    fun provideZenMuxRepository(
+        apiService: ZenMuxApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = ZenMuxRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.KIMI)
+    fun provideKimiRepository(
+        apiService: KimiApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = KimiRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.ELEVENLABS)
+    fun provideElevenLabsRepository(
+        apiService: ElevenLabsApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = ElevenLabsRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.OPENROUTER)
+    fun provideOpenRouterRepository(
+        apiService: OpenRouterApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = OpenRouterRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.SYNTHETIC)
+    fun provideSyntheticRepository(
+        apiService: SyntheticApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = SyntheticRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.CHUTES)
+    fun provideChutesRepository(
+        apiService: ChutesApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = ChutesRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.DEEPSEEK)
+    fun provideDeepSeekRepository(
+        apiService: DeepSeekApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = DeepSeekRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.VENICE)
+    fun provideVeniceRepository(
+        apiService: VeniceApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = VeniceRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.MOONSHOT)
+    fun provideMoonshotRepository(
+        apiService: MoonshotApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = MoonshotRepositoryImpl(apiService, prefsManager)
 }

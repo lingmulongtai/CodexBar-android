@@ -26,6 +26,17 @@ fun providerVisualStyle(service: AiService): ProviderVisualStyle {
         AiService.CODEX -> if (isDark) Color(0xFF63DBB6) else Color(0xFF006B53)
         AiService.GEMINI -> if (isDark) Color(0xFFBBC3FF) else Color(0xFF3559C7)
         AiService.COPILOT -> if (isDark) Color(0xFFC6C5D0) else Color(0xFF555E6D)
+        AiService.CURSOR -> if (isDark) Color(0xFF65DDB8) else Color(0xFF006B53)
+        AiService.ZAI -> if (isDark) Color(0xFFFFB2B8) else Color(0xFF9F273C)
+        AiService.ZENMUX -> if (isDark) Color(0xFFD0BCFF) else Color(0xFF6750A4)
+        AiService.KIMI -> if (isDark) Color(0xFF6FE7D8) else Color(0xFF006B62)
+        AiService.ELEVENLABS -> if (isDark) Color(0xFFC8BFFF) else Color(0xFF5545B5)
+        AiService.OPENROUTER -> if (isDark) Color(0xFFB9C3FF) else Color(0xFF304BC0)
+        AiService.SYNTHETIC -> if (isDark) Color(0xFFFFAFD7) else Color(0xFF9B2765)
+        AiService.CHUTES -> if (isDark) Color(0xFF75DBB5) else Color(0xFF006B50)
+        AiService.DEEPSEEK -> if (isDark) Color(0xFFB9C3FF) else Color(0xFF304BC0)
+        AiService.VENICE -> if (isDark) Color(0xFFD0BCFF) else Color(0xFF6941C6)
+        AiService.MOONSHOT -> if (isDark) Color(0xFFE2E8F0) else Color(0xFF334155)
     }
     val tintAlpha = if (isDark) 0.16f else 0.09f
     val shape = when (service) {
@@ -48,6 +59,72 @@ fun providerVisualStyle(service: AiService): ProviderVisualStyle {
             bottomStart = 30.dp
         )
         AiService.COPILOT -> RoundedCornerShape(24.dp)
+        AiService.CURSOR -> RoundedCornerShape(
+            topStart = 8.dp,
+            topEnd = 24.dp,
+            bottomEnd = 24.dp,
+            bottomStart = 24.dp
+        )
+        AiService.ZAI -> RoundedCornerShape(
+            topStart = 24.dp,
+            topEnd = 8.dp,
+            bottomEnd = 24.dp,
+            bottomStart = 24.dp
+        )
+        AiService.ZENMUX -> RoundedCornerShape(
+            topStart = 24.dp,
+            topEnd = 24.dp,
+            bottomEnd = 8.dp,
+            bottomStart = 24.dp
+        )
+        AiService.KIMI -> RoundedCornerShape(
+            topStart = 24.dp,
+            topEnd = 8.dp,
+            bottomEnd = 24.dp,
+            bottomStart = 24.dp
+        )
+        AiService.ELEVENLABS -> RoundedCornerShape(
+            topStart = 8.dp,
+            topEnd = 24.dp,
+            bottomEnd = 24.dp,
+            bottomStart = 24.dp
+        )
+        AiService.OPENROUTER -> RoundedCornerShape(
+            topStart = 24.dp,
+            topEnd = 24.dp,
+            bottomEnd = 24.dp,
+            bottomStart = 8.dp
+        )
+        AiService.SYNTHETIC -> RoundedCornerShape(
+            topStart = 24.dp,
+            topEnd = 24.dp,
+            bottomEnd = 8.dp,
+            bottomStart = 24.dp
+        )
+        AiService.CHUTES -> RoundedCornerShape(
+            topStart = 24.dp,
+            topEnd = 8.dp,
+            bottomEnd = 24.dp,
+            bottomStart = 24.dp
+        )
+        AiService.DEEPSEEK -> RoundedCornerShape(
+            topStart = 8.dp,
+            topEnd = 24.dp,
+            bottomEnd = 24.dp,
+            bottomStart = 24.dp
+        )
+        AiService.VENICE -> RoundedCornerShape(
+            topStart = 24.dp,
+            topEnd = 24.dp,
+            bottomEnd = 8.dp,
+            bottomStart = 24.dp
+        )
+        AiService.MOONSHOT -> RoundedCornerShape(
+            topStart = 24.dp,
+            topEnd = 8.dp,
+            bottomEnd = 24.dp,
+            bottomStart = 24.dp
+        )
     }
     return ProviderVisualStyle(
         accent = accent,

@@ -39,4 +39,17 @@ sealed class Credential {
     ) : Credential() {
         override val refreshToken: String? = null
     }
+
+    data class ProviderSecretCredential(
+        val service: AiService,
+        val kind: ProviderSecretKind,
+        override val accessToken: String
+    ) : Credential() {
+        override val refreshToken: String? = null
+    }
+}
+
+enum class ProviderSecretKind {
+    API_KEY,
+    COOKIE_HEADER
 }

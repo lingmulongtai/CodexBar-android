@@ -1,6 +1,7 @@
 package com.codexbar.android.feature.settings
 
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.domain.model.providerMetadata
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -8,17 +9,10 @@ import org.junit.Test
 class SettingsHelpLinksTest {
     @Test
     fun `every provider opens its own https setup section`() {
-        val expectedAnchors = mapOf(
-            AiService.CLAUDE to "claude-anthropic",
-            AiService.CODEX to "codex-openai--chatgpt",
-            AiService.GEMINI to "gemini-google",
-            AiService.COPILOT to "github-copilot"
-        )
-
-        expectedAnchors.forEach { (service, anchor) ->
+        AiService.entries.forEach { service ->
             val url = accountGuideUrl(service)
             assertTrue(url.startsWith("https://github.com/lingmulongtai/CodexBar-android#"))
-            assertEquals(anchor, url.substringAfter('#'))
+            assertEquals(service.providerMetadata.guideAnchor, url.substringAfter('#'))
         }
     }
 }

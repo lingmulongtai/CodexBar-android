@@ -18,6 +18,7 @@ import androidx.annotation.StringRes
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.KeyboardOptions
@@ -42,8 +44,10 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -52,6 +56,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.HorizontalDivider
@@ -94,6 +99,9 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.domain.model.ProviderAuthMode
+import com.codexbar.android.core.domain.model.ProviderCategory
+import com.codexbar.android.core.domain.model.providerMetadata
 import com.codexbar.android.core.security.PrivacySettings
 import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
 import com.codexbar.android.ui.components.providerIcon
@@ -107,8 +115,6 @@ import kotlin.math.roundToInt
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     showBackButton: Boolean = true,
-    initialGeminiPairingUri: String? = null,
-    onGeminiPairingConsumed: () -> Unit = {},
     onScreenPrivacyChanged: (Boolean) -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
@@ -151,13 +157,6 @@ fun SettingsScreen(
         }
     }
 
-    LaunchedEffect(initialGeminiPairingUri) {
-        if (initialGeminiPairingUri != null) {
-            viewModel.importGeminiPairingCode(initialGeminiPairingUri)
-            onGeminiPairingConsumed()
-        }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -189,47 +188,6 @@ fun SettingsScreen(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                SettingsSectionHeader(
-                    title = stringResource(R.string.settings_accounts_title),
-                    description = stringResource(R.string.settings_accounts_description)
-                )
-
-                AiService.entries.forEach { service ->
-                    val state = uiState.serviceStates[service] ?: ServiceCredentialState()
-                    ServiceCredentialSection(
-                        service = service,
-                        state = state,
-                        onFieldChange = { field, value ->
-                            viewModel.updateField(service, field, value)
-                        },
-                        onStartAccountLink = { viewModel.startAccountLink(service) },
-                        onOpenAccountLink = { url -> openAuthUrl(context, url) },
-                        onCopyAccountCode = { code ->
-                            copyToClipboard(
-                                context = context,
-                                text = code,
-                                labelRes = R.string.clipboard_sign_in_code,
-                                sensitive = true
-                            )
-                        },
-                        onCopySetupCommand = { command ->
-                            copyToClipboard(
-                                context = context,
-                                text = command,
-                                labelRes = R.string.clipboard_setup_command,
-                                sensitive = false
-                            )
-                        },
-                        onGeminiPairingCodeChange = viewModel::updateGeminiPairingCode,
-                        onConnectGeminiCompanion = viewModel::connectGeminiCompanion,
-                        onOpenSetupGuide = {
-                            openAuthUrl(context, accountGuideUrl(service))
-                        },
-                        onValidate = { viewModel.validateCredential(service) },
-                        onDisconnect = { viewModel.showDisconnectConfirmDialog(service) }
-                    )
-                }
-
                 SettingsSectionHeader(
                     title = stringResource(R.string.settings_monitoring_title),
                     description = stringResource(R.string.settings_monitoring_description)
@@ -296,6 +254,153 @@ fun SettingsScreen(
                     }
                 )
 
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ConnectionsScreen(
+    onNavigateBack: () -> Unit,
+    showBackButton: Boolean = true,
+    initialGeminiPairingUri: String? = null,
+    onGeminiPairingConsumed: () -> Unit = {},
+    viewModel: SettingsViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    var providerSearchQuery by rememberSaveable { mutableStateOf("") }
+    var providerFilterName by rememberSaveable {
+        mutableStateOf(ProviderConnectionFilter.ALL.name)
+    }
+    var providerCategoryName by rememberSaveable {
+        mutableStateOf(ProviderCategoryFilter.ALL.name)
+    }
+    var expandedProviderName by rememberSaveable { mutableStateOf<String?>(null) }
+    val providerFilter = runCatching {
+        ProviderConnectionFilter.valueOf(providerFilterName)
+    }.getOrDefault(ProviderConnectionFilter.ALL)
+    val providerCategory = runCatching {
+        ProviderCategoryFilter.valueOf(providerCategoryName)
+    }.getOrDefault(ProviderCategoryFilter.ALL)
+    val visibleProviders = filterProviders(
+        query = providerSearchQuery,
+        filter = providerFilter,
+        categoryFilter = providerCategory,
+        serviceStates = uiState.serviceStates
+    )
+    val connectedCount = uiState.serviceStates.values.count(ServiceCredentialState::isConnected)
+
+    LaunchedEffect(initialGeminiPairingUri) {
+        if (initialGeminiPairingUri != null) {
+            viewModel.importGeminiPairingCode(initialGeminiPairingUri)
+            expandedProviderName = AiService.GEMINI.name
+            onGeminiPairingConsumed()
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.connections_title)) },
+                navigationIcon = {
+                    if (showBackButton) {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.action_back)
+                            )
+                        }
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .widthIn(max = 840.dp)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                SettingsSectionHeader(
+                    title = stringResource(R.string.connections_manage_title),
+                    description = stringResource(R.string.connections_manage_description)
+                )
+
+                ConnectionSummaryCard(
+                    connectedCount = connectedCount,
+                    totalCount = AiService.entries.size
+                )
+
+                ProviderDirectoryControls(
+                    query = providerSearchQuery,
+                    onQueryChange = { providerSearchQuery = it },
+                    filter = providerFilter,
+                    onFilterChange = { providerFilterName = it.name },
+                    categoryFilter = providerCategory,
+                    onCategoryFilterChange = { providerCategoryName = it.name },
+                    visibleCount = visibleProviders.size,
+                    totalCount = AiService.entries.size
+                )
+
+                if (visibleProviders.isEmpty()) {
+                    ProviderDirectoryEmptyState()
+                }
+
+                visibleProviders.forEach { service ->
+                    val state = uiState.serviceStates[service] ?: ServiceCredentialState()
+                    ServiceCredentialSection(
+                        service = service,
+                        state = state,
+                        expanded = expandedProviderName == service.name,
+                        onToggleExpanded = {
+                            expandedProviderName = if (expandedProviderName == service.name) {
+                                null
+                            } else {
+                                service.name
+                            }
+                        },
+                        onFieldChange = { field, value ->
+                            viewModel.updateField(service, field, value)
+                        },
+                        onStartAccountLink = { viewModel.startAccountLink(service) },
+                        onOpenAccountLink = { url -> openAuthUrl(context, url) },
+                        onCopyAccountCode = { code ->
+                            copyToClipboard(
+                                context = context,
+                                text = code,
+                                labelRes = R.string.clipboard_sign_in_code,
+                                sensitive = true
+                            )
+                        },
+                        onCopySetupCommand = { command ->
+                            copyToClipboard(
+                                context = context,
+                                text = command,
+                                labelRes = R.string.clipboard_setup_command,
+                                sensitive = false
+                            )
+                        },
+                        onGeminiPairingCodeChange = viewModel::updateGeminiPairingCode,
+                        onConnectGeminiCompanion = viewModel::connectGeminiCompanion,
+                        onOpenSetupGuide = {
+                            openAuthUrl(context, accountGuideUrl(service))
+                        },
+                        onValidate = { viewModel.validateCredential(service) },
+                        onDisconnect = { viewModel.showDisconnectConfirmDialog(service) }
+                    )
+                }
+
                 DangerZoneSection(
                     onDeleteAll = { viewModel.showDeleteConfirmDialog() }
                 )
@@ -305,7 +410,6 @@ fun SettingsScreen(
         }
     }
 
-    // Delete confirmation dialog
     if (uiState.showDeleteConfirmDialog) {
         DeleteConfirmDialog(
             onConfirm = {
@@ -343,6 +447,60 @@ private fun SettingsSectionHeader(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@Composable
+private fun ConnectionSummaryCard(
+    connectedCount: Int,
+    totalCount: Int
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.primaryContainer
+    ) {
+        Row(
+            modifier = Modifier.padding(18.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.Login,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.connections_summary,
+                        connectedCount,
+                        totalCount
+                    ),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Text(
+                    text = stringResource(R.string.connections_summary_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
     }
 }
 
@@ -396,9 +554,157 @@ private fun LanguageSection(
 }
 
 @Composable
+private fun ProviderDirectoryControls(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    filter: ProviderConnectionFilter,
+    onFilterChange: (ProviderConnectionFilter) -> Unit,
+    categoryFilter: ProviderCategoryFilter,
+    onCategoryFilterChange: (ProviderCategoryFilter) -> Unit,
+    visibleCount: Int,
+    totalCount: Int
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        shape = MaterialTheme.shapes.extraLarge
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = { Text(stringResource(R.string.provider_search_label)) },
+                placeholder = { Text(stringResource(R.string.provider_search_placeholder)) },
+                leadingIcon = {
+                    Icon(Icons.Rounded.Search, contentDescription = null)
+                },
+                trailingIcon = if (query.isNotEmpty()) {
+                    {
+                        IconButton(onClick = { onQueryChange("") }) {
+                            Icon(
+                                Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.action_clear_search)
+                            )
+                        }
+                    }
+                } else {
+                    null
+                }
+            )
+
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                ProviderConnectionFilter.entries.forEachIndexed { index, option ->
+                    SegmentedButton(
+                        selected = option == filter,
+                        onClick = { onFilterChange(option) },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = ProviderConnectionFilter.entries.size
+                        )
+                    ) {
+                        Text(stringResource(option.labelRes()))
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ProviderCategoryFilter.entries.forEach { option ->
+                    FilterChip(
+                        selected = option == categoryFilter,
+                        onClick = { onCategoryFilterChange(option) },
+                        label = { Text(stringResource(option.labelRes())) }
+                    )
+                }
+            }
+
+            Text(
+                text = stringResource(
+                    R.string.provider_result_count,
+                    visibleCount,
+                    totalCount
+                ),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProviderDirectoryEmptyState() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainer
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.provider_empty_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(R.string.provider_empty_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@StringRes
+private fun ProviderConnectionFilter.labelRes(): Int = when (this) {
+    ProviderConnectionFilter.ALL -> R.string.provider_filter_all
+    ProviderConnectionFilter.CONNECTED -> R.string.provider_filter_connected
+    ProviderConnectionFilter.NOT_CONNECTED -> R.string.provider_filter_not_connected
+}
+
+@StringRes
+private fun ProviderCategoryFilter.labelRes(): Int = when (this) {
+    ProviderCategoryFilter.ALL -> R.string.provider_category_all
+    ProviderCategoryFilter.CODING -> R.string.provider_category_coding
+    ProviderCategoryFilter.MODEL_API -> R.string.provider_category_model_api
+    ProviderCategoryFilter.ROUTER -> R.string.provider_category_router
+    ProviderCategoryFilter.MEDIA -> R.string.provider_category_media
+}
+
+@StringRes
+private fun ProviderAuthMode.labelRes(): Int = when (this) {
+    ProviderAuthMode.DEVICE_SIGN_IN -> R.string.provider_auth_sign_in
+    ProviderAuthMode.LOCAL_COMPANION -> R.string.provider_auth_companion
+    ProviderAuthMode.API_KEY -> R.string.provider_auth_api_key
+    ProviderAuthMode.SESSION_COOKIE -> R.string.provider_auth_session_cookie
+    ProviderAuthMode.ACCESS_TOKEN -> R.string.provider_auth_access_token
+}
+
+@StringRes
+private fun ProviderCategory.labelRes(): Int = when (this) {
+    ProviderCategory.CODING -> R.string.provider_category_coding
+    ProviderCategory.MODEL_API -> R.string.provider_category_model_api
+    ProviderCategory.ROUTER -> R.string.provider_category_router
+    ProviderCategory.MEDIA -> R.string.provider_category_media
+}
+
+@Composable
 private fun ServiceCredentialSection(
     service: AiService,
     state: ServiceCredentialState,
+    expanded: Boolean,
+    onToggleExpanded: () -> Unit,
     onFieldChange: (String, String) -> Unit,
     onStartAccountLink: () -> Unit,
     onOpenAccountLink: (String) -> Unit,
@@ -412,7 +718,7 @@ private fun ServiceCredentialSection(
 ) {
     val visualStyle = providerVisualStyle(service)
     var showManualSetup by rememberSaveable(service) {
-        mutableStateOf(service == AiService.CLAUDE)
+        mutableStateOf(service.requiresManualCredentials || service == AiService.CLAUDE)
     }
     LaunchedEffect(state.hasUnsavedChanges) {
         if (state.hasUnsavedChanges) showManualSetup = true
@@ -426,10 +732,15 @@ private fun ServiceCredentialSection(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(if (expanded) 20.dp else 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggleExpanded),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Surface(
                     modifier = Modifier.size(46.dp),
                     shape = MaterialTheme.shapes.small,
@@ -450,6 +761,15 @@ private fun ServiceCredentialSection(
                     Text(
                         text = service.displayName,
                         style = MaterialTheme.typography.titleLarge
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.provider_metadata_summary,
+                            stringResource(service.providerMetadata.category.labelRes()),
+                            stringResource(service.providerMetadata.authMode.labelRes())
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 val statusColor = if (state.isConnected) {
@@ -474,29 +794,102 @@ private fun ServiceCredentialSection(
                         color = statusColor
                     )
                 }
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = if (expanded) {
+                        Icons.Rounded.ExpandLess
+                    } else {
+                        Icons.Rounded.ExpandMore
+                    },
+                    contentDescription = stringResource(
+                        if (expanded) {
+                            R.string.action_collapse_provider
+                        } else {
+                            R.string.action_expand_provider
+                        },
+                        service.displayName
+                    ),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
-            when {
-                service == AiService.GEMINI -> GeminiCompanionSetup(
-                    state = state,
-                    accent = visualStyle.accent,
-                    onPairingCodeChange = onGeminiPairingCodeChange,
-                    onConnect = onConnectGeminiCompanion
-                )
-                service.supportsAccountLink() -> AccountLinkControls(
-                    service = service,
-                    state = state,
-                    accent = visualStyle.accent,
-                    onAccent = visualStyle.onAccent,
-                    onStartAccountLink = onStartAccountLink,
-                    onOpenAccountLink = onOpenAccountLink,
-                    onCopyAccountCode = onCopyAccountCode
-                )
-                else -> ClaudeSetupGuide(
-                    accent = visualStyle.accent,
-                    onCopySetupCommand = onCopySetupCommand
-                )
-            }
+            if (expanded) {
+                when {
+                    service == AiService.GEMINI -> GeminiCompanionSetup(
+                        state = state,
+                        accent = visualStyle.accent,
+                        onPairingCodeChange = onGeminiPairingCodeChange,
+                        onConnect = onConnectGeminiCompanion
+                    )
+                    service.supportsAccountLink() -> AccountLinkControls(
+                        service = service,
+                        state = state,
+                        accent = visualStyle.accent,
+                        onAccent = visualStyle.onAccent,
+                        onStartAccountLink = onStartAccountLink,
+                        onOpenAccountLink = onOpenAccountLink,
+                        onCopyAccountCode = onCopyAccountCode
+                    )
+                    service == AiService.CLAUDE -> ClaudeSetupGuide(
+                        accent = visualStyle.accent,
+                        onCopySetupCommand = onCopySetupCommand
+                    )
+                    service == AiService.CURSOR -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_cursor_setup_title),
+                        body = stringResource(R.string.credential_cursor_setup_body),
+                        accent = visualStyle.accent
+                    )
+                    service == AiService.ZAI -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_zai_setup_title),
+                        body = stringResource(R.string.credential_zai_setup_body),
+                        accent = visualStyle.accent
+                    )
+                    service == AiService.ZENMUX -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_zenmux_setup_title),
+                        body = stringResource(R.string.credential_zenmux_setup_body),
+                        accent = visualStyle.accent
+                    )
+                    service == AiService.KIMI -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_kimi_setup_title),
+                        body = stringResource(R.string.credential_kimi_setup_body),
+                        accent = visualStyle.accent
+                    )
+                    service == AiService.ELEVENLABS -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_elevenlabs_setup_title),
+                        body = stringResource(R.string.credential_elevenlabs_setup_body),
+                        accent = visualStyle.accent
+                    )
+                    service == AiService.OPENROUTER -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_openrouter_setup_title),
+                        body = stringResource(R.string.credential_openrouter_setup_body),
+                        accent = visualStyle.accent
+                    )
+                    service == AiService.SYNTHETIC -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_synthetic_setup_title),
+                        body = stringResource(R.string.credential_synthetic_setup_body),
+                        accent = visualStyle.accent
+                    )
+                    service == AiService.CHUTES -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_chutes_setup_title),
+                        body = stringResource(R.string.credential_chutes_setup_body),
+                        accent = visualStyle.accent
+                    )
+                    service == AiService.DEEPSEEK -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_deepseek_setup_title),
+                        body = stringResource(R.string.credential_deepseek_setup_body),
+                        accent = visualStyle.accent
+                    )
+                    service == AiService.VENICE -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_venice_setup_title),
+                        body = stringResource(R.string.credential_venice_setup_body),
+                        accent = visualStyle.accent
+                    )
+                    service == AiService.MOONSHOT -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_moonshot_setup_title),
+                        body = stringResource(R.string.credential_moonshot_setup_body),
+                        accent = visualStyle.accent
+                    )
+                }
 
             if (service != AiService.GEMINI) {
                 Surface(
@@ -591,6 +984,7 @@ private fun ServiceCredentialSection(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
             }
         }
     }
@@ -732,6 +1126,32 @@ private fun ClaudeSetupGuide(
 }
 
 @Composable
+private fun ProviderSecretSetupGuide(
+    title: String,
+    body: String,
+    accent: Color
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = accent.copy(alpha = 0.11f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(text = title, style = MaterialTheme.typography.titleSmall, color = accent)
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
 private fun ManualCredentialFields(
     service: AiService,
     state: ServiceCredentialState,
@@ -745,10 +1165,16 @@ private fun ManualCredentialFields(
             label = {
                 Text(
                     stringResource(
-                        if (service == AiService.COPILOT) {
-                            R.string.credential_github_oauth_token
-                        } else {
-                            R.string.credential_access_token
+                        when {
+                            service == AiService.COPILOT -> R.string.credential_github_oauth_token
+                            service == AiService.ZENMUX -> R.string.credential_zenmux_management_key
+                            service.providerMetadata.authMode == ProviderAuthMode.SESSION_COOKIE -> {
+                                R.string.credential_provider_session_cookie
+                            }
+                            service.providerMetadata.authMode == ProviderAuthMode.API_KEY -> {
+                                R.string.credential_provider_api_key
+                            }
+                            else -> R.string.credential_access_token
                         }
                     )
                 )
@@ -759,7 +1185,7 @@ private fun ManualCredentialFields(
             singleLine = true
         )
 
-        if (service != AiService.COPILOT) {
+        if (service == AiService.CLAUDE || service == AiService.CODEX) {
             OutlinedTextField(
                 value = state.refreshToken,
                 onValueChange = { onFieldChange("refreshToken", it) },
@@ -880,6 +1306,17 @@ private fun AccountLinkControls(
                 AiService.GEMINI -> stringResource(R.string.credential_gemini_companion_body)
                 AiService.COPILOT -> stringResource(R.string.account_link_copilot_description)
                 AiService.CLAUDE -> stringResource(R.string.credential_claude_instructions)
+                AiService.CURSOR -> stringResource(R.string.credential_cursor_setup_body)
+                AiService.ZAI -> stringResource(R.string.credential_zai_setup_body)
+                AiService.ZENMUX -> stringResource(R.string.credential_zenmux_setup_body)
+                AiService.KIMI -> stringResource(R.string.credential_kimi_setup_body)
+                AiService.ELEVENLABS -> stringResource(R.string.credential_elevenlabs_setup_body)
+                AiService.OPENROUTER -> stringResource(R.string.credential_openrouter_setup_body)
+                AiService.SYNTHETIC -> stringResource(R.string.credential_synthetic_setup_body)
+                AiService.CHUTES -> stringResource(R.string.credential_chutes_setup_body)
+                AiService.DEEPSEEK -> stringResource(R.string.credential_deepseek_setup_body)
+                AiService.VENICE -> stringResource(R.string.credential_venice_setup_body)
+                AiService.MOONSHOT -> stringResource(R.string.credential_moonshot_setup_body)
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1077,17 +1514,11 @@ internal fun deviceCodeForClipboard(userCode: String): String {
 }
 
 private fun AiService.supportsAccountLink(): Boolean {
-    return this == AiService.CODEX || this == AiService.COPILOT
+    return providerMetadata.authMode == ProviderAuthMode.DEVICE_SIGN_IN
 }
 
 internal fun accountGuideUrl(service: AiService): String {
-    val anchor = when (service) {
-        AiService.CLAUDE -> "claude-anthropic"
-        AiService.CODEX -> "codex-openai--chatgpt"
-        AiService.GEMINI -> "gemini-google"
-        AiService.COPILOT -> "github-copilot"
-    }
-    return "$ACCOUNT_GUIDE_BASE_URL#$anchor"
+    return "$ACCOUNT_GUIDE_BASE_URL#${service.providerMetadata.guideAnchor}"
 }
 
 private fun openAuthUrl(context: Context, url: String) {

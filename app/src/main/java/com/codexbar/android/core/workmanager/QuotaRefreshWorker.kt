@@ -3,6 +3,7 @@ package com.codexbar.android.core.workmanager
 import android.content.ComponentName
 import android.content.Context
 import android.service.quicksettings.TileService
+import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
@@ -12,8 +13,8 @@ import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.data.QuotaHistoryStore
+import com.codexbar.android.core.data.QuotaRepositoryRegistry
 import com.codexbar.android.core.domain.model.QuotaInfo
-import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.monitoring.MonitoringSessionStore
 import com.codexbar.android.core.notification.QuotaNotificationService
 import com.codexbar.android.core.presentation.AndroidQuotaPresentationText
@@ -26,10 +27,6 @@ import com.codexbar.android.core.tile.QuotaTileService
 import com.codexbar.android.core.widget.QuotaGlanceWidget
 import com.codexbar.android.core.widget.QuotaWidgetReceiver
 import com.codexbar.android.core.widget.WidgetPrefsManager
-import com.codexbar.android.di.ClaudeRepository
-import com.codexbar.android.di.CodexRepository
-import com.codexbar.android.di.CopilotRepository
-import com.codexbar.android.di.GeminiRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import androidx.glance.appwidget.GlanceAppWidgetManager
@@ -43,10 +40,7 @@ import java.time.Instant
 class QuotaRefreshWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted workerParams: WorkerParameters,
-    @ClaudeRepository private val claudeRepository: QuotaRepository,
-    @CodexRepository private val codexRepository: QuotaRepository,
-    @GeminiRepository private val geminiRepository: QuotaRepository,
-    @CopilotRepository private val copilotRepository: QuotaRepository,
+    private val repositoryRegistry: QuotaRepositoryRegistry,
     private val prefsManager: EncryptedPrefsManager,
     private val notificationService: QuotaNotificationService,
     private val widgetPrefsManager: WidgetPrefsManager,
@@ -60,20 +54,26 @@ class QuotaRefreshWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         prefsManager.warmCache()
-        val repos = buildList {
-            if (prefsManager.loadCredential(AiService.CLAUDE) != null) add(AiService.CLAUDE to claudeRepository)
-            if (prefsManager.loadCredential(AiService.CODEX) != null) add(AiService.CODEX to codexRepository)
-            if (prefsManager.loadCredential(AiService.GEMINI) != null) add(AiService.GEMINI to geminiRepository)
-            if (prefsManager.loadCredential(AiService.COPILOT) != null) add(AiService.COPILOT to copilotRepository)
+        val repos = repositoryRegistry.entries().mapNotNull { (service, repository) ->
+            if (prefsManager.loadCredential(service) == null) return@mapNotNull null
+            service to repository
         }
 
         if (repos.isEmpty()) {
             // A widget can outlive its selected account. Always replace the provider's
             // initial loading layout even when there is no network work to perform.
+            val languageContext = ContextCompat.getContextForLanguage(applicationContext)
+            AiService.entries.forEach { service ->
+                widgetPrefsManager.cacheStatusMessageIfEmpty(
+                    service,
+                    languageContext.getString(R.string.widget_not_connected)
+                )
+            }
             try {
                 QuotaGlanceWidget().updateAll(applicationContext)
-            } catch (_: Exception) {
+            } catch (error: Exception) {
                 // Widget rendering cannot turn a no-op account refresh into retry work.
+                Log.e(TAG, "Widget render failed after disconnected refresh", error)
             }
             return Result.success()
         }
@@ -150,7 +150,19 @@ class QuotaRefreshWorker @AssistedInject constructor(
             } else {
                 Result.success()
             }
-        } catch (_: Exception) {
+        } catch (error: Exception) {
+            val languageContext = ContextCompat.getContextForLanguage(applicationContext)
+            repos.forEach { (service, _) ->
+                widgetPrefsManager.cacheStatusMessageIfEmpty(
+                    service,
+                    languageContext.getString(R.string.widget_refresh_failed)
+                )
+            }
+            runCatching { QuotaGlanceWidget().updateAll(applicationContext) }
+                .onFailure { renderError ->
+                    Log.e(TAG, "Widget render failed after refresh error", renderError)
+                }
+            Log.e(TAG, "Quota refresh worker failed", error)
             Result.retry()
         }
     }
@@ -190,5 +202,9 @@ class QuotaRefreshWorker @AssistedInject constructor(
             .build()
 
         return ForegroundInfo(QuotaNotificationService.NOTIFICATION_ID + 1, notification)
+    }
+
+    companion object {
+        private const val TAG = "CodexBarRefresh"
     }
 }

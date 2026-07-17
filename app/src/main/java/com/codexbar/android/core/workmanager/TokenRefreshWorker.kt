@@ -94,6 +94,7 @@ class TokenRefreshWorker @AssistedInject constructor(
             is Credential.CodexCredential -> refreshCodex(credential)
             is Credential.GeminiCompanionCredential -> RefreshOutcome.NotNeeded
             is Credential.CopilotCredential -> RefreshOutcome.NotNeeded
+            is Credential.ProviderSecretCredential -> RefreshOutcome.NotNeeded
         }
     }
 
@@ -190,6 +191,8 @@ class TokenRefreshWorker @AssistedInject constructor(
             is Credential.GeminiCompanionCredential -> Long.MAX_VALUE
 
             is Credential.CopilotCredential -> Long.MAX_VALUE
+
+            is Credential.ProviderSecretCredential -> Long.MAX_VALUE
         }
     }
 

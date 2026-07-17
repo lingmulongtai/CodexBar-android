@@ -28,6 +28,17 @@ class WidgetDataSynchronizationSourceTest {
         assertTrue(emptyRepos.contains("QuotaGlanceWidget().updateAll(applicationContext)"))
     }
 
+    @Test
+    fun `metricless successful providers replace the waiting placeholder`() {
+        val prefs = sourceFile("core/widget/WidgetPrefsManager.kt")
+        val cachePresentation = prefs.substringAfter("fun cachePresentation(")
+            .substringBefore("private fun SharedPreferences.Editor.cacheMetric")
+
+        assertTrue(cachePresentation.contains("if (service.metrics.isEmpty())"))
+        assertTrue(cachePresentation.contains("widget_no_bounded_quota"))
+        assertTrue(cachePresentation.contains("_status_message"))
+    }
+
     private fun sourceFile(relativePath: String): String {
         return File(
             appDir,

@@ -145,6 +145,12 @@ class WidgetPrefsManager @Inject constructor(
         }
 
         service.tier?.let { editor.putString("${prefix}_tier", it) }
+        if (service.metrics.isEmpty()) {
+            val message = service.tier
+                ?: ContextCompat.getContextForLanguage(context)
+                    .getString(R.string.widget_no_bounded_quota)
+            editor.putString("${prefix}_status_message", message)
+        }
 
         for (metric in service.metrics) {
             editor.cacheMetric(prefix, metric)
@@ -203,6 +209,15 @@ class WidgetPrefsManager @Inject constructor(
 
     fun getCachedStatusMessage(service: AiService): String? {
         return prefs.getString("cache_${service.name}_status_message", null)
+    }
+
+    fun cacheStatusMessageIfEmpty(service: AiService, message: String) {
+        if (getCachedLabels(service).isNotEmpty()) return
+        val prefix = "cache_${service.name}"
+        prefs.edit()
+            .putString("${prefix}_status_message", message)
+            .putLong("${prefix}_updated_at", System.currentTimeMillis())
+            .apply()
     }
 
     fun getCachedResetsAt(service: AiService, label: String): Long? {

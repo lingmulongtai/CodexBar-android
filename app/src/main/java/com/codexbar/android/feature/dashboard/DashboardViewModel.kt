@@ -1,14 +1,15 @@
 package com.codexbar.android.feature.dashboard
 
 import android.content.Context
+import android.util.Log
 import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codexbar.android.core.data.QuotaHistoryStore
+import com.codexbar.android.core.data.QuotaRepositoryRegistry
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.Result
-import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.monitoring.MonitoringSessionStore
 import com.codexbar.android.core.notification.QuotaNotificationService
 import com.codexbar.android.core.presentation.AndroidQuotaPresentationText
@@ -18,10 +19,6 @@ import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.widget.QuotaGlanceWidget
 import com.codexbar.android.core.widget.WidgetPrefsManager
-import com.codexbar.android.di.ClaudeRepository
-import com.codexbar.android.di.CodexRepository
-import com.codexbar.android.di.CopilotRepository
-import com.codexbar.android.di.GeminiRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
@@ -34,10 +31,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
-    @ClaudeRepository private val claudeRepository: QuotaRepository,
-    @CodexRepository private val codexRepository: QuotaRepository,
-    @GeminiRepository private val geminiRepository: QuotaRepository,
-    @CopilotRepository private val copilotRepository: QuotaRepository,
+    private val repositoryRegistry: QuotaRepositoryRegistry,
     private val prefsManager: EncryptedPrefsManager,
     private val quotaHistoryStore: QuotaHistoryStore,
     private val monitoringSessionStore: MonitoringSessionStore,
@@ -66,11 +60,9 @@ class DashboardViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val repos = buildList {
-                    if (prefsManager.loadCredential(AiService.CLAUDE) != null) add(AiService.CLAUDE to claudeRepository)
-                    if (prefsManager.loadCredential(AiService.CODEX) != null) add(AiService.CODEX to codexRepository)
-                    if (prefsManager.loadCredential(AiService.GEMINI) != null) add(AiService.GEMINI to geminiRepository)
-                    if (prefsManager.loadCredential(AiService.COPILOT) != null) add(AiService.COPILOT to copilotRepository)
+                val repos = repositoryRegistry.entries().mapNotNull { (service, repository) ->
+                    if (prefsManager.loadCredential(service) == null) return@mapNotNull null
+                    service to repository
                 }
 
                 if (repos.isEmpty()) {
@@ -138,8 +130,13 @@ class DashboardViewModel @Inject constructor(
         try {
             snapshot.services.forEach(widgetPrefsManager::cachePresentation)
             QuotaGlanceWidget().updateAll(appContext)
-        } catch (_: Exception) {
+        } catch (error: Exception) {
             // Widget rendering must not turn a successful dashboard refresh into an app error.
+            Log.e(TAG, "Widget render failed after dashboard refresh", error)
         }
+    }
+
+    companion object {
+        private const val TAG = "CodexBarDashboard"
     }
 }

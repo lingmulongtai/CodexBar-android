@@ -26,7 +26,7 @@ class GeminiPairingDeepLinkSourceTest {
     }
 
     @Test
-    fun `a scanned pairing fills settings but requires an explicit verification tap`() {
+    fun `a scanned pairing fills connections but requires an explicit verification tap`() {
         val screen = File(
             appDir,
             "src/main/java/com/codexbar/android/feature/settings/SettingsScreen.kt"

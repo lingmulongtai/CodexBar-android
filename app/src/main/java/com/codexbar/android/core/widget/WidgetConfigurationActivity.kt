@@ -4,8 +4,8 @@ import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.widget.RemoteViews
-import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.enableEdgeToEdge
@@ -62,6 +62,7 @@ import com.codexbar.android.ui.theme.CodexBarStateColors
 import com.codexbar.android.ui.theme.CodexBarTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import kotlin.math.roundToInt
 
@@ -247,8 +248,12 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.error
                                             )
-                                            OutlinedButton(onClick = ::openAppSettings) {
-                                                Text(stringResource(R.string.widget_setup_open_app_settings))
+                                            OutlinedButton(onClick = ::openAppConnections) {
+                                                Text(
+                                                    stringResource(
+                                                        R.string.widget_setup_open_app_connections
+                                                    )
+                                                )
                                             }
                                         } else {
                                             Text(
@@ -345,7 +350,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         }
     }
 
-    private fun openAppSettings() {
+    private fun openAppConnections() {
         setResult(
             RESULT_CANCELED,
             Intent().apply {
@@ -354,7 +359,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         )
         startActivity(
             Intent(this, MainActivity::class.java).apply {
-                data = Uri.parse("codexbar://settings")
+                data = Uri.parse("codexbar://connections")
             }
         )
         finish()
@@ -373,6 +378,10 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         val selectedServices = checkedState
             .filter { it.value }
             .keys
+        val hadExistingConfiguration = widgetPrefsManager
+            .getWidgetConfig(appWidgetId)
+            .services
+            .isNotEmpty()
 
         // commit() ensures data is persisted before the widget reads it
         widgetPrefsManager.saveWidgetConfig(
@@ -386,42 +395,68 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             )
         )
 
-        // Configuration widgets do not receive their initial onUpdate broadcast.
-        // Render once before reporting success so the launcher never keeps the XML loading view.
+        // Configuration widgets do not reliably receive an initial onUpdate broadcast on every
+        // launcher. Attempt the documented immediate update, then always schedule a second local
+        // render after the host has finished binding the widget.
         lifecycleScope.launch {
+            if (!hadExistingConfiguration) {
+                runCatching {
+                    AppWidgetManager.getInstance(this@WidgetConfigurationActivity).updateAppWidget(
+                        appWidgetId,
+                        RemoteViews(packageName, R.layout.widget_loading).apply {
+                            setTextViewText(
+                                R.id.widget_loading_text,
+                                getString(R.string.widget_preparing)
+                            )
+                        }
+                    )
+                }.onFailure { error ->
+                    Log.w(TAG, "Could not install widget placeholder for id=$appWidgetId", error)
+                }
+            }
+
             try {
-                // Replace the provider XML immediately. This gives launchers a real RemoteViews
-                // update before Glance starts its asynchronous composition worker.
-                AppWidgetManager.getInstance(this@WidgetConfigurationActivity).updateAppWidget(
-                    appWidgetId,
-                    RemoteViews(packageName, R.layout.widget_loading).apply {
-                        setTextViewText(R.id.widget_loading_text, getString(R.string.widget_waiting_for_data))
-                    }
+                val rendered = withTimeoutOrNull(IMMEDIATE_RENDER_TIMEOUT_MILLIS) {
+                    val glanceId = GlanceAppWidgetManager(this@WidgetConfigurationActivity)
+                        .getGlanceIdBy(appWidgetId)
+                    QuotaGlanceWidget().update(this@WidgetConfigurationActivity, glanceId)
+                    true
+                }
+                if (rendered != true) {
+                    Log.w(TAG, "Immediate widget render timed out for id=$appWidgetId")
+                }
+            } catch (error: Exception) {
+                Log.w(TAG, "Immediate widget render failed for id=$appWidgetId", error)
+            }
+
+            runCatching {
+                WorkManagerInitializer.enqueueWidgetRender(
+                    context = this@WidgetConfigurationActivity,
+                    appWidgetId = appWidgetId
                 )
-
-                val glanceId = GlanceAppWidgetManager(this@WidgetConfigurationActivity)
-                    .getGlanceIdBy(appWidgetId)
-                QuotaGlanceWidget().update(this@WidgetConfigurationActivity, glanceId)
-
+            }.onFailure { error ->
+                Log.e(TAG, "Could not schedule widget render for id=$appWidgetId", error)
+            }
+            runCatching {
                 WorkManagerInitializer.enqueueManualQuotaRefresh(
                     context = this@WidgetConfigurationActivity,
                     source = "widget_config"
                 )
-
-                val resultValue = Intent().apply {
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-                }
-                setResult(RESULT_OK, resultValue)
-                finish()
-            } catch (_: Exception) {
-                isCompletingConfiguration = false
-                Toast.makeText(
-                    this@WidgetConfigurationActivity,
-                    R.string.widget_setup_update_failed,
-                    Toast.LENGTH_LONG
-                ).show()
+            }.onFailure { error ->
+                Log.e(TAG, "Could not schedule widget data refresh", error)
             }
+
+            val resultValue = Intent().apply {
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            }
+            setResult(RESULT_OK, resultValue)
+            finish()
         }
+    }
+
+    companion object {
+        private const val TAG = "CodexBarWidget"
+        private const val IMMEDIATE_RENDER_TIMEOUT_MILLIS = 1_500L
     }
 }
 

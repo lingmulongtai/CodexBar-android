@@ -2,7 +2,7 @@
 
 > Android port of [**CodexBar**](https://github.com/steipete/CodexBar) by [@steipete](https://github.com/steipete) — the macOS menu bar app for monitoring AI service quotas.
 
-Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, and Gemini usage in one place; Gemini uses an optional private companion that keeps Google authentication inside the official Gemini CLI.
+Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi Code, ElevenLabs, OpenRouter, Synthetic, Chutes, DeepSeek, Venice, and Moonshot API usage in one place; Gemini uses an optional private companion that keeps Google authentication inside the official Gemini CLI.
 
 <p align="center">
   <img src="docs/images/dashboard-light.png" width="320" alt="Material 3 Expressive dashboard in light mode" />
@@ -14,7 +14,7 @@ Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT
 
 ## Features
 
-- Unified quota monitoring for Claude, Codex, GitHub Copilot, and Gemini through a token-free local CLI companion
+- Unified quota monitoring for Claude, Codex, GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi Code, ElevenLabs, OpenRouter, Synthetic, Chutes, DeepSeek, Venice, and Moonshot API
 - Material 3 Expressive provider cards with animated rings, bars, exact values, reset countdowns, and pace forecasts
 - Adaptive phone navigation and a two-pane large-screen dashboard
 - Quick Settings tile for at-a-glance status
@@ -80,14 +80,14 @@ Provider credentials are stored in `codexbar_secure_prefs`, an on-device DataSto
 
 ## Setup
 
-For normal use, install the signed APK from the latest release and open **Settings** to connect accounts or enter fallback tokens.
+For normal use, install the signed APK from the latest release and open **Connections** to link providers or enter fallback credentials.
 
 For local development:
 
 1. Install [OpenJDK 17](https://formulae.brew.sh/formula/openjdk@17) (or any JDK 17+)
 2. Clone and open the project in Android Studio
 3. Build and install the debug APK
-4. Open the app and go to **Settings** to connect accounts or enter fallback tokens
+4. Open the app and go to **Connections** to link providers or enter fallback credentials
 
 ## Connecting Accounts
 
@@ -95,12 +95,12 @@ For local development:
 
 Codex and GitHub Copilot use a device-code flow. The app intentionally shows the code before opening a browser so it can be copied safely:
 
-1. Open **Settings**, expand the provider, and tap **Connect account**.
+1. Open **Connections**, expand the provider, and tap **Connect account**.
 2. Wait for the one-time code card. The browser does not open automatically.
 3. Tap **Copy paste-ready code**. The copied value removes spaces and separators so the entire code can be pasted into the first field, including pages that display split code boxes.
 4. Tap **Open sign-in page** and verify the browser address before entering the code.
 5. Paste the complete code, sign in to the intended account, and approve the connection.
-6. When the website reports success, return to the same Settings screen before the displayed expiry time. Do not force-close the app.
+6. When the website reports success, return to the same Connections screen before the displayed expiry time. Do not force-close the app.
 7. Wait for the app to validate the returned credential and show the connected state. Browser success alone does not mean the on-device validation and encrypted save have finished.
 8. If the code expires or the app reports a failure, tap **Connect account** again and use the newly issued code. Do not reuse an old code.
 
@@ -126,7 +126,7 @@ Claude does not expose a supported Android device-code flow for third-party apps
 claude setup-token
 ```
 
-Paste the generated OAuth token into the Claude **Access Token** field in Settings. Avoid copying raw Keychain exports into logs, notes, or issue reports.
+Paste the generated OAuth token into the Claude **Access Token** field in Connections. Avoid copying raw Keychain exports into logs, notes, or issue reports.
 
 ### Codex (OpenAI / ChatGPT)
 
@@ -146,7 +146,7 @@ Do not extract bearer tokens from browser DevTools unless you are debugging loca
 
 ### Gemini (Google)
 
-Direct Gemini OAuth inside the Android app remains disabled. CodexBar does not copy Gemini CLI credentials, embed a Google client secret, or call the internal `cloudcode-pa` service. Instead, the v0.4.1 companion drives the official Gemini CLI's documented `/stats` view and sends only a sanitized quota snapshot over your trusted local network.
+Direct Gemini OAuth inside the Android app remains disabled. CodexBar does not copy Gemini CLI credentials, embed a Google client secret, or call the internal `cloudcode-pa` service. Instead, the v0.5.0 companion drives the official Gemini CLI's documented `/stats` view and sends only a sanitized quota snapshot over your trusted local network.
 
 #### Install and pair the private companion
 
@@ -158,7 +158,7 @@ gemini
 ```
 
 2. Complete Google's sign-in in that official CLI, then exit it.
-3. Download `CodexBar-Gemini-Companion-v0.4.1.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
+3. Download `CodexBar-Gemini-Companion-v0.5.0.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
 4. On Windows, double-click `start-windows.cmd`. On macOS or Linux, run `./start-macos-linux.sh`. The first launch installs only the versions pinned in `package-lock.json`.
 5. Keep the phone and computer on the same trusted Wi-Fi. If the computer firewall prompts, permit private networks only.
 6. Scan the displayed QR code with the phone and choose CodexBar, or paste the complete `codexbar://gemini-pair?...` value into the Gemini card.
@@ -178,6 +178,74 @@ This design follows the official Gemini CLI's documented [usage and quota comman
 ### GitHub Copilot
 
 Follow the device-code steps above. The app opens `https://github.com/login/device` only after you press **Open sign-in page**, then fetches Copilot quota data after GitHub authorization and on-device credential validation complete.
+
+### Cursor
+
+Cursor does not currently expose a supported mobile device-code flow. The original macOS CodexBar reads a signed-in desktop browser session or Cursor.app state; Android cannot safely access either store. This port therefore starts with the original project's manual fallback: copy the `Cookie` request header from `https://cursor.com/api/usage-summary` in a signed-in desktop browser, paste it into the Cursor card, and select **Validate & connect**.
+
+The app rejects malformed or multi-line values before network access, sends the cookie only to `https://cursor.com`, refuses HTTP and HTTPS redirects, and encrypts it with Android Keystore only after the usage endpoint accepts it. Never paste this value into an issue or chat. Signing out of Cursor invalidates the session.
+
+Cursor cards show the billing-cycle Total, Auto, and API percentages, legacy request-plan usage when available, the cycle reset, plan name, and capped on-demand USD usage. Team and Enterprise personal/shared-cap fallbacks follow the original CodexBar mapping.
+
+### z.ai
+
+Create or copy an API token from the [z.ai Coding Plan dashboard](https://z.ai/manage-apikey/coding-plan/personal/my-plan), paste it into the z.ai card, and select **Validate & connect**. The app reads the personal quota response from the fixed Global endpoint at `https://api.z.ai/api/monitor/usage/quota/limit` and maps the Tokens, MCP/time, and shorter rolling token windows using the original CodexBar rules.
+
+The token is sent only as a bearer credential to `api.z.ai`, never across redirects, never written to HTTP logs, and encrypted with Android Keystore after validation. BigModel China and team mode need additional region, organization, and project selectors; they intentionally remain unavailable rather than silently sending a Global token to a configurable host.
+
+### ZenMux
+
+Create a **Management API key** at `https://zenmux.ai/platform/management`, then paste it into the ZenMux card in Connections and select **Validate & connect**. A normal ZenMux inference API key is not accepted by the management quota endpoints.
+
+The app sends the key only as a bearer credential to `https://zenmux.ai/api/v1/management/subscription/detail`. It displays the rolling 5-hour and 7-day flow quotas from the documented response. The key is encrypted with Android Keystore after validation; prompts, inference requests, and request logs are never requested.
+
+### Kimi
+
+Create a Kimi Code API key in the Kimi Code console, paste it into the Kimi card in Connections, and select **Validate & connect**. The app calls only `https://api.kimi.com/coding/v1/usages` and displays the short rolling window (normally 5 hours) together with the 7-day coding quota.
+
+The API key is sent only as a bearer credential to the fixed HTTPS host, never follows redirects, never enters HTTP logs, and is encrypted with Android Keystore only after validation. The app does not request prompts, inference responses, or browser session cookies.
+
+### ElevenLabs
+
+Create a restricted ElevenLabs API key with permission to read the user subscription, paste it into the ElevenLabs card, and select **Validate & connect**. The app calls `https://api.elevenlabs.io/v1/user/subscription` and displays character usage, voice slots, professional voice slots, the subscription tier, and the next character reset when provided.
+
+Use the narrowest key permissions available. The key is sent only in the `xi-api-key` header to the fixed ElevenLabs HTTPS host, redirects and HTTP logging are disabled, and the key is encrypted with Android Keystore after validation. Generated audio, voices, projects, and request content are not fetched.
+
+### OpenRouter
+
+Create a dedicated OpenRouter API key, preferably with a daily, weekly, or monthly credit limit, paste it into the OpenRouter card, and select **Validate & connect**. The app calls `https://openrouter.ai/api/v1/key` and maps the configured key limit, remaining credits, usage, reset cadence, and free-tier state. A management key is not required.
+
+If no key limit is configured, the account remains connected and the dashboard/widget states that there is no spending cap while showing the reported spend. A configured limit adds an exact USD credit summary and a progress bar. The key is sent only as a bearer credential to the fixed OpenRouter HTTPS host, redirects and HTTP logging are disabled, and it is encrypted with Android Keystore after validation.
+
+### Synthetic
+
+Create a dedicated Synthetic API key, paste it into the Synthetic card, and select **Validate & connect**. The app calls only `https://api.synthetic.new/v2/quotas`, maps subscription requests against the documented limit, and shows the renewal timestamp. Synthetic documents that quota checks do not consume subscription limits.
+
+The key is sent only as a bearer credential to the fixed Synthetic HTTPS host, redirects and HTTP logging are disabled, and it is encrypted with Android Keystore after validation. Prompts, model responses, and request history are not fetched.
+
+### Chutes
+
+Create a dedicated scoped Chutes API key, paste it into the Chutes card, and select **Validate & connect**. The app first calls `https://api.chutes.ai/users/me/subscription_usage`, whose official API description returns monthly and 4-hour usage versus caps, and falls back to the documented `/users/me/quotas` response when necessary.
+
+The parser accepts the currently documented flexible quota payload without trusting arbitrary endpoints. The key is sent only as a bearer credential to the fixed Chutes HTTPS host, redirects and HTTP logging are disabled, and it is encrypted with Android Keystore after validation. Chute code, prompts, invocations, and request history are not fetched.
+
+### DeepSeek
+
+Create a dedicated DeepSeek API key, paste it into the DeepSeek card, and select **Validate & connect**. The app calls only `https://api.deepseek.com/user/balance` and displays whether API calls are currently available together with each reported USD or CNY balance. DeepSeek does not expose a bounded quota in this endpoint, so the app intentionally shows an exact status instead of inventing a utilization bar.
+
+The key is sent only as a bearer credential to the fixed DeepSeek HTTPS host, redirects and HTTP logging are disabled, and it is encrypted with Android Keystore after validation. Prompts, chat history, model responses, and usage records are not fetched.
+
+### Venice
+
+Create a dedicated Venice API key with the narrowest permission that can read billing balance, paste it into the Venice card, and select **Validate & connect**. The app calls only `https://api.venice.ai/api/v1/billing/balance`, shows whether the account can make API calls, and displays USD/DIEM balances. When a DIEM epoch allocation is present, it also derives the consumed fraction for the progress bar from the documented remaining balance and allocation.
+
+The key is sent only as a bearer credential to the fixed Venice HTTPS host, redirects and HTTP logging are disabled, and it is encrypted with Android Keystore after validation. Prompts, model responses, billing history, and inference request details are not fetched.
+
+### Moonshot API (International)
+
+Create an API key on the international Moonshot API platform, paste it into the Moonshot API card, and select **Validate & connect**. This is deliberately separate from the Kimi Code card: Kimi Code subscription keys and Moonshot API billing keys use different account surfaces. The app calls only `https://api.moonshot.ai/v1/users/me/balance` and displays available, cash, and voucher balances without inventing a rolling quota bar.
+
+The key is sent only as a bearer credential to the fixed international Moonshot HTTPS host, redirects and HTTP logging are disabled, and it is encrypted with Android Keystore after validation. The app does not automatically forward the key to the China-mainland host. Prompts, model responses, and request history are not fetched.
 
 ## Build
 

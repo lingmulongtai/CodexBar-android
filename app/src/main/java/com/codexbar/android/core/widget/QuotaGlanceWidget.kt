@@ -1,9 +1,9 @@
 package com.codexbar.android.core.widget
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.ColorFilter
@@ -18,6 +18,7 @@ import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
@@ -48,18 +49,22 @@ import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.workmanager.WorkManagerInitializer
 import java.time.Duration
 import java.time.Instant
-import kotlin.math.roundToInt
 
-class QuotaGlanceWidget : GlanceAppWidget() {
+class QuotaGlanceWidget : GlanceAppWidget(errorUiLayout = R.layout.widget_error) {
 
-    override val sizeMode: SizeMode = SizeMode.Responsive(
-        setOf(
-            DpSize(180.dp, 90.dp),
-            DpSize(250.dp, 120.dp),
-            DpSize(320.dp, 180.dp),
-            DpSize(420.dp, 260.dp)
-        )
-    )
+    // Exact composes only the launcher's current size. Responsive composes every declared
+    // variant into one RemoteViews payload, which can exceed OEM launcher/Binder limits.
+    override val sizeMode: SizeMode = SizeMode.Exact
+
+    override fun onCompositionError(
+        context: Context,
+        glanceId: GlanceId,
+        appWidgetId: Int,
+        throwable: Throwable
+    ) {
+        Log.e(TAG, "Widget composition failed for id=$appWidgetId", throwable)
+        super.onCompositionError(context, glanceId, appWidgetId, throwable)
+    }
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val widgetPrefs = WidgetPrefsManager(context)
@@ -91,11 +96,9 @@ class QuotaGlanceWidget : GlanceAppWidget() {
     ) {
         val size = LocalSize.current
         val selectedServices = config.services
-        val maxServices = when {
-            size.height < 110.dp -> 1
-            size.height < 180.dp -> 2
-            else -> selectedServices.size
-        }
+        val heightDp = size.height.value.toInt()
+        val maxServices = WidgetRenderPolicy.maxServices(heightDp)
+        val maxRows = WidgetRenderPolicy.maxRows(heightDp, config.maxRows)
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
@@ -119,7 +122,7 @@ class QuotaGlanceWidget : GlanceAppWidget() {
                         ServiceSection(
                             service = service,
                             widgetPrefs = widgetPrefs,
-                            config = config,
+                            config = config.copy(maxRows = maxRows),
                             showRefresh = index == 0,
                             strings = strings
                         )
@@ -333,7 +336,7 @@ class QuotaGlanceWidget : GlanceAppWidget() {
             Spacer(modifier = GlanceModifier.height(3.dp))
 
             // Progress bar
-            SegmentedProgressBar(barProgress, severity)
+            QuotaProgressBar(barProgress, severity)
 
             // Reset time
             val detailText = listOf(
@@ -357,31 +360,18 @@ class QuotaGlanceWidget : GlanceAppWidget() {
     }
 
     @Composable
-    private fun SegmentedProgressBar(barProgress: Float, severity: QuotaSeverity) {
-        val totalSegments = 24
-        val filledSegments = (barProgress * totalSegments).roundToInt().coerceIn(0, totalSegments)
-        val fillColor = severityColor(severity)
-        val trackColor = ColorProvider(Color.White.copy(alpha = 0.1f))
-
-        Row(
-            modifier = GlanceModifier.fillMaxWidth().height(4.dp)
-        ) {
-            for (i in 0 until totalSegments) {
-                val color = if (i < filledSegments) fillColor else trackColor
-                Box(
-                    modifier = GlanceModifier
-                        .defaultWeight()
-                        .height(4.dp)
-                        .background(color)
-                ) {}
-                if (i < totalSegments - 1) {
-                    Spacer(modifier = GlanceModifier.width(1.dp))
-                }
-            }
-        }
+    private fun QuotaProgressBar(barProgress: Float, severity: QuotaSeverity) {
+        LinearProgressIndicator(
+            progress = barProgress.coerceIn(0f, 1f),
+            modifier = GlanceModifier.fillMaxWidth().height(4.dp),
+            color = severityColor(severity),
+            backgroundColor = ColorProvider(Color.White.copy(alpha = 0.1f))
+        )
     }
 
     companion object {
+        private const val TAG = "CodexBarWidget"
+
         fun utilizationColor(utilization: Float): ColorProvider {
             return severityColor(severityForUtilization(utilization))
         }

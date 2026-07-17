@@ -17,8 +17,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,7 +54,7 @@ private const val TwoPaneMinWidthDp = 720f
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
-    onNavigateToSettings: () -> Unit,
+    onNavigateToConnections: () -> Unit,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -100,7 +100,7 @@ fun DashboardScreen(
 
                     is DashboardUiState.Content -> {
                         if (state.snapshot.services.isEmpty()) {
-                            EmptyState(onOpenSettings = onNavigateToSettings)
+                            EmptyState(onOpenConnections = onNavigateToConnections)
                         } else {
                             val failedServices = state.snapshot.services
                                 .filterNot {
@@ -136,7 +136,7 @@ fun DashboardScreen(
                                         ServiceDetailPane(
                                             service = paneService,
                                             onRefresh = { viewModel.refresh() },
-                                            onOpenSettings = onNavigateToSettings
+                                            onManageConnection = onNavigateToConnections
                                         )
                                     }
                                 }
@@ -161,9 +161,9 @@ fun DashboardScreen(
                         service = service,
                         onDismiss = { selectedServiceName = null },
                         onRefresh = { viewModel.refresh() },
-                        onOpenSettings = {
+                        onManageConnection = {
                             selectedServiceName = null
-                            onNavigateToSettings()
+                            onNavigateToConnections()
                         }
                     )
                 }
@@ -224,7 +224,7 @@ private fun CardList(
 }
 
 @Composable
-private fun EmptyState(onOpenSettings: () -> Unit) {
+private fun EmptyState(onOpenConnections: () -> Unit) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -252,10 +252,10 @@ private fun EmptyState(onOpenSettings: () -> Unit) {
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(20.dp))
-            Button(onClick = onOpenSettings) {
-                Icon(Icons.Default.Settings, contentDescription = null)
+            Button(onClick = onOpenConnections) {
+                Icon(Icons.AutoMirrored.Rounded.Login, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.action_open_settings))
+                Text(stringResource(R.string.action_open_connections))
             }
         }
     }

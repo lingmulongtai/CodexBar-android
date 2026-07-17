@@ -15,6 +15,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.Credential
+import com.codexbar.android.core.domain.model.ProviderSecretKind
+import com.codexbar.android.core.domain.model.providerMetadata
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import java.nio.charset.StandardCharsets
@@ -79,6 +81,10 @@ class EncryptedPrefsManager @Inject constructor(
     }
 
     suspend fun saveCredential(service: AiService, credential: Credential) {
+        require(
+            credential !is Credential.ProviderSecretCredential || credential.service == service
+        ) { "Provider credential does not match ${service.name}" }
+
         val updated = dataStore.edit { prefs ->
             prefs.removeServiceEntries(service)
             val prefix = service.name
@@ -121,6 +127,10 @@ class EncryptedPrefsManager @Inject constructor(
 
                 is Credential.CopilotCredential -> {
                     // Access-token only; GitHub's device flow used here does not issue refresh tokens.
+                }
+
+                is Credential.ProviderSecretCredential -> {
+                    prefs.putEncryptedString("${prefix}_secret_kind", credential.kind.name)
                 }
             }
         }
@@ -270,8 +280,8 @@ class EncryptedPrefsManager @Inject constructor(
     private fun readCredential(prefs: Preferences, service: AiService): Credential? {
         val prefix = service.name
 
-        return when (service) {
-            AiService.CLAUDE -> {
+        return when {
+            service == AiService.CLAUDE -> {
                 val accessToken = prefs.getEncryptedString("${prefix}_access_token") ?: return null
                 val refreshToken = prefs.getEncryptedString("${prefix}_refresh_token")
                 val expiresAt = prefs[longPreferencesKey("${prefix}_expires_at")]
@@ -288,7 +298,7 @@ class EncryptedPrefsManager @Inject constructor(
                 )
             }
 
-            AiService.CODEX -> {
+            service == AiService.CODEX -> {
                 val accessToken = prefs.getEncryptedString("${prefix}_access_token") ?: return null
                 val refreshToken = prefs.getEncryptedString("${prefix}_refresh_token") ?: return null
                 val accountId = prefs.getEncryptedString("${prefix}_account_id")
@@ -299,7 +309,7 @@ class EncryptedPrefsManager @Inject constructor(
                 )
             }
 
-            AiService.GEMINI -> {
+            service == AiService.GEMINI -> {
                 val host = prefs.getEncryptedString("${prefix}_companion_host") ?: return null
                 val port = prefs[longPreferencesKey("${prefix}_companion_port")]
                     ?.takeIf { it in 1..65535 }
@@ -316,10 +326,25 @@ class EncryptedPrefsManager @Inject constructor(
                 )
             }
 
-            AiService.COPILOT -> {
+            service == AiService.COPILOT -> {
                 val accessToken = prefs.getEncryptedString("${prefix}_access_token") ?: return null
                 Credential.CopilotCredential(accessToken = accessToken)
             }
+
+            service.providerMetadata.secretKind != null -> {
+                val accessToken = prefs.getEncryptedString("${prefix}_access_token") ?: return null
+                val expectedKind = checkNotNull(service.providerMetadata.secretKind)
+                val kind = prefs.getEncryptedString("${prefix}_secret_kind")
+                    ?.let { runCatching { ProviderSecretKind.valueOf(it) }.getOrNull() }
+                    ?: expectedKind
+                if (kind != expectedKind) return null
+                Credential.ProviderSecretCredential(
+                    service = service,
+                    kind = kind,
+                    accessToken = accessToken
+                )
+            }
+            else -> null
         }
     }
 
