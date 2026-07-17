@@ -80,14 +80,14 @@ Provider credentials are stored in `codexbar_secure_prefs`, an on-device DataSto
 
 ## Setup
 
-For normal use, install the signed APK from the latest release and open **Settings** to connect accounts or enter fallback tokens.
+For normal use, install the signed APK from the latest release and open **Connections** to link providers or enter fallback credentials.
 
 For local development:
 
 1. Install [OpenJDK 17](https://formulae.brew.sh/formula/openjdk@17) (or any JDK 17+)
 2. Clone and open the project in Android Studio
 3. Build and install the debug APK
-4. Open the app and go to **Settings** to connect accounts or enter fallback tokens
+4. Open the app and go to **Connections** to link providers or enter fallback credentials
 
 ## Connecting Accounts
 
@@ -95,12 +95,12 @@ For local development:
 
 Codex and GitHub Copilot use a device-code flow. The app intentionally shows the code before opening a browser so it can be copied safely:
 
-1. Open **Settings**, expand the provider, and tap **Connect account**.
+1. Open **Connections**, expand the provider, and tap **Connect account**.
 2. Wait for the one-time code card. The browser does not open automatically.
 3. Tap **Copy paste-ready code**. The copied value removes spaces and separators so the entire code can be pasted into the first field, including pages that display split code boxes.
 4. Tap **Open sign-in page** and verify the browser address before entering the code.
 5. Paste the complete code, sign in to the intended account, and approve the connection.
-6. When the website reports success, return to the same Settings screen before the displayed expiry time. Do not force-close the app.
+6. When the website reports success, return to the same Connections screen before the displayed expiry time. Do not force-close the app.
 7. Wait for the app to validate the returned credential and show the connected state. Browser success alone does not mean the on-device validation and encrypted save have finished.
 8. If the code expires or the app reports a failure, tap **Connect account** again and use the newly issued code. Do not reuse an old code.
 
@@ -126,7 +126,7 @@ Claude does not expose a supported Android device-code flow for third-party apps
 claude setup-token
 ```
 
-Paste the generated OAuth token into the Claude **Access Token** field in Settings. Avoid copying raw Keychain exports into logs, notes, or issue reports.
+Paste the generated OAuth token into the Claude **Access Token** field in Connections. Avoid copying raw Keychain exports into logs, notes, or issue reports.
 
 ### Codex (OpenAI / ChatGPT)
 
@@ -146,7 +146,7 @@ Do not extract bearer tokens from browser DevTools unless you are debugging loca
 
 ### Gemini (Google)
 
-Direct Gemini OAuth inside the Android app remains disabled. CodexBar does not copy Gemini CLI credentials, embed a Google client secret, or call the internal `cloudcode-pa` service. Instead, the v0.4.1 companion drives the official Gemini CLI's documented `/stats` view and sends only a sanitized quota snapshot over your trusted local network.
+Direct Gemini OAuth inside the Android app remains disabled. CodexBar does not copy Gemini CLI credentials, embed a Google client secret, or call the internal `cloudcode-pa` service. Instead, the v0.5.0 companion drives the official Gemini CLI's documented `/stats` view and sends only a sanitized quota snapshot over your trusted local network.
 
 #### Install and pair the private companion
 
@@ -158,7 +158,7 @@ gemini
 ```
 
 2. Complete Google's sign-in in that official CLI, then exit it.
-3. Download `CodexBar-Gemini-Companion-v0.4.1.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
+3. Download `CodexBar-Gemini-Companion-v0.5.0.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
 4. On Windows, double-click `start-windows.cmd`. On macOS or Linux, run `./start-macos-linux.sh`. The first launch installs only the versions pinned in `package-lock.json`.
 5. Keep the phone and computer on the same trusted Wi-Fi. If the computer firewall prompts, permit private networks only.
 6. Scan the displayed QR code with the phone and choose CodexBar, or paste the complete `codexbar://gemini-pair?...` value into the Gemini card.
@@ -195,13 +195,13 @@ The token is sent only as a bearer credential to `api.z.ai`, never across redire
 
 ### ZenMux
 
-Create a **Management API key** at `https://zenmux.ai/platform/management`, then paste it into the ZenMux card in Settings and select **Validate & connect**. A normal ZenMux inference API key is not accepted by the management quota endpoints.
+Create a **Management API key** at `https://zenmux.ai/platform/management`, then paste it into the ZenMux card in Connections and select **Validate & connect**. A normal ZenMux inference API key is not accepted by the management quota endpoints.
 
 The app sends the key only as a bearer credential to `https://zenmux.ai/api/v1/management/subscription/detail`. It displays the rolling 5-hour and 7-day flow quotas from the documented response. The key is encrypted with Android Keystore after validation; prompts, inference requests, and request logs are never requested.
 
 ### Kimi
 
-Create a Kimi Code API key in the Kimi Code console, paste it into the Kimi card in Settings, and select **Validate & connect**. The app calls only `https://api.kimi.com/coding/v1/usages` and displays the short rolling window (normally 5 hours) together with the 7-day coding quota.
+Create a Kimi Code API key in the Kimi Code console, paste it into the Kimi card in Connections, and select **Validate & connect**. The app calls only `https://api.kimi.com/coding/v1/usages` and displays the short rolling window (normally 5 hours) together with the 7-day coding quota.
 
 The API key is sent only as a bearer credential to the fixed HTTPS host, never follows redirects, never enters HTTP logs, and is encrypted with Android Keystore only after validation. The app does not request prompts, inference responses, or browser session cookies.
 
