@@ -15,8 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -57,7 +57,7 @@ fun ServiceDetailSheet(
     service: ServiceQuotaPresentation,
     onDismiss: () -> Unit,
     onRefresh: () -> Unit,
-    onOpenSettings: () -> Unit,
+    onManageConnection: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     ModalBottomSheet(
@@ -67,7 +67,7 @@ fun ServiceDetailSheet(
         ServiceDetailContent(
             service = service,
             onRefresh = onRefresh,
-            onOpenSettings = onOpenSettings,
+            onManageConnection = onManageConnection,
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
@@ -82,7 +82,7 @@ fun ServiceDetailSheet(
 fun ServiceDetailPane(
     service: ServiceQuotaPresentation,
     onRefresh: () -> Unit,
-    onOpenSettings: () -> Unit,
+    onManageConnection: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val visualStyle = providerVisualStyle(service.service)
@@ -95,7 +95,7 @@ fun ServiceDetailPane(
         ServiceDetailContent(
             service = service,
             onRefresh = onRefresh,
-            onOpenSettings = onOpenSettings,
+            onManageConnection = onManageConnection,
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
@@ -108,7 +108,7 @@ fun ServiceDetailPane(
 private fun ServiceDetailContent(
     service: ServiceQuotaPresentation,
     onRefresh: () -> Unit,
-    onOpenSettings: () -> Unit,
+    onManageConnection: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val accent = providerVisualStyle(service.service).accent
@@ -151,12 +151,12 @@ private fun ServiceDetailContent(
                 Text(stringResource(R.string.action_refresh))
             }
             Button(
-                onClick = onOpenSettings,
+                onClick = onManageConnection,
                 modifier = Modifier.weight(1f)
             ) {
-                Icon(Icons.Default.Settings, contentDescription = null)
+                Icon(Icons.AutoMirrored.Rounded.Login, contentDescription = null)
                 Spacer(modifier = Modifier.size(8.dp))
-                Text(stringResource(R.string.action_settings))
+                Text(stringResource(R.string.action_manage_connection))
             }
         }
     }

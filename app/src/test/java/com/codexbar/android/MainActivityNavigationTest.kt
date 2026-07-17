@@ -9,7 +9,14 @@ class MainActivityNavigationTest {
     @Test
     fun `settings deep link opens settings`() {
         assertEquals("settings", startDestinationForHost("settings"))
-        assertEquals("settings", startDestinationForHost("gemini-pair"))
+        assertEquals("settings", startDestinationForHost("SETTINGS"))
+    }
+
+    @Test
+    fun `connection and pairing deep links open connections`() {
+        assertEquals("connections", startDestinationForHost("connections"))
+        assertEquals("connections", startDestinationForHost("CONNECTIONS"))
+        assertEquals("connections", startDestinationForHost("gemini-pair"))
     }
 
     @Test

@@ -133,7 +133,12 @@ class MainActivity : AppCompatActivity() {
 }
 
 internal fun startDestinationForHost(host: String?): String {
-    return if (host == "settings" || host == "gemini-pair") "settings" else "dashboard"
+    return when {
+        host.equals("settings", ignoreCase = true) -> "settings"
+        host.equals("connections", ignoreCase = true) ||
+            host.equals("gemini-pair", ignoreCase = true) -> "connections"
+        else -> "dashboard"
+    }
 }
 
 internal fun geminiPairingUriOrNull(uri: Uri?): String? {

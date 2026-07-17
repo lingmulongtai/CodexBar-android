@@ -248,8 +248,12 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.error
                                             )
-                                            OutlinedButton(onClick = ::openAppSettings) {
-                                                Text(stringResource(R.string.widget_setup_open_app_settings))
+                                            OutlinedButton(onClick = ::openAppConnections) {
+                                                Text(
+                                                    stringResource(
+                                                        R.string.widget_setup_open_app_connections
+                                                    )
+                                                )
                                             }
                                         } else {
                                             Text(
@@ -346,7 +350,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         }
     }
 
-    private fun openAppSettings() {
+    private fun openAppConnections() {
         setResult(
             RESULT_CANCELED,
             Intent().apply {
@@ -355,7 +359,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         )
         startActivity(
             Intent(this, MainActivity::class.java).apply {
-                data = Uri.parse("codexbar://settings")
+                data = Uri.parse("codexbar://connections")
             }
         )
         finish()

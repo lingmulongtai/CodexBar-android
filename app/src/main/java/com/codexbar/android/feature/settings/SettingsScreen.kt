@@ -115,8 +115,6 @@ import kotlin.math.roundToInt
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     showBackButton: Boolean = true,
-    initialGeminiPairingUri: String? = null,
-    onGeminiPairingConsumed: () -> Unit = {},
     onScreenPrivacyChanged: (Boolean) -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
@@ -127,26 +125,6 @@ fun SettingsScreen(
     var enablePersistentAfterSettings by remember { mutableStateOf(false) }
     var enablePersistentAfterPermission by remember { mutableStateOf(false) }
     var selectedLanguage by remember { mutableStateOf(AppLanguage.current()) }
-    var providerSearchQuery by rememberSaveable { mutableStateOf("") }
-    var providerFilterName by rememberSaveable {
-        mutableStateOf(ProviderConnectionFilter.ALL.name)
-    }
-    var providerCategoryName by rememberSaveable {
-        mutableStateOf(ProviderCategoryFilter.ALL.name)
-    }
-    var expandedProviderName by rememberSaveable { mutableStateOf<String?>(null) }
-    val providerFilter = runCatching {
-        ProviderConnectionFilter.valueOf(providerFilterName)
-    }.getOrDefault(ProviderConnectionFilter.ALL)
-    val providerCategory = runCatching {
-        ProviderCategoryFilter.valueOf(providerCategoryName)
-    }.getOrDefault(ProviderCategoryFilter.ALL)
-    val visibleProviders = filterProviders(
-        query = providerSearchQuery,
-        filter = providerFilter,
-        categoryFilter = providerCategory,
-        serviceStates = uiState.serviceStates
-    )
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -176,13 +154,6 @@ fun SettingsScreen(
         while (true) {
             delay(60_000L)
             viewModel.syncMonitoringState()
-        }
-    }
-
-    LaunchedEffect(initialGeminiPairingUri) {
-        if (initialGeminiPairingUri != null) {
-            viewModel.importGeminiPairingCode(initialGeminiPairingUri)
-            onGeminiPairingConsumed()
         }
     }
 
@@ -217,70 +188,6 @@ fun SettingsScreen(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                SettingsSectionHeader(
-                    title = stringResource(R.string.settings_accounts_title),
-                    description = stringResource(R.string.settings_accounts_description)
-                )
-
-                ProviderDirectoryControls(
-                    query = providerSearchQuery,
-                    onQueryChange = { providerSearchQuery = it },
-                    filter = providerFilter,
-                    onFilterChange = { providerFilterName = it.name },
-                    categoryFilter = providerCategory,
-                    onCategoryFilterChange = { providerCategoryName = it.name },
-                    visibleCount = visibleProviders.size,
-                    totalCount = AiService.entries.size
-                )
-
-                if (visibleProviders.isEmpty()) {
-                    ProviderDirectoryEmptyState()
-                }
-
-                visibleProviders.forEach { service ->
-                    val state = uiState.serviceStates[service] ?: ServiceCredentialState()
-                    ServiceCredentialSection(
-                        service = service,
-                        state = state,
-                        expanded = expandedProviderName == service.name,
-                        onToggleExpanded = {
-                            expandedProviderName = if (expandedProviderName == service.name) {
-                                null
-                            } else {
-                                service.name
-                            }
-                        },
-                        onFieldChange = { field, value ->
-                            viewModel.updateField(service, field, value)
-                        },
-                        onStartAccountLink = { viewModel.startAccountLink(service) },
-                        onOpenAccountLink = { url -> openAuthUrl(context, url) },
-                        onCopyAccountCode = { code ->
-                            copyToClipboard(
-                                context = context,
-                                text = code,
-                                labelRes = R.string.clipboard_sign_in_code,
-                                sensitive = true
-                            )
-                        },
-                        onCopySetupCommand = { command ->
-                            copyToClipboard(
-                                context = context,
-                                text = command,
-                                labelRes = R.string.clipboard_setup_command,
-                                sensitive = false
-                            )
-                        },
-                        onGeminiPairingCodeChange = viewModel::updateGeminiPairingCode,
-                        onConnectGeminiCompanion = viewModel::connectGeminiCompanion,
-                        onOpenSetupGuide = {
-                            openAuthUrl(context, accountGuideUrl(service))
-                        },
-                        onValidate = { viewModel.validateCredential(service) },
-                        onDisconnect = { viewModel.showDisconnectConfirmDialog(service) }
-                    )
-                }
-
                 SettingsSectionHeader(
                     title = stringResource(R.string.settings_monitoring_title),
                     description = stringResource(R.string.settings_monitoring_description)
@@ -347,6 +254,153 @@ fun SettingsScreen(
                     }
                 )
 
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ConnectionsScreen(
+    onNavigateBack: () -> Unit,
+    showBackButton: Boolean = true,
+    initialGeminiPairingUri: String? = null,
+    onGeminiPairingConsumed: () -> Unit = {},
+    viewModel: SettingsViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    var providerSearchQuery by rememberSaveable { mutableStateOf("") }
+    var providerFilterName by rememberSaveable {
+        mutableStateOf(ProviderConnectionFilter.ALL.name)
+    }
+    var providerCategoryName by rememberSaveable {
+        mutableStateOf(ProviderCategoryFilter.ALL.name)
+    }
+    var expandedProviderName by rememberSaveable { mutableStateOf<String?>(null) }
+    val providerFilter = runCatching {
+        ProviderConnectionFilter.valueOf(providerFilterName)
+    }.getOrDefault(ProviderConnectionFilter.ALL)
+    val providerCategory = runCatching {
+        ProviderCategoryFilter.valueOf(providerCategoryName)
+    }.getOrDefault(ProviderCategoryFilter.ALL)
+    val visibleProviders = filterProviders(
+        query = providerSearchQuery,
+        filter = providerFilter,
+        categoryFilter = providerCategory,
+        serviceStates = uiState.serviceStates
+    )
+    val connectedCount = uiState.serviceStates.values.count(ServiceCredentialState::isConnected)
+
+    LaunchedEffect(initialGeminiPairingUri) {
+        if (initialGeminiPairingUri != null) {
+            viewModel.importGeminiPairingCode(initialGeminiPairingUri)
+            expandedProviderName = AiService.GEMINI.name
+            onGeminiPairingConsumed()
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.connections_title)) },
+                navigationIcon = {
+                    if (showBackButton) {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.action_back)
+                            )
+                        }
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .widthIn(max = 840.dp)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                SettingsSectionHeader(
+                    title = stringResource(R.string.connections_manage_title),
+                    description = stringResource(R.string.connections_manage_description)
+                )
+
+                ConnectionSummaryCard(
+                    connectedCount = connectedCount,
+                    totalCount = AiService.entries.size
+                )
+
+                ProviderDirectoryControls(
+                    query = providerSearchQuery,
+                    onQueryChange = { providerSearchQuery = it },
+                    filter = providerFilter,
+                    onFilterChange = { providerFilterName = it.name },
+                    categoryFilter = providerCategory,
+                    onCategoryFilterChange = { providerCategoryName = it.name },
+                    visibleCount = visibleProviders.size,
+                    totalCount = AiService.entries.size
+                )
+
+                if (visibleProviders.isEmpty()) {
+                    ProviderDirectoryEmptyState()
+                }
+
+                visibleProviders.forEach { service ->
+                    val state = uiState.serviceStates[service] ?: ServiceCredentialState()
+                    ServiceCredentialSection(
+                        service = service,
+                        state = state,
+                        expanded = expandedProviderName == service.name,
+                        onToggleExpanded = {
+                            expandedProviderName = if (expandedProviderName == service.name) {
+                                null
+                            } else {
+                                service.name
+                            }
+                        },
+                        onFieldChange = { field, value ->
+                            viewModel.updateField(service, field, value)
+                        },
+                        onStartAccountLink = { viewModel.startAccountLink(service) },
+                        onOpenAccountLink = { url -> openAuthUrl(context, url) },
+                        onCopyAccountCode = { code ->
+                            copyToClipboard(
+                                context = context,
+                                text = code,
+                                labelRes = R.string.clipboard_sign_in_code,
+                                sensitive = true
+                            )
+                        },
+                        onCopySetupCommand = { command ->
+                            copyToClipboard(
+                                context = context,
+                                text = command,
+                                labelRes = R.string.clipboard_setup_command,
+                                sensitive = false
+                            )
+                        },
+                        onGeminiPairingCodeChange = viewModel::updateGeminiPairingCode,
+                        onConnectGeminiCompanion = viewModel::connectGeminiCompanion,
+                        onOpenSetupGuide = {
+                            openAuthUrl(context, accountGuideUrl(service))
+                        },
+                        onValidate = { viewModel.validateCredential(service) },
+                        onDisconnect = { viewModel.showDisconnectConfirmDialog(service) }
+                    )
+                }
+
                 DangerZoneSection(
                     onDeleteAll = { viewModel.showDeleteConfirmDialog() }
                 )
@@ -356,7 +410,6 @@ fun SettingsScreen(
         }
     }
 
-    // Delete confirmation dialog
     if (uiState.showDeleteConfirmDialog) {
         DeleteConfirmDialog(
             onConfirm = {
@@ -394,6 +447,60 @@ private fun SettingsSectionHeader(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@Composable
+private fun ConnectionSummaryCard(
+    connectedCount: Int,
+    totalCount: Int
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.primaryContainer
+    ) {
+        Row(
+            modifier = Modifier.padding(18.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.Login,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.connections_summary,
+                        connectedCount,
+                        totalCount
+                    ),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Text(
+                    text = stringResource(R.string.connections_summary_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
     }
 }
 
