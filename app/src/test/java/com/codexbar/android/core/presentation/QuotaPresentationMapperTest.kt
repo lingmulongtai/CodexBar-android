@@ -44,6 +44,14 @@ class QuotaPresentationMapperTest {
         assertEquals(0.28f, primary.barProgress, 0.001f)
         assertEquals("28% left", primary.remainingLabel)
         assertEquals("Resets in 2h 0m", primary.resetLabel)
+        val resetPlan = requireNotNull(primary.resetPlan)
+        assertEquals("Use by Jul 13, 02:00 UTC", resetPlan.deadlineLabel)
+        assertEquals("Balanced budget: 14.0%/h", resetPlan.budgetLabel)
+        assertEquals(
+            "Best time to use it: now. Up to 28% is available before Jul 13, 02:00 UTC.",
+            resetPlan.actionLabel
+        )
+        assertEquals("Use now · 28% available", resetPlan.compactActionLabel)
         assertEquals("1m ago", service.freshness.ageLabel)
     }
 
@@ -91,7 +99,24 @@ class QuotaPresentationMapperTest {
         assertNull(metric.usedPercent)
         assertEquals("Remaining hidden", metric.remainingLabel)
         assertEquals(QuotaSeverity.Redacted, metric.severity)
+        assertNull(metric.resetPlan)
         assertEquals("Used hidden", service.extraUsage!!.usedCreditsLabel)
+    }
+
+    @Test
+    fun `reset plans are limited to Codex windows`() {
+        val snapshot = mapper.map(
+            quotas = listOf(
+                QuotaInfo(
+                    service = AiService.CLAUDE,
+                    windows = listOf(UsageWindow("5h", 0.25, now.plusSeconds(7200))),
+                    extraUsage = null,
+                    fetchedAt = now
+                )
+            )
+        )
+
+        assertNull(snapshot.services.single().metrics.single().resetPlan)
     }
 
     @Test

@@ -322,6 +322,20 @@
     <string name="pace_usage_rate">平均%1$s%%/時</string>
     <string name="pace_multiplier">基準ペースの%1$s倍</string>
     <string name="pace_forecast">現在のペースではリセット時に%1$d%%使用</string>
+    <string name="reset_plan_title">リセット計画</string>
+    <string name="reset_plan_deadline">利用期限 %1$s</string>
+    <string name="reset_plan_budget_hour">均等ペース: 1時間あたり%1$s%%</string>
+    <string name="reset_plan_budget_hour_day">均等ペース: 1時間あたり%1$s%%・1日あたり%2$s%%</string>
+    <string name="reset_plan_almost_used">残り%1$d%%です。%2$sまでの優先作業用に残しておきましょう。</string>
+    <string name="reset_plan_use_now">使うなら今が効果的です。%2$sまでに残り%1$d%%を利用できます。</string>
+    <string name="reset_plan_slow_down">今はいったん抑えましょう。%2$sまでは約%1$d%%以内が目安です。</string>
+    <string name="reset_plan_keep_pace">いい調子です。%2$sまでに約%1$d%%使うと均等なペースを保てます。</string>
+    <string name="reset_plan_use_by_checkpoint">残りを均等に使うなら、%2$sまでに約%1$d%%使うのが目安です。</string>
+    <string name="reset_plan_compact_almost_used">残り%1$d%%は優先作業用に</string>
+    <string name="reset_plan_compact_use_now">今が使いどき · 残り%1$d%%</string>
+    <string name="reset_plan_compact_slow_down">抑えめに · %2$sまで%1$d%%以内</string>
+    <string name="reset_plan_compact_keep_pace">いい調子 · %2$sまで約%1$d%%</string>
+    <string name="reset_plan_compact_use_by_checkpoint">次の目安 · %2$sまで約%1$d%%</string>
     <string name="insight_limit_not_provided_title">%1$d時間リミットは現在ありません！</string>
     <string name="insight_limit_not_provided_message">短期枠を気にせず、長期枠を見ながら開発を進められます。</string>
 </resources>

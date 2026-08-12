@@ -305,6 +305,7 @@ class QuotaGlanceWidget : GlanceAppWidget(errorUiLayout = R.layout.widget_error)
         val remainingLabel = widgetPrefs.getCachedRemainingLabel(service, label)
         val resetText = widgetPrefs.getCachedResetLabel(service, label).orEmpty()
         val paceText = widgetPrefs.getCachedPaceLabel(service, label).orEmpty()
+        val resetPlanText = widgetPrefs.getCachedResetPlanLabel(service, label).orEmpty()
         val severity = widgetPrefs.getCachedSeverity(service, label)
             ?.let { runCatching { QuotaSeverity.valueOf(it) }.getOrNull() }
             ?: severityForUtilization(utilization)
@@ -341,7 +342,7 @@ class QuotaGlanceWidget : GlanceAppWidget(errorUiLayout = R.layout.widget_error)
             // Reset time
             val detailText = listOf(
                 resetText.takeIf { config.showReset },
-                paceText.takeIf { config.showPace }
+                resetPlanText.ifBlank { paceText }.takeIf { config.showPace }
             ).filterNotNull().filter { it.isNotBlank() }.joinToString(" · ")
             if (detailText.isNotEmpty()) {
                 Spacer(modifier = GlanceModifier.height(2.dp))
@@ -352,7 +353,8 @@ class QuotaGlanceWidget : GlanceAppWidget(errorUiLayout = R.layout.widget_error)
                         style = TextStyle(
                             color = ColorProvider(Color.White.copy(alpha = 0.4f)),
                             fontSize = 10.sp
-                        )
+                        ),
+                        maxLines = 2
                     )
                 }
             }
