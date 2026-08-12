@@ -64,6 +64,11 @@ interface QuotaPresentationText {
     fun resetSlowDown(checkpointPercent: Int, checkpointAt: Instant): String
     fun resetKeepPace(checkpointPercent: Int, checkpointAt: Instant): String
     fun resetUseByCheckpoint(checkpointPercent: Int, checkpointAt: Instant): String
+    fun resetCompactAlmostUsed(remainingPercent: Int): String
+    fun resetCompactUseNow(remainingPercent: Int): String
+    fun resetCompactSlowDown(checkpointPercent: Int, checkpointAt: Instant): String
+    fun resetCompactKeepPace(checkpointPercent: Int, checkpointAt: Instant): String
+    fun resetCompactUseByCheckpoint(checkpointPercent: Int, checkpointAt: Instant): String
     fun limitNotProvidedTitle(hours: Long): String
     fun limitNotProvidedMessage(): String
 }
@@ -132,6 +137,16 @@ object EnglishQuotaPresentationText : QuotaPresentationText {
         "Good pace. About $checkpointPercent% by ${formatResetInstant(checkpointAt)} keeps the allowance balanced."
     override fun resetUseByCheckpoint(checkpointPercent: Int, checkpointAt: Instant): String =
         "Use about $checkpointPercent% by ${formatResetInstant(checkpointAt)} to spread the remaining allowance."
+    override fun resetCompactAlmostUsed(remainingPercent: Int): String =
+        "Save the last $remainingPercent% for priority work"
+    override fun resetCompactUseNow(remainingPercent: Int): String =
+        "Use now · $remainingPercent% available"
+    override fun resetCompactSlowDown(checkpointPercent: Int, checkpointAt: Instant): String =
+        "Slow down · ≤$checkpointPercent% by ${formatResetInstant(checkpointAt)}"
+    override fun resetCompactKeepPace(checkpointPercent: Int, checkpointAt: Instant): String =
+        "Good pace · ~$checkpointPercent% by ${formatResetInstant(checkpointAt)}"
+    override fun resetCompactUseByCheckpoint(checkpointPercent: Int, checkpointAt: Instant): String =
+        "Next target · ~$checkpointPercent% by ${formatResetInstant(checkpointAt)}"
     override fun limitNotProvidedTitle(hours: Long): String =
         "$hours-hour limit isn't active right now!"
     override fun limitNotProvidedMessage(): String =
@@ -227,6 +242,22 @@ class AndroidQuotaPresentationText(
         string(R.string.reset_plan_keep_pace, checkpointPercent, formatInstant(checkpointAt))
     override fun resetUseByCheckpoint(checkpointPercent: Int, checkpointAt: Instant): String =
         string(R.string.reset_plan_use_by_checkpoint, checkpointPercent, formatInstant(checkpointAt))
+    override fun resetCompactAlmostUsed(remainingPercent: Int): String =
+        string(R.string.reset_plan_compact_almost_used, remainingPercent)
+    override fun resetCompactUseNow(remainingPercent: Int): String =
+        string(R.string.reset_plan_compact_use_now, remainingPercent)
+    override fun resetCompactSlowDown(checkpointPercent: Int, checkpointAt: Instant): String =
+        string(R.string.reset_plan_compact_slow_down, checkpointPercent, formatInstant(checkpointAt))
+    override fun resetCompactKeepPace(checkpointPercent: Int, checkpointAt: Instant): String =
+        string(R.string.reset_plan_compact_keep_pace, checkpointPercent, formatInstant(checkpointAt))
+    override fun resetCompactUseByCheckpoint(
+        checkpointPercent: Int,
+        checkpointAt: Instant
+    ): String = string(
+        R.string.reset_plan_compact_use_by_checkpoint,
+        checkpointPercent,
+        formatInstant(checkpointAt)
+    )
     override fun limitNotProvidedTitle(hours: Long): String =
         string(R.string.insight_limit_not_provided_title, hours)
     override fun limitNotProvidedMessage(): String =

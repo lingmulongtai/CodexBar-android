@@ -49,7 +49,8 @@ data class QuotaResetPlanPresentation(
     val action: ResetPlanAction,
     val deadlineLabel: String,
     val budgetLabel: String,
-    val actionLabel: String
+    val actionLabel: String,
+    val compactActionLabel: String
 )
 
 data class ExtraUsagePresentation(

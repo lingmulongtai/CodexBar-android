@@ -174,11 +174,28 @@ class QuotaPresentationMapper(
                 plan.checkpointAt
             )
         }
+        val compactActionLabel = when (plan.action) {
+            ResetPlanAction.AlmostUsed -> text.resetCompactAlmostUsed(plan.remainingPercent)
+            ResetPlanAction.UseNow -> text.resetCompactUseNow(plan.remainingPercent)
+            ResetPlanAction.SlowDown -> text.resetCompactSlowDown(
+                plan.checkpointBudgetPercent,
+                plan.checkpointAt
+            )
+            ResetPlanAction.KeepPace -> text.resetCompactKeepPace(
+                plan.checkpointBudgetPercent,
+                plan.checkpointAt
+            )
+            ResetPlanAction.UseByCheckpoint -> text.resetCompactUseByCheckpoint(
+                plan.checkpointBudgetPercent,
+                plan.checkpointAt
+            )
+        }
         return QuotaResetPlanPresentation(
             action = plan.action,
             deadlineLabel = text.resetDeadline(plan.resetAt),
             budgetLabel = budgetLabel,
-            actionLabel = actionLabel
+            actionLabel = actionLabel,
+            compactActionLabel = compactActionLabel
         )
     }
 

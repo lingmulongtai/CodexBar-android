@@ -51,6 +51,7 @@ class QuotaPresentationMapperTest {
             "Best time to use it: now. Up to 28% is available before Jul 13, 02:00 UTC.",
             resetPlan.actionLabel
         )
+        assertEquals("Use now · 28% available", resetPlan.compactActionLabel)
         assertEquals("1m ago", service.freshness.ageLabel)
     }
 

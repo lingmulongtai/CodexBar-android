@@ -331,6 +331,11 @@
     <string name="reset_plan_slow_down">Slow down for now. Use no more than about %1$d%% by %2$s.</string>
     <string name="reset_plan_keep_pace">Good pace. About %1$d%% by %2$s keeps the allowance balanced.</string>
     <string name="reset_plan_use_by_checkpoint">Use about %1$d%% by %2$s to spread the remaining allowance.</string>
+    <string name="reset_plan_compact_almost_used">Save the last %1$d%% for priority work</string>
+    <string name="reset_plan_compact_use_now">Use now · %1$d%% available</string>
+    <string name="reset_plan_compact_slow_down">Slow down · ≤%1$d%% by %2$s</string>
+    <string name="reset_plan_compact_keep_pace">Good pace · ~%1$d%% by %2$s</string>
+    <string name="reset_plan_compact_use_by_checkpoint">Next target · ~%1$d%% by %2$s</string>
     <string name="insight_limit_not_provided_title">%1$d-hour limit isn’t active right now!</string>
     <string name="insight_limit_not_provided_message">No short-term window was returned, so you can focus on the longer window and keep building.</string>
 </resources>
