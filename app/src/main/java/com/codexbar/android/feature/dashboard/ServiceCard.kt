@@ -176,6 +176,13 @@ fun ServiceCard(
                         }
                     }
                 }
+                metric.resetPlan?.let { plan ->
+                    Spacer(modifier = Modifier.height(CodexBarSpacing.medium))
+                    ResetPlanBanner(
+                        plan = plan,
+                        accent = visualStyle.accent
+                    )
+                }
             }
 
             val secondaryMetrics = service.metrics.filterNot {
@@ -190,6 +197,12 @@ fun ServiceCard(
                             showExtendedDetails = true,
                             goodColor = visualStyle.accent
                         )
+                        metric.resetPlan?.let { plan ->
+                            ResetPlanBanner(
+                                plan = plan,
+                                accent = visualStyle.accent
+                            )
+                        }
                     }
                 }
             }

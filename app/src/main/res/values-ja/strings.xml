@@ -322,6 +322,7 @@
     <string name="pace_usage_rate">平均%1$s%%/時</string>
     <string name="pace_multiplier">基準ペースの%1$s倍</string>
     <string name="pace_forecast">現在のペースではリセット時に%1$d%%使用</string>
+    <string name="reset_plan_title">リセット計画</string>
     <string name="reset_plan_deadline">利用期限 %1$s</string>
     <string name="reset_plan_budget_hour">均等ペース: 1時間あたり%1$s%%</string>
     <string name="reset_plan_budget_hour_day">均等ペース: 1時間あたり%1$s%%・1日あたり%2$s%%</string>

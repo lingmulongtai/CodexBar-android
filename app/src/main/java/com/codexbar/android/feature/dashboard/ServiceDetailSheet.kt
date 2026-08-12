@@ -281,6 +281,13 @@ private fun MetricDetailCard(metric: QuotaMetricPresentation, accent: Color) {
                 metric.pace.reserveLabel?.let { DetailChip(it) }
             }
 
+            metric.resetPlan?.let { plan ->
+                ResetPlanBanner(
+                    plan = plan,
+                    accent = accent
+                )
+            }
+
             if (metric.pace.label.isNotBlank()) {
                 DetailRow(stringResource(R.string.detail_pace), metric.pace.label)
             }

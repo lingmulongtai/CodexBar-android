@@ -322,6 +322,7 @@
     <string name="pace_usage_rate">Avg %1$s%%/h</string>
     <string name="pace_multiplier">%1$s× target pace</string>
     <string name="pace_forecast">At this pace: %1$d%% by reset</string>
+    <string name="reset_plan_title">Reset plan</string>
     <string name="reset_plan_deadline">Use by %1$s</string>
     <string name="reset_plan_budget_hour">Balanced budget: %1$s%%/h</string>
     <string name="reset_plan_budget_hour_day">Balanced budget: %1$s%%/h · %2$s%%/day</string>
