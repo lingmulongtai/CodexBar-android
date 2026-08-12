@@ -430,8 +430,10 @@ class QuotaNotificationService @Inject constructor(
                 ?: localizedString(R.string.notification_waiting_for_data)
         }
         val resetText = primaryMetric.resetLabel?.let { " - $it" } ?: ""
-        val paceText = primaryMetric.pace.label.takeIf { it.isNotBlank() }?.let { " - $it" } ?: ""
-        return "${primaryMetric.remainingLabel} (${primaryMetric.label})$resetText$paceText"
+        val guidance = primaryMetric.resetPlan?.compactActionLabel
+            ?: primaryMetric.pace.label.takeIf { it.isNotBlank() }
+        val guidanceText = guidance?.let { " - $it" } ?: ""
+        return "${primaryMetric.remainingLabel} (${primaryMetric.label})$resetText$guidanceText"
     }
 
     private fun localizedString(@StringRes resourceId: Int, vararg formatArgs: Any): String {

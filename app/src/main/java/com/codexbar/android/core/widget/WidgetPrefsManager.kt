@@ -166,6 +166,7 @@ class WidgetPrefsManager @Inject constructor(
         putString("${prefix}_${label}_used_label", metric.usedLabel)
         putString("${prefix}_${label}_reset_label", metric.resetLabel)
         putString("${prefix}_${label}_pace_label", metric.pace.label)
+        putString("${prefix}_${label}_reset_plan_label", metric.resetPlan?.compactActionLabel)
         putString("${prefix}_${label}_severity", metric.severity.name)
         metric.resetsAt?.let { putLong("${prefix}_${label}_resets", it.epochSecond) }
     }
@@ -197,6 +198,10 @@ class WidgetPrefsManager @Inject constructor(
 
     fun getCachedPaceLabel(service: AiService, label: String): String? {
         return prefs.getString("cache_${service.name}_${label}_pace_label", null)
+    }
+
+    fun getCachedResetPlanLabel(service: AiService, label: String): String? {
+        return prefs.getString("cache_${service.name}_${label}_reset_plan_label", null)
     }
 
     fun getCachedSeverity(service: AiService, label: String): String? {
