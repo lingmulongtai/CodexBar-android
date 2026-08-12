@@ -14,7 +14,8 @@ import kotlin.math.roundToInt
 
 class QuotaPresentationMapper(
     private val clock: Clock = Clock.systemDefaultZone(),
-    private val text: QuotaPresentationText = EnglishQuotaPresentationText
+    private val text: QuotaPresentationText = EnglishQuotaPresentationText,
+    private val resetPlanCalculator: QuotaResetPlanCalculator = QuotaResetPlanCalculator()
 ) {
     fun map(
         quotas: List<QuotaInfo>,
@@ -106,6 +107,15 @@ class QuotaPresentationMapper(
             else -> QuotaSeverity.Good
         }
         val label = window.label.ifBlank { text.window(index + 1) }
+        val pace = paceByMetricKey[metricKey(service, label)] ?: PacePresentation(
+            state = PaceState.CollectingHistory,
+            label = text.collectingPaceHistory()
+        )
+        val resetPlan = if (service == AiService.CODEX && !privacy.redactSensitiveValues) {
+            resetPlanCalculator.calculate(window, pace.state, generatedAt)?.let(::mapResetPlan)
+        } else {
+            null
+        }
         return QuotaMetricPresentation(
             id = label.lowercase(locale).replace(Regex("[^a-z0-9]+"), "-").trim('-')
                 .ifBlank { "window-${index + 1}" },
@@ -130,10 +140,45 @@ class QuotaPresentationMapper(
             resetLabel = if (privacy.redactSensitiveValues) null else window.resetsAt?.let {
                 formatResetLabel(it, generatedAt)
             },
-            pace = paceByMetricKey[metricKey(service, label)] ?: PacePresentation(
-                state = PaceState.CollectingHistory,
-                label = text.collectingPaceHistory()
+            pace = pace,
+            resetPlan = resetPlan
+        )
+    }
+
+    private fun mapResetPlan(plan: QuotaResetPlan): QuotaResetPlanPresentation {
+        val perHour = formatDecimal(plan.sustainablePercentPerHour)
+        val budgetLabel = if (plan.minutesUntilReset >= MINUTES_PER_DAY) {
+            text.resetBudgetPerHourAndDay(
+                percentPerHour = perHour,
+                percentPerDay = formatDecimal(plan.sustainablePercentPerDay)
             )
+        } else {
+            text.resetBudgetPerHour(perHour)
+        }
+        val actionLabel = when (plan.action) {
+            ResetPlanAction.AlmostUsed -> text.resetAlmostUsed(
+                plan.remainingPercent,
+                plan.resetAt
+            )
+            ResetPlanAction.UseNow -> text.resetUseNow(plan.remainingPercent, plan.resetAt)
+            ResetPlanAction.SlowDown -> text.resetSlowDown(
+                plan.checkpointBudgetPercent,
+                plan.checkpointAt
+            )
+            ResetPlanAction.KeepPace -> text.resetKeepPace(
+                plan.checkpointBudgetPercent,
+                plan.checkpointAt
+            )
+            ResetPlanAction.UseByCheckpoint -> text.resetUseByCheckpoint(
+                plan.checkpointBudgetPercent,
+                plan.checkpointAt
+            )
+        }
+        return QuotaResetPlanPresentation(
+            action = plan.action,
+            deadlineLabel = text.resetDeadline(plan.resetAt),
+            budgetLabel = budgetLabel,
+            actionLabel = actionLabel
         )
     }
 
@@ -281,11 +326,16 @@ class QuotaPresentationMapper(
 
     private fun Double.toPercent(): Int = (this * 100.0).roundToInt().coerceIn(0, 100)
 
+    private fun formatDecimal(value: Double): String {
+        return String.format(text.locale, "%.1f", value.coerceAtLeast(0.0))
+    }
+
     companion object {
         fun metricKey(service: AiService, label: String): String = "${service.name}|$label"
 
         private const val WARNING_USED_FRACTION = 0.60
         private const val CRITICAL_USED_FRACTION = 0.85
         private const val SECONDS_PER_HOUR = 3600L
+        private const val MINUTES_PER_DAY = 24L * 60L
     }
 }

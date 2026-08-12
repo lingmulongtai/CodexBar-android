@@ -6,6 +6,7 @@ import androidx.core.content.ContextCompat
 import com.codexbar.android.R
 import java.time.Instant
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -55,6 +56,14 @@ interface QuotaPresentationText {
     fun usageRate(percentPerHour: String): String
     fun paceMultiplier(multiplier: String): String
     fun forecastAtReset(projectedPercent: Int): String
+    fun resetDeadline(resetAt: Instant): String
+    fun resetBudgetPerHour(percentPerHour: String): String
+    fun resetBudgetPerHourAndDay(percentPerHour: String, percentPerDay: String): String
+    fun resetAlmostUsed(remainingPercent: Int, resetAt: Instant): String
+    fun resetUseNow(remainingPercent: Int, resetAt: Instant): String
+    fun resetSlowDown(checkpointPercent: Int, checkpointAt: Instant): String
+    fun resetKeepPace(checkpointPercent: Int, checkpointAt: Instant): String
+    fun resetUseByCheckpoint(checkpointPercent: Int, checkpointAt: Instant): String
     fun limitNotProvidedTitle(hours: Long): String
     fun limitNotProvidedMessage(): String
 }
@@ -107,10 +116,32 @@ object EnglishQuotaPresentationText : QuotaPresentationText {
     override fun paceMultiplier(multiplier: String): String = "$multiplier× target pace"
     override fun forecastAtReset(projectedPercent: Int): String =
         "At this pace: $projectedPercent% by reset"
+    override fun resetDeadline(resetAt: Instant): String =
+        "Use by ${formatResetInstant(resetAt)}"
+    override fun resetBudgetPerHour(percentPerHour: String): String =
+        "Balanced budget: $percentPerHour%/h"
+    override fun resetBudgetPerHourAndDay(percentPerHour: String, percentPerDay: String): String =
+        "Balanced budget: $percentPerHour%/h · $percentPerDay%/day"
+    override fun resetAlmostUsed(remainingPercent: Int, resetAt: Instant): String =
+        "Only $remainingPercent% remains. Save it for priority work before ${formatResetInstant(resetAt)}."
+    override fun resetUseNow(remainingPercent: Int, resetAt: Instant): String =
+        "Best time to use it: now. Up to $remainingPercent% is available before ${formatResetInstant(resetAt)}."
+    override fun resetSlowDown(checkpointPercent: Int, checkpointAt: Instant): String =
+        "Slow down for now. Use no more than about $checkpointPercent% by ${formatResetInstant(checkpointAt)}."
+    override fun resetKeepPace(checkpointPercent: Int, checkpointAt: Instant): String =
+        "Good pace. About $checkpointPercent% by ${formatResetInstant(checkpointAt)} keeps the allowance balanced."
+    override fun resetUseByCheckpoint(checkpointPercent: Int, checkpointAt: Instant): String =
+        "Use about $checkpointPercent% by ${formatResetInstant(checkpointAt)} to spread the remaining allowance."
     override fun limitNotProvidedTitle(hours: Long): String =
         "$hours-hour limit isn't active right now!"
     override fun limitNotProvidedMessage(): String =
         "No short-term window was returned, so you can focus on the longer window and keep building."
+
+    private fun formatResetInstant(instant: Instant): String {
+        return DateTimeFormatter.ofPattern("MMM d, HH:mm 'UTC'", locale)
+            .withZone(ZoneOffset.UTC)
+            .format(instant)
+    }
 }
 
 class AndroidQuotaPresentationText(
@@ -178,6 +209,24 @@ class AndroidQuotaPresentationText(
         string(R.string.pace_multiplier, multiplier)
     override fun forecastAtReset(projectedPercent: Int): String =
         string(R.string.pace_forecast, projectedPercent)
+    override fun resetDeadline(resetAt: Instant): String =
+        string(R.string.reset_plan_deadline, formatInstant(resetAt))
+    override fun resetBudgetPerHour(percentPerHour: String): String =
+        string(R.string.reset_plan_budget_hour, percentPerHour)
+    override fun resetBudgetPerHourAndDay(
+        percentPerHour: String,
+        percentPerDay: String
+    ): String = string(R.string.reset_plan_budget_hour_day, percentPerHour, percentPerDay)
+    override fun resetAlmostUsed(remainingPercent: Int, resetAt: Instant): String =
+        string(R.string.reset_plan_almost_used, remainingPercent, formatInstant(resetAt))
+    override fun resetUseNow(remainingPercent: Int, resetAt: Instant): String =
+        string(R.string.reset_plan_use_now, remainingPercent, formatInstant(resetAt))
+    override fun resetSlowDown(checkpointPercent: Int, checkpointAt: Instant): String =
+        string(R.string.reset_plan_slow_down, checkpointPercent, formatInstant(checkpointAt))
+    override fun resetKeepPace(checkpointPercent: Int, checkpointAt: Instant): String =
+        string(R.string.reset_plan_keep_pace, checkpointPercent, formatInstant(checkpointAt))
+    override fun resetUseByCheckpoint(checkpointPercent: Int, checkpointAt: Instant): String =
+        string(R.string.reset_plan_use_by_checkpoint, checkpointPercent, formatInstant(checkpointAt))
     override fun limitNotProvidedTitle(hours: Long): String =
         string(R.string.insight_limit_not_provided_title, hours)
     override fun limitNotProvidedMessage(): String =

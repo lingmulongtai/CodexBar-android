@@ -41,7 +41,15 @@ data class QuotaMetricPresentation(
     val severity: QuotaSeverity,
     val resetsAt: Instant?,
     val resetLabel: String?,
-    val pace: PacePresentation
+    val pace: PacePresentation,
+    val resetPlan: QuotaResetPlanPresentation? = null
+)
+
+data class QuotaResetPlanPresentation(
+    val action: ResetPlanAction,
+    val deadlineLabel: String,
+    val budgetLabel: String,
+    val actionLabel: String
 )
 
 data class ExtraUsagePresentation(
