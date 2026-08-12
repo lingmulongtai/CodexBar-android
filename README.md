@@ -20,6 +20,7 @@ Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT
 - Quick Settings tile for at-a-glance status
 - Per-widget Android home screen customization for providers, quota windows, reset time, freshness, and pace
 - Configurable background refresh plus explicit refresh actions that supersede stale queued work
+- Built-in stable-release update prompt with a direct link to this fork's signed APK
 - Independently configurable persistent notification and time-bounded API 36 promoted Live Update, both synchronized with every dashboard refresh
 - Live progress, remaining quota, reset, pace, Refresh, and Stop on eligible Android 16 / One UI surfaces, with a compatible ongoing notification elsewhere
 - Secure device-code account connection for Codex and GitHub Copilot, with a validated Claude setup-token fallback
@@ -146,7 +147,7 @@ Do not extract bearer tokens from browser DevTools unless you are debugging loca
 
 ### Gemini (Google)
 
-Direct Gemini OAuth inside the Android app remains disabled. CodexBar does not copy Gemini CLI credentials, embed a Google client secret, or call the internal `cloudcode-pa` service. Instead, the v0.5.0 companion drives the official Gemini CLI's documented `/stats` view and sends only a sanitized quota snapshot over your trusted local network.
+Direct Gemini OAuth inside the Android app remains disabled. CodexBar does not copy Gemini CLI credentials, embed a Google client secret, or call the internal `cloudcode-pa` service. Instead, the v0.6.0 companion drives the official Gemini CLI's documented `/stats` view and sends only a sanitized quota snapshot over your trusted local network.
 
 #### Install and pair the private companion
 
@@ -158,7 +159,7 @@ gemini
 ```
 
 2. Complete Google's sign-in in that official CLI, then exit it.
-3. Download `CodexBar-Gemini-Companion-v0.5.0.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
+3. Download `CodexBar-Gemini-Companion-v0.6.0.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
 4. On Windows, double-click `start-windows.cmd`. On macOS or Linux, run `./start-macos-linux.sh`. The first launch installs only the versions pinned in `package-lock.json`.
 5. Keep the phone and computer on the same trusted Wi-Fi. If the computer firewall prompts, permit private networks only.
 6. Scan the displayed QR code with the phone and choose CodexBar, or paste the complete `codexbar://gemini-pair?...` value into the Gemini card.
