@@ -9,6 +9,7 @@ import com.codexbar.android.core.auth.DeviceAuthSession
 import com.codexbar.android.core.data.QuotaHistoryStore
 import com.codexbar.android.core.data.QuotaRepositoryRegistry
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.domain.model.ProviderAuthMode
@@ -66,6 +67,7 @@ class SettingsViewModel @Inject constructor(
                     isMonitoring = monitoringSession != null,
                     monitoringDurationMinutes = monitoringSessionStore.preferredDurationMinutes(),
                     monitoringRemainingMinutes = monitoringSession?.remainingMinutes(),
+                    appThemeStyle = prefsManager.appThemeStyle.value,
                     privacySettings = prefsManager.getPrivacySettings()
                 )
             }
@@ -368,6 +370,13 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setAppThemeStyle(style: AppThemeStyle) {
+        _uiState.update { it.copy(appThemeStyle = style) }
+        viewModelScope.launch {
+            prefsManager.setAppThemeStyle(style)
+        }
+    }
+
     fun showDeleteConfirmDialog() {
         _uiState.update { it.copy(showDeleteConfirmDialog = true) }
     }
@@ -406,6 +415,7 @@ class SettingsViewModel @Inject constructor(
                 isMonitoring = it.isMonitoring,
                 monitoringDurationMinutes = it.monitoringDurationMinutes,
                 monitoringRemainingMinutes = it.monitoringRemainingMinutes,
+                appThemeStyle = it.appThemeStyle,
                 privacySettings = it.privacySettings
             )
         }

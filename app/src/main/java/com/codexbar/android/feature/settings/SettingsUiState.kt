@@ -1,6 +1,7 @@
 package com.codexbar.android.feature.settings
 
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.security.PrivacySettings
 
 data class SettingsUiState(
@@ -12,6 +13,7 @@ data class SettingsUiState(
     val isMonitoring: Boolean = false,
     val monitoringDurationMinutes: Long = 60L,
     val monitoringRemainingMinutes: Long? = null,
+    val appThemeStyle: AppThemeStyle = AppThemeStyle.MATERIAL_3,
     val privacySettings: PrivacySettings = PrivacySettings(),
     val showDeleteConfirmDialog: Boolean = false,
     val disconnectConfirmService: AiService? = null

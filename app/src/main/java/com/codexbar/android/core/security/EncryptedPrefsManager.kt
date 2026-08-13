@@ -14,6 +14,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.domain.model.ProviderSecretKind
 import com.codexbar.android.core.domain.model.providerMetadata
@@ -33,6 +34,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 private const val SECURE_DATASTORE_NAME = "codexbar_secure_prefs"
@@ -56,6 +60,9 @@ class EncryptedPrefsManager @Inject constructor(
     @Volatile
     private var cachedSettings = CachedSettings()
 
+    private val _appThemeStyle = MutableStateFlow(AppThemeStyle.MATERIAL_3)
+    val appThemeStyle: StateFlow<AppThemeStyle> = _appThemeStyle.asStateFlow()
+
     @Volatile
     private var cacheRefreshStarted = false
 
@@ -74,7 +81,7 @@ class EncryptedPrefsManager @Inject constructor(
             initialPrefs
         }
         if (prefs == null) {
-            cachedSettings = CachedSettings()
+            updateCachedSettings(CachedSettings())
         } else {
             updateCache(prefs)
         }
@@ -199,6 +206,13 @@ class EncryptedPrefsManager @Inject constructor(
         updateCache(updated)
     }
 
+    suspend fun setAppThemeStyle(style: AppThemeStyle) {
+        val updated = dataStore.edit { prefs ->
+            prefs[KEY_APP_THEME_STYLE] = style.name
+        }
+        updateCache(updated)
+    }
+
     suspend fun saveResetTimes(service: AiService, windows: List<Pair<String, Instant?>>) {
         val updated = dataStore.edit { prefs ->
             windows.forEach { (label, resetsAt) ->
@@ -236,7 +250,7 @@ class EncryptedPrefsManager @Inject constructor(
                 try {
                     warmCache()
                 } catch (_: Exception) {
-                    cachedSettings = CachedSettings()
+                    updateCachedSettings(CachedSettings())
                     synchronized(this@EncryptedPrefsManager) {
                         cacheRefreshStarted = false
                     }
@@ -262,19 +276,25 @@ class EncryptedPrefsManager @Inject constructor(
     }
 
     private fun updateCache(prefs: Preferences) {
-        cachedSettings = CachedSettings(
+        updateCachedSettings(CachedSettings(
             credentialServices = AiService.entries
                 .filter { service -> readCredential(prefs, service) != null }
                 .toSet(),
             refreshIntervalMinutes = prefs[KEY_REFRESH_INTERVAL] ?: DEFAULT_REFRESH_INTERVAL_MINUTES,
             persistentNotificationEnabled = prefs[KEY_NOTIFICATIONS_ENABLED] ?: true,
+            appThemeStyle = AppThemeStyle.fromStoredValue(prefs[KEY_APP_THEME_STYLE]),
             privacySettings = PrivacySettings(
                 screenPrivacyEnabled = prefs[KEY_PRIVACY_SCREEN_ENABLED] ?: true,
                 lockScreenRedactionEnabled = prefs[KEY_PRIVACY_LOCK_SCREEN_REDACTION_ENABLED] ?: true,
                 notificationRedactionEnabled = prefs[KEY_PRIVACY_NOTIFICATION_REDACTION_ENABLED] ?: false,
                 widgetRedactionEnabled = prefs[KEY_PRIVACY_WIDGET_REDACTION_ENABLED] ?: false
             )
-        )
+        ))
+    }
+
+    private fun updateCachedSettings(settings: CachedSettings) {
+        cachedSettings = settings
+        _appThemeStyle.value = settings.appThemeStyle
     }
 
     private fun readCredential(prefs: Preferences, service: AiService): Credential? {
@@ -377,6 +397,7 @@ class EncryptedPrefsManager @Inject constructor(
         val credentialServices: Set<AiService> = emptySet(),
         val refreshIntervalMinutes: Long = DEFAULT_REFRESH_INTERVAL_MINUTES,
         val persistentNotificationEnabled: Boolean = true,
+        val appThemeStyle: AppThemeStyle = AppThemeStyle.MATERIAL_3,
         val privacySettings: PrivacySettings = FAIL_CLOSED_PRIVACY_SETTINGS
     )
 
@@ -386,6 +407,7 @@ class EncryptedPrefsManager @Inject constructor(
 
         private val KEY_REFRESH_INTERVAL = longPreferencesKey("refresh_interval_minutes")
         private val KEY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
+        private val KEY_APP_THEME_STYLE = stringPreferencesKey("app_theme_style")
         private val KEY_PRIVACY_SCREEN_ENABLED = booleanPreferencesKey("privacy_screen_enabled")
         private val KEY_PRIVACY_LOCK_SCREEN_REDACTION_ENABLED =
             booleanPreferencesKey("privacy_lock_screen_redaction_enabled")
