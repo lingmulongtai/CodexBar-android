@@ -308,8 +308,10 @@
             <div class="theme-copy-panel">
               <div class="theme-selector" role="tablist" aria-label="テーマを選択">
                 <button
+                  id="theme-tab-material"
                   type="button"
                   role="tab"
+                  aria-controls="theme-preview-panel"
                   aria-selected="false"
                   data-theme-button="material"
                   data-image="./images/releases/v0.7.0/dashboard-material3.png"
@@ -319,8 +321,10 @@
                   <span><strong>Material 3</strong><small>Android native</small></span>
                 </button>
                 <button
+                  id="theme-tab-liquid"
                   type="button"
                   role="tab"
+                  aria-controls="theme-preview-panel"
                   aria-selected="true"
                   data-theme-button="liquid"
                   data-image="./images/releases/v0.7.0/dashboard-liquid-glass.png"
@@ -330,8 +334,10 @@
                   <span><strong>Liquid Glass</strong><small>Soft &amp; translucent</small></span>
                 </button>
                 <button
+                  id="theme-tab-winui"
                   type="button"
                   role="tab"
+                  aria-controls="theme-preview-panel"
                   aria-selected="false"
                   data-theme-button="winui"
                   data-image="./images/releases/v0.7.0/dashboard-winui3.png"
@@ -341,8 +347,10 @@
                   <span><strong>WinUI 3</strong><small>Clean &amp; precise</small></span>
                 </button>
                 <button
+                  id="theme-tab-aurora"
                   type="button"
                   role="tab"
+                  aria-controls="theme-preview-panel"
                   aria-selected="false"
                   data-theme-button="aurora"
                   data-image="./images/releases/v0.7.0/dashboard-aurora-dark.png"
@@ -356,7 +364,13 @@
               <p class="theme-hint"><span aria-hidden="true">↗</span> テーマを選ぶとプレビューが切り替わります</p>
             </div>
 
-            <div class="theme-preview" aria-live="polite">
+            <div
+              class="theme-preview"
+              id="theme-preview-panel"
+              role="tabpanel"
+              aria-labelledby="theme-tab-liquid"
+              aria-live="polite"
+            >
               <div class="preview-aura" aria-hidden="true"></div>
               <div class="phone theme-phone">
                 <img
@@ -441,9 +455,19 @@
           <span class="kicker">ONE PLACE, MANY PROVIDERS</span>
           <h2 id="providers-title">いつものAIを、ひとつに。</h2>
           <p>サービスごとの違いを保ったまま、重要な数字を同じ見方に整理します。</p>
+          <button
+            class="marquee-toggle"
+            type="button"
+            aria-controls="provider-list"
+            aria-pressed="false"
+            data-marquee-toggle
+          >
+            <span class="marquee-toggle-icon" aria-hidden="true">Ⅱ</span>
+            <span data-marquee-label>自動スクロールを停止</span>
+          </button>
         </div>
 
-        <div class="provider-marquee" aria-label="対応プロバイダー一覧">
+        <div class="provider-marquee" id="provider-list" aria-label="対応プロバイダー一覧">
           <div class="provider-row provider-row-one">
             <span class="provider-chip chip-codex"><i>C</i>Codex</span>
             <span class="provider-chip chip-claude"><i>Cl</i>Claude</span>

@@ -31,6 +31,7 @@ const themeSection = document.querySelector("[data-theme-section]");
 const themeImage = document.querySelector("[data-theme-image]");
 const themeName = document.querySelector("[data-theme-name]");
 const themePhone = themeImage?.closest(".theme-phone");
+const themePanel = document.querySelector("#theme-preview-panel");
 const themeButtons = [...document.querySelectorAll("[data-theme-button]")];
 
 const selectTheme = (button) => {
@@ -51,6 +52,7 @@ const selectTheme = (button) => {
 
   themeSection.dataset.themeSection = theme;
   themeName.textContent = nextName;
+  themePanel?.setAttribute("aria-labelledby", button.id);
 
   if (themeImage.getAttribute("src") === nextSource) return;
 
@@ -99,6 +101,18 @@ themeButtons.forEach((button, index) => {
     nextButton.focus();
     selectTheme(nextButton);
   });
+});
+
+const marquee = document.querySelector("#provider-list");
+const marqueeToggle = document.querySelector("[data-marquee-toggle]");
+const marqueeLabel = document.querySelector("[data-marquee-label]");
+
+marqueeToggle?.addEventListener("click", () => {
+  if (!marquee || !marqueeLabel) return;
+
+  const isPaused = marquee.classList.toggle("is-paused");
+  marqueeToggle.setAttribute("aria-pressed", String(isPaused));
+  marqueeLabel.textContent = isPaused ? "自動スクロールを再開" : "自動スクロールを停止";
 });
 
 const currentYear = String(new Date().getFullYear());
