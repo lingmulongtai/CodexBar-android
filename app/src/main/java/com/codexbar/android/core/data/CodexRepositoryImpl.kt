@@ -3,6 +3,7 @@ package com.codexbar.android.core.data
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.CodexResetCredits
+import com.codexbar.android.core.domain.model.CodexTelemetry
 import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.domain.model.QuotaInfo
 import com.codexbar.android.core.domain.model.QuotaNotice
@@ -12,11 +13,14 @@ import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexDto
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
+import com.codexbar.android.core.network.codex.telemetry.CodexTelemetryClient
 import com.codexbar.android.core.network.RetryAfter
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.TokenRefreshCoordinator
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonPrimitive
@@ -33,7 +37,8 @@ class CodexRepositoryImpl @Inject constructor(
     private val apiService: CodexApiService,
     private val tokenRefreshService: CodexTokenRefreshService,
     private val prefsManager: EncryptedPrefsManager,
-    private val tokenRefreshCoordinator: TokenRefreshCoordinator
+    private val tokenRefreshCoordinator: TokenRefreshCoordinator,
+    private val codexTelemetryClient: CodexTelemetryClient
 ) : QuotaRepository {
 
     override suspend fun fetchQuota(): Result<QuotaInfo, AppError> {
@@ -51,12 +56,7 @@ class CodexRepositoryImpl @Inject constructor(
                 200 -> {
                     val body = response.body()
                         ?: return Result.Failure(AppError.ParseError("Empty response body"))
-                    Result.Success(
-                        mapToQuotaInfo(
-                            response = body,
-                            resetCredits = fetchResetCreditsBestEffort(credential)
-                        )
-                    )
+                    Result.Success(mapToQuotaInfoWithExtras(body, credential))
                 }
                 401 -> {
                     val refreshed = refreshToken(credential)
@@ -68,12 +68,7 @@ class CodexRepositoryImpl @Inject constructor(
                         if (retryResponse.isSuccessful) {
                             val body = retryResponse.body()
                                 ?: return Result.Failure(AppError.ParseError("Empty response body"))
-                            Result.Success(
-                                mapToQuotaInfo(
-                                    response = body,
-                                    resetCredits = fetchResetCreditsBestEffort(refreshed)
-                                )
-                            )
+                            Result.Success(mapToQuotaInfoWithExtras(body, refreshed))
                         } else {
                             Result.Failure(AppError.AuthError(AiService.CODEX, isTerminal = true))
                         }
@@ -214,9 +209,36 @@ class CodexRepositoryImpl @Inject constructor(
         }
     }
 
+    private suspend fun fetchTelemetryBestEffort(): CodexTelemetry? {
+        val credential = prefsManager.loadCodexTelemetryCredential() ?: return null
+        return try {
+            withTimeoutOrNull(TELEMETRY_TIMEOUT_MILLIS) {
+                codexTelemetryClient.fetchSnapshot(credential)
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private suspend fun mapToQuotaInfoWithExtras(
+        response: CodexDto.UsageResponse,
+        credential: Credential.CodexCredential
+    ): QuotaInfo = coroutineScope {
+        val resetCredits = async { fetchResetCreditsBestEffort(credential) }
+        val telemetry = async { fetchTelemetryBestEffort() }
+        mapToQuotaInfo(
+            response = response,
+            resetCredits = resetCredits.await(),
+            telemetry = telemetry.await()
+        )
+    }
+
     private fun mapToQuotaInfo(
         response: CodexDto.UsageResponse,
-        resetCredits: CodexResetCredits? = null
+        resetCredits: CodexResetCredits? = null,
+        telemetry: CodexTelemetry? = null
     ): QuotaInfo {
         val windows = buildList {
             response.rateLimit?.primaryWindow?.let { window ->
@@ -235,7 +257,8 @@ class CodexRepositoryImpl @Inject constructor(
             tier = response.planType?.replaceFirstChar { it.uppercase() },
             fetchedAt = Instant.now(),
             notices = availabilityNotices(response),
-            codexResetCredits = resetCredits
+            codexResetCredits = resetCredits,
+            codexTelemetry = telemetry
         )
     }
 
@@ -355,6 +378,7 @@ class CodexRepositoryImpl @Inject constructor(
         private const val SIX_DAYS_SECONDS = 6L * 24L * 60L * 60L
         private const val SEVEN_DAYS_SECONDS = 7L * 24L * 60L * 60L
         private const val RESET_CREDITS_TIMEOUT_MILLIS = 4_000L
+        private const val TELEMETRY_TIMEOUT_MILLIS = 10_000L
         private const val AVAILABLE_RESET_CREDIT_STATUS = "available"
         private const val MAX_ADDITIONAL_RATE_LIMITS = 32
         private const val MAX_ADDITIONAL_RATE_LIMIT_LABEL_LENGTH = 80

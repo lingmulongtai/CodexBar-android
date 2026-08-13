@@ -3,11 +3,17 @@ package com.codexbar.android.core.data
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
+import com.codexbar.android.core.domain.model.CodexContextUsage
+import com.codexbar.android.core.domain.model.CodexTelemetry
+import com.codexbar.android.core.domain.model.CodexTelemetryCredential
+import com.codexbar.android.core.domain.model.CodexTokenTotals
+import com.codexbar.android.core.domain.model.CodexTokenUsage
 import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.domain.model.QuotaNotice
 import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
+import com.codexbar.android.core.network.codex.telemetry.CodexTelemetryClient
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.TokenRefreshCoordinator
 import kotlinx.serialization.json.Json
@@ -26,6 +32,7 @@ import org.mockito.Mockito.never
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.verify
 import retrofit2.Retrofit
+import java.time.Instant
 
 class CodexRepositoryImplTest {
 
@@ -33,6 +40,7 @@ class CodexRepositoryImplTest {
     private lateinit var apiService: CodexApiService
     private lateinit var tokenRefreshService: CodexTokenRefreshService
     private lateinit var prefsManager: EncryptedPrefsManager
+    private lateinit var codexTelemetryClient: CodexTelemetryClient
     private lateinit var repository: CodexRepositoryImpl
     private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true; isLenient = true }
 
@@ -65,11 +73,18 @@ class CodexRepositoryImplTest {
             .create(CodexTokenRefreshService::class.java)
 
         prefsManager = mock(EncryptedPrefsManager::class.java)
+        codexTelemetryClient = mock(CodexTelemetryClient::class.java)
         runTest {
             `when`(prefsManager.loadCredential(AiService.CODEX)).thenReturn(testCredential)
         }
 
-        repository = CodexRepositoryImpl(apiService, tokenRefreshService, prefsManager, TokenRefreshCoordinator())
+        repository = CodexRepositoryImpl(
+            apiService,
+            tokenRefreshService,
+            prefsManager,
+            TokenRefreshCoordinator(),
+            codexTelemetryClient
+        )
     }
 
     @After
@@ -359,6 +374,89 @@ class CodexRepositoryImplTest {
 
         assertTrue(result is Result.Success)
         assertEquals(null, (result as Result.Success).value.codexResetCredits)
+    }
+
+    @Test
+    fun `adds optional local telemetry without exposing it as a required dependency`() = runTest {
+        val telemetryCredential = CodexTelemetryCredential(
+            host = "127.0.0.1",
+            port = 43822,
+            companionId = "5b017391-6dc4-4ab7-b0ad-2255dada62d7",
+            sharedKeyBase64Url = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        )
+        val totals = CodexTokenTotals(100, 20, 10, 3, 110)
+        val telemetry = CodexTelemetry(
+            generatedAt = Instant.ofEpochSecond(1_750_000_000L),
+            currentContext = CodexContextUsage(
+                capturedAt = Instant.ofEpochSecond(1_750_000_000L),
+                model = "gpt-5.6",
+                usedTokens = 64_000,
+                contextWindowTokens = 258_400,
+                sessionTokens = 110
+            ),
+            tokenUsage = CodexTokenUsage(totals, totals, totals, emptyList(), emptyList())
+        )
+        `when`(prefsManager.loadCodexTelemetryCredential()).thenReturn(telemetryCredential)
+        val telemetryClient = object : CodexTelemetryClient(json) {
+            override suspend fun fetchSnapshot(
+                credential: CodexTelemetryCredential,
+                now: Instant
+            ): CodexTelemetry = telemetry
+        }
+        val telemetryRepository = CodexRepositoryImpl(
+            apiService,
+            tokenRefreshService,
+            prefsManager,
+            TokenRefreshCoordinator(),
+            telemetryClient
+        )
+        mockWebServer.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """{"rate_limit":{"primary_window":{"used_percent":10,"limit_window_seconds":18000}}}"""
+            )
+        )
+        mockWebServer.enqueue(resetCreditsResponse())
+
+        val result = telemetryRepository.fetchQuota()
+
+        assertTrue(result is Result.Success)
+        assertEquals("gpt-5.6", (result as Result.Success).value.codexTelemetry?.currentContext?.model)
+    }
+
+    @Test
+    fun `telemetry failure never discards OpenAI quota`() = runTest {
+        val telemetryCredential = CodexTelemetryCredential(
+            host = "127.0.0.1",
+            port = 43822,
+            companionId = "5b017391-6dc4-4ab7-b0ad-2255dada62d7",
+            sharedKeyBase64Url = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        )
+        `when`(prefsManager.loadCodexTelemetryCredential()).thenReturn(telemetryCredential)
+        val failingClient = object : CodexTelemetryClient(json) {
+            override suspend fun fetchSnapshot(
+                credential: CodexTelemetryCredential,
+                now: Instant
+            ): CodexTelemetry = throw java.io.IOException("companion offline")
+        }
+        val telemetryRepository = CodexRepositoryImpl(
+            apiService,
+            tokenRefreshService,
+            prefsManager,
+            TokenRefreshCoordinator(),
+            failingClient
+        )
+        mockWebServer.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """{"rate_limit":{"primary_window":{"used_percent":10,"limit_window_seconds":18000}}}"""
+            )
+        )
+        mockWebServer.enqueue(resetCreditsResponse())
+
+        val result = telemetryRepository.fetchQuota()
+
+        assertTrue(result is Result.Success)
+        assertEquals(null, (result as Result.Success).value.codexTelemetry)
+        assertEquals(1, result.value.windows.size)
     }
 
     @Test

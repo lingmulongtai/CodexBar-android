@@ -9,7 +9,8 @@ data class QuotaInfo(
     val tier: String? = null,
     val fetchedAt: Instant,
     val notices: Set<QuotaNotice> = emptySet(),
-    val codexResetCredits: CodexResetCredits? = null
+    val codexResetCredits: CodexResetCredits? = null,
+    val codexTelemetry: CodexTelemetry? = null
 )
 
 data class CodexResetCredits(

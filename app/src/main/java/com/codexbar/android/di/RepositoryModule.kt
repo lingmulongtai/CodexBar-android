@@ -22,6 +22,7 @@ import com.codexbar.android.core.network.claude.ClaudeTokenRefreshService
 import com.codexbar.android.core.network.chutes.ChutesApiService
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
+import com.codexbar.android.core.network.codex.telemetry.CodexTelemetryClient
 import com.codexbar.android.core.network.copilot.CopilotApiService
 import com.codexbar.android.core.network.cursor.CursorApiService
 import com.codexbar.android.core.network.deepseek.DeepSeekApiService
@@ -69,8 +70,15 @@ object RepositoryModule {
         apiService: CodexApiService,
         tokenRefreshService: CodexTokenRefreshService,
         prefsManager: EncryptedPrefsManager,
-        tokenRefreshCoordinator: TokenRefreshCoordinator
-    ): QuotaRepository = CodexRepositoryImpl(apiService, tokenRefreshService, prefsManager, tokenRefreshCoordinator)
+        tokenRefreshCoordinator: TokenRefreshCoordinator,
+        codexTelemetryClient: CodexTelemetryClient
+    ): QuotaRepository = CodexRepositoryImpl(
+        apiService,
+        tokenRefreshService,
+        prefsManager,
+        tokenRefreshCoordinator,
+        codexTelemetryClient
+    )
 
     @Provides
     @Singleton
