@@ -17,6 +17,8 @@ import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.domain.model.providerMetadata
 import com.codexbar.android.core.monitoring.MonitoringSessionStore
 import com.codexbar.android.core.network.gemini.GeminiCompanionPairing
+import com.codexbar.android.core.network.codex.telemetry.CodexTelemetryClient
+import com.codexbar.android.core.network.codex.telemetry.CodexTelemetryPairing
 import com.codexbar.android.core.notification.QuotaNotificationService
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.PrivacySettings
@@ -42,6 +44,7 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val repositoryRegistry: QuotaRepositoryRegistry,
     private val accountLinkManager: AccountLinkManager,
+    private val codexTelemetryClient: CodexTelemetryClient,
     private val prefsManager: EncryptedPrefsManager,
     private val quotaHistoryStore: QuotaHistoryStore,
     private val widgetPrefsManager: WidgetPrefsManager,
@@ -103,6 +106,16 @@ class SettingsViewModel @Inject constructor(
             }
             _uiState.update {
                 it.copy(serviceStates = it.serviceStates + (service to state))
+            }
+        }
+        if (prefsManager.loadCodexTelemetryCredential() != null) {
+            _uiState.update { state ->
+                val current = state.serviceStates[AiService.CODEX] ?: ServiceCredentialState()
+                state.copy(
+                    serviceStates = state.serviceStates + (
+                        AiService.CODEX to current.copy(isCodexTelemetryConnected = true)
+                    )
+                )
             }
         }
     }
@@ -394,13 +407,20 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun disconnectService(service: AiService) {
+        val currentState = _uiState.value.serviceStates[service] ?: ServiceCredentialState()
         _uiState.update { state ->
             state.copy(
-                serviceStates = state.serviceStates + (service to ServiceCredentialState()),
+                serviceStates = state.serviceStates + (
+                    service to ServiceCredentialState(
+                        isCodexTelemetryConnected = service == AiService.CODEX &&
+                            currentState.isCodexTelemetryConnected
+                    )
+                ),
                 disconnectConfirmService = null
             )
         }
         viewModelScope.launch {
+            // The optional Codex telemetry pairing is independent from the OAuth account.
             prefsManager.deleteCredential(service)
             quotaHistoryStore.deleteService(service)
             widgetPrefsManager.deleteServiceCache(service)
@@ -462,6 +482,115 @@ class SettingsViewModel @Inject constructor(
 
     fun importGeminiPairingCode(value: String) {
         updateGeminiPairingCode(value)
+    }
+
+    fun updateCodexTelemetryPairingCode(value: String) {
+        _uiState.update { state ->
+            val current = state.serviceStates[AiService.CODEX] ?: ServiceCredentialState()
+            state.copy(
+                serviceStates = state.serviceStates + (
+                    AiService.CODEX to current.copy(
+                        codexTelemetryPairingCode = value.take(MAX_PAIRING_CODE_LENGTH),
+                        codexTelemetryValidationResult = null
+                    )
+                )
+            )
+        }
+    }
+
+    fun importCodexTelemetryPairingCode(value: String) {
+        updateCodexTelemetryPairingCode(value)
+    }
+
+    fun connectCodexTelemetryCompanion() {
+        val state = _uiState.value.serviceStates[AiService.CODEX] ?: return
+        val credential = runCatching {
+            CodexTelemetryPairing.parse(state.codexTelemetryPairingCode)
+        }.getOrElse { error ->
+            updateCodexTelemetryValidation(
+                isValidating = false,
+                result = ValidationResult.Failure(
+                    appContext.getString(
+                        R.string.validation_codex_telemetry_pairing_invalid,
+                        error.message ?: appContext.getString(R.string.validation_unknown)
+                    )
+                )
+            )
+            return
+        }
+
+        updateCodexTelemetryValidation(isValidating = true, result = null)
+        viewModelScope.launch {
+            try {
+                codexTelemetryClient.fetchSnapshot(credential)
+                prefsManager.saveCodexTelemetryCredential(credential)
+                updateCodexTelemetryValidation(
+                    isValidating = false,
+                    result = ValidationResult.Success,
+                    connected = true,
+                    clearPairingCode = true
+                )
+                WorkManagerInitializer.enqueueManualQuotaRefresh(
+                    appContext,
+                    source = "codex_telemetry_companion_connected"
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                updateCodexTelemetryValidation(
+                    isValidating = false,
+                    result = ValidationResult.Failure(
+                        appContext.getString(
+                            R.string.validation_codex_telemetry_failed,
+                            error.message ?: appContext.getString(R.string.validation_unknown)
+                        )
+                    )
+                )
+            }
+        }
+    }
+
+    fun disconnectCodexTelemetryCompanion() {
+        viewModelScope.launch {
+            prefsManager.deleteCodexTelemetryCredential()
+            updateCodexTelemetryValidation(
+                isValidating = false,
+                result = null,
+                connected = false,
+                replaceConnectedState = true,
+                clearPairingCode = true
+            )
+        }
+    }
+
+    private fun updateCodexTelemetryValidation(
+        isValidating: Boolean,
+        result: ValidationResult?,
+        connected: Boolean = false,
+        replaceConnectedState: Boolean = false,
+        clearPairingCode: Boolean = false
+    ) {
+        _uiState.update { state ->
+            val current = state.serviceStates[AiService.CODEX] ?: ServiceCredentialState()
+            state.copy(
+                serviceStates = state.serviceStates + (
+                    AiService.CODEX to current.copy(
+                        codexTelemetryPairingCode = if (clearPairingCode) {
+                            ""
+                        } else {
+                            current.codexTelemetryPairingCode
+                        },
+                        isCodexTelemetryConnected = if (replaceConnectedState) {
+                            connected
+                        } else {
+                            current.isCodexTelemetryConnected || connected
+                        },
+                        isCodexTelemetryValidating = isValidating,
+                        codexTelemetryValidationResult = result
+                    )
+                )
+            )
+        }
     }
 
     fun connectGeminiCompanion() {

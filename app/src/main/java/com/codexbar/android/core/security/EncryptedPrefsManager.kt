@@ -185,7 +185,6 @@ class EncryptedPrefsManager @Inject constructor(
     suspend fun deleteCredential(service: AiService) {
         val updated = dataStore.edit { prefs ->
             prefs.removeServiceEntries(service)
-            if (service == AiService.CODEX) prefs.removeCodexTelemetryEntries()
         }
         updateCache(updated)
     }

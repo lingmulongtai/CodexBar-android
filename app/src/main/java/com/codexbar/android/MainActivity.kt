@@ -30,6 +30,7 @@ import javax.inject.Inject
 class MainActivity : AppCompatActivity() {
 
     private var pendingGeminiPairingUri by mutableStateOf<String?>(null)
+    private var pendingCodexTelemetryPairingUri by mutableStateOf<String?>(null)
 
     @Inject
     lateinit var prefsManager: EncryptedPrefsManager
@@ -42,7 +43,10 @@ class MainActivity : AppCompatActivity() {
         val launchUri = intent?.data
         val initialDestination = startDestinationForHost(launchUri?.host)
         pendingGeminiPairingUri = geminiPairingUriOrNull(launchUri)
-        if (pendingGeminiPairingUri != null) intent?.data = null
+        pendingCodexTelemetryPairingUri = codexTelemetryPairingUriOrNull(launchUri)
+        if (pendingGeminiPairingUri != null || pendingCodexTelemetryPairingUri != null) {
+            intent?.data = null
+        }
         applyScreenPrivacy(prefsManager.getPrivacySettings().screenPrivacyEnabled)
         lifecycleScope.launch {
             prefsManager.warmCache()
@@ -93,6 +97,10 @@ class MainActivity : AppCompatActivity() {
                     initialDestination = initialDestination,
                     initialGeminiPairingUri = pendingGeminiPairingUri,
                     onGeminiPairingConsumed = { pendingGeminiPairingUri = null },
+                    initialCodexTelemetryPairingUri = pendingCodexTelemetryPairingUri,
+                    onCodexTelemetryPairingConsumed = {
+                        pendingCodexTelemetryPairingUri = null
+                    },
                     onScreenPrivacyChanged = ::applyScreenPrivacy
                 )
             }
@@ -102,8 +110,13 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         val pairingUri = geminiPairingUriOrNull(intent.data)
+        val codexTelemetryPairingUri = codexTelemetryPairingUriOrNull(intent.data)
         if (pairingUri != null) {
             pendingGeminiPairingUri = pairingUri
+            intent.data = null
+        }
+        if (codexTelemetryPairingUri != null) {
+            pendingCodexTelemetryPairingUri = codexTelemetryPairingUri
             intent.data = null
         }
         setIntent(intent)
@@ -138,8 +151,17 @@ internal fun startDestinationForHost(host: String?): String {
     return when {
         host.equals("settings", ignoreCase = true) -> "settings"
         host.equals("connections", ignoreCase = true) ||
-            host.equals("gemini-pair", ignoreCase = true) -> "connections"
+            host.equals("gemini-pair", ignoreCase = true) ||
+            host.equals("codex-telemetry-pair", ignoreCase = true) -> "connections"
         else -> "dashboard"
+    }
+}
+
+internal fun codexTelemetryPairingUriOrNull(uri: Uri?): String? {
+    if (uri == null || uri.toString().length > 2048) return null
+    return uri.toString().takeIf {
+        uri.scheme.equals("codexbar", ignoreCase = true) &&
+            uri.host.equals("codex-telemetry-pair", ignoreCase = true)
     }
 }
 

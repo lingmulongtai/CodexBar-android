@@ -282,6 +282,8 @@ fun ConnectionsScreen(
     showBackButton: Boolean = true,
     initialGeminiPairingUri: String? = null,
     onGeminiPairingConsumed: () -> Unit = {},
+    initialCodexTelemetryPairingUri: String? = null,
+    onCodexTelemetryPairingConsumed: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -314,6 +316,14 @@ fun ConnectionsScreen(
             viewModel.importGeminiPairingCode(initialGeminiPairingUri)
             expandedProviderName = AiService.GEMINI.name
             onGeminiPairingConsumed()
+        }
+    }
+
+    LaunchedEffect(initialCodexTelemetryPairingUri) {
+        if (initialCodexTelemetryPairingUri != null) {
+            viewModel.importCodexTelemetryPairingCode(initialCodexTelemetryPairingUri)
+            expandedProviderName = AiService.CODEX.name
+            onCodexTelemetryPairingConsumed()
         }
     }
 
@@ -413,6 +423,9 @@ fun ConnectionsScreen(
                         },
                         onGeminiPairingCodeChange = viewModel::updateGeminiPairingCode,
                         onConnectGeminiCompanion = viewModel::connectGeminiCompanion,
+                        onCodexTelemetryPairingCodeChange = viewModel::updateCodexTelemetryPairingCode,
+                        onConnectCodexTelemetryCompanion = viewModel::connectCodexTelemetryCompanion,
+                        onDisconnectCodexTelemetryCompanion = viewModel::disconnectCodexTelemetryCompanion,
                         onOpenSetupGuide = {
                             openAuthUrl(context, accountGuideUrl(service))
                         },
@@ -864,6 +877,9 @@ private fun ServiceCredentialSection(
     onCopySetupCommand: (String) -> Unit,
     onGeminiPairingCodeChange: (String) -> Unit,
     onConnectGeminiCompanion: () -> Unit,
+    onCodexTelemetryPairingCodeChange: (String) -> Unit,
+    onConnectCodexTelemetryCompanion: () -> Unit,
+    onDisconnectCodexTelemetryCompanion: () -> Unit,
     onOpenSetupGuide: () -> Unit,
     onValidate: () -> Unit,
     onDisconnect: () -> Unit
@@ -1043,6 +1059,16 @@ private fun ServiceCredentialSection(
                     )
                 }
 
+                if (service == AiService.CODEX) {
+                    CodexTelemetryCompanionSetup(
+                        state = state,
+                        accent = visualStyle.accent,
+                        onPairingCodeChange = onCodexTelemetryPairingCodeChange,
+                        onConnect = onConnectCodexTelemetryCompanion,
+                        onDisconnect = onDisconnectCodexTelemetryCompanion
+                    )
+                }
+
             if (service != AiService.GEMINI) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -1217,6 +1243,94 @@ private fun GeminiCompanionSetup(
         }
     }
 
+}
+
+@Composable
+private fun CodexTelemetryCompanionSetup(
+    state: ServiceCredentialState,
+    accent: Color,
+    onPairingCodeChange: (String) -> Unit,
+    onConnect: () -> Unit,
+    onDisconnect: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = accent.copy(alpha = 0.11f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.credential_codex_telemetry_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = accent
+            )
+            Text(
+                text = stringResource(R.string.credential_codex_telemetry_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = stringResource(R.string.credential_codex_telemetry_steps),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            OutlinedTextField(
+                value = state.codexTelemetryPairingCode,
+                onValueChange = onPairingCodeChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.credential_codex_telemetry_pairing_code)) },
+                supportingText = {
+                    Text(stringResource(R.string.credential_codex_telemetry_pairing_hint))
+                },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = secretKeyboardOptions()
+            )
+            Button(
+                onClick = onConnect,
+                enabled = state.codexTelemetryPairingCode.isNotBlank() &&
+                    !state.isCodexTelemetryValidating,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (state.isCodexTelemetryValidating) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text(
+                    stringResource(
+                        if (state.isCodexTelemetryConnected) {
+                            R.string.action_repair_codex_telemetry
+                        } else {
+                            R.string.action_pair_codex_telemetry
+                        }
+                    )
+                )
+            }
+            if (state.isCodexTelemetryConnected) {
+                OutlinedButton(
+                    onClick = onDisconnect,
+                    enabled = !state.isCodexTelemetryValidating,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.action_disconnect_codex_telemetry))
+                }
+            }
+            Text(
+                text = stringResource(R.string.credential_codex_telemetry_security),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            CredentialValidationResult(state.codexTelemetryValidationResult, accent)
+        }
+    }
 }
 
 @Composable

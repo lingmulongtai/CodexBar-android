@@ -24,6 +24,10 @@ data class ServiceCredentialState(
     val refreshToken: String = "",
     val accountId: String = "", // Codex only
     val geminiPairingCode: String = "",
+    val codexTelemetryPairingCode: String = "",
+    val isCodexTelemetryConnected: Boolean = false,
+    val isCodexTelemetryValidating: Boolean = false,
+    val codexTelemetryValidationResult: ValidationResult? = null,
     val isValidating: Boolean = false,
     val isAccountLinking: Boolean = false,
     val accountLinkPrompt: AccountLinkPrompt? = null,

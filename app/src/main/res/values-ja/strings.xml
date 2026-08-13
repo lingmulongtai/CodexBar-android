@@ -133,6 +133,15 @@
     <string name="credential_gemini_pairing_code">コンパニオンのペアリングコード</string>
     <string name="credential_gemini_pairing_hint">codexbar://gemini-pair から始まります。ローカル端末用のパスワードとして安全に扱ってください。</string>
     <string name="credential_gemini_companion_security">Googleのアクセストークン、更新トークン、OAuthクライアントID、プロンプト、ファイル、メールアドレス、CLIセッション内容はAndroidへ送信しません。ペアリング鍵はAndroid Keystoreで暗号化します。</string>
+    <string name="credential_codex_telemetry_title">Codexコンテキスト・トークンコンパニオン</string>
+    <string name="credential_codex_telemetry_body">パソコン上のCodex CLIセッションから、現在のコンテキスト量と日別・モデル別トークン集計を任意で追加します。OpenAIの使用枠接続とは独立しています。</string>
+    <string name="credential_codex_telemetry_steps">1. このプロジェクトのReleaseからCodexテレメトリコンパニオンをダウンロードし、同じWi-Fi上のパソコンで起動します。2. QRコードを読み取るか、下へペアリングコードを貼り付けます。3. 最新のローカル分析を表示する間は起動したままにします。</string>
+    <string name="credential_codex_telemetry_pairing_code">非公開テレメトリペアリングコード</string>
+    <string name="credential_codex_telemetry_pairing_hint">codexbar://codex-telemetry-pair で始まります</string>
+    <string name="credential_codex_telemetry_security">暗号化して送るのは集計済みトークン数、モデル名、日付、現在のコンテキスト量だけです。プロンプト、応答、ファイルパス、セッションID、ソースファイル、認証情報はパソコン外へ出ません。</string>
+    <string name="action_pair_codex_telemetry">テレメトリコンパニオンをペアリングして検証</string>
+    <string name="action_repair_codex_telemetry">テレメトリコンパニオンを入れ替える</string>
+    <string name="action_disconnect_codex_telemetry">テレメトリコンパニオンを切断</string>
     <string name="credential_cursor_setup_title">Cursor Webセッション</string>
     <string name="credential_cursor_setup_body">Cursorには対応済みのモバイル向けデバイスコード認証がありません。PCのブラウザでcursor.comへログインし、/api/usage-summaryリクエストのCookieヘッダーをコピーして下へ貼り付けてください。パスワードと同様に扱ってください。CodexBarはcursor.comに対してだけ検証し、リダイレクトせず、検証成功後に暗号化します。</string>
     <string name="credential_cursor_cookie_header">Cursor Cookieヘッダー</string>
@@ -221,6 +230,8 @@
     <string name="validation_account_link_dns_failed">%1$sの認証サーバーを名前解決できません。プライベートDNS、VPN、広告ブロッカー、ネットワーク接続を確認してから再試行してください。</string>
     <string name="validation_gemini_pairing_invalid">Geminiコンパニオンのペアリング情報が無効です: %1$s</string>
     <string name="validation_gemini_companion_failed">Geminiコンパニオンを検証できませんでした。同じ信頼済みWi-Fi上でコンパニオンを起動したままにし、パソコンのファイアウォールでプライベートネットワークを許可して、両端末の時刻が自動設定か確認してください。詳細: %1$s</string>
+    <string name="validation_codex_telemetry_pairing_invalid">Codexテレメトリのペアリング情報が無効です: %1$s</string>
+    <string name="validation_codex_telemetry_failed">Codexテレメトリを検証できませんでした。同じ信頼済みWi-Fi上でコンパニオンを起動したままにし、パソコンのファイアウォールでプライベートネットワークを許可して、両端末の時刻が自動設定か確認してください。詳細: %1$s</string>
     <string name="validation_unknown">不明</string>
     <string name="validation_network_error">ネットワークエラー: %1$s</string>
     <string name="validation_authentication_required">認証に失敗しました（再ログインが必要です）</string>

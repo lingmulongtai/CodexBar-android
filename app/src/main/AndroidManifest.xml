@@ -52,6 +52,7 @@
                 <data android:host="connections" />
                 <data android:host="settings" />
                 <data android:host="gemini-pair" />
+                <data android:host="codex-telemetry-pair" />
             </intent-filter>
         </activity>
 

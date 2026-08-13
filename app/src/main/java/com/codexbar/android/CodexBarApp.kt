@@ -80,6 +80,8 @@ fun CodexBarApp(
     initialDestination: String,
     initialGeminiPairingUri: String? = null,
     onGeminiPairingConsumed: () -> Unit = {},
+    initialCodexTelemetryPairingUri: String? = null,
+    onCodexTelemetryPairingConsumed: () -> Unit = {},
     onScreenPrivacyChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -103,6 +105,14 @@ fun CodexBarApp(
 
     LaunchedEffect(initialGeminiPairingUri) {
         if (initialGeminiPairingUri != null) {
+            navController.navigate(ConnectionsRoute) {
+                launchSingleTop = true
+            }
+        }
+    }
+
+    LaunchedEffect(initialCodexTelemetryPairingUri) {
+        if (initialCodexTelemetryPairingUri != null) {
             navController.navigate(ConnectionsRoute) {
                 launchSingleTop = true
             }
@@ -161,6 +171,8 @@ fun CodexBarApp(
                     navController = navController,
                     initialGeminiPairingUri = initialGeminiPairingUri,
                     onGeminiPairingConsumed = onGeminiPairingConsumed,
+                    initialCodexTelemetryPairingUri = initialCodexTelemetryPairingUri,
+                    onCodexTelemetryPairingConsumed = onCodexTelemetryPairingConsumed,
                     onScreenPrivacyChanged = onScreenPrivacyChanged,
                     settingsViewModel = settingsViewModel,
                     modifier = Modifier.weight(1f)
@@ -194,6 +206,8 @@ fun CodexBarApp(
                     navController = navController,
                     initialGeminiPairingUri = initialGeminiPairingUri,
                     onGeminiPairingConsumed = onGeminiPairingConsumed,
+                    initialCodexTelemetryPairingUri = initialCodexTelemetryPairingUri,
+                    onCodexTelemetryPairingConsumed = onCodexTelemetryPairingConsumed,
                     onScreenPrivacyChanged = onScreenPrivacyChanged,
                     settingsViewModel = settingsViewModel,
                     modifier = Modifier.padding(paddingValues)
@@ -208,6 +222,8 @@ private fun AppNavHost(
     navController: NavHostController,
     initialGeminiPairingUri: String?,
     onGeminiPairingConsumed: () -> Unit,
+    initialCodexTelemetryPairingUri: String?,
+    onCodexTelemetryPairingConsumed: () -> Unit,
     onScreenPrivacyChanged: (Boolean) -> Unit,
     settingsViewModel: SettingsViewModel,
     modifier: Modifier = Modifier
@@ -232,6 +248,8 @@ private fun AppNavHost(
                 showBackButton = false,
                 initialGeminiPairingUri = initialGeminiPairingUri,
                 onGeminiPairingConsumed = onGeminiPairingConsumed,
+                initialCodexTelemetryPairingUri = initialCodexTelemetryPairingUri,
+                onCodexTelemetryPairingConsumed = onCodexTelemetryPairingConsumed,
                 viewModel = settingsViewModel
             )
         }
