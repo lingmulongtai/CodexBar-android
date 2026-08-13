@@ -69,7 +69,8 @@ class TokenRefreshStateStore @Inject constructor(
             is Credential.ProviderSecretCredential -> listOf(
                 credential.service.name,
                 credential.kind.name,
-                credential.accessToken
+                credential.accessToken,
+                credential.accountReference.orEmpty()
             )
         }.joinToString(separator = "\u001F")
 

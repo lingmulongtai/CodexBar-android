@@ -139,6 +139,9 @@ class EncryptedPrefsManager @Inject constructor(
 
                 is Credential.ProviderSecretCredential -> {
                     prefs.putEncryptedString("${prefix}_secret_kind", credential.kind.name)
+                    credential.accountReference?.let {
+                        prefs.putEncryptedString("${prefix}_account_reference", it)
+                    }
                 }
             }
         }
@@ -396,7 +399,8 @@ class EncryptedPrefsManager @Inject constructor(
                 Credential.ProviderSecretCredential(
                     service = service,
                     kind = kind,
-                    accessToken = accessToken
+                    accessToken = accessToken,
+                    accountReference = prefs.getEncryptedString("${prefix}_account_reference")
                 )
             }
             else -> null

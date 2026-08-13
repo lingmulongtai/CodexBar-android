@@ -20,7 +20,8 @@ data class ProviderMetadata(
     val authMode: ProviderAuthMode,
     val aliases: Set<String>,
     val guideAnchor: String,
-    val recommended: Boolean = false
+    val recommended: Boolean = false,
+    val requiresAccountReference: Boolean = false
 ) {
     val secretKind: ProviderSecretKind?
         get() = when (authMode) {
@@ -137,6 +138,13 @@ object ProviderCatalog {
             authMode = ProviderAuthMode.API_KEY,
             aliases = setOf("ibm", "bob", "bob shell", "bobcoins", "bobshell"),
             guideAnchor = "ibm-bob"
+        ),
+        AiService.FIREWORKS to ProviderMetadata(
+            category = ProviderCategory.MODEL_API,
+            authMode = ProviderAuthMode.API_KEY,
+            aliases = setOf("fireworks", "fireworks ai", "serverless inference", "billing spend"),
+            guideAnchor = "fireworks-ai",
+            requiresAccountReference = true
         )
     )
 

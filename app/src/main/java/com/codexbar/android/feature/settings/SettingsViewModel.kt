@@ -101,6 +101,7 @@ class SettingsViewModel @Inject constructor(
                 )
                 is Credential.ProviderSecretCredential -> ServiceCredentialState(
                     accessToken = credential.accessToken,
+                    accountReference = credential.accountReference ?: "",
                     isConnected = true
                 )
             }
@@ -127,6 +128,11 @@ class SettingsViewModel @Inject constructor(
                 "accessToken" -> current.copy(accessToken = value, validationResult = null, hasUnsavedChanges = true)
                 "refreshToken" -> current.copy(refreshToken = value, validationResult = null, hasUnsavedChanges = true)
                 "accountId" -> current.copy(accountId = value, validationResult = null, hasUnsavedChanges = true)
+                "accountReference" -> current.copy(
+                    accountReference = value,
+                    validationResult = null,
+                    hasUnsavedChanges = true
+                )
                 else -> current
             }
             state.copy(serviceStates = state.serviceStates + (service to updated))
@@ -153,11 +159,17 @@ class SettingsViewModel @Inject constructor(
             service == AiService.COPILOT -> Credential.CopilotCredential(
                 accessToken = state.accessToken
             )
-            service.providerMetadata.secretKind != null -> Credential.ProviderSecretCredential(
-                service = service,
-                kind = checkNotNull(service.providerMetadata.secretKind),
-                accessToken = state.accessToken.trim()
-            )
+            service.providerMetadata.secretKind != null -> {
+                if (service.providerMetadata.requiresAccountReference && state.accountReference.isBlank()) {
+                    return null
+                }
+                Credential.ProviderSecretCredential(
+                    service = service,
+                    kind = checkNotNull(service.providerMetadata.secretKind),
+                    accessToken = state.accessToken.trim(),
+                    accountReference = state.accountReference.trim().ifBlank { null }
+                )
+            }
             else -> null
         }
     }

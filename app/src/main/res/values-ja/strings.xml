@@ -192,6 +192,10 @@
     <string name="credential_clinepass_setup_body">Clineで専用APIキーを作成し、下へ貼り付けてください。CodexBarは5時間・週間・月間のプラン使用量を取得するため、api.cline.bot/api/v1/users/me/plan/usage-limitsだけへ送信します。プロンプト、モデル応答、リクエスト履歴は要求しません。</string>
     <string name="credential_ibm_bob_setup_title">IBM Bob Bobcoin使用量</string>
     <string name="credential_ibm_bob_setup_body">IBM BobポータルでAPIキーを作成し、下へ貼り付けてください。CodexBarは表示可能な各チームの月間Bobcoin予算を取得します。資格情報はbob.ibm.com配下の厳密に検証したHTTPS APIホストだけへ送信し、プロンプトやコーディング履歴は要求しません。</string>
+    <string name="credential_fireworks_setup_title">Fireworks AI請求支出</string>
+    <string name="credential_fireworks_setup_body">Fireworks AIで専用APIキーを作成し、アカウントURLにあるslugを入力してください。CodexBarは直近30日間の確定支出を集計するため、両方をapi.fireworks.aiだけへ送信します。プロンプトやモデル応答は要求しません。</string>
+    <string name="credential_account_slug">アカウントslug</string>
+    <string name="credential_fireworks_slug_support">FireworksのアカウントURLで/accounts/の後にある値です。</string>
     <string name="credential_zenmux_management_key">Management APIキー</string>
     <string name="credential_refresh_token">更新トークン</string>
     <string name="credential_changes_pending">検証に成功するまで変更は反映されません。</string>

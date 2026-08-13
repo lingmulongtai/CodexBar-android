@@ -1067,6 +1067,11 @@ private fun ServiceCredentialSection(
                         body = stringResource(R.string.credential_ibm_bob_setup_body),
                         accent = visualStyle.accent
                     )
+                    service == AiService.FIREWORKS -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_fireworks_setup_title),
+                        body = stringResource(R.string.credential_fireworks_setup_body),
+                        accent = visualStyle.accent
+                    )
                 }
 
                 if (service == AiService.CODEX) {
@@ -1486,9 +1491,22 @@ private fun ManualCredentialFields(
             )
         }
 
+        if (service.providerMetadata.requiresAccountReference) {
+            OutlinedTextField(
+                value = state.accountReference,
+                onValueChange = { onFieldChange("accountReference", it) },
+                label = { Text(stringResource(R.string.credential_account_slug)) },
+                supportingText = { Text(stringResource(R.string.credential_fireworks_slug_support)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+        }
+
         OutlinedButton(
             onClick = onValidate,
-            enabled = !state.isValidating && state.accessToken.isNotBlank(),
+            enabled = !state.isValidating &&
+                state.accessToken.isNotBlank() &&
+                (!service.providerMetadata.requiresAccountReference || state.accountReference.isNotBlank()),
             modifier = Modifier.fillMaxWidth()
         ) {
             if (state.isValidating) {
@@ -1595,6 +1613,7 @@ private fun AccountLinkControls(
                 AiService.MOONSHOT -> stringResource(R.string.credential_moonshot_setup_body)
                 AiService.CLINEPASS -> stringResource(R.string.credential_clinepass_setup_body)
                 AiService.IBM_BOB -> stringResource(R.string.credential_ibm_bob_setup_body)
+                AiService.FIREWORKS -> stringResource(R.string.credential_fireworks_setup_body)
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant

@@ -9,6 +9,7 @@ import com.codexbar.android.core.data.CursorRepositoryImpl
 import com.codexbar.android.core.data.DeepSeekRepositoryImpl
 import com.codexbar.android.core.data.ElevenLabsRepositoryImpl
 import com.codexbar.android.core.data.GeminiRepositoryImpl
+import com.codexbar.android.core.data.FireworksRepositoryImpl
 import com.codexbar.android.core.data.KimiRepositoryImpl
 import com.codexbar.android.core.data.IbmBobRepositoryImpl
 import com.codexbar.android.core.data.MoonshotRepositoryImpl
@@ -31,6 +32,7 @@ import com.codexbar.android.core.network.cursor.CursorApiService
 import com.codexbar.android.core.network.deepseek.DeepSeekApiService
 import com.codexbar.android.core.network.elevenlabs.ElevenLabsApiService
 import com.codexbar.android.core.network.gemini.GeminiCompanionClient
+import com.codexbar.android.core.network.fireworks.FireworksApiService
 import com.codexbar.android.core.network.kimi.KimiApiService
 import com.codexbar.android.core.network.ibmbob.IbmBobApiService
 import com.codexbar.android.core.network.moonshot.MoonshotApiService
@@ -218,4 +220,13 @@ object RepositoryModule {
         apiService: IbmBobApiService,
         prefsManager: EncryptedPrefsManager
     ): QuotaRepository = IbmBobRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.FIREWORKS)
+    fun provideFireworksRepository(
+        apiService: FireworksApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = FireworksRepositoryImpl(apiService, prefsManager)
 }

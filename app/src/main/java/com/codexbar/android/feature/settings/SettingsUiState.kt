@@ -23,6 +23,7 @@ data class ServiceCredentialState(
     val accessToken: String = "",
     val refreshToken: String = "",
     val accountId: String = "", // Codex only
+    val accountReference: String = "", // Provider-specific non-secret account selector
     val geminiPairingCode: String = "",
     val codexTelemetryPairingCode: String = "",
     val isCodexTelemetryConnected: Boolean = false,

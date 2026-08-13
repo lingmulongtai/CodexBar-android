@@ -107,5 +107,11 @@ enum class AiService(
         brandColor = 0xFF0E61FA,
         baseUrl = "https://api.us-east.bob.ibm.com/",
         requiresManualCredentials = true
+    ),
+    FIREWORKS(
+        displayName = "Fireworks AI",
+        brandColor = 0xFFF45B3A,
+        baseUrl = "https://api.fireworks.ai/",
+        requiresManualCredentials = true
     )
 }

@@ -192,6 +192,10 @@
     <string name="credential_clinepass_setup_body">Create a dedicated API key in Cline and paste it below. CodexBar sends it only to api.cline.bot/api/v1/users/me/plan/usage-limits to read 5-hour, weekly, and monthly plan usage. Prompts, model responses, and request history are never requested.</string>
     <string name="credential_ibm_bob_setup_title">IBM Bob Bobcoin usage</string>
     <string name="credential_ibm_bob_setup_body">Create an API key in the IBM Bob portal and paste it below. CodexBar reads monthly Bobcoin budgets for each visible team. Credentials are sent only to HTTPS API hosts strictly under bob.ibm.com; prompts and coding history are never requested.</string>
+    <string name="credential_fireworks_setup_title">Fireworks AI billing spend</string>
+    <string name="credential_fireworks_setup_body">Create a dedicated API key in Fireworks AI and enter the account slug from your account URL. CodexBar sends both only to api.fireworks.ai to total rated spend from the last 30 days. It never requests prompts or model responses.</string>
+    <string name="credential_account_slug">Account slug</string>
+    <string name="credential_fireworks_slug_support">For example, the value after /accounts/ in your Fireworks account URL.</string>
     <string name="credential_zenmux_management_key">Management API key</string>
     <string name="credential_refresh_token">Refresh Token</string>
     <string name="credential_changes_pending">Changes are not active until validation succeeds.</string>
