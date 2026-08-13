@@ -103,6 +103,7 @@ class CodexRepositoryImplTest {
         """.trimIndent()
 
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(responseJson))
+        mockWebServer.enqueue(resetCreditsResponse())
 
         val result = repository.fetchQuota()
 
@@ -118,6 +119,7 @@ class CodexRepositoryImplTest {
         assertEquals(604800L, quotaInfo.windows[1].windowDurationSeconds)
         assertEquals("Pro", quotaInfo.tier)
         assertTrue(quotaInfo.notices.isEmpty())
+        assertEquals(0, quotaInfo.codexResetCredits?.availableCount)
     }
 
     @Test
@@ -136,6 +138,7 @@ class CodexRepositoryImplTest {
         """.trimIndent()
 
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(responseJson))
+        mockWebServer.enqueue(resetCreditsResponse())
 
         val result = repository.fetchQuota()
 
@@ -188,6 +191,7 @@ class CodexRepositoryImplTest {
                 """.trimIndent()
             )
         )
+        mockWebServer.enqueue(resetCreditsResponse())
 
         val result = repository.fetchQuota()
 
@@ -256,11 +260,110 @@ class CodexRepositoryImplTest {
         """.trimIndent()
 
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(responseJson))
+        mockWebServer.enqueue(resetCreditsResponse())
 
         val result = repository.fetchQuota()
 
         assertTrue(result is Result.Success)
         val quotaInfo = (result as Result.Success).value
         assertEquals("1h", quotaInfo.windows[0].label)
+    }
+
+    @Test
+    fun `fetchQuota includes only available unexpired reset credits`() = runTest {
+        mockWebServer.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """
+                {
+                    "plan_type": "pro",
+                    "rate_limit": {
+                        "primary_window": {
+                            "used_percent": 30,
+                            "reset_at": 1999999999,
+                            "limit_window_seconds": 18000
+                        }
+                    }
+                }
+                """.trimIndent()
+            )
+        )
+        mockWebServer.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """
+                {
+                    "credits": [
+                        {
+                            "id": "available-later",
+                            "reset_type": "codex_rate_limits",
+                            "status": "available",
+                            "granted_at": "2026-08-01T00:00:00Z",
+                            "expires_at": "2099-08-30T00:00:00.123456Z"
+                        },
+                        {
+                            "id": "available-no-expiry",
+                            "reset_type": "codex_rate_limits",
+                            "status": "available",
+                            "granted_at": "2026-08-01T00:00:00Z",
+                            "expires_at": null
+                        },
+                        {
+                            "id": "redeemed",
+                            "reset_type": "codex_rate_limits",
+                            "status": "redeemed",
+                            "granted_at": "2026-08-01T00:00:00Z",
+                            "expires_at": "2099-09-30T00:00:00Z"
+                        }
+                    ],
+                    "available_count": 2
+                }
+                """.trimIndent()
+            )
+        )
+
+        val result = repository.fetchQuota()
+
+        assertTrue(result is Result.Success)
+        val resetCredits = (result as Result.Success).value.codexResetCredits
+        assertEquals(2, resetCredits?.availableCount)
+        assertEquals(1, resetCredits?.expiresAt?.size)
+        val creditsRequest = mockWebServer.takeRequest()
+        val resetRequest = mockWebServer.takeRequest()
+        assertEquals("/backend-api/wham/usage", creditsRequest.path)
+        assertEquals("/backend-api/wham/rate-limit-reset-credits", resetRequest.path)
+        assertEquals("codex-1", resetRequest.getHeader("OpenAI-Beta"))
+        assertEquals("Codex Desktop", resetRequest.getHeader("originator"))
+        assertEquals("test-account-id", resetRequest.getHeader("ChatGPT-Account-ID"))
+    }
+
+    @Test
+    fun `reset credit failure does not discard successful usage`() = runTest {
+        mockWebServer.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """
+                {
+                    "plan_type": "pro",
+                    "rate_limit": {
+                        "primary_window": {
+                            "used_percent": 30,
+                            "reset_at": 1999999999,
+                            "limit_window_seconds": 18000
+                        }
+                    }
+                }
+                """.trimIndent()
+            )
+        )
+        mockWebServer.enqueue(MockResponse().setResponseCode(503))
+
+        val result = repository.fetchQuota()
+
+        assertTrue(result is Result.Success)
+        assertEquals(null, (result as Result.Success).value.codexResetCredits)
+    }
+
+    private fun resetCreditsResponse(): MockResponse {
+        return MockResponse()
+            .setResponseCode(200)
+            .setBody("""{"credits":[],"available_count":0}""")
     }
 }

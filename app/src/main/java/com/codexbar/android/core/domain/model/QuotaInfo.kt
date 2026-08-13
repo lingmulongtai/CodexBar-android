@@ -8,7 +8,13 @@ data class QuotaInfo(
     val extraUsage: ExtraUsage?,
     val tier: String? = null,
     val fetchedAt: Instant,
-    val notices: Set<QuotaNotice> = emptySet()
+    val notices: Set<QuotaNotice> = emptySet(),
+    val codexResetCredits: CodexResetCredits? = null
+)
+
+data class CodexResetCredits(
+    val availableCount: Int,
+    val expiresAt: List<Instant>
 )
 
 sealed interface QuotaNotice {

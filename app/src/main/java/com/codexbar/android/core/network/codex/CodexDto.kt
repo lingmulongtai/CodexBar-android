@@ -34,6 +34,18 @@ object CodexDto {
     )
 
     @Serializable
+    data class ResetCreditsResponse(
+        val credits: List<ResetCredit> = emptyList(),
+        @SerialName("available_count") val availableCount: Int = 0
+    )
+
+    @Serializable
+    data class ResetCredit(
+        val status: String,
+        @SerialName("expires_at") val expiresAt: String? = null
+    )
+
+    @Serializable
     data class TokenRefreshRequest(
         @SerialName("client_id") val clientId: String = CODEX_CLIENT_ID,
         @SerialName("grant_type") val grantType: String = "refresh_token",
