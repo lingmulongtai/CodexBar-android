@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://lingmulongtai.github.io/CodexBar-android/sitemap.xml

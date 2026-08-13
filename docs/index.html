@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CodexBar for Android — AIの残量、その先まで。</title>
+    <meta
+      name="description"
+      content="Codex、Claude、Gemini、GitHub Copilotなど18のAIサービスの残量、リセット、利用ペース、履歴をひとつに。Android向けオープンソースAI使用量モニター。"
+    />
+    <meta name="theme-color" content="#090b15" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="https://lingmulongtai.github.io/CodexBar-android/" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="./site.webmanifest" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="CodexBar for Android" />
+    <meta property="og:title" content="AIの残量、その先まで。｜CodexBar for Android" />
+    <meta
+      property="og:description"
+      content="残量だけでなく、ペース・リセット計画・履歴まで。18のAIサービスをAndroidで一望。"
+    />
+    <meta property="og:url" content="https://lingmulongtai.github.io/CodexBar-android/" />
+    <meta
+      property="og:image"
+      content="https://lingmulongtai.github.io/CodexBar-android/assets/og.png"
+    />
+    <meta property="og:image:width" content="1731" />
+    <meta property="og:image:height" content="909" />
+    <meta property="og:image:alt" content="CodexBar for Androidのダッシュボード" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="stylesheet" href="./assets/site.css" />
+    <script src="./assets/site.js" defer></script>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "CodexBar for Android",
+        "operatingSystem": "Android 8.0 or later",
+        "applicationCategory": "UtilitiesApplication",
+        "description": "An open-source Android app for monitoring AI service quotas, reset times, pace, and usage history.",
+        "downloadUrl": "https://github.com/lingmulongtai/CodexBar-android/releases/latest/download/app-release.apk",
+        "softwareVersion": "0.7.0",
+        "license": "https://opensource.org/license/mit",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "JPY"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">本文へ移動</a>
+
+    <header class="site-header" data-header>
+      <div class="shell header-inner">
+        <a class="brand" href="#top" aria-label="CodexBar ホーム">
+          <span class="brand-mark" aria-hidden="true"><span></span></span>
+          <span>CodexBar</span>
+          <span class="brand-platform">Android</span>
+        </a>
+
+        <nav class="desktop-nav" aria-label="メインナビゲーション">
+          <a href="#insights">できること</a>
+          <a href="#themes">テーマ</a>
+          <a href="#everywhere">表示場所</a>
+          <a href="#security">セキュリティ</a>
+        </nav>
+
+        <div class="header-actions">
+          <a
+            class="text-link header-github"
+            href="https://github.com/lingmulongtai/CodexBar-android"
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub <span aria-hidden="true">↗</span>
+          </a>
+          <a
+            class="button button-small"
+            href="https://github.com/lingmulongtai/CodexBar-android/releases/latest/download/app-release.apk"
+          >
+            APKを入手
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="top" aria-labelledby="hero-title">
+        <div class="hero-glow hero-glow-one" aria-hidden="true"></div>
+        <div class="hero-glow hero-glow-two" aria-hidden="true"></div>
+
+        <div class="shell hero-grid">
+          <div class="hero-copy">
+            <div class="eyebrow reveal">
+              <span class="status-dot" aria-hidden="true"></span>
+              v0.7.0 · Android 8.0+
+            </div>
+
+            <h1 id="hero-title" class="reveal">
+              AIの残量、
+              <span>その先まで。</span>
+            </h1>
+
+            <p class="hero-lede reveal">
+              「あと何％？」から「このペースで大丈夫？」へ。Codex、Claude、Gemini、GitHub
+              Copilotなど18サービスの残量・リセット・履歴・使い方のペースを、ひとつの画面で。
+            </p>
+
+            <div class="hero-actions reveal">
+              <a
+                class="button button-primary"
+                href="https://github.com/lingmulongtai/CodexBar-android/releases/latest/download/app-release.apk"
+              >
+                <span>無料でAPKをダウンロード</span>
+                <span class="button-arrow" aria-hidden="true">↓</span>
+              </a>
+              <a
+                class="button button-secondary"
+                href="https://github.com/lingmulongtai/CodexBar-android/releases/latest"
+                target="_blank"
+                rel="noreferrer"
+              >
+                リリースを見る <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+
+            <ul class="trust-list reveal" aria-label="主な特徴">
+              <li><span aria-hidden="true">✓</span> オープンソース</li>
+              <li><span aria-hidden="true">✓</span> 広告・トラッカーなし</li>
+              <li><span aria-hidden="true">✓</span> 資格情報は端末で暗号化</li>
+            </ul>
+          </div>
+
+          <div class="hero-visual reveal" aria-label="CodexBarのダッシュボード例">
+            <div class="hero-orbit" aria-hidden="true"></div>
+
+            <div class="floating-card floating-card-pace" aria-hidden="true">
+              <span class="floating-label">5-hour pace</span>
+              <strong>いい調子</strong>
+              <span class="mini-progress"><i></i></span>
+              <small>62% left · 0.70× target</small>
+            </div>
+
+            <div class="phone hero-phone">
+              <div class="phone-sensor" aria-hidden="true"></div>
+              <img
+                src="./images/releases/v0.7.0/dashboard-aurora-dark.png"
+                alt="AuroraテーマのCodex使用量ダッシュボード。残量、ペース、リセット計画を表示している"
+                width="1080"
+                height="2400"
+                fetchpriority="high"
+              />
+            </div>
+
+            <div class="floating-card floating-card-reset" aria-hidden="true">
+              <span class="floating-icon">↻</span>
+              <span>
+                <small>Next reset</small>
+                <strong>2h 18m</strong>
+              </span>
+            </div>
+
+            <div class="demo-note">DEMO DATA</div>
+          </div>
+        </div>
+
+        <div class="shell metric-strip reveal" aria-label="製品概要">
+          <div><strong>18</strong><span>AI providers</span></div>
+          <div><strong>4</strong><span>visual themes</span></div>
+          <div><strong>24/7</strong><span>at-a-glance status</span></div>
+          <div><strong>0</strong><span>hosted backends</span></div>
+        </div>
+      </section>
+
+      <section class="section section-insights" id="insights" aria-labelledby="insights-title">
+        <div class="shell">
+          <div class="section-heading centered reveal">
+            <span class="kicker">QUOTA INTELLIGENCE</span>
+            <h2 id="insights-title"><span>残量だけでは、</span><span>足りない。</span></h2>
+            <p>
+              リセットまでの時間と利用ペースを組み合わせて、「今どう使うべきか」まで見える形にします。
+            </p>
+          </div>
+
+          <div class="insight-grid">
+            <article class="insight-card pace-card reveal">
+              <div class="card-topline">
+                <span class="card-index">01</span>
+                <span class="pill pill-green"><i></i> On track</span>
+              </div>
+              <div class="pace-visual" aria-hidden="true">
+                <div class="pace-ring"><span>58<small>%</small></span></div>
+                <div class="pace-copy">
+                  <span>5-hour</span>
+                  <strong>42% left</strong>
+                  <small>Ends near 71% used</small>
+                </div>
+              </div>
+              <h3>使う速さを、言葉で。</h3>
+              <p>
+                目標ペースと現在の消費量を比較。「いい調子」「使いすぎ」など、数字を判断に変えるメッセージを表示します。
+              </p>
+            </article>
+
+            <article class="insight-card plan-card reveal">
+              <div class="card-topline">
+                <span class="card-index">02</span>
+                <span class="pill pill-amber">Reset plan</span>
+              </div>
+              <div class="plan-visual" aria-hidden="true">
+                <div class="plan-date"><span>次の目安</span><strong>16:42</strong></div>
+                <div class="plan-line"><i></i><b></b></div>
+                <p><strong>あと10%</strong>をこの時間までに</p>
+              </div>
+              <h3>リセット日を、使いどきに。</h3>
+              <p>
+                残り時間、予備、予測消費をもとに、いつまでにどれくらい使えるかを具体的に提案します。
+              </p>
+            </article>
+
+            <article class="insight-card history-card reveal">
+              <div class="card-topline">
+                <span class="card-index">03</span>
+                <span class="pill pill-violet">Local telemetry</span>
+              </div>
+              <div class="history-bars" aria-hidden="true">
+                <i style="--h: 34%"></i>
+                <i style="--h: 46%"></i>
+                <i style="--h: 42%"></i>
+                <i style="--h: 65%"></i>
+                <i style="--h: 58%"></i>
+                <i style="--h: 76%"></i>
+                <i style="--h: 92%"></i>
+              </div>
+              <h3>トークンの流れを、あとから。</h3>
+              <p>
+                オプションのローカル companion で、Codexのコンテキスト使用率や日別・モデル別トークン履歴を可視化します。
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section detail-showcase" aria-labelledby="detail-title">
+        <div class="shell detail-grid">
+          <div class="detail-copy reveal">
+            <span class="kicker">CODEX INSIGHTS</span>
+            <h2 id="detail-title">リセット残数も、期限も、コンテキストも。</h2>
+            <p>
+              Codexのリセットクレジット、追加クォータ枠、現在のコンテキスト、日別トークンを同じ詳細画面に整理。必要な情報へすぐ辿り着けます。
+            </p>
+
+            <ul class="feature-checks">
+              <li><span>01</span><p><strong>リセットクレジット</strong>残数と次の失効日時を表示</p></li>
+              <li><span>02</span><p><strong>コンテキスト</strong>現在のモデルと使用率を視覚化</p></li>
+              <li><span>03</span><p><strong>トークン履歴</strong>入力・キャッシュ・出力・推論を分類</p></li>
+            </ul>
+
+            <p class="detail-note">
+              <span aria-hidden="true">●</span>
+              ローカル companion は会話本文、ファイルパス、アカウントトークンを送信しません。
+            </p>
+          </div>
+
+          <div class="detail-visual reveal">
+            <div class="phone phone-back">
+              <img
+                src="./images/releases/v0.7.0/codex-token-history-liquid-glass.png"
+                alt="Codexの日別トークン履歴画面"
+                width="1080"
+                height="2400"
+                loading="lazy"
+              />
+            </div>
+            <div class="phone phone-front">
+              <img
+                src="./images/releases/v0.7.0/codex-insights-liquid-glass.png"
+                alt="Codexのリセットクレジットとコンテキスト詳細画面"
+                width="1080"
+                height="2400"
+                loading="lazy"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section themes-section" id="themes" aria-labelledby="themes-title" data-theme-section="liquid">
+        <div class="shell">
+          <div class="section-heading themes-heading reveal">
+            <div>
+              <span class="kicker">MAKE IT YOURS</span>
+              <h2 id="themes-title">気分で選べる、4つの顔。</h2>
+            </div>
+            <p>
+              AndroidらしいMaterial 3から、透明感のあるLiquid Glass、精密なWinUI 3、深い色のAuroraまで。
+            </p>
+          </div>
+
+          <div class="theme-stage reveal">
+            <div class="theme-copy-panel">
+              <div class="theme-selector" role="tablist" aria-label="テーマを選択">
+                <button
+                  id="theme-tab-material"
+                  type="button"
+                  role="tab"
+                  aria-controls="theme-preview-panel"
+                  aria-selected="false"
+                  data-theme-button="material"
+                  data-image="./images/releases/v0.7.0/dashboard-material3.png"
+                  data-alt="Material 3テーマのダッシュボード"
+                >
+                  <i class="swatch swatch-material" aria-hidden="true"></i>
+                  <span><strong>Material 3</strong><small>Android native</small></span>
+                </button>
+                <button
+                  id="theme-tab-liquid"
+                  type="button"
+                  role="tab"
+                  aria-controls="theme-preview-panel"
+                  aria-selected="true"
+                  data-theme-button="liquid"
+                  data-image="./images/releases/v0.7.0/dashboard-liquid-glass.png"
+                  data-alt="Liquid Glassテーマのダッシュボード"
+                >
+                  <i class="swatch swatch-liquid" aria-hidden="true"></i>
+                  <span><strong>Liquid Glass</strong><small>Soft &amp; translucent</small></span>
+                </button>
+                <button
+                  id="theme-tab-winui"
+                  type="button"
+                  role="tab"
+                  aria-controls="theme-preview-panel"
+                  aria-selected="false"
+                  data-theme-button="winui"
+                  data-image="./images/releases/v0.7.0/dashboard-winui3.png"
+                  data-alt="WinUI 3テーマのダッシュボード"
+                >
+                  <i class="swatch swatch-winui" aria-hidden="true"></i>
+                  <span><strong>WinUI 3</strong><small>Clean &amp; precise</small></span>
+                </button>
+                <button
+                  id="theme-tab-aurora"
+                  type="button"
+                  role="tab"
+                  aria-controls="theme-preview-panel"
+                  aria-selected="false"
+                  data-theme-button="aurora"
+                  data-image="./images/releases/v0.7.0/dashboard-aurora-dark.png"
+                  data-alt="Auroraテーマのダッシュボード"
+                >
+                  <i class="swatch swatch-aurora" aria-hidden="true"></i>
+                  <span><strong>Aurora</strong><small>Deep &amp; luminous</small></span>
+                </button>
+              </div>
+
+              <p class="theme-hint"><span aria-hidden="true">↗</span> テーマを選ぶとプレビューが切り替わります</p>
+            </div>
+
+            <div
+              class="theme-preview"
+              id="theme-preview-panel"
+              role="tabpanel"
+              aria-labelledby="theme-tab-liquid"
+              aria-live="polite"
+            >
+              <div class="preview-aura" aria-hidden="true"></div>
+              <div class="phone theme-phone">
+                <img
+                  data-theme-image
+                  src="./images/releases/v0.7.0/dashboard-liquid-glass.png"
+                  alt="Liquid Glassテーマのダッシュボード"
+                  width="1080"
+                  height="2400"
+                  loading="lazy"
+                />
+              </div>
+              <span class="theme-name" data-theme-name>Liquid Glass</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section everywhere-section" id="everywhere" aria-labelledby="everywhere-title">
+        <div class="shell">
+          <div class="section-heading centered reveal">
+            <span class="kicker">ALWAYS WITHIN REACH</span>
+            <h2 id="everywhere-title">アプリを開かなくても、わかる。</h2>
+            <p>ホーム画面、通知、Quick Settings、大画面。いま見ている場所に、必要な情報だけを。</p>
+          </div>
+
+          <div class="surface-grid">
+            <article class="surface-card live-card reveal">
+              <div class="surface-copy">
+                <span class="surface-tag">Android 16</span>
+                <h3>Live Update</h3>
+                <p>短時間の監視セッションでは、残量とペースを通知シェードから更新できます。</p>
+              </div>
+              <div class="notification-mock" aria-hidden="true">
+                <div class="notification-head">
+                  <span class="notification-logo">C</span>
+                  <span>CodexBar · Live session</span>
+                  <small>59:20</small>
+                </div>
+                <strong>Claude: 34% left</strong>
+                <span>Resets in 2 days 9 hr · At risk</span>
+                <div class="notification-bar"><i></i></div>
+                <div class="notification-actions"><b>Refresh</b><b>Stop</b></div>
+              </div>
+            </article>
+
+            <article class="surface-card widget-card reveal">
+              <div class="surface-copy">
+                <span class="surface-tag">Home screen</span>
+                <h3>Custom widgets</h3>
+                <p>プロバイダー、対象期間、残量、リセット、ペース、鮮度をウィジェットごとに選択。</p>
+              </div>
+              <div class="widget-mock" aria-hidden="true">
+                <div class="widget-top"><span>Codex</span><small>just now</small></div>
+                <div class="widget-value"><strong>62%</strong><span>left</span></div>
+                <div class="widget-bar"><i></i></div>
+                <div class="widget-bottom"><span>5-hour</span><strong>Good pace</strong></div>
+              </div>
+            </article>
+
+            <article class="surface-card wide-card reveal">
+              <div class="surface-copy">
+                <span class="surface-tag">Tablet &amp; foldable</span>
+                <h3>Large-screen dashboard</h3>
+                <p>タブレットや横画面では、一覧と詳細を同時に表示。情報量を落とさず広い画面を活かします。</p>
+              </div>
+              <div class="tablet-frame">
+                <img
+                  src="./images/dashboard-large-screen.png"
+                  alt="タブレット向けの2ペインダッシュボード"
+                  width="2560"
+                  height="1600"
+                  loading="lazy"
+                />
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="providers-section" aria-labelledby="providers-title">
+        <div class="shell provider-heading reveal">
+          <span class="kicker">ONE PLACE, MANY PROVIDERS</span>
+          <h2 id="providers-title">いつものAIを、ひとつに。</h2>
+          <p>サービスごとの違いを保ったまま、重要な数字を同じ見方に整理します。</p>
+          <button
+            class="marquee-toggle"
+            type="button"
+            aria-controls="provider-list"
+            aria-pressed="false"
+            data-marquee-toggle
+          >
+            <span class="marquee-toggle-icon" aria-hidden="true">Ⅱ</span>
+            <span data-marquee-label>自動スクロールを停止</span>
+          </button>
+        </div>
+
+        <div class="provider-marquee" id="provider-list" aria-label="対応プロバイダー一覧">
+          <div class="provider-row provider-row-one">
+            <span class="provider-chip chip-codex"><i>C</i>Codex</span>
+            <span class="provider-chip chip-claude"><i>Cl</i>Claude</span>
+            <span class="provider-chip chip-gemini"><i>G</i>Gemini</span>
+            <span class="provider-chip chip-github"><i>GH</i>GitHub Copilot</span>
+            <span class="provider-chip chip-cursor"><i>Cu</i>Cursor</span>
+            <span class="provider-chip chip-zai"><i>Z</i>z.ai</span>
+            <span class="provider-chip chip-zen"><i>Ze</i>ZenMux</span>
+            <span class="provider-chip chip-kimi"><i>K</i>Kimi Code</span>
+            <span class="provider-chip chip-codex" aria-hidden="true"><i>C</i>Codex</span>
+            <span class="provider-chip chip-claude" aria-hidden="true"><i>Cl</i>Claude</span>
+            <span class="provider-chip chip-gemini" aria-hidden="true"><i>G</i>Gemini</span>
+            <span class="provider-chip chip-github" aria-hidden="true"><i>GH</i>GitHub Copilot</span>
+          </div>
+          <div class="provider-row provider-row-two">
+            <span class="provider-chip chip-eleven"><i>11</i>ElevenLabs</span>
+            <span class="provider-chip chip-openrouter"><i>OR</i>OpenRouter</span>
+            <span class="provider-chip chip-synthetic"><i>Sy</i>Synthetic</span>
+            <span class="provider-chip chip-chutes"><i>Ch</i>Chutes</span>
+            <span class="provider-chip chip-deepseek"><i>DS</i>DeepSeek</span>
+            <span class="provider-chip chip-venice"><i>V</i>Venice</span>
+            <span class="provider-chip chip-moonshot"><i>M</i>Moonshot API</span>
+            <span class="provider-chip chip-cline"><i>Cl</i>Cline</span>
+            <span class="provider-chip chip-ibm"><i>IB</i>IBM Bob</span>
+            <span class="provider-chip chip-fireworks"><i>F</i>Fireworks AI</span>
+            <span class="provider-chip chip-eleven" aria-hidden="true"><i>11</i>ElevenLabs</span>
+            <span class="provider-chip chip-openrouter" aria-hidden="true"><i>OR</i>OpenRouter</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section security-section" id="security" aria-labelledby="security-title">
+        <div class="shell security-grid">
+          <div class="security-copy reveal">
+            <span class="kicker">PRIVATE BY DESIGN</span>
+            <h2 id="security-title">あなたの資格情報は、あなたの端末に。</h2>
+            <p>
+              CodexBar専用のホスト型バックエンドはありません。接続情報はAndroid Keystoreで保護され、検証に成功したあとだけ暗号化保存されます。
+            </p>
+            <a
+              class="text-link"
+              href="https://github.com/lingmulongtai/CodexBar-android/blob/main/docs/provider-auth-architecture.md"
+              target="_blank"
+              rel="noreferrer"
+            >
+              セキュリティ設計を読む <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+
+          <div class="security-cards">
+            <article class="security-card reveal">
+              <span class="security-number">01</span>
+              <div><h3>Keystore暗号化</h3><p>資格情報は端末固有の鍵で暗号化。バックアップや端末移行からも除外します。</p></div>
+            </article>
+            <article class="security-card reveal">
+              <span class="security-number">02</span>
+              <div><h3>固定された送信先</h3><p>認証情報を任意のURLへ送らず、対象サービスの検証済みHTTPSホストだけを使用します。</p></div>
+            </article>
+            <article class="security-card reveal">
+              <span class="security-number">03</span>
+              <div><h3>オープンな実装</h3><p>MITライセンス。アプリ、companions、リリース検証の実装をGitHubで確認できます。</p></div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="download-section" id="download" aria-labelledby="download-title">
+        <div class="download-glow" aria-hidden="true"></div>
+        <div class="shell download-inner">
+          <div class="download-copy reveal">
+            <span class="kicker">READY WHEN YOU ARE</span>
+            <h2 id="download-title">AIを、ちょうどよく使おう。</h2>
+            <p>最新の安定版APKをGitHub Releaseから。無料、広告なし、Android 8.0以降。</p>
+            <div class="download-actions">
+              <a
+                class="button button-primary button-light"
+                href="https://github.com/lingmulongtai/CodexBar-android/releases/latest/download/app-release.apk"
+              >
+                APKをダウンロード <span aria-hidden="true">↓</span>
+              </a>
+              <a
+                class="button button-ghost"
+                href="https://github.com/lingmulongtai/CodexBar-android"
+                target="_blank"
+                rel="noreferrer"
+              >
+                GitHubでソースを見る <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </div>
+
+          <ol class="install-steps reveal">
+            <li><span>1</span><p><strong>APKを取得</strong>最新Releaseの署名済みapp-release.apkをダウンロード</p></li>
+            <li><span>2</span><p><strong>Androidで開く</strong>ブラウザまたはファイル管理アプリからインストール</p></li>
+            <li><span>3</span><p><strong>AIを接続</strong>Connectionsから使っているサービスを安全に追加</p></li>
+          </ol>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell footer-inner">
+        <div>
+          <a class="brand footer-brand" href="#top">
+            <span class="brand-mark" aria-hidden="true"><span></span></span>
+            <span>CodexBar</span>
+          </a>
+          <p>AI usage intelligence for Android.</p>
+        </div>
+
+        <div class="footer-links">
+          <a href="https://github.com/lingmulongtai/CodexBar-android" target="_blank" rel="noreferrer">GitHub</a>
+          <a href="https://github.com/lingmulongtai/CodexBar-android/releases/latest" target="_blank" rel="noreferrer">Releases</a>
+          <a href="https://github.com/lingmulongtai/CodexBar-android/issues" target="_blank" rel="noreferrer">Issues</a>
+          <a href="https://github.com/lingmulongtai/CodexBar-android/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT License</a>
+        </div>
+
+        <p class="footer-legal">
+          Community Android port of
+          <a href="https://github.com/steipete/CodexBar" target="_blank" rel="noreferrer">CodexBar</a>.
+          Not affiliated with the listed AI providers. © <span data-current-year>2026</span> contributors.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

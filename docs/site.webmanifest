@@ -1,0 +1,17 @@
+{
+  "name": "CodexBar for Android",
+  "short_name": "CodexBar",
+  "description": "AI usage intelligence for Android.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#090b15",
+  "theme_color": "#090b15",
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
