@@ -9,6 +9,7 @@ import com.codexbar.android.core.domain.model.QuotaNotice
 import com.codexbar.android.core.domain.model.UsageWindow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Clock
 import java.time.Instant
@@ -192,5 +193,53 @@ class QuotaPresentationMapperTest {
         )
 
         assertNull(snapshot.services.single().codexResetCredits)
+    }
+
+    @Test
+    fun `maps quota history and marks reset boundaries`() {
+        val metricKey = QuotaPresentationMapper.metricKey(AiService.CODEX, "7-Day")
+        val snapshot = mapper.map(
+            quotas = listOf(
+                QuotaInfo(
+                    service = AiService.CODEX,
+                    windows = listOf(UsageWindow("7-Day", 0.1, now.plusSeconds(604800))),
+                    extraUsage = null,
+                    fetchedAt = now
+                )
+            ),
+            historyByMetricKey = mapOf(
+                metricKey to listOf(
+                    QuotaHistorySample(now.minusSeconds(7200), 0.8, now.plusSeconds(3600)),
+                    QuotaHistorySample(now.minusSeconds(3600), 0.1, now.plusSeconds(604800))
+                )
+            )
+        )
+
+        val points = snapshot.services.single().metrics.single().history.points
+        assertEquals(2, points.size)
+        assertEquals(0.8f, points.first().usedFraction)
+        assertEquals(false, points.first().startsNewCycle)
+        assertEquals(true, points.last().startsNewCycle)
+    }
+
+    @Test
+    fun `redaction removes quota history`() {
+        val metricKey = QuotaPresentationMapper.metricKey(AiService.CLAUDE, "weekly")
+        val snapshot = mapper.map(
+            quotas = listOf(
+                QuotaInfo(
+                    service = AiService.CLAUDE,
+                    windows = listOf(UsageWindow("weekly", 0.5, now.plusSeconds(604800))),
+                    extraUsage = null,
+                    fetchedAt = now
+                )
+            ),
+            privacy = PrivacyPresentation(redactSensitiveValues = true),
+            historyByMetricKey = mapOf(
+                metricKey to listOf(QuotaHistorySample(now, 0.5, now.plusSeconds(604800)))
+            )
+        )
+
+        assertTrue(snapshot.services.single().metrics.single().history.points.isEmpty())
     }
 }

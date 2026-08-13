@@ -51,7 +51,18 @@ data class QuotaMetricPresentation(
     val resetsAt: Instant?,
     val resetLabel: String?,
     val pace: PacePresentation,
-    val resetPlan: QuotaResetPlanPresentation? = null
+    val resetPlan: QuotaResetPlanPresentation? = null,
+    val history: QuotaHistoryPresentation = QuotaHistoryPresentation()
+)
+
+data class QuotaHistoryPresentation(
+    val points: List<QuotaHistoryPointPresentation> = emptyList()
+)
+
+data class QuotaHistoryPointPresentation(
+    val capturedAt: Instant,
+    val usedFraction: Float,
+    val startsNewCycle: Boolean
 )
 
 data class QuotaResetPlanPresentation(

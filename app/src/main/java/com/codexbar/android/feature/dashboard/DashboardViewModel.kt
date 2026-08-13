@@ -97,6 +97,7 @@ class DashboardViewModel @Inject constructor(
                 val now = Instant.now()
                 quotaHistoryStore.record(successfulQuotas)
                 val paceByMetricKey = quotaHistoryStore.paceFor(successfulQuotas, now)
+                val historyByMetricKey = quotaHistoryStore.historyFor(successfulQuotas)
                 val privacySettings = prefsManager.getPrivacySettings()
                 val privacy = PrivacyPresentation(
                     redactSensitiveValues = false,
@@ -109,7 +110,8 @@ class DashboardViewModel @Inject constructor(
                     errors = errors,
                     generatedAt = now,
                     privacy = privacy,
-                    paceByMetricKey = paceByMetricKey
+                    paceByMetricKey = paceByMetricKey,
+                    historyByMetricKey = historyByMetricKey
                 )
                 publishSnapshot(snapshot)
             } finally {

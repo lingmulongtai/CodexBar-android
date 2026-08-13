@@ -24,7 +24,8 @@ class QuotaPresentationMapper(
         locale: Locale = text.locale,
         privacy: PrivacyPresentation = PrivacyPresentation(),
         source: RefreshSourcePresentation = RefreshSourcePresentation.Unknown,
-        paceByMetricKey: Map<String, PacePresentation> = emptyMap()
+        paceByMetricKey: Map<String, PacePresentation> = emptyMap(),
+        historyByMetricKey: Map<String, List<QuotaHistorySample>> = emptyMap()
     ): QuotaPresentationSnapshot {
         val successfulServices = quotas.map { quota ->
             val metrics = quota.windows.mapIndexed { index, window ->
@@ -35,7 +36,8 @@ class QuotaPresentationMapper(
                     generatedAt = generatedAt,
                     locale = locale,
                     privacy = privacy,
-                    paceByMetricKey = paceByMetricKey
+                    paceByMetricKey = paceByMetricKey,
+                    historyByMetricKey = historyByMetricKey
                 )
             }
             val primary = metrics.maxWithOrNull(
@@ -106,7 +108,8 @@ class QuotaPresentationMapper(
         generatedAt: Instant,
         locale: Locale,
         privacy: PrivacyPresentation,
-        paceByMetricKey: Map<String, PacePresentation>
+        paceByMetricKey: Map<String, PacePresentation>,
+        historyByMetricKey: Map<String, List<QuotaHistorySample>>
     ): QuotaMetricPresentation {
         val used = window.utilization.takeIf { it.isFinite() }?.coerceIn(0.0, 1.0)
         val remaining = used?.let { 1.0 - it }
@@ -128,6 +131,11 @@ class QuotaPresentationMapper(
             resetPlanCalculator.calculate(window, pace.state, generatedAt)?.let(::mapResetPlan)
         } else {
             null
+        }
+        val history = if (privacy.redactSensitiveValues) {
+            QuotaHistoryPresentation()
+        } else {
+            mapHistory(historyByMetricKey[metricKey(service, label)].orEmpty())
         }
         return QuotaMetricPresentation(
             id = label.lowercase(locale).replace(Regex("[^a-z0-9]+"), "-").trim('-')
@@ -154,8 +162,29 @@ class QuotaPresentationMapper(
                 formatResetLabel(it, generatedAt)
             },
             pace = pace,
-            resetPlan = resetPlan
+            resetPlan = resetPlan,
+            history = history
         )
+    }
+
+    private fun mapHistory(samples: List<QuotaHistorySample>): QuotaHistoryPresentation {
+        var previous: QuotaHistorySample? = null
+        val points = samples
+            .filter { it.utilization.isFinite() }
+            .sortedBy(QuotaHistorySample::fetchedAt)
+            .map { sample ->
+                val prior = previous
+                val startsNewCycle = prior != null && (
+                    prior.resetsAt != sample.resetsAt || sample.utilization < prior.utilization
+                )
+                previous = sample
+                QuotaHistoryPointPresentation(
+                    capturedAt = sample.fetchedAt,
+                    usedFraction = sample.utilization.coerceIn(0.0, 1.0).toFloat(),
+                    startsNewCycle = startsNewCycle
+                )
+            }
+        return QuotaHistoryPresentation(points)
     }
 
     private fun mapResetPlan(plan: QuotaResetPlan): QuotaResetPlanPresentation {
