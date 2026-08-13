@@ -52,6 +52,7 @@ internal fun CodexTelemetryCompactCard(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.88f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
         border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
     ) {
         Column(

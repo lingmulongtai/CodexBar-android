@@ -112,7 +112,8 @@ fun ServiceCard(
                 MaterialTheme.colorScheme.surfaceContainerLow.copy(
                     alpha = themeProfile.serviceCardContainerAlpha
                 )
-            }
+            },
+            contentColor = MaterialTheme.colorScheme.onSurface
         )
     ) {
         Column(modifier = Modifier.padding(CodexBarSpacing.large)) {
