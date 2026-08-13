@@ -15,6 +15,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppThemeStyle
+import com.codexbar.android.core.domain.model.CodexTelemetryCredential
 import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.domain.model.ProviderSecretKind
 import com.codexbar.android.core.domain.model.providerMetadata
@@ -148,9 +149,43 @@ class EncryptedPrefsManager @Inject constructor(
         return readCredential(readPreferences(), service)
     }
 
+    suspend fun saveCodexTelemetryCredential(credential: CodexTelemetryCredential) {
+        require(credential.host.isNotBlank()) { "Companion host is required" }
+        require(credential.port in 1..65535) { "Invalid companion port" }
+        require(credential.companionId.isNotBlank()) { "Companion ID is required" }
+        require(credential.sharedKeyBase64Url.isNotBlank()) { "Companion key is required" }
+        dataStore.edit { prefs ->
+            prefs.removeCodexTelemetryEntries()
+            prefs.putEncryptedString("${CODEX_TELEMETRY_PREFIX}host", credential.host)
+            prefs[longPreferencesKey("${CODEX_TELEMETRY_PREFIX}port")] = credential.port.toLong()
+            prefs.putEncryptedString("${CODEX_TELEMETRY_PREFIX}id", credential.companionId)
+            prefs.putEncryptedString(
+                "${CODEX_TELEMETRY_PREFIX}shared_key",
+                credential.sharedKeyBase64Url
+            )
+        }
+    }
+
+    suspend fun loadCodexTelemetryCredential(): CodexTelemetryCredential? {
+        val prefs = readPreferences()
+        val host = prefs.getEncryptedString("${CODEX_TELEMETRY_PREFIX}host") ?: return null
+        val port = prefs[longPreferencesKey("${CODEX_TELEMETRY_PREFIX}port")]
+            ?.takeIf { it in 1..65535 }
+            ?.toInt()
+            ?: return null
+        val companionId = prefs.getEncryptedString("${CODEX_TELEMETRY_PREFIX}id") ?: return null
+        val sharedKey = prefs.getEncryptedString("${CODEX_TELEMETRY_PREFIX}shared_key") ?: return null
+        return CodexTelemetryCredential(host, port, companionId, sharedKey)
+    }
+
+    suspend fun deleteCodexTelemetryCredential() {
+        dataStore.edit { prefs -> prefs.removeCodexTelemetryEntries() }
+    }
+
     suspend fun deleteCredential(service: AiService) {
         val updated = dataStore.edit { prefs ->
             prefs.removeServiceEntries(service)
+            if (service == AiService.CODEX) prefs.removeCodexTelemetryEntries()
         }
         updateCache(updated)
     }
@@ -158,6 +193,7 @@ class EncryptedPrefsManager @Inject constructor(
     suspend fun deleteAllCredentials() {
         val updated = dataStore.edit { prefs ->
             AiService.entries.forEach { prefs.removeServiceEntries(it) }
+            prefs.removeCodexTelemetryEntries()
         }
         updateCache(updated)
     }
@@ -393,6 +429,14 @@ class EncryptedPrefsManager @Inject constructor(
         }
     }
 
+    private fun MutablePreferences.removeCodexTelemetryEntries() {
+        val keysToRemove = asMap().keys.filter { it.name.startsWith(CODEX_TELEMETRY_PREFIX) }
+        keysToRemove.forEach { key ->
+            @Suppress("UNCHECKED_CAST")
+            remove(key as Preferences.Key<Any>)
+        }
+    }
+
     private data class CachedSettings(
         val credentialServices: Set<AiService> = emptySet(),
         val refreshIntervalMinutes: Long = DEFAULT_REFRESH_INTERVAL_MINUTES,
@@ -404,6 +448,8 @@ class EncryptedPrefsManager @Inject constructor(
     companion object {
         const val SECURE_PREFS_NAME = SECURE_DATASTORE_NAME
         const val SECURE_DATASTORE_BACKUP_PATH = "datastore/$SECURE_DATASTORE_NAME.preferences_pb"
+
+        private const val CODEX_TELEMETRY_PREFIX = "LOCAL_CODEX_TELEMETRY_"
 
         private val KEY_REFRESH_INTERVAL = longPreferencesKey("refresh_interval_minutes")
         private val KEY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
