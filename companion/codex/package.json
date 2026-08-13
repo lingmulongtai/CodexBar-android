@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node src/index.js",
     "test": "node --test",
-    "check": "node --check src/scanner.js"
+    "check": "node --check src/config.js && node --check src/index.js && node --check src/network.js && node --check src/protocol.js && node --check src/scanner.js && node --check src/server.js"
   },
   "dependencies": {
     "qrcode-terminal": "0.12.0"
