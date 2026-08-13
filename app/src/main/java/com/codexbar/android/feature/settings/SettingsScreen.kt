@@ -18,6 +18,7 @@ import androidx.annotation.StringRes
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -99,6 +101,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.domain.model.ProviderAuthMode
 import com.codexbar.android.core.domain.model.ProviderCategory
 import com.codexbar.android.core.domain.model.providerMetadata
@@ -235,6 +238,11 @@ fun SettingsScreen(
                 SettingsSectionHeader(
                     title = stringResource(R.string.settings_preferences_title),
                     description = stringResource(R.string.settings_preferences_description)
+                )
+
+                ThemeStyleSection(
+                    selectedStyle = uiState.appThemeStyle,
+                    onStyleSelected = viewModel::setAppThemeStyle
                 )
 
                 LanguageSection(
@@ -427,6 +435,138 @@ fun ConnectionsScreen(
             onDismiss = { viewModel.dismissDisconnectConfirmDialog() }
         )
     }
+}
+
+@Composable
+private fun ThemeStyleSection(
+    selectedStyle: AppThemeStyle,
+    onStyleSelected: (AppThemeStyle) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.theme_style_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(R.string.theme_style_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                AppThemeStyle.entries.forEach { style ->
+                    ThemeStyleOption(
+                        style = style,
+                        selected = style == selectedStyle,
+                        onClick = { onStyleSelected(style) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThemeStyleOption(
+    style: AppThemeStyle,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val previewColors = when (style) {
+        AppThemeStyle.MATERIAL_3 -> listOf(Color(0xFF4355B9), Color(0xFFF3DAFF), Color(0xFF52D7F0))
+        AppThemeStyle.LIQUID_GLASS -> listOf(Color(0xFF65BFFF), Color(0xFFE0F4FF), Color(0xFFB391FF))
+        AppThemeStyle.WINUI_3 -> listOf(Color(0xFF0067C0), Color(0xFF60CDFF), Color(0xFFF3F3F3))
+        AppThemeStyle.AURORA -> listOf(Color(0xFF00E5B8), Color(0xFF7957FF), Color(0xFFFF4FA3))
+    }
+    Card(
+        onClick = onClick,
+        modifier = Modifier.width(184.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        ),
+        border = BorderStroke(
+            width = if (selected) 2.dp else 1.dp,
+            color = if (selected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.outlineVariant
+            }
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                previewColors.forEach { color ->
+                    Box(
+                        modifier = Modifier
+                            .size(18.dp)
+                            .background(color, CircleShape)
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                if (selected) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = stringResource(R.string.theme_style_selected),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            Text(
+                text = stringResource(style.titleResource()),
+                style = MaterialTheme.typography.labelLarge
+            )
+            Text(
+                text = stringResource(style.descriptionResource()),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                minLines = 2
+            )
+        }
+    }
+}
+
+@StringRes
+private fun AppThemeStyle.titleResource(): Int = when (this) {
+    AppThemeStyle.MATERIAL_3 -> R.string.theme_style_material_3
+    AppThemeStyle.LIQUID_GLASS -> R.string.theme_style_liquid_glass
+    AppThemeStyle.WINUI_3 -> R.string.theme_style_winui_3
+    AppThemeStyle.AURORA -> R.string.theme_style_aurora
+}
+
+@StringRes
+private fun AppThemeStyle.descriptionResource(): Int = when (this) {
+    AppThemeStyle.MATERIAL_3 -> R.string.theme_style_material_3_description
+    AppThemeStyle.LIQUID_GLASS -> R.string.theme_style_liquid_glass_description
+    AppThemeStyle.WINUI_3 -> R.string.theme_style_winui_3_description
+    AppThemeStyle.AURORA -> R.string.theme_style_aurora_description
 }
 
 @Composable
