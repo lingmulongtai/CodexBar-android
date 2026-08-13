@@ -10,6 +10,7 @@ import com.codexbar.android.core.data.DeepSeekRepositoryImpl
 import com.codexbar.android.core.data.ElevenLabsRepositoryImpl
 import com.codexbar.android.core.data.GeminiRepositoryImpl
 import com.codexbar.android.core.data.KimiRepositoryImpl
+import com.codexbar.android.core.data.IbmBobRepositoryImpl
 import com.codexbar.android.core.data.MoonshotRepositoryImpl
 import com.codexbar.android.core.data.OpenRouterRepositoryImpl
 import com.codexbar.android.core.data.SyntheticRepositoryImpl
@@ -31,6 +32,7 @@ import com.codexbar.android.core.network.deepseek.DeepSeekApiService
 import com.codexbar.android.core.network.elevenlabs.ElevenLabsApiService
 import com.codexbar.android.core.network.gemini.GeminiCompanionClient
 import com.codexbar.android.core.network.kimi.KimiApiService
+import com.codexbar.android.core.network.ibmbob.IbmBobApiService
 import com.codexbar.android.core.network.moonshot.MoonshotApiService
 import com.codexbar.android.core.network.openrouter.OpenRouterApiService
 import com.codexbar.android.core.network.synthetic.SyntheticApiService
@@ -207,4 +209,13 @@ object RepositoryModule {
         apiService: ClinePassApiService,
         prefsManager: EncryptedPrefsManager
     ): QuotaRepository = ClinePassRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.IBM_BOB)
+    fun provideIbmBobRepository(
+        apiService: IbmBobApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = IbmBobRepositoryImpl(apiService, prefsManager)
 }

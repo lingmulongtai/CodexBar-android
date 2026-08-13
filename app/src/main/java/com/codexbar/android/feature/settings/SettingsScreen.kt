@@ -1062,6 +1062,11 @@ private fun ServiceCredentialSection(
                         body = stringResource(R.string.credential_clinepass_setup_body),
                         accent = visualStyle.accent
                     )
+                    service == AiService.IBM_BOB -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_ibm_bob_setup_title),
+                        body = stringResource(R.string.credential_ibm_bob_setup_body),
+                        accent = visualStyle.accent
+                    )
                 }
 
                 if (service == AiService.CODEX) {
@@ -1589,6 +1594,7 @@ private fun AccountLinkControls(
                 AiService.VENICE -> stringResource(R.string.credential_venice_setup_body)
                 AiService.MOONSHOT -> stringResource(R.string.credential_moonshot_setup_body)
                 AiService.CLINEPASS -> stringResource(R.string.credential_clinepass_setup_body)
+                AiService.IBM_BOB -> stringResource(R.string.credential_ibm_bob_setup_body)
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant

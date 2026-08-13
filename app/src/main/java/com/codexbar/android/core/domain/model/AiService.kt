@@ -101,5 +101,11 @@ enum class AiService(
         brandColor = 0xFFF36F45,
         baseUrl = "https://api.cline.bot/",
         requiresManualCredentials = true
+    ),
+    IBM_BOB(
+        displayName = "IBM Bob",
+        brandColor = 0xFF0E61FA,
+        baseUrl = "https://api.us-east.bob.ibm.com/",
+        requiresManualCredentials = true
     )
 }

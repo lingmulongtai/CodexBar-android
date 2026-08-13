@@ -131,6 +131,12 @@ object ProviderCatalog {
             authMode = ProviderAuthMode.API_KEY,
             aliases = setOf("cline", "cline pass", "cline bot", "coding subscription"),
             guideAnchor = "cline"
+        ),
+        AiService.IBM_BOB to ProviderMetadata(
+            category = ProviderCategory.CODING,
+            authMode = ProviderAuthMode.API_KEY,
+            aliases = setOf("ibm", "bob", "bob shell", "bobcoins", "bobshell"),
+            guideAnchor = "ibm-bob"
         )
     )
 

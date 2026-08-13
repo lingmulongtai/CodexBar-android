@@ -16,6 +16,7 @@ import com.codexbar.android.core.network.cursor.CursorApiService
 import com.codexbar.android.core.network.deepseek.DeepSeekApiService
 import com.codexbar.android.core.network.elevenlabs.ElevenLabsApiService
 import com.codexbar.android.core.network.kimi.KimiApiService
+import com.codexbar.android.core.network.ibmbob.IbmBobApiService
 import com.codexbar.android.core.network.moonshot.MoonshotApiService
 import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
 import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
@@ -446,5 +447,21 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(ClinePassApiService::class.java)
+    }
+
+    // --- IBM Bob ---
+
+    @Provides
+    @Singleton
+    fun provideIbmBobApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): IbmBobApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.IBM_BOB.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(IbmBobApiService::class.java)
     }
 }
