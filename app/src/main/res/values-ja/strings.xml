@@ -338,4 +338,13 @@
     <string name="reset_plan_compact_use_by_checkpoint">次の目安 · %2$sまで約%1$d%%</string>
     <string name="insight_limit_not_provided_title">%1$d時間リミットは現在ありません！</string>
     <string name="insight_limit_not_provided_message">短期枠を気にせず、長期枠を見ながら開発を進められます。</string>
+    <string name="codex_reset_credits_title">使用枠リセットクレジット</string>
+    <plurals name="codex_reset_credits_available">
+        <item quantity="other">残り%1$d回</item>
+    </plurals>
+    <string name="codex_reset_credit_next_expires">次の期限: %1$s</string>
+    <string name="codex_reset_credit_expires">期限: %1$s</string>
+    <plurals name="codex_reset_credits_no_expiry">
+        <item quantity="other">期限なし %1$d回</item>
+    </plurals>
 </resources>

@@ -71,6 +71,9 @@ interface QuotaPresentationText {
     fun resetCompactUseByCheckpoint(checkpointPercent: Int, checkpointAt: Instant): String
     fun limitNotProvidedTitle(hours: Long): String
     fun limitNotProvidedMessage(): String
+    fun resetCreditsAvailable(count: Int): String
+    fun resetCreditExpiresAt(expiresAt: Instant): String
+    fun resetCreditNextExpiresAt(expiresAt: Instant): String
 }
 
 object EnglishQuotaPresentationText : QuotaPresentationText {
@@ -151,6 +154,12 @@ object EnglishQuotaPresentationText : QuotaPresentationText {
         "$hours-hour limit isn't active right now!"
     override fun limitNotProvidedMessage(): String =
         "No short-term window was returned, so you can focus on the longer window and keep building."
+    override fun resetCreditsAvailable(count: Int): String =
+        if (count == 1) "1 available" else "$count available"
+    override fun resetCreditExpiresAt(expiresAt: Instant): String =
+        "Expires ${formatResetInstant(expiresAt)}"
+    override fun resetCreditNextExpiresAt(expiresAt: Instant): String =
+        "Next expires ${formatResetInstant(expiresAt)}"
 
     private fun formatResetInstant(instant: Instant): String {
         return DateTimeFormatter.ofPattern("MMM d, HH:mm 'UTC'", locale)
@@ -262,6 +271,16 @@ class AndroidQuotaPresentationText(
         string(R.string.insight_limit_not_provided_title, hours)
     override fun limitNotProvidedMessage(): String =
         string(R.string.insight_limit_not_provided_message)
+    override fun resetCreditsAvailable(count: Int): String =
+        languageContext.resources.getQuantityString(
+            R.plurals.codex_reset_credits_available,
+            count,
+            count
+        )
+    override fun resetCreditExpiresAt(expiresAt: Instant): String =
+        string(R.string.codex_reset_credit_expires, formatInstant(expiresAt))
+    override fun resetCreditNextExpiresAt(expiresAt: Instant): String =
+        string(R.string.codex_reset_credit_next_expires, formatInstant(expiresAt))
 
     private fun string(@StringRes resourceId: Int, vararg formatArgs: Any): String {
         return languageContext.getString(resourceId, *formatArgs)

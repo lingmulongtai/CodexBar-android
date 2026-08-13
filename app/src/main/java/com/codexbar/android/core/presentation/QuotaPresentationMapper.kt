@@ -61,7 +61,20 @@ class QuotaPresentationMapper(
                     QuotaAction.Refresh,
                     QuotaAction.StartMonitoring,
                     QuotaAction.Disconnect
-                )
+                ),
+                codexResetCredits = quota.codexResetCredits
+                    ?.takeUnless { privacy.redactSensitiveValues }
+                    ?.let { credits ->
+                        CodexResetCreditsPresentation(
+                            availableCount = credits.availableCount,
+                            availableLabel = text.resetCreditsAvailable(credits.availableCount),
+                            nextExpiryLabel = credits.expiresAt.firstOrNull()
+                                ?.let(text::resetCreditNextExpiresAt),
+                            expiryLabels = credits.expiresAt.map(text::resetCreditExpiresAt),
+                            noExpiryCount = (credits.availableCount - credits.expiresAt.size)
+                                .coerceAtLeast(0)
+                        )
+                    }
             )
         }
 

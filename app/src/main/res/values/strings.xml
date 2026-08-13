@@ -338,4 +338,15 @@
     <string name="reset_plan_compact_use_by_checkpoint">Next target · ~%1$d%% by %2$s</string>
     <string name="insight_limit_not_provided_title">%1$d-hour limit isn’t active right now!</string>
     <string name="insight_limit_not_provided_message">No short-term window was returned, so you can focus on the longer window and keep building.</string>
+    <string name="codex_reset_credits_title">Limit reset credits</string>
+    <plurals name="codex_reset_credits_available">
+        <item quantity="one">%1$d available</item>
+        <item quantity="other">%1$d available</item>
+    </plurals>
+    <string name="codex_reset_credit_next_expires">Next expires %1$s</string>
+    <string name="codex_reset_credit_expires">Expires %1$s</string>
+    <plurals name="codex_reset_credits_no_expiry">
+        <item quantity="one">%1$d without an expiry date</item>
+        <item quantity="other">%1$d without an expiry date</item>
+    </plurals>
 </resources>

@@ -20,7 +20,16 @@ data class ServiceQuotaPresentation(
     val extraUsage: ExtraUsagePresentation?,
     val insights: List<ServiceInsightPresentation> = emptyList(),
     val freshness: FreshnessPresentation,
-    val supportedActions: Set<QuotaAction>
+    val supportedActions: Set<QuotaAction>,
+    val codexResetCredits: CodexResetCreditsPresentation? = null
+)
+
+data class CodexResetCreditsPresentation(
+    val availableCount: Int,
+    val availableLabel: String,
+    val nextExpiryLabel: String?,
+    val expiryLabels: List<String>,
+    val noExpiryCount: Int
 )
 
 data class ServiceInsightPresentation(

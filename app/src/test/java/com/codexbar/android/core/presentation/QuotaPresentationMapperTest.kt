@@ -2,6 +2,7 @@ package com.codexbar.android.core.presentation
 
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
+import com.codexbar.android.core.domain.model.CodexResetCredits
 import com.codexbar.android.core.domain.model.ExtraUsage
 import com.codexbar.android.core.domain.model.QuotaInfo
 import com.codexbar.android.core.domain.model.QuotaNotice
@@ -139,5 +140,57 @@ class QuotaPresentationMapperTest {
             "No short-term window was returned, so you can focus on the longer window and keep building.",
             insight.message
         )
+    }
+
+    @Test
+    fun `maps Codex reset credits with count and expiration order`() {
+        val snapshot = mapper.map(
+            quotas = listOf(
+                QuotaInfo(
+                    service = AiService.CODEX,
+                    windows = listOf(UsageWindow("7-Day", 0.24, now.plusSeconds(172800))),
+                    extraUsage = null,
+                    fetchedAt = now,
+                    codexResetCredits = CodexResetCredits(
+                        availableCount = 3,
+                        expiresAt = listOf(
+                            now.plusSeconds(7200),
+                            now.plusSeconds(86400)
+                        )
+                    )
+                )
+            )
+        )
+
+        val credits = requireNotNull(snapshot.services.single().codexResetCredits)
+        assertEquals(3, credits.availableCount)
+        assertEquals("3 available", credits.availableLabel)
+        assertEquals("Next expires Jul 13, 02:00 UTC", credits.nextExpiryLabel)
+        assertEquals(
+            listOf("Expires Jul 13, 02:00 UTC", "Expires Jul 14, 00:00 UTC"),
+            credits.expiryLabels
+        )
+        assertEquals(1, credits.noExpiryCount)
+    }
+
+    @Test
+    fun `redaction hides Codex reset credit inventory`() {
+        val snapshot = mapper.map(
+            quotas = listOf(
+                QuotaInfo(
+                    service = AiService.CODEX,
+                    windows = emptyList(),
+                    extraUsage = null,
+                    fetchedAt = now,
+                    codexResetCredits = CodexResetCredits(
+                        availableCount = 1,
+                        expiresAt = emptyList()
+                    )
+                )
+            ),
+            privacy = PrivacyPresentation(redactSensitiveValues = true)
+        )
+
+        assertNull(snapshot.services.single().codexResetCredits)
     }
 }
