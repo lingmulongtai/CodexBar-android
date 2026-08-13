@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
 import com.codexbar.android.CodexBarApp
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppThemeStyle
@@ -34,9 +35,13 @@ import java.time.ZoneId
 class ScreenshotActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         val style = AppThemeStyle.fromStoredValue(intent.getStringExtra(EXTRA_THEME))
         val darkTheme = intent.getBooleanExtra(EXTRA_DARK_THEME, false)
+        enableEdgeToEdge()
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !darkTheme
+            isAppearanceLightNavigationBars = !darkTheme
+        }
         val snapshot = createScreenshotSnapshot(Instant.now())
 
         setContent {
