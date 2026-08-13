@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.update.AvailableUpdate
 import com.codexbar.android.core.update.GitHubReleaseUpdateChecker
@@ -50,7 +51,8 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
 
         setContent {
-            CodexBarTheme {
+            val appThemeStyle by prefsManager.appThemeStyle.collectAsStateWithLifecycle()
+            CodexBarTheme(style = appThemeStyle) {
                 var availableUpdate by remember { mutableStateOf<AvailableUpdate?>(null) }
 
                 LaunchedEffect(Unit) {

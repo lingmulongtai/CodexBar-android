@@ -49,6 +49,7 @@ import com.codexbar.android.ui.components.providerIcon
 import com.codexbar.android.ui.theme.CodexBarSpacing
 import com.codexbar.android.ui.theme.CodexBarStateColors
 import com.codexbar.android.ui.theme.providerVisualStyle
+import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 
 @Composable
 fun ServiceCard(
@@ -58,6 +59,7 @@ fun ServiceCard(
     modifier: Modifier = Modifier
 ) {
     val visualStyle = providerVisualStyle(service.service)
+    val themeProfile = LocalCodexBarThemeProfile.current
     var previousFetchedAt by remember(service.service) {
         mutableStateOf(service.freshness.fetchedAt)
     }
@@ -84,16 +86,34 @@ fun ServiceCard(
                 scaleX = scale
                 scaleY = scale
             },
-        shape = visualStyle.shape,
+        shape = if (themeProfile.usesProviderCardShapes) {
+            visualStyle.shape
+        } else {
+            MaterialTheme.shapes.large
+        },
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (selected) 3.dp else 1.dp,
-            pressedElevation = 5.dp
+            defaultElevation = if (selected) {
+                themeProfile.serviceCardElevation + 2.dp
+            } else {
+                themeProfile.serviceCardElevation
+            },
+            pressedElevation = themeProfile.serviceCardElevation + 4.dp
         ),
         border = BorderStroke(
             width = if (selected) 2.dp else 1.dp,
-            color = visualStyle.accent.copy(alpha = 0.22f + (updatePulse.value * 0.5f))
+            color = visualStyle.accent.copy(
+                alpha = themeProfile.serviceCardBorderAlpha + (updatePulse.value * 0.5f)
+            )
         ),
-        colors = CardDefaults.cardColors(containerColor = visualStyle.container)
+        colors = CardDefaults.cardColors(
+            containerColor = if (themeProfile.usesProviderCardShapes) {
+                visualStyle.container
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerLow.copy(
+                    alpha = themeProfile.serviceCardContainerAlpha
+                )
+            }
+        )
     ) {
         Column(modifier = Modifier.padding(CodexBarSpacing.large)) {
             ProviderHeader(

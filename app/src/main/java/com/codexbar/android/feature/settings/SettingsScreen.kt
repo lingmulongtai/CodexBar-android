@@ -76,6 +76,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -109,6 +110,7 @@ import com.codexbar.android.core.security.PrivacySettings
 import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
 import com.codexbar.android.ui.components.providerIcon
 import com.codexbar.android.ui.theme.providerVisualStyle
+import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 import kotlinx.coroutines.delay
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -122,6 +124,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val themeProfile = LocalCodexBarThemeProfile.current
     val context = LocalContext.current
     var notificationsAllowed by remember { mutableStateOf(context.canPostNotifications()) }
     var promotedUpdatesAllowed by remember { mutableStateOf(context.canPostPromotedNotifications()) }
@@ -161,9 +164,13 @@ fun SettingsScreen(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings_title)) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = themeProfile.topBarContainerColor
+                ),
                 navigationIcon = {
                     if (showBackButton) {
                         IconButton(onClick = onNavigateBack) {
@@ -278,6 +285,7 @@ fun ConnectionsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val themeProfile = LocalCodexBarThemeProfile.current
     val context = LocalContext.current
     var providerSearchQuery by rememberSaveable { mutableStateOf("") }
     var providerFilterName by rememberSaveable {
@@ -310,9 +318,13 @@ fun ConnectionsScreen(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.connections_title)) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = themeProfile.topBarContainerColor
+                ),
                 navigationIcon = {
                     if (showBackButton) {
                         IconButton(onClick = onNavigateBack) {

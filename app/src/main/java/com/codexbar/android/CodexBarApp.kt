@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.rounded.DonutLarge
@@ -45,6 +46,7 @@ import com.codexbar.android.feature.dashboard.DashboardScreen
 import com.codexbar.android.feature.settings.ConnectionsScreen
 import com.codexbar.android.feature.settings.SettingsScreen
 import com.codexbar.android.feature.settings.SettingsViewModel
+import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 
 private const val DashboardRoute = "dashboard"
 private const val ConnectionsRoute = "connections"
@@ -81,6 +83,7 @@ fun CodexBarApp(
     onScreenPrivacyChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val themeProfile = LocalCodexBarThemeProfile.current
     val navController = rememberNavController()
     val settingsViewModel: SettingsViewModel = hiltViewModel()
     val currentEntry by navController.currentBackStackEntryAsState()
@@ -106,13 +109,18 @@ fun CodexBarApp(
         }
     }
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxSize()
+            .background(themeProfile.backgroundBrush)
+    ) {
         if (useExpandedNavigation(maxWidth.value)) {
             Row(modifier = Modifier.fillMaxSize()) {
                 NavigationRail(
                     modifier = Modifier
                         .fillMaxHeight()
                         .width(88.dp),
+                    containerColor = themeProfile.navigationContainerColor,
                     header = {
                         Surface(
                             modifier = Modifier.padding(vertical = 12.dp),
@@ -161,8 +169,9 @@ fun CodexBarApp(
         } else {
             Scaffold(
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                containerColor = androidx.compose.ui.graphics.Color.Transparent,
                 bottomBar = {
-                    NavigationBar {
+                    NavigationBar(containerColor = themeProfile.navigationContainerColor) {
                         AppDestination.entries.forEach { destination ->
                             NavigationBarItem(
                                 selected = currentRoute == destination.route,

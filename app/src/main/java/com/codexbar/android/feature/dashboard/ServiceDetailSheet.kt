@@ -45,6 +45,7 @@ import com.codexbar.android.ui.components.providerIcon
 import com.codexbar.android.ui.theme.CodexBarSpacing
 import com.codexbar.android.ui.theme.CodexBarStateColors
 import com.codexbar.android.ui.theme.providerVisualStyle
+import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -86,10 +87,21 @@ fun ServiceDetailPane(
     modifier: Modifier = Modifier
 ) {
     val visualStyle = providerVisualStyle(service.service)
+    val themeProfile = LocalCodexBarThemeProfile.current
     Surface(
         modifier = modifier.fillMaxSize(),
-        shape = visualStyle.shape,
-        color = visualStyle.container,
+        shape = if (themeProfile.usesProviderCardShapes) {
+            visualStyle.shape
+        } else {
+            MaterialTheme.shapes.large
+        },
+        color = if (themeProfile.usesProviderCardShapes) {
+            visualStyle.container
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow.copy(
+                alpha = themeProfile.serviceCardContainerAlpha
+            )
+        },
         border = BorderStroke(1.dp, visualStyle.accent.copy(alpha = 0.3f))
     ) {
         ServiceDetailContent(

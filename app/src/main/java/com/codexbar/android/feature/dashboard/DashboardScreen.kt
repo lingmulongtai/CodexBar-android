@@ -29,6 +29,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -48,6 +49,7 @@ import com.codexbar.android.R
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaStatus
 import com.codexbar.android.ui.theme.CodexBarSpacing
+import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 
 private const val TwoPaneMinWidthDp = 720f
 
@@ -58,6 +60,7 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val themeProfile = LocalCodexBarThemeProfile.current
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     var selectedServiceName by remember { mutableStateOf<String?>(null) }
 
@@ -71,9 +74,13 @@ fun DashboardScreen(
         ?.firstOrNull { it.service.name == selectedServiceName }
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.app_name)) }
+                title = { Text(stringResource(R.string.app_name)) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = themeProfile.topBarContainerColor
+                )
             )
         }
     ) { paddingValues ->
