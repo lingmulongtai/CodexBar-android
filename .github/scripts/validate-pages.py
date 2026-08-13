@@ -28,7 +28,7 @@ class LandingPageParser(HTMLParser):
         if element_id:
             self.ids.append(element_id)
 
-        for attribute in ("href", "src"):
+        for attribute in ("href", "src", "data-image"):
             value = attributes.get(attribute)
             if value:
                 self.references.append((tag, value, line))
