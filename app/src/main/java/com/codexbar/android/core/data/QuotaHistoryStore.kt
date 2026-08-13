@@ -7,6 +7,7 @@ import com.codexbar.android.core.domain.model.QuotaInfo
 import com.codexbar.android.core.presentation.AndroidQuotaPresentationText
 import com.codexbar.android.core.presentation.PacePresentation
 import com.codexbar.android.core.presentation.QuotaHistorySample
+import com.codexbar.android.core.presentation.QuotaHistorySeries
 import com.codexbar.android.core.presentation.QuotaPaceCalculator
 import com.codexbar.android.core.presentation.QuotaPresentationMapper
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -33,10 +34,10 @@ class QuotaHistoryStore @Inject constructor(
                     utilization = window.utilization.coerceIn(0.0, 1.0),
                     resetsAt = window.resetsAt
                 )
-                val samples = (loadSamples(key) + sample)
-                    .distinctBy { "${it.fetchedAt.toEpochMilli()}|${it.resetsAt?.epochSecond}|${it.utilization}" }
-                    .sortedBy { it.fetchedAt }
-                    .takeLast(MAX_SAMPLES_PER_WINDOW)
+                val samples = QuotaHistorySeries.compact(
+                    samples = loadSamples(key) + sample,
+                    now = sample.fetchedAt
+                )
                 editor.putString(key, samples.joinToString("\n") { it.serialize() })
             }
         }
@@ -53,6 +54,21 @@ class QuotaHistoryStore @Inject constructor(
                             samples = loadSamples(historyKey(quota.service, window.label)),
                             currentWindow = window,
                             now = now
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    fun historyFor(quotas: List<QuotaInfo>): Map<String, List<QuotaHistorySample>> {
+        return buildMap {
+            for (quota in quotas) {
+                for (window in quota.windows) {
+                    put(
+                        QuotaPresentationMapper.metricKey(quota.service, window.label),
+                        QuotaHistorySeries.forChart(
+                            loadSamples(historyKey(quota.service, window.label))
                         )
                     )
                 }
@@ -103,6 +119,5 @@ class QuotaHistoryStore @Inject constructor(
     internal companion object {
         const val PREFS_NAME = "codexbar_quota_history"
         const val BACKUP_PATH = "$PREFS_NAME.xml"
-        private const val MAX_SAMPLES_PER_WINDOW = 96
     }
 }
