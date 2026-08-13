@@ -287,6 +287,11 @@ private fun MetricDetailCard(metric: QuotaMetricPresentation, accent: Color) {
 
             QuotaGaugeBar(metric = metric, goodColor = accent)
 
+            QuotaHistoryChart(
+                history = metric.history,
+                accent = accent
+            )
+
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(CodexBarSpacing.small),
                 verticalArrangement = Arrangement.spacedBy(CodexBarSpacing.small)

@@ -65,6 +65,10 @@
     <string name="dashboard_empty_message">Go to Connections to add an AI provider securely.</string>
     <string name="content_description_error">Error</string>
     <string name="quota_windows">Quota windows</string>
+    <string name="quota_history_title">Usage history</string>
+    <string name="quota_history_sample_count">%1$d samples</string>
+    <string name="quota_history_collecting">Collecting more samples for the trend graph</string>
+    <string name="quota_history_accessibility">Quota usage history from %1$s to %2$s. Dashed markers indicate a reset.</string>
     <string name="extra_usage">Extra usage</string>
     <string name="quota_monitor">Quota monitor</string>
     <string name="detail_status">Status</string>

@@ -65,6 +65,10 @@
     <string name="dashboard_empty_message">接続タブからAIプロバイダーを安全に追加してください。</string>
     <string name="content_description_error">エラー</string>
     <string name="quota_windows">使用枠</string>
+    <string name="quota_history_title">使用量の推移</string>
+    <string name="quota_history_sample_count">%1$d件</string>
+    <string name="quota_history_collecting">推移グラフに必要なデータを収集中です</string>
+    <string name="quota_history_accessibility">%1$sから%2$sまでの使用枠推移。破線はリセットを示します。</string>
     <string name="extra_usage">追加使用量</string>
     <string name="quota_monitor">使用枠モニター</string>
     <string name="detail_status">状態</string>

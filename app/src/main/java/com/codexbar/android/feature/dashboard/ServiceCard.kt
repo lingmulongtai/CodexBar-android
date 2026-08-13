@@ -212,6 +212,11 @@ fun ServiceCard(
                         accent = visualStyle.accent
                     )
                 }
+                QuotaHistorySparkline(
+                    history = metric.history,
+                    accent = visualStyle.accent,
+                    modifier = Modifier.padding(top = CodexBarSpacing.small)
+                )
             }
 
             val secondaryMetrics = service.metrics.filterNot {
