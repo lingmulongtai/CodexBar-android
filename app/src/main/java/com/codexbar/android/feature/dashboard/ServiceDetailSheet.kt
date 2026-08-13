@@ -137,6 +137,10 @@ private fun ServiceDetailContent(
                 expanded = true
             )
         }
+        service.codexTelemetry?.let { telemetry ->
+            SectionTitle(stringResource(R.string.codex_telemetry_section_title))
+            CodexTelemetryDetail(telemetry = telemetry, accent = accent)
+        }
         service.insights.forEach { insight ->
             ServiceInsightBanner(insight = insight, accent = accent)
         }

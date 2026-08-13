@@ -145,6 +145,14 @@ fun ServiceCard(
                 )
             }
 
+            service.codexTelemetry?.let { telemetry ->
+                Spacer(modifier = Modifier.height(CodexBarSpacing.medium))
+                CodexTelemetryCompactCard(
+                    telemetry = telemetry,
+                    accent = visualStyle.accent
+                )
+            }
+
             service.primaryMetric?.let { metric ->
                 Spacer(modifier = Modifier.height(CodexBarSpacing.large))
                 Row(
