@@ -116,6 +116,15 @@ fun ServiceCard(
                 ServiceError(service)
             }
 
+            service.codexResetCredits?.let { credits ->
+                Spacer(modifier = Modifier.height(CodexBarSpacing.medium))
+                CodexResetCreditsCard(
+                    credits = credits,
+                    accent = visualStyle.accent,
+                    expanded = false
+                )
+            }
+
             service.primaryMetric?.let { metric ->
                 Spacer(modifier = Modifier.height(CodexBarSpacing.large))
                 Row(

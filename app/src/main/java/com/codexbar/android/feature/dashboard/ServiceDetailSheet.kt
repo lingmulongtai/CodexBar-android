@@ -118,6 +118,13 @@ private fun ServiceDetailContent(
     ) {
         ServiceDetailHeader(service, accent)
         ServiceStateSummary(service, accent)
+        service.codexResetCredits?.let { credits ->
+            CodexResetCreditsCard(
+                credits = credits,
+                accent = accent,
+                expanded = true
+            )
+        }
         service.insights.forEach { insight ->
             ServiceInsightBanner(insight = insight, accent = accent)
         }
