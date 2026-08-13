@@ -95,5 +95,23 @@ enum class AiService(
         brandColor = 0xFF111827,
         baseUrl = "https://api.moonshot.ai/",
         requiresManualCredentials = true
+    ),
+    CLINEPASS(
+        displayName = "Cline",
+        brandColor = 0xFFF36F45,
+        baseUrl = "https://api.cline.bot/",
+        requiresManualCredentials = true
+    ),
+    IBM_BOB(
+        displayName = "IBM Bob",
+        brandColor = 0xFF0E61FA,
+        baseUrl = "https://api.us-east.bob.ibm.com/",
+        requiresManualCredentials = true
+    ),
+    FIREWORKS(
+        displayName = "Fireworks AI",
+        brandColor = 0xFFF45B3A,
+        baseUrl = "https://api.fireworks.ai/",
+        requiresManualCredentials = true
     )
 }

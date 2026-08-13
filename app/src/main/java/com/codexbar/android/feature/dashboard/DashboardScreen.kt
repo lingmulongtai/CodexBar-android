@@ -29,6 +29,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -45,9 +46,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
+import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaStatus
 import com.codexbar.android.ui.theme.CodexBarSpacing
+import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 
 private const val TwoPaneMinWidthDp = 720f
 
@@ -59,11 +62,42 @@ fun DashboardScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
-    var selectedServiceName by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.refresh()
     }
+
+    DashboardContent(
+        uiState = uiState,
+        isRefreshing = isRefreshing,
+        onRefresh = viewModel::refresh,
+        onNavigateToConnections = onNavigateToConnections
+    )
+}
+
+@Composable
+fun DashboardPreviewScreen(
+    snapshot: QuotaPresentationSnapshot,
+    onNavigateToConnections: () -> Unit = {}
+) {
+    DashboardContent(
+        uiState = DashboardUiState.Content(snapshot),
+        isRefreshing = false,
+        onRefresh = {},
+        onNavigateToConnections = onNavigateToConnections
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DashboardContent(
+    uiState: DashboardUiState,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
+    onNavigateToConnections: () -> Unit
+) {
+    val themeProfile = LocalCodexBarThemeProfile.current
+    var selectedServiceName by remember { mutableStateOf<String?>(null) }
 
     val explicitlySelectedService = (uiState as? DashboardUiState.Content)
         ?.snapshot
@@ -71,9 +105,13 @@ fun DashboardScreen(
         ?.firstOrNull { it.service.name == selectedServiceName }
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.app_name)) }
+                title = { Text(stringResource(R.string.app_name)) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = themeProfile.topBarContainerColor
+                )
             )
         }
     ) { paddingValues ->
@@ -85,7 +123,7 @@ fun DashboardScreen(
             val useTwoPane = useTwoPaneDashboard(maxWidth.value)
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
-                onRefresh = { viewModel.refresh() },
+                onRefresh = onRefresh,
                 modifier = Modifier.fillMaxSize()
             ) {
                 when (val state = uiState) {
@@ -135,7 +173,7 @@ fun DashboardScreen(
                                     ) {
                                         ServiceDetailPane(
                                             service = paneService,
-                                            onRefresh = { viewModel.refresh() },
+                                            onRefresh = onRefresh,
                                             onManageConnection = onNavigateToConnections
                                         )
                                     }
@@ -160,7 +198,7 @@ fun DashboardScreen(
                     ServiceDetailSheet(
                         service = service,
                         onDismiss = { selectedServiceName = null },
-                        onRefresh = { viewModel.refresh() },
+                        onRefresh = onRefresh,
                         onManageConnection = {
                             selectedServiceName = null
                             onNavigateToConnections()

@@ -2,7 +2,7 @@
 
 > Android port of [**CodexBar**](https://github.com/steipete/CodexBar) by [@steipete](https://github.com/steipete) — the macOS menu bar app for monitoring AI service quotas.
 
-Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi Code, ElevenLabs, OpenRouter, Synthetic, Chutes, DeepSeek, Venice, and Moonshot API usage in one place; Gemini uses an optional private companion that keeps Google authentication inside the official Gemini CLI.
+Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi Code, ElevenLabs, OpenRouter, Synthetic, Chutes, DeepSeek, Venice, Moonshot API, Cline, IBM Bob, and Fireworks AI usage in one place. Optional private companions keep Gemini authentication inside the official Gemini CLI and add local Codex context/token telemetry without exporting session content.
 
 <p align="center">
   <img src="docs/images/dashboard-light.png" width="320" alt="Material 3 Expressive dashboard in light mode" />
@@ -14,8 +14,11 @@ Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT
 
 ## Features
 
-- Unified quota monitoring for Claude, Codex, GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi Code, ElevenLabs, OpenRouter, Synthetic, Chutes, DeepSeek, Venice, and Moonshot API
-- Material 3 Expressive provider cards with animated rings, bars, exact values, reset countdowns, and pace forecasts
+- Unified quota monitoring for 18 providers: Claude, Codex, GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi Code, ElevenLabs, OpenRouter, Synthetic, Chutes, DeepSeek, Venice, Moonshot API, Cline, IBM Bob, and Fireworks AI
+- Four complete selectable design systems: the existing Material 3 UI, Liquid Glass, WinUI 3, and Aurora, each with light/dark support
+- Provider cards with animated rings, bars, exact values, reset countdowns, pace forecasts, and retained history charts
+- Codex reset-credit inventory, provider-reported model quota windows, and exact expiry details
+- Optional privacy-preserving Codex companion for current context usage and input, cached-input, output, reasoning, daily, and per-model token totals
 - Adaptive phone navigation and a two-pane large-screen dashboard
 - Quick Settings tile for at-a-glance status
 - Per-widget Android home screen customization for providers, quota windows, reset time, freshness, and pace
@@ -27,7 +30,23 @@ Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT
 - Push alert when quota resets (fully replenished)
 - DataStore + Android Keystore-backed credential storage
 - English and Japanese per-app language selection
-- Dynamic color, light/dark themes, and responsive widget layouts
+- Dynamic color for Material 3, light/dark appearance, selectable visual styles, and responsive widget layouts
+
+## Selectable design systems and Codex insights
+
+<p align="center">
+  <img src="docs/images/releases/v0.7.0/dashboard-material3.png" width="210" alt="Material 3 dashboard" />
+  <img src="docs/images/releases/v0.7.0/dashboard-liquid-glass.png" width="210" alt="Liquid Glass dashboard" />
+  <img src="docs/images/releases/v0.7.0/dashboard-winui3.png" width="210" alt="WinUI 3 dashboard" />
+  <img src="docs/images/releases/v0.7.0/dashboard-aurora-dark.png" width="210" alt="Aurora dashboard in dark mode" />
+</p>
+
+<p align="center">
+  <img src="docs/images/releases/v0.7.0/codex-insights-liquid-glass.png" width="320" alt="Codex reset-credit and context detail" />
+  <img src="docs/images/releases/v0.7.0/codex-token-history-liquid-glass.png" width="320" alt="Codex daily token history" />
+</p>
+
+<p align="center"><sub>All release screenshots were captured from the debug-only deterministic harness on an Android 16 emulator. They contain demo data, not account credentials.</sub></p>
 
 ## Live monitoring and large screens
 
@@ -67,7 +86,7 @@ Signed APKs are available on this fork's [Releases](https://github.com/lingmulon
 
 If Android reports a signature conflict, first confirm that both APKs came from this repository's Releases. Uninstalling the existing app is a last resort because it deletes locally encrypted credentials, settings, and cached usage data.
 
-No hosted CodexBar backend is used. Provider tokens stay on-device; the optional Gemini companion is a local-network process on your own computer whose code does not read, copy, store, or serve Google tokens.
+No hosted CodexBar backend is used. Provider tokens stay on-device. The optional Gemini and Codex companions are local-network processes on your own computer: the Gemini companion does not read, copy, store, or serve Google tokens, while the Codex companion serves only bounded aggregate token/model metadata and never prompts, responses, file paths, working directories, session IDs, or account tokens.
 
 ## Security & Backup
 
@@ -145,9 +164,20 @@ cat ~/.codex/auth.json | python3 -c "import sys,json; print(json.loads(sys.stdin
 
 Do not extract bearer tokens from browser DevTools unless you are debugging locally and understand the exposure risk.
 
+#### Optional private Codex telemetry companion
+
+OpenAI's subscription quota response does not contain local Codex CLI context-window or token-count history. To add those insights without uploading session content, install `CodexBar-Codex-Telemetry-Companion-v0.7.0.zip` from the same GitHub Release as the app:
+
+1. Install Node.js 20 or newer on the computer where Codex CLI or Codex desktop stores `~/.codex/sessions`.
+2. Extract the companion archive. On Windows, run `start-windows.cmd`; on macOS or Linux, run `./start-macos-linux.sh`.
+3. Keep the phone and computer on the same trusted Wi-Fi, scan the displayed QR code, and review the hidden pairing value in the Codex card under **Connections**.
+4. Tap **Pair & verify telemetry companion**. Keep the companion running whenever local telemetry should refresh.
+
+The scanner is bounded to recent session files and reads only `token_count` plus model metadata. Android receives current context usage, aggregate token categories, daily totals, and model totals. Requests use HMAC-SHA256 authentication with replay and rate-limit defenses; snapshots use AES-256-GCM; the server accepts only a numeric private address. Never expose its port through router forwarding, a public IP, or a public tunnel. Codex subscription quota, reset credits, and model-limit windows continue to come directly from OpenAI even when this companion is off.
+
 ### Gemini (Google)
 
-Direct Gemini OAuth inside the Android app remains disabled. CodexBar does not copy Gemini CLI credentials, embed a Google client secret, or call the internal `cloudcode-pa` service. Instead, the v0.6.0 companion drives the official Gemini CLI's documented `/stats` view and sends only a sanitized quota snapshot over your trusted local network.
+Direct Gemini OAuth inside the Android app remains disabled. CodexBar does not copy Gemini CLI credentials, embed a Google client secret, or call the internal `cloudcode-pa` service. Instead, the v0.7.0 companion drives the official Gemini CLI's documented `/stats` view and sends only a sanitized quota snapshot over your trusted local network.
 
 #### Install and pair the private companion
 
@@ -159,7 +189,7 @@ gemini
 ```
 
 2. Complete Google's sign-in in that official CLI, then exit it.
-3. Download `CodexBar-Gemini-Companion-v0.6.0.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
+3. Download `CodexBar-Gemini-Companion-v0.7.0.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
 4. On Windows, double-click `start-windows.cmd`. On macOS or Linux, run `./start-macos-linux.sh`. The first launch installs only the versions pinned in `package-lock.json`.
 5. Keep the phone and computer on the same trusted Wi-Fi. If the computer firewall prompts, permit private networks only.
 6. Scan the displayed QR code with the phone and choose CodexBar, or paste the complete `codexbar://gemini-pair?...` value into the Gemini card.
@@ -248,6 +278,24 @@ Create an API key on the international Moonshot API platform, paste it into the 
 
 The key is sent only as a bearer credential to the fixed international Moonshot HTTPS host, redirects and HTTP logging are disabled, and it is encrypted with Android Keystore after validation. The app does not automatically forward the key to the China-mainland host. Prompts, model responses, and request history are not fetched.
 
+### Cline
+
+Create a dedicated API key in Cline, paste it into the Cline card, and select **Validate & connect**. The app calls only `https://api.cline.bot/api/v1/users/me/plan/usage-limits` and displays the provider-reported 5-hour, weekly, and monthly plan windows with their reset times.
+
+The key is sent only as a bearer credential to the fixed Cline HTTPS host, redirects and HTTP logging are disabled, and it is encrypted with Android Keystore after validation. Prompts, model responses, and request history are not requested.
+
+### IBM Bob
+
+Create an API key in the IBM Bob portal, paste it into the IBM Bob card, and select **Validate & connect**. The app reads the profile and aggregates the monthly Bobcoin usage and budget across visible teams, preserving the earliest reported refresh time.
+
+API keys use IBM Bob's `Apikey` scheme, while structurally valid JWT credentials use `Bearer`. Regional endpoints returned by the profile are accepted only when they are HTTPS hosts strictly under `bob.ibm.com`; URL user info, ports, paths, queries, fragments, and lookalike domains are rejected. The encrypted credential is never logged, and prompts or coding history are not requested.
+
+### Fireworks AI
+
+Create a dedicated Fireworks API key and copy the account slug from the account URL. Enter both in the Fireworks AI card and select **Validate & connect**. The app calls only `https://api.fireworks.ai/v1/accounts/{accountSlug}/billing/summary` and totals rated spend for the last 30 days in the first reported currency.
+
+The account slug is restricted to a short ASCII identifier, the API key is sent only as a bearer credential to the fixed Fireworks HTTPS host, redirects and HTTP logging are disabled, and both values are encrypted with Android Keystore after validation. Prompts, model responses, and inference history are not requested.
+
 ## Build
 
 ```bash
@@ -281,7 +329,7 @@ Public releases are built only from `v*` Git tags by the protected release workf
 - `ANDROID_KEY_ALIAS`
 - `ANDROID_KEY_PASSWORD`
 
-The release workflow publishes signed APK/AAB artifacts, the versioned Gemini companion ZIP, Android and companion CycloneDX SBOMs, `SHA256SUMS`, a build provenance JSON file, and GitHub artifact attestations. Debug APKs from CI are short-lived test artifacts only.
+The release workflow publishes signed APK/AAB artifacts, versioned Gemini and Codex companion ZIPs, Android and companion CycloneDX SBOMs, emulator screenshots, `SHA256SUMS`, a build provenance JSON file, and GitHub artifact attestations. Debug APKs from CI are short-lived test artifacts only.
 
 ## Tech Stack
 
@@ -289,7 +337,7 @@ The release workflow publishes signed APK/AAB artifacts, the versioned Gemini co
 - Hilt (DI), Retrofit2 + OkHttp (networking)
 - WorkManager (background sync), DataStore + Android Keystore-backed encryption
 - Glance AppWidget, Quick Settings tile, Android notification/live monitoring APIs
-- Node.js companion with the official Gemini CLI, authenticated local snapshots, and no Google credential export
+- Node.js companions for the official Gemini CLI and privacy-bounded Codex session telemetry, with authenticated encrypted local snapshots
 - KSP, kotlinx.serialization
 
 ## Acknowledgments

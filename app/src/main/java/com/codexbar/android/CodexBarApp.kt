@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.rounded.DonutLarge
@@ -42,9 +43,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.codexbar.android.feature.dashboard.DashboardScreen
+import com.codexbar.android.feature.dashboard.DashboardPreviewScreen
 import com.codexbar.android.feature.settings.ConnectionsScreen
 import com.codexbar.android.feature.settings.SettingsScreen
 import com.codexbar.android.feature.settings.SettingsViewModel
+import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
+import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 
 private const val DashboardRoute = "dashboard"
 private const val ConnectionsRoute = "connections"
@@ -78,9 +82,13 @@ fun CodexBarApp(
     initialDestination: String,
     initialGeminiPairingUri: String? = null,
     onGeminiPairingConsumed: () -> Unit = {},
+    initialCodexTelemetryPairingUri: String? = null,
+    onCodexTelemetryPairingConsumed: () -> Unit = {},
+    dashboardPreviewSnapshot: QuotaPresentationSnapshot? = null,
     onScreenPrivacyChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val themeProfile = LocalCodexBarThemeProfile.current
     val navController = rememberNavController()
     val settingsViewModel: SettingsViewModel = hiltViewModel()
     val currentEntry by navController.currentBackStackEntryAsState()
@@ -106,13 +114,26 @@ fun CodexBarApp(
         }
     }
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+    LaunchedEffect(initialCodexTelemetryPairingUri) {
+        if (initialCodexTelemetryPairingUri != null) {
+            navController.navigate(ConnectionsRoute) {
+                launchSingleTop = true
+            }
+        }
+    }
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxSize()
+            .background(themeProfile.backgroundBrush)
+    ) {
         if (useExpandedNavigation(maxWidth.value)) {
             Row(modifier = Modifier.fillMaxSize()) {
                 NavigationRail(
                     modifier = Modifier
                         .fillMaxHeight()
                         .width(88.dp),
+                    containerColor = themeProfile.navigationContainerColor,
                     header = {
                         Surface(
                             modifier = Modifier.padding(vertical = 12.dp),
@@ -153,16 +174,20 @@ fun CodexBarApp(
                     navController = navController,
                     initialGeminiPairingUri = initialGeminiPairingUri,
                     onGeminiPairingConsumed = onGeminiPairingConsumed,
+                    initialCodexTelemetryPairingUri = initialCodexTelemetryPairingUri,
+                    onCodexTelemetryPairingConsumed = onCodexTelemetryPairingConsumed,
                     onScreenPrivacyChanged = onScreenPrivacyChanged,
                     settingsViewModel = settingsViewModel,
+                    dashboardPreviewSnapshot = dashboardPreviewSnapshot,
                     modifier = Modifier.weight(1f)
                 )
             }
         } else {
             Scaffold(
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                containerColor = androidx.compose.ui.graphics.Color.Transparent,
                 bottomBar = {
-                    NavigationBar {
+                    NavigationBar(containerColor = themeProfile.navigationContainerColor) {
                         AppDestination.entries.forEach { destination ->
                             NavigationBarItem(
                                 selected = currentRoute == destination.route,
@@ -185,8 +210,11 @@ fun CodexBarApp(
                     navController = navController,
                     initialGeminiPairingUri = initialGeminiPairingUri,
                     onGeminiPairingConsumed = onGeminiPairingConsumed,
+                    initialCodexTelemetryPairingUri = initialCodexTelemetryPairingUri,
+                    onCodexTelemetryPairingConsumed = onCodexTelemetryPairingConsumed,
                     onScreenPrivacyChanged = onScreenPrivacyChanged,
                     settingsViewModel = settingsViewModel,
+                    dashboardPreviewSnapshot = dashboardPreviewSnapshot,
                     modifier = Modifier.padding(paddingValues)
                 )
             }
@@ -199,8 +227,11 @@ private fun AppNavHost(
     navController: NavHostController,
     initialGeminiPairingUri: String?,
     onGeminiPairingConsumed: () -> Unit,
+    initialCodexTelemetryPairingUri: String?,
+    onCodexTelemetryPairingConsumed: () -> Unit,
     onScreenPrivacyChanged: (Boolean) -> Unit,
     settingsViewModel: SettingsViewModel,
+    dashboardPreviewSnapshot: QuotaPresentationSnapshot?,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -209,11 +240,17 @@ private fun AppNavHost(
         modifier = modifier
     ) {
         composable(DashboardRoute) {
-            DashboardScreen(
-                onNavigateToConnections = {
-                    navController.navigateTopLevel(ConnectionsRoute)
-                }
-            )
+            val navigateToConnections = {
+                navController.navigateTopLevel(ConnectionsRoute)
+            }
+            if (dashboardPreviewSnapshot == null) {
+                DashboardScreen(onNavigateToConnections = navigateToConnections)
+            } else {
+                DashboardPreviewScreen(
+                    snapshot = dashboardPreviewSnapshot,
+                    onNavigateToConnections = navigateToConnections
+                )
+            }
         }
         composable(ConnectionsRoute) {
             ConnectionsScreen(
@@ -223,6 +260,8 @@ private fun AppNavHost(
                 showBackButton = false,
                 initialGeminiPairingUri = initialGeminiPairingUri,
                 onGeminiPairingConsumed = onGeminiPairingConsumed,
+                initialCodexTelemetryPairingUri = initialCodexTelemetryPairingUri,
+                onCodexTelemetryPairingConsumed = onCodexTelemetryPairingConsumed,
                 viewModel = settingsViewModel
             )
         }

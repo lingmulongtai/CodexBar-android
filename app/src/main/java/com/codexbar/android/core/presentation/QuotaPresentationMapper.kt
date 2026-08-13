@@ -2,6 +2,8 @@ package com.codexbar.android.core.presentation
 
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
+import com.codexbar.android.core.domain.model.CodexTelemetry
+import com.codexbar.android.core.domain.model.CodexTokenTotals
 import com.codexbar.android.core.domain.model.ExtraUsage
 import com.codexbar.android.core.domain.model.QuotaInfo
 import com.codexbar.android.core.domain.model.QuotaNotice
@@ -10,6 +12,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.Locale
+import java.text.NumberFormat
 import kotlin.math.roundToInt
 
 class QuotaPresentationMapper(
@@ -24,7 +27,8 @@ class QuotaPresentationMapper(
         locale: Locale = text.locale,
         privacy: PrivacyPresentation = PrivacyPresentation(),
         source: RefreshSourcePresentation = RefreshSourcePresentation.Unknown,
-        paceByMetricKey: Map<String, PacePresentation> = emptyMap()
+        paceByMetricKey: Map<String, PacePresentation> = emptyMap(),
+        historyByMetricKey: Map<String, List<QuotaHistorySample>> = emptyMap()
     ): QuotaPresentationSnapshot {
         val successfulServices = quotas.map { quota ->
             val metrics = quota.windows.mapIndexed { index, window ->
@@ -35,7 +39,8 @@ class QuotaPresentationMapper(
                     generatedAt = generatedAt,
                     locale = locale,
                     privacy = privacy,
-                    paceByMetricKey = paceByMetricKey
+                    paceByMetricKey = paceByMetricKey,
+                    historyByMetricKey = historyByMetricKey
                 )
             }
             val primary = metrics.maxWithOrNull(
@@ -61,7 +66,23 @@ class QuotaPresentationMapper(
                     QuotaAction.Refresh,
                     QuotaAction.StartMonitoring,
                     QuotaAction.Disconnect
-                )
+                ),
+                codexResetCredits = quota.codexResetCredits
+                    ?.takeUnless { privacy.redactSensitiveValues }
+                    ?.let { credits ->
+                        CodexResetCreditsPresentation(
+                            availableCount = credits.availableCount,
+                            availableLabel = text.resetCreditsAvailable(credits.availableCount),
+                            nextExpiryLabel = credits.expiresAt.firstOrNull()
+                                ?.let(text::resetCreditNextExpiresAt),
+                            expiryLabels = credits.expiresAt.map(text::resetCreditExpiresAt),
+                            noExpiryCount = (credits.availableCount - credits.expiresAt.size)
+                                .coerceAtLeast(0)
+                            )
+                    },
+                codexTelemetry = quota.codexTelemetry
+                    ?.takeUnless { privacy.redactSensitiveValues }
+                    ?.let { mapCodexTelemetry(it, locale) }
             )
         }
 
@@ -93,7 +114,8 @@ class QuotaPresentationMapper(
         generatedAt: Instant,
         locale: Locale,
         privacy: PrivacyPresentation,
-        paceByMetricKey: Map<String, PacePresentation>
+        paceByMetricKey: Map<String, PacePresentation>,
+        historyByMetricKey: Map<String, List<QuotaHistorySample>>
     ): QuotaMetricPresentation {
         val used = window.utilization.takeIf { it.isFinite() }?.coerceIn(0.0, 1.0)
         val remaining = used?.let { 1.0 - it }
@@ -115,6 +137,11 @@ class QuotaPresentationMapper(
             resetPlanCalculator.calculate(window, pace.state, generatedAt)?.let(::mapResetPlan)
         } else {
             null
+        }
+        val history = if (privacy.redactSensitiveValues) {
+            QuotaHistoryPresentation()
+        } else {
+            mapHistory(historyByMetricKey[metricKey(service, label)].orEmpty())
         }
         return QuotaMetricPresentation(
             id = label.lowercase(locale).replace(Regex("[^a-z0-9]+"), "-").trim('-')
@@ -141,8 +168,29 @@ class QuotaPresentationMapper(
                 formatResetLabel(it, generatedAt)
             },
             pace = pace,
-            resetPlan = resetPlan
+            resetPlan = resetPlan,
+            history = history
         )
+    }
+
+    private fun mapHistory(samples: List<QuotaHistorySample>): QuotaHistoryPresentation {
+        var previous: QuotaHistorySample? = null
+        val points = samples
+            .filter { it.utilization.isFinite() }
+            .sortedBy(QuotaHistorySample::fetchedAt)
+            .map { sample ->
+                val prior = previous
+                val startsNewCycle = prior != null && (
+                    prior.resetsAt != sample.resetsAt || sample.utilization < prior.utilization
+                )
+                previous = sample
+                QuotaHistoryPointPresentation(
+                    capturedAt = sample.fetchedAt,
+                    usedFraction = sample.utilization.coerceIn(0.0, 1.0).toFloat(),
+                    startsNewCycle = startsNewCycle
+                )
+            }
+        return QuotaHistoryPresentation(points)
     }
 
     private fun mapResetPlan(plan: QuotaResetPlan): QuotaResetPlanPresentation {
@@ -241,6 +289,75 @@ class QuotaPresentationMapper(
                 utilization >= WARNING_USED_FRACTION -> QuotaSeverity.Warning
                 else -> QuotaSeverity.Good
             }
+        )
+    }
+
+    private fun mapCodexTelemetry(
+        telemetry: CodexTelemetry,
+        locale: Locale
+    ): CodexTelemetryPresentation {
+        val numberFormat = NumberFormat.getIntegerInstance(locale)
+        val currentContext = telemetry.currentContext?.let { context ->
+            val fraction = context.usedTokens.toDouble()
+                .div(context.contextWindowTokens.toDouble())
+                .takeIf(Double::isFinite)
+                ?.coerceIn(0.0, 1.0)
+                ?: 0.0
+            CodexContextPresentation(
+                model = context.model,
+                usedTokens = context.usedTokens,
+                contextWindowTokens = context.contextWindowTokens,
+                sessionTokens = context.sessionTokens,
+                usedFraction = fraction.toFloat(),
+                usedPercent = (fraction * 100).roundToInt().coerceIn(0, 100),
+                usageLabel = "${numberFormat.format(context.usedTokens)} / " +
+                    "${numberFormat.format(context.contextWindowTokens)}",
+                capturedAt = context.capturedAt
+            )
+        }
+        val thirtyDayTotal = telemetry.tokenUsage.last30Days.totalTokens.coerceAtLeast(1L)
+        return CodexTelemetryPresentation(
+            generatedAt = telemetry.generatedAt,
+            currentContext = currentContext,
+            tokenUsage = CodexTokenUsagePresentation(
+                today = mapTokenTotals(telemetry.tokenUsage.today, numberFormat),
+                last7Days = mapTokenTotals(telemetry.tokenUsage.last7Days, numberFormat),
+                last30Days = mapTokenTotals(telemetry.tokenUsage.last30Days, numberFormat),
+                daily = telemetry.tokenUsage.daily.map { entry ->
+                    CodexDailyTokenPresentation(
+                        date = entry.date,
+                        totalTokens = entry.totals.totalTokens,
+                        totalLabel = numberFormat.format(entry.totals.totalTokens)
+                    )
+                },
+                models = telemetry.tokenUsage.models.map { entry ->
+                    CodexModelTokenPresentation(
+                        model = entry.model,
+                        totalTokens = entry.totals.totalTokens,
+                        totalLabel = numberFormat.format(entry.totals.totalTokens),
+                        shareFraction = entry.totals.totalTokens.toDouble()
+                            .div(thirtyDayTotal.toDouble())
+                            .takeIf(Double::isFinite)
+                            ?.coerceIn(0.0, 1.0)
+                            ?.toFloat()
+                            ?: 0f
+                    )
+                }
+            )
+        )
+    }
+
+    private fun mapTokenTotals(
+        totals: CodexTokenTotals,
+        numberFormat: NumberFormat
+    ): CodexTokenTotalsPresentation {
+        return CodexTokenTotalsPresentation(
+            totalTokens = totals.totalTokens,
+            totalLabel = numberFormat.format(totals.totalTokens),
+            inputLabel = numberFormat.format(totals.inputTokens),
+            cachedInputLabel = numberFormat.format(totals.cachedInputTokens),
+            outputLabel = numberFormat.format(totals.outputTokens),
+            reasoningOutputLabel = numberFormat.format(totals.reasoningOutputTokens)
         )
     }
 

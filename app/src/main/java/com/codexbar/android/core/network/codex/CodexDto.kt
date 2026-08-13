@@ -10,7 +10,8 @@ object CodexDto {
     data class UsageResponse(
         @SerialName("plan_type") val planType: String? = null,
         @SerialName("rate_limit") val rateLimit: RateLimit? = null,
-        val credits: Credits? = null
+        val credits: Credits? = null,
+        @SerialName("additional_rate_limits") val additionalRateLimits: JsonElement? = null
     )
 
     @Serializable
@@ -31,6 +32,18 @@ object CodexDto {
         @SerialName("has_credits") val hasCredits: Boolean = false,
         val unlimited: Boolean = false,
         val balance: JsonElement? = null // Can be Double or String
+    )
+
+    @Serializable
+    data class ResetCreditsResponse(
+        val credits: List<ResetCredit> = emptyList(),
+        @SerialName("available_count") val availableCount: Int = 0
+    )
+
+    @Serializable
+    data class ResetCredit(
+        val status: String,
+        @SerialName("expires_at") val expiresAt: String? = null
     )
 
     @Serializable

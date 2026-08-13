@@ -20,7 +20,64 @@ data class ServiceQuotaPresentation(
     val extraUsage: ExtraUsagePresentation?,
     val insights: List<ServiceInsightPresentation> = emptyList(),
     val freshness: FreshnessPresentation,
-    val supportedActions: Set<QuotaAction>
+    val supportedActions: Set<QuotaAction>,
+    val codexResetCredits: CodexResetCreditsPresentation? = null,
+    val codexTelemetry: CodexTelemetryPresentation? = null
+)
+
+data class CodexResetCreditsPresentation(
+    val availableCount: Int,
+    val availableLabel: String,
+    val nextExpiryLabel: String?,
+    val expiryLabels: List<String>,
+    val noExpiryCount: Int
+)
+
+data class CodexTelemetryPresentation(
+    val generatedAt: Instant,
+    val currentContext: CodexContextPresentation?,
+    val tokenUsage: CodexTokenUsagePresentation
+)
+
+data class CodexContextPresentation(
+    val model: String,
+    val usedTokens: Long,
+    val contextWindowTokens: Long,
+    val sessionTokens: Long,
+    val usedFraction: Float,
+    val usedPercent: Int,
+    val usageLabel: String,
+    val capturedAt: Instant
+)
+
+data class CodexTokenUsagePresentation(
+    val today: CodexTokenTotalsPresentation,
+    val last7Days: CodexTokenTotalsPresentation,
+    val last30Days: CodexTokenTotalsPresentation,
+    val daily: List<CodexDailyTokenPresentation>,
+    val models: List<CodexModelTokenPresentation>
+)
+
+data class CodexTokenTotalsPresentation(
+    val totalTokens: Long,
+    val totalLabel: String,
+    val inputLabel: String,
+    val cachedInputLabel: String,
+    val outputLabel: String,
+    val reasoningOutputLabel: String
+)
+
+data class CodexDailyTokenPresentation(
+    val date: java.time.LocalDate,
+    val totalTokens: Long,
+    val totalLabel: String
+)
+
+data class CodexModelTokenPresentation(
+    val model: String,
+    val totalTokens: Long,
+    val totalLabel: String,
+    val shareFraction: Float
 )
 
 data class ServiceInsightPresentation(
@@ -42,7 +99,18 @@ data class QuotaMetricPresentation(
     val resetsAt: Instant?,
     val resetLabel: String?,
     val pace: PacePresentation,
-    val resetPlan: QuotaResetPlanPresentation? = null
+    val resetPlan: QuotaResetPlanPresentation? = null,
+    val history: QuotaHistoryPresentation = QuotaHistoryPresentation()
+)
+
+data class QuotaHistoryPresentation(
+    val points: List<QuotaHistoryPointPresentation> = emptyList()
+)
+
+data class QuotaHistoryPointPresentation(
+    val capturedAt: Instant,
+    val usedFraction: Float,
+    val startsNewCycle: Boolean
 )
 
 data class QuotaResetPlanPresentation(

@@ -35,5 +35,8 @@ fun AiService.providerIcon(): ImageVector {
         AiService.DEEPSEEK -> Icons.Rounded.Water
         AiService.VENICE -> Icons.Rounded.Explore
         AiService.MOONSHOT -> Icons.Rounded.AutoAwesome
+        AiService.CLINEPASS -> Icons.Rounded.Code
+        AiService.IBM_BOB -> Icons.Rounded.DataUsage
+        AiService.FIREWORKS -> Icons.Rounded.Bolt
     }
 }

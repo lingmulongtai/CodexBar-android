@@ -2,13 +2,16 @@ package com.codexbar.android.di
 
 import com.codexbar.android.core.data.ClaudeRepositoryImpl
 import com.codexbar.android.core.data.ChutesRepositoryImpl
+import com.codexbar.android.core.data.ClinePassRepositoryImpl
 import com.codexbar.android.core.data.CodexRepositoryImpl
 import com.codexbar.android.core.data.CopilotRepositoryImpl
 import com.codexbar.android.core.data.CursorRepositoryImpl
 import com.codexbar.android.core.data.DeepSeekRepositoryImpl
 import com.codexbar.android.core.data.ElevenLabsRepositoryImpl
 import com.codexbar.android.core.data.GeminiRepositoryImpl
+import com.codexbar.android.core.data.FireworksRepositoryImpl
 import com.codexbar.android.core.data.KimiRepositoryImpl
+import com.codexbar.android.core.data.IbmBobRepositoryImpl
 import com.codexbar.android.core.data.MoonshotRepositoryImpl
 import com.codexbar.android.core.data.OpenRouterRepositoryImpl
 import com.codexbar.android.core.data.SyntheticRepositoryImpl
@@ -20,14 +23,18 @@ import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.network.claude.ClaudeApiService
 import com.codexbar.android.core.network.claude.ClaudeTokenRefreshService
 import com.codexbar.android.core.network.chutes.ChutesApiService
+import com.codexbar.android.core.network.clinepass.ClinePassApiService
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
+import com.codexbar.android.core.network.codex.telemetry.CodexTelemetryClient
 import com.codexbar.android.core.network.copilot.CopilotApiService
 import com.codexbar.android.core.network.cursor.CursorApiService
 import com.codexbar.android.core.network.deepseek.DeepSeekApiService
 import com.codexbar.android.core.network.elevenlabs.ElevenLabsApiService
 import com.codexbar.android.core.network.gemini.GeminiCompanionClient
+import com.codexbar.android.core.network.fireworks.FireworksApiService
 import com.codexbar.android.core.network.kimi.KimiApiService
+import com.codexbar.android.core.network.ibmbob.IbmBobApiService
 import com.codexbar.android.core.network.moonshot.MoonshotApiService
 import com.codexbar.android.core.network.openrouter.OpenRouterApiService
 import com.codexbar.android.core.network.synthetic.SyntheticApiService
@@ -69,8 +76,15 @@ object RepositoryModule {
         apiService: CodexApiService,
         tokenRefreshService: CodexTokenRefreshService,
         prefsManager: EncryptedPrefsManager,
-        tokenRefreshCoordinator: TokenRefreshCoordinator
-    ): QuotaRepository = CodexRepositoryImpl(apiService, tokenRefreshService, prefsManager, tokenRefreshCoordinator)
+        tokenRefreshCoordinator: TokenRefreshCoordinator,
+        codexTelemetryClient: CodexTelemetryClient
+    ): QuotaRepository = CodexRepositoryImpl(
+        apiService,
+        tokenRefreshService,
+        prefsManager,
+        tokenRefreshCoordinator,
+        codexTelemetryClient
+    )
 
     @Provides
     @Singleton
@@ -188,4 +202,31 @@ object RepositoryModule {
         apiService: MoonshotApiService,
         prefsManager: EncryptedPrefsManager
     ): QuotaRepository = MoonshotRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.CLINEPASS)
+    fun provideClinePassRepository(
+        apiService: ClinePassApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = ClinePassRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.IBM_BOB)
+    fun provideIbmBobRepository(
+        apiService: IbmBobApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = IbmBobRepositoryImpl(apiService, prefsManager)
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.FIREWORKS)
+    fun provideFireworksRepository(
+        apiService: FireworksApiService,
+        prefsManager: EncryptedPrefsManager
+    ): QuotaRepository = FireworksRepositoryImpl(apiService, prefsManager)
 }

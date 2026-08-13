@@ -35,10 +35,20 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: companion/gemini/package-lock.json
+          cache-dependency-path: |
+            companion/gemini/package-lock.json
+            companion/codex/package-lock.json
 
       - name: Verify Gemini companion
         working-directory: companion/gemini
+        run: |
+          npm ci
+          npm run check
+          npm test
+          npm audit --omit=dev
+
+      - name: Verify Codex telemetry companion
+        working-directory: companion/codex
         run: |
           npm ci
           npm run check
@@ -156,6 +166,18 @@ jobs:
             npm sbom --omit=dev --sbom-format=cyclonedx \
               > "../../build/release/gemini-companion-sbom.cdx.json"
           )
+          codex_companion_archive="CodexBar-Codex-Telemetry-Companion-${GITHUB_REF_NAME}.zip"
+          (
+            cd companion/codex
+            zip -r "../../build/release/${codex_companion_archive}" \
+              README.md package.json package-lock.json src test \
+              start-windows.cmd start-macos-linux.sh
+            npm sbom --omit=dev --sbom-format=cyclonedx \
+              > "../../build/release/codex-telemetry-companion-sbom.cdx.json"
+          )
+          screenshots_dir="docs/images/releases/${GITHUB_REF_NAME}"
+          test -d "$screenshots_dir"
+          cp "$screenshots_dir"/*.png build/release/
           cat > build/release/build-provenance.json <<EOF
           {
             "repository": "${GITHUB_REPOSITORY}",

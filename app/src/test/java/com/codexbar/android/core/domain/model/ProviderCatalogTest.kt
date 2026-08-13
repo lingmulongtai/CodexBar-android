@@ -52,6 +52,19 @@ class ProviderCatalogTest {
             AiService.MOONSHOT.providerMetadata.secretKind
         )
         assertEquals(
+            ProviderSecretKind.API_KEY,
+            AiService.CLINEPASS.providerMetadata.secretKind
+        )
+        assertEquals(
+            ProviderSecretKind.API_KEY,
+            AiService.IBM_BOB.providerMetadata.secretKind
+        )
+        assertEquals(
+            ProviderSecretKind.API_KEY,
+            AiService.FIREWORKS.providerMetadata.secretKind
+        )
+        assertEquals(true, AiService.FIREWORKS.providerMetadata.requiresAccountReference)
+        assertEquals(
             ProviderSecretKind.COOKIE_HEADER,
             AiService.CURSOR.providerMetadata.secretKind
         )

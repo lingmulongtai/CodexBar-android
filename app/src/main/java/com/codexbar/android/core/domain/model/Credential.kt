@@ -43,7 +43,8 @@ sealed class Credential {
     data class ProviderSecretCredential(
         val service: AiService,
         val kind: ProviderSecretKind,
-        override val accessToken: String
+        override val accessToken: String,
+        val accountReference: String? = null
     ) : Credential() {
         override val refreshToken: String? = null
     }

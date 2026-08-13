@@ -8,13 +8,16 @@ import com.codexbar.android.core.network.ResponseSizeLimitInterceptor
 import com.codexbar.android.core.network.claude.ClaudeApiService
 import com.codexbar.android.core.network.claude.ClaudeTokenRefreshService
 import com.codexbar.android.core.network.chutes.ChutesApiService
+import com.codexbar.android.core.network.clinepass.ClinePassApiService
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.copilot.CopilotApiService
 import com.codexbar.android.core.network.cursor.CursorApiService
 import com.codexbar.android.core.network.deepseek.DeepSeekApiService
 import com.codexbar.android.core.network.elevenlabs.ElevenLabsApiService
+import com.codexbar.android.core.network.fireworks.FireworksApiService
 import com.codexbar.android.core.network.kimi.KimiApiService
+import com.codexbar.android.core.network.ibmbob.IbmBobApiService
 import com.codexbar.android.core.network.moonshot.MoonshotApiService
 import com.codexbar.android.core.network.oauth.CodexDeviceAuthService
 import com.codexbar.android.core.network.oauth.GitHubDeviceAuthService
@@ -429,5 +432,53 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(MoonshotApiService::class.java)
+    }
+
+    // --- Cline ---
+
+    @Provides
+    @Singleton
+    fun provideClinePassApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): ClinePassApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.CLINEPASS.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(ClinePassApiService::class.java)
+    }
+
+    // --- IBM Bob ---
+
+    @Provides
+    @Singleton
+    fun provideIbmBobApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): IbmBobApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.IBM_BOB.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(IbmBobApiService::class.java)
+    }
+
+    // --- Fireworks AI ---
+
+    @Provides
+    @Singleton
+    fun provideFireworksApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): FireworksApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.FIREWORKS.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(FireworksApiService::class.java)
     }
 }

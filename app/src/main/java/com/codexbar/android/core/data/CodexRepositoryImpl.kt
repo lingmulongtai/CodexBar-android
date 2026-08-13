@@ -2,6 +2,8 @@ package com.codexbar.android.core.data
 
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
+import com.codexbar.android.core.domain.model.CodexResetCredits
+import com.codexbar.android.core.domain.model.CodexTelemetry
 import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.domain.model.QuotaInfo
 import com.codexbar.android.core.domain.model.QuotaNotice
@@ -11,11 +13,22 @@ import com.codexbar.android.core.domain.repository.QuotaRepository
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexDto
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
+import com.codexbar.android.core.network.codex.telemetry.CodexTelemetryClient
 import com.codexbar.android.core.network.RetryAfter
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.TokenRefreshCoordinator
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.longOrNull
 import java.io.IOException
 import java.time.Instant
 import javax.inject.Inject
@@ -24,7 +37,8 @@ class CodexRepositoryImpl @Inject constructor(
     private val apiService: CodexApiService,
     private val tokenRefreshService: CodexTokenRefreshService,
     private val prefsManager: EncryptedPrefsManager,
-    private val tokenRefreshCoordinator: TokenRefreshCoordinator
+    private val tokenRefreshCoordinator: TokenRefreshCoordinator,
+    private val codexTelemetryClient: CodexTelemetryClient
 ) : QuotaRepository {
 
     override suspend fun fetchQuota(): Result<QuotaInfo, AppError> {
@@ -42,7 +56,7 @@ class CodexRepositoryImpl @Inject constructor(
                 200 -> {
                     val body = response.body()
                         ?: return Result.Failure(AppError.ParseError("Empty response body"))
-                    Result.Success(mapToQuotaInfo(body))
+                    Result.Success(mapToQuotaInfoWithExtras(body, credential))
                 }
                 401 -> {
                     val refreshed = refreshToken(credential)
@@ -54,7 +68,7 @@ class CodexRepositoryImpl @Inject constructor(
                         if (retryResponse.isSuccessful) {
                             val body = retryResponse.body()
                                 ?: return Result.Failure(AppError.ParseError("Empty response body"))
-                            Result.Success(mapToQuotaInfo(body))
+                            Result.Success(mapToQuotaInfoWithExtras(body, refreshed))
                         } else {
                             Result.Failure(AppError.AuthError(AiService.CODEX, isTerminal = true))
                         }
@@ -156,7 +170,76 @@ class CodexRepositoryImpl @Inject constructor(
         return refreshToken == other.refreshToken && accountId == other.accountId
     }
 
-    private fun mapToQuotaInfo(response: CodexDto.UsageResponse): QuotaInfo {
+    private suspend fun fetchResetCreditsBestEffort(
+        credential: Credential.CodexCredential
+    ): CodexResetCredits? {
+        return try {
+            withContext(Dispatchers.IO) {
+                withTimeoutOrNull(RESET_CREDITS_TIMEOUT_MILLIS) {
+                    val response = apiService.getRateLimitResetCredits(
+                        authorization = "Bearer ${credential.accessToken}",
+                        accountId = credential.accountId
+                    )
+                    if (!response.isSuccessful) return@withTimeoutOrNull null
+                    val body = response.body() ?: return@withTimeoutOrNull null
+                    if (body.availableCount < 0) return@withTimeoutOrNull null
+
+                    val now = Instant.now()
+                    val availableExpirations = body.credits.mapNotNull { credit ->
+                        if (credit.status != AVAILABLE_RESET_CREDIT_STATUS) return@mapNotNull null
+                        credit.expiresAt
+                            ?.let { runCatching { Instant.parse(it) }.getOrNull() }
+                            ?.takeIf { it > now }
+                    }.sorted()
+                    val availableWithoutExpiry = body.credits.count { credit ->
+                        credit.status == AVAILABLE_RESET_CREDIT_STATUS && credit.expiresAt == null
+                    }
+                    val derivedCount = availableExpirations.size + availableWithoutExpiry
+
+                    CodexResetCredits(
+                        availableCount = derivedCount,
+                        expiresAt = availableExpirations
+                    )
+                }
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private suspend fun fetchTelemetryBestEffort(): CodexTelemetry? {
+        val credential = prefsManager.loadCodexTelemetryCredential() ?: return null
+        return try {
+            withTimeoutOrNull(TELEMETRY_TIMEOUT_MILLIS) {
+                codexTelemetryClient.fetchSnapshot(credential)
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private suspend fun mapToQuotaInfoWithExtras(
+        response: CodexDto.UsageResponse,
+        credential: Credential.CodexCredential
+    ): QuotaInfo = coroutineScope {
+        val resetCredits = async { fetchResetCreditsBestEffort(credential) }
+        val telemetry = async { fetchTelemetryBestEffort() }
+        mapToQuotaInfo(
+            response = response,
+            resetCredits = resetCredits.await(),
+            telemetry = telemetry.await()
+        )
+    }
+
+    private fun mapToQuotaInfo(
+        response: CodexDto.UsageResponse,
+        resetCredits: CodexResetCredits? = null,
+        telemetry: CodexTelemetry? = null
+    ): QuotaInfo {
         val windows = buildList {
             response.rateLimit?.primaryWindow?.let { window ->
                 add(mapRateLimitWindow("primary", window))
@@ -164,6 +247,7 @@ class CodexRepositoryImpl @Inject constructor(
             response.rateLimit?.secondaryWindow?.let { window ->
                 add(mapRateLimitWindow("secondary", window))
             }
+            addAll(mapAdditionalRateLimits(response.additionalRateLimits))
         }
 
         return QuotaInfo(
@@ -172,7 +256,9 @@ class CodexRepositoryImpl @Inject constructor(
             extraUsage = null,
             tier = response.planType?.replaceFirstChar { it.uppercase() },
             fetchedAt = Instant.now(),
-            notices = availabilityNotices(response)
+            notices = availabilityNotices(response),
+            codexResetCredits = resetCredits,
+            codexTelemetry = telemetry
         )
     }
 
@@ -209,9 +295,93 @@ class CodexRepositoryImpl @Inject constructor(
         )
     }
 
+    private fun mapAdditionalRateLimits(element: kotlinx.serialization.json.JsonElement?): List<UsageWindow> {
+        val entries = element as? JsonArray ?: return emptyList()
+        val usedLabels = mutableSetOf<String>()
+        return entries.take(MAX_ADDITIONAL_RATE_LIMITS).flatMap { rawEntry ->
+            val entry = rawEntry as? JsonObject ?: return@flatMap emptyList()
+            val limitName = entry.stringOrNull("limit_name")
+            val meteredFeature = entry.stringOrNull("metered_feature")
+            val rateLimit = entry["rate_limit"] as? JsonObject ?: return@flatMap emptyList()
+            val primary = rateLimit.rateLimitWindowOrNull("primary_window")
+            val secondary = rateLimit.rateLimitWindowOrNull("secondary_window")
+            val isSpark = sequenceOf(limitName, meteredFeature)
+                .filterNotNull()
+                .any { it.contains("spark", ignoreCase = true) }
+
+            if (isSpark) {
+                listOfNotNull(
+                    primary?.let { window ->
+                        val label = if ((window.limitWindowSeconds ?: 0L) >= SIX_DAYS_SECONDS) {
+                            "Codex Spark Weekly"
+                        } else {
+                            "Codex Spark 5-Hour"
+                        }
+                        label to window
+                    },
+                    secondary?.let { window ->
+                        val label = if ((window.limitWindowSeconds ?: 0L) <= SIX_HOURS_SECONDS) {
+                            "Codex Spark 5-Hour"
+                        } else {
+                            "Codex Spark Weekly"
+                        }
+                        label to window
+                    }
+                ).mapNotNull { (label, window) ->
+                    if (!usedLabels.add(label)) return@mapNotNull null
+                    mapNamedRateLimitWindow(label, window)
+                }
+            } else {
+                val window = primary ?: secondary ?: return@flatMap emptyList()
+                val label = listOf(limitName, meteredFeature)
+                    .firstOrNull { !it.isNullOrBlank() }
+                    ?.trim()
+                    ?.take(MAX_ADDITIONAL_RATE_LIMIT_LABEL_LENGTH)
+                    ?: return@flatMap emptyList()
+                if (!usedLabels.add(label)) return@flatMap emptyList()
+                listOf(mapNamedRateLimitWindow(label, window))
+            }
+        }
+    }
+
+    private fun JsonObject.rateLimitWindowOrNull(key: String): CodexDto.RateLimitWindow? {
+        val objectValue = this[key] as? JsonObject ?: return null
+        val usedPercent = (objectValue["used_percent"] as? JsonPrimitive)
+            ?.doubleOrNull
+            ?: return null
+        return CodexDto.RateLimitWindow(
+            usedPercent = usedPercent,
+            resetAt = (objectValue["reset_at"] as? JsonPrimitive)?.longOrNull,
+            limitWindowSeconds = (objectValue["limit_window_seconds"] as? JsonPrimitive)?.longOrNull
+        )
+    }
+
+    private fun JsonObject.stringOrNull(key: String): String? {
+        return (this[key] as? JsonPrimitive)?.contentOrNull
+    }
+
+    private fun mapNamedRateLimitWindow(
+        label: String,
+        window: CodexDto.RateLimitWindow
+    ): UsageWindow {
+        return UsageWindow(
+            label = label,
+            utilization = window.usedPercent / 100.0,
+            resetsAt = window.resetAt?.takeIf { it > 0L }?.let(Instant::ofEpochSecond),
+            windowDurationSeconds = window.limitWindowSeconds?.takeIf { it > 0L }
+        )
+    }
+
     companion object {
         private const val FIVE_HOURS_SECONDS = 5L * 60L * 60L
+        private const val SIX_HOURS_SECONDS = 6L * 60L * 60L
+        private const val SIX_DAYS_SECONDS = 6L * 24L * 60L * 60L
         private const val SEVEN_DAYS_SECONDS = 7L * 24L * 60L * 60L
+        private const val RESET_CREDITS_TIMEOUT_MILLIS = 4_000L
+        private const val TELEMETRY_TIMEOUT_MILLIS = 10_000L
+        private const val AVAILABLE_RESET_CREDIT_STATUS = "available"
+        private const val MAX_ADDITIONAL_RATE_LIMITS = 32
+        private const val MAX_ADDITIONAL_RATE_LIMIT_LABEL_LENGTH = 80
 
         fun parseBalance(element: kotlinx.serialization.json.JsonElement?): Double? {
             if (element == null) return null

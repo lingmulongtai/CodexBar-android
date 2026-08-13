@@ -94,4 +94,34 @@ class ReleaseWorkflowSourceTest {
         assertTrue(bundleStep.contains("npm sbom --omit=dev --sbom-format=cyclonedx"))
         assertTrue(bundleStep.contains("gemini-companion-sbom.cdx.json"))
     }
+
+    @Test
+    fun `Codex telemetry companion is tested and shipped with an SBOM`() {
+        val continuousIntegration = File(repoDir, ".github/workflows/android.yml").readText()
+        val release = File(repoDir, ".github/workflows/release.yml").readText()
+        val bundleStep = release
+            .substringAfter("- name: Prepare release bundle")
+            .substringBefore("- name: Attest release artifacts")
+
+        assertTrue(continuousIntegration.contains("codex-companion:"))
+        assertTrue(continuousIntegration.contains("companion/codex"))
+        assertTrue(release.contains("- name: Verify Codex telemetry companion"))
+        assertTrue(
+            bundleStep.contains(
+                "CodexBar-Codex-Telemetry-Companion-\${GITHUB_REF_NAME}.zip"
+            )
+        )
+        assertTrue(bundleStep.contains("codex-telemetry-companion-sbom.cdx.json"))
+    }
+
+    @Test
+    fun `versioned emulator screenshots are published as release assets`() {
+        val release = File(repoDir, ".github/workflows/release.yml").readText()
+        val bundleStep = release
+            .substringAfter("- name: Prepare release bundle")
+            .substringBefore("- name: Attest release artifacts")
+
+        assertTrue(bundleStep.contains("docs/images/releases/\${GITHUB_REF_NAME}"))
+        assertTrue(bundleStep.contains("cp \"\$screenshots_dir\"/*.png build/release/"))
+    }
 }

@@ -18,6 +18,7 @@ import androidx.annotation.StringRes
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -74,6 +76,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -99,6 +102,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.domain.model.ProviderAuthMode
 import com.codexbar.android.core.domain.model.ProviderCategory
 import com.codexbar.android.core.domain.model.providerMetadata
@@ -106,6 +110,7 @@ import com.codexbar.android.core.security.PrivacySettings
 import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
 import com.codexbar.android.ui.components.providerIcon
 import com.codexbar.android.ui.theme.providerVisualStyle
+import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 import kotlinx.coroutines.delay
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -119,6 +124,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val themeProfile = LocalCodexBarThemeProfile.current
     val context = LocalContext.current
     var notificationsAllowed by remember { mutableStateOf(context.canPostNotifications()) }
     var promotedUpdatesAllowed by remember { mutableStateOf(context.canPostPromotedNotifications()) }
@@ -158,9 +164,13 @@ fun SettingsScreen(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings_title)) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = themeProfile.topBarContainerColor
+                ),
                 navigationIcon = {
                     if (showBackButton) {
                         IconButton(onClick = onNavigateBack) {
@@ -237,6 +247,11 @@ fun SettingsScreen(
                     description = stringResource(R.string.settings_preferences_description)
                 )
 
+                ThemeStyleSection(
+                    selectedStyle = uiState.appThemeStyle,
+                    onStyleSelected = viewModel::setAppThemeStyle
+                )
+
                 LanguageSection(
                     selectedLanguage = selectedLanguage,
                     onLanguageSelected = { language ->
@@ -267,9 +282,12 @@ fun ConnectionsScreen(
     showBackButton: Boolean = true,
     initialGeminiPairingUri: String? = null,
     onGeminiPairingConsumed: () -> Unit = {},
+    initialCodexTelemetryPairingUri: String? = null,
+    onCodexTelemetryPairingConsumed: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val themeProfile = LocalCodexBarThemeProfile.current
     val context = LocalContext.current
     var providerSearchQuery by rememberSaveable { mutableStateOf("") }
     var providerFilterName by rememberSaveable {
@@ -301,10 +319,22 @@ fun ConnectionsScreen(
         }
     }
 
+    LaunchedEffect(initialCodexTelemetryPairingUri) {
+        if (initialCodexTelemetryPairingUri != null) {
+            viewModel.importCodexTelemetryPairingCode(initialCodexTelemetryPairingUri)
+            expandedProviderName = AiService.CODEX.name
+            onCodexTelemetryPairingConsumed()
+        }
+    }
+
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.connections_title)) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = themeProfile.topBarContainerColor
+                ),
                 navigationIcon = {
                     if (showBackButton) {
                         IconButton(onClick = onNavigateBack) {
@@ -393,6 +423,9 @@ fun ConnectionsScreen(
                         },
                         onGeminiPairingCodeChange = viewModel::updateGeminiPairingCode,
                         onConnectGeminiCompanion = viewModel::connectGeminiCompanion,
+                        onCodexTelemetryPairingCodeChange = viewModel::updateCodexTelemetryPairingCode,
+                        onConnectCodexTelemetryCompanion = viewModel::connectCodexTelemetryCompanion,
+                        onDisconnectCodexTelemetryCompanion = viewModel::disconnectCodexTelemetryCompanion,
                         onOpenSetupGuide = {
                             openAuthUrl(context, accountGuideUrl(service))
                         },
@@ -427,6 +460,138 @@ fun ConnectionsScreen(
             onDismiss = { viewModel.dismissDisconnectConfirmDialog() }
         )
     }
+}
+
+@Composable
+private fun ThemeStyleSection(
+    selectedStyle: AppThemeStyle,
+    onStyleSelected: (AppThemeStyle) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.theme_style_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(R.string.theme_style_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                AppThemeStyle.entries.forEach { style ->
+                    ThemeStyleOption(
+                        style = style,
+                        selected = style == selectedStyle,
+                        onClick = { onStyleSelected(style) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThemeStyleOption(
+    style: AppThemeStyle,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val previewColors = when (style) {
+        AppThemeStyle.MATERIAL_3 -> listOf(Color(0xFF4355B9), Color(0xFFF3DAFF), Color(0xFF52D7F0))
+        AppThemeStyle.LIQUID_GLASS -> listOf(Color(0xFF65BFFF), Color(0xFFE0F4FF), Color(0xFFB391FF))
+        AppThemeStyle.WINUI_3 -> listOf(Color(0xFF0067C0), Color(0xFF60CDFF), Color(0xFFF3F3F3))
+        AppThemeStyle.AURORA -> listOf(Color(0xFF00E5B8), Color(0xFF7957FF), Color(0xFFFF4FA3))
+    }
+    Card(
+        onClick = onClick,
+        modifier = Modifier.width(184.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        ),
+        border = BorderStroke(
+            width = if (selected) 2.dp else 1.dp,
+            color = if (selected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.outlineVariant
+            }
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                previewColors.forEach { color ->
+                    Box(
+                        modifier = Modifier
+                            .size(18.dp)
+                            .background(color, CircleShape)
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                if (selected) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = stringResource(R.string.theme_style_selected),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            Text(
+                text = stringResource(style.titleResource()),
+                style = MaterialTheme.typography.labelLarge
+            )
+            Text(
+                text = stringResource(style.descriptionResource()),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                minLines = 2
+            )
+        }
+    }
+}
+
+@StringRes
+private fun AppThemeStyle.titleResource(): Int = when (this) {
+    AppThemeStyle.MATERIAL_3 -> R.string.theme_style_material_3
+    AppThemeStyle.LIQUID_GLASS -> R.string.theme_style_liquid_glass
+    AppThemeStyle.WINUI_3 -> R.string.theme_style_winui_3
+    AppThemeStyle.AURORA -> R.string.theme_style_aurora
+}
+
+@StringRes
+private fun AppThemeStyle.descriptionResource(): Int = when (this) {
+    AppThemeStyle.MATERIAL_3 -> R.string.theme_style_material_3_description
+    AppThemeStyle.LIQUID_GLASS -> R.string.theme_style_liquid_glass_description
+    AppThemeStyle.WINUI_3 -> R.string.theme_style_winui_3_description
+    AppThemeStyle.AURORA -> R.string.theme_style_aurora_description
 }
 
 @Composable
@@ -712,6 +877,9 @@ private fun ServiceCredentialSection(
     onCopySetupCommand: (String) -> Unit,
     onGeminiPairingCodeChange: (String) -> Unit,
     onConnectGeminiCompanion: () -> Unit,
+    onCodexTelemetryPairingCodeChange: (String) -> Unit,
+    onConnectCodexTelemetryCompanion: () -> Unit,
+    onDisconnectCodexTelemetryCompanion: () -> Unit,
     onOpenSetupGuide: () -> Unit,
     onValidate: () -> Unit,
     onDisconnect: () -> Unit
@@ -888,6 +1056,31 @@ private fun ServiceCredentialSection(
                         title = stringResource(R.string.credential_moonshot_setup_title),
                         body = stringResource(R.string.credential_moonshot_setup_body),
                         accent = visualStyle.accent
+                    )
+                    service == AiService.CLINEPASS -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_clinepass_setup_title),
+                        body = stringResource(R.string.credential_clinepass_setup_body),
+                        accent = visualStyle.accent
+                    )
+                    service == AiService.IBM_BOB -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_ibm_bob_setup_title),
+                        body = stringResource(R.string.credential_ibm_bob_setup_body),
+                        accent = visualStyle.accent
+                    )
+                    service == AiService.FIREWORKS -> ProviderSecretSetupGuide(
+                        title = stringResource(R.string.credential_fireworks_setup_title),
+                        body = stringResource(R.string.credential_fireworks_setup_body),
+                        accent = visualStyle.accent
+                    )
+                }
+
+                if (service == AiService.CODEX) {
+                    CodexTelemetryCompanionSetup(
+                        state = state,
+                        accent = visualStyle.accent,
+                        onPairingCodeChange = onCodexTelemetryPairingCodeChange,
+                        onConnect = onConnectCodexTelemetryCompanion,
+                        onDisconnect = onDisconnectCodexTelemetryCompanion
                     )
                 }
 
@@ -1068,6 +1261,94 @@ private fun GeminiCompanionSetup(
 }
 
 @Composable
+private fun CodexTelemetryCompanionSetup(
+    state: ServiceCredentialState,
+    accent: Color,
+    onPairingCodeChange: (String) -> Unit,
+    onConnect: () -> Unit,
+    onDisconnect: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = accent.copy(alpha = 0.11f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.credential_codex_telemetry_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = accent
+            )
+            Text(
+                text = stringResource(R.string.credential_codex_telemetry_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = stringResource(R.string.credential_codex_telemetry_steps),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            OutlinedTextField(
+                value = state.codexTelemetryPairingCode,
+                onValueChange = onPairingCodeChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.credential_codex_telemetry_pairing_code)) },
+                supportingText = {
+                    Text(stringResource(R.string.credential_codex_telemetry_pairing_hint))
+                },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = secretKeyboardOptions()
+            )
+            Button(
+                onClick = onConnect,
+                enabled = state.codexTelemetryPairingCode.isNotBlank() &&
+                    !state.isCodexTelemetryValidating,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (state.isCodexTelemetryValidating) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text(
+                    stringResource(
+                        if (state.isCodexTelemetryConnected) {
+                            R.string.action_repair_codex_telemetry
+                        } else {
+                            R.string.action_pair_codex_telemetry
+                        }
+                    )
+                )
+            }
+            if (state.isCodexTelemetryConnected) {
+                OutlinedButton(
+                    onClick = onDisconnect,
+                    enabled = !state.isCodexTelemetryValidating,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.action_disconnect_codex_telemetry))
+                }
+            }
+            Text(
+                text = stringResource(R.string.credential_codex_telemetry_security),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            CredentialValidationResult(state.codexTelemetryValidationResult, accent)
+        }
+    }
+}
+
+@Composable
 private fun ClaudeSetupGuide(
     accent: Color,
     onCopySetupCommand: (String) -> Unit
@@ -1210,9 +1491,22 @@ private fun ManualCredentialFields(
             )
         }
 
+        if (service.providerMetadata.requiresAccountReference) {
+            OutlinedTextField(
+                value = state.accountReference,
+                onValueChange = { onFieldChange("accountReference", it) },
+                label = { Text(stringResource(R.string.credential_account_slug)) },
+                supportingText = { Text(stringResource(R.string.credential_fireworks_slug_support)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+        }
+
         OutlinedButton(
             onClick = onValidate,
-            enabled = !state.isValidating && state.accessToken.isNotBlank(),
+            enabled = !state.isValidating &&
+                state.accessToken.isNotBlank() &&
+                (!service.providerMetadata.requiresAccountReference || state.accountReference.isNotBlank()),
             modifier = Modifier.fillMaxWidth()
         ) {
             if (state.isValidating) {
@@ -1317,6 +1611,9 @@ private fun AccountLinkControls(
                 AiService.DEEPSEEK -> stringResource(R.string.credential_deepseek_setup_body)
                 AiService.VENICE -> stringResource(R.string.credential_venice_setup_body)
                 AiService.MOONSHOT -> stringResource(R.string.credential_moonshot_setup_body)
+                AiService.CLINEPASS -> stringResource(R.string.credential_clinepass_setup_body)
+                AiService.IBM_BOB -> stringResource(R.string.credential_ibm_bob_setup_body)
+                AiService.FIREWORKS -> stringResource(R.string.credential_fireworks_setup_body)
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
