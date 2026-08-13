@@ -8,6 +8,7 @@ import com.codexbar.android.core.network.ResponseSizeLimitInterceptor
 import com.codexbar.android.core.network.claude.ClaudeApiService
 import com.codexbar.android.core.network.claude.ClaudeTokenRefreshService
 import com.codexbar.android.core.network.chutes.ChutesApiService
+import com.codexbar.android.core.network.clinepass.ClinePassApiService
 import com.codexbar.android.core.network.codex.CodexApiService
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.copilot.CopilotApiService
@@ -429,5 +430,21 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(MoonshotApiService::class.java)
+    }
+
+    // --- Cline ---
+
+    @Provides
+    @Singleton
+    fun provideClinePassApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): ClinePassApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.CLINEPASS.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(ClinePassApiService::class.java)
     }
 }

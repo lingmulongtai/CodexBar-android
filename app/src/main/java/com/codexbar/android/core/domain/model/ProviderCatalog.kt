@@ -125,6 +125,12 @@ object ProviderCatalog {
             authMode = ProviderAuthMode.API_KEY,
             aliases = setOf("moonshot ai", "kimi api", "kimi k2", "international"),
             guideAnchor = "moonshot-api-international"
+        ),
+        AiService.CLINEPASS to ProviderMetadata(
+            category = ProviderCategory.CODING,
+            authMode = ProviderAuthMode.API_KEY,
+            aliases = setOf("cline", "cline pass", "cline bot", "coding subscription"),
+            guideAnchor = "cline"
         )
     )
 

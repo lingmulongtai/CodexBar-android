@@ -95,5 +95,11 @@ enum class AiService(
         brandColor = 0xFF111827,
         baseUrl = "https://api.moonshot.ai/",
         requiresManualCredentials = true
+    ),
+    CLINEPASS(
+        displayName = "Cline",
+        brandColor = 0xFFF36F45,
+        baseUrl = "https://api.cline.bot/",
+        requiresManualCredentials = true
     )
 }
