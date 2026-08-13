@@ -10,7 +10,8 @@ object CodexDto {
     data class UsageResponse(
         @SerialName("plan_type") val planType: String? = null,
         @SerialName("rate_limit") val rateLimit: RateLimit? = null,
-        val credits: Credits? = null
+        val credits: Credits? = null,
+        @SerialName("additional_rate_limits") val additionalRateLimits: JsonElement? = null
     )
 
     @Serializable

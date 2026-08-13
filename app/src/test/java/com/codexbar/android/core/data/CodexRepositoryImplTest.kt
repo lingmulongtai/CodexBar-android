@@ -361,6 +361,85 @@ class CodexRepositoryImplTest {
         assertEquals(null, (result as Result.Success).value.codexResetCredits)
     }
 
+    @Test
+    fun `maps valid model-specific limits while skipping malformed siblings`() = runTest {
+        mockWebServer.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """
+                {
+                    "plan_type": "pro",
+                    "rate_limit": {
+                        "primary_window": {
+                            "used_percent": 22,
+                            "reset_at": 1999999999,
+                            "limit_window_seconds": 18000
+                        }
+                    },
+                    "additional_rate_limits": [
+                        "malformed",
+                        {
+                            "limit_name": "GPT-5.3-Codex-Spark",
+                            "metered_feature": "gpt_5_3_codex_spark",
+                            "rate_limit": {
+                                "primary_window": {
+                                    "used_percent": 30,
+                                    "reset_at": 1999999999,
+                                    "limit_window_seconds": 18000
+                                },
+                                "secondary_window": {
+                                    "used_percent": 80,
+                                    "reset_at": 2000000999,
+                                    "limit_window_seconds": 604800
+                                }
+                            }
+                        },
+                        42
+                    ]
+                }
+                """.trimIndent()
+            )
+        )
+        mockWebServer.enqueue(resetCreditsResponse())
+
+        val result = repository.fetchQuota()
+
+        assertTrue(result is Result.Success)
+        val windows = (result as Result.Success).value.windows
+        assertEquals(3, windows.size)
+        assertEquals("5-Hour", windows[0].label)
+        assertEquals("Codex Spark 5-Hour", windows[1].label)
+        assertEquals(0.30, windows[1].utilization, 0.001)
+        assertEquals("Codex Spark Weekly", windows[2].label)
+        assertEquals(0.80, windows[2].utilization, 0.001)
+    }
+
+    @Test
+    fun `malformed additional limit container preserves core windows`() = runTest {
+        mockWebServer.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """
+                {
+                    "rate_limit": {
+                        "primary_window": {
+                            "used_percent": 22,
+                            "reset_at": 1999999999,
+                            "limit_window_seconds": 18000
+                        }
+                    },
+                    "additional_rate_limits": "unexpected"
+                }
+                """.trimIndent()
+            )
+        )
+        mockWebServer.enqueue(resetCreditsResponse())
+
+        val result = repository.fetchQuota()
+
+        assertTrue(result is Result.Success)
+        assertEquals(1, (result as Result.Success).value.windows.size)
+        assertEquals("5-Hour", result.value.windows.single().label)
+    }
+
     private fun resetCreditsResponse(): MockResponse {
         return MockResponse()
             .setResponseCode(200)

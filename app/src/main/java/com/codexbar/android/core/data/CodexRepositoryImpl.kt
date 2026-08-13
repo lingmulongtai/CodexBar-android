@@ -20,7 +20,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.longOrNull
 import java.io.IOException
 import java.time.Instant
 import javax.inject.Inject
@@ -221,6 +225,7 @@ class CodexRepositoryImpl @Inject constructor(
             response.rateLimit?.secondaryWindow?.let { window ->
                 add(mapRateLimitWindow("secondary", window))
             }
+            addAll(mapAdditionalRateLimits(response.additionalRateLimits))
         }
 
         return QuotaInfo(
@@ -267,11 +272,92 @@ class CodexRepositoryImpl @Inject constructor(
         )
     }
 
+    private fun mapAdditionalRateLimits(element: kotlinx.serialization.json.JsonElement?): List<UsageWindow> {
+        val entries = element as? JsonArray ?: return emptyList()
+        val usedLabels = mutableSetOf<String>()
+        return entries.take(MAX_ADDITIONAL_RATE_LIMITS).flatMap { rawEntry ->
+            val entry = rawEntry as? JsonObject ?: return@flatMap emptyList()
+            val limitName = entry.stringOrNull("limit_name")
+            val meteredFeature = entry.stringOrNull("metered_feature")
+            val rateLimit = entry["rate_limit"] as? JsonObject ?: return@flatMap emptyList()
+            val primary = rateLimit.rateLimitWindowOrNull("primary_window")
+            val secondary = rateLimit.rateLimitWindowOrNull("secondary_window")
+            val isSpark = sequenceOf(limitName, meteredFeature)
+                .filterNotNull()
+                .any { it.contains("spark", ignoreCase = true) }
+
+            if (isSpark) {
+                listOfNotNull(
+                    primary?.let { window ->
+                        val label = if ((window.limitWindowSeconds ?: 0L) >= SIX_DAYS_SECONDS) {
+                            "Codex Spark Weekly"
+                        } else {
+                            "Codex Spark 5-Hour"
+                        }
+                        label to window
+                    },
+                    secondary?.let { window ->
+                        val label = if ((window.limitWindowSeconds ?: 0L) <= SIX_HOURS_SECONDS) {
+                            "Codex Spark 5-Hour"
+                        } else {
+                            "Codex Spark Weekly"
+                        }
+                        label to window
+                    }
+                ).mapNotNull { (label, window) ->
+                    if (!usedLabels.add(label)) return@mapNotNull null
+                    mapNamedRateLimitWindow(label, window)
+                }
+            } else {
+                val window = primary ?: secondary ?: return@flatMap emptyList()
+                val label = listOf(limitName, meteredFeature)
+                    .firstOrNull { !it.isNullOrBlank() }
+                    ?.trim()
+                    ?.take(MAX_ADDITIONAL_RATE_LIMIT_LABEL_LENGTH)
+                    ?: return@flatMap emptyList()
+                if (!usedLabels.add(label)) return@flatMap emptyList()
+                listOf(mapNamedRateLimitWindow(label, window))
+            }
+        }
+    }
+
+    private fun JsonObject.rateLimitWindowOrNull(key: String): CodexDto.RateLimitWindow? {
+        val objectValue = this[key] as? JsonObject ?: return null
+        val usedPercent = (objectValue["used_percent"] as? JsonPrimitive)
+            ?.doubleOrNull
+            ?: return null
+        return CodexDto.RateLimitWindow(
+            usedPercent = usedPercent,
+            resetAt = (objectValue["reset_at"] as? JsonPrimitive)?.longOrNull,
+            limitWindowSeconds = (objectValue["limit_window_seconds"] as? JsonPrimitive)?.longOrNull
+        )
+    }
+
+    private fun JsonObject.stringOrNull(key: String): String? {
+        return (this[key] as? JsonPrimitive)?.contentOrNull
+    }
+
+    private fun mapNamedRateLimitWindow(
+        label: String,
+        window: CodexDto.RateLimitWindow
+    ): UsageWindow {
+        return UsageWindow(
+            label = label,
+            utilization = window.usedPercent / 100.0,
+            resetsAt = window.resetAt?.takeIf { it > 0L }?.let(Instant::ofEpochSecond),
+            windowDurationSeconds = window.limitWindowSeconds?.takeIf { it > 0L }
+        )
+    }
+
     companion object {
         private const val FIVE_HOURS_SECONDS = 5L * 60L * 60L
+        private const val SIX_HOURS_SECONDS = 6L * 60L * 60L
+        private const val SIX_DAYS_SECONDS = 6L * 24L * 60L * 60L
         private const val SEVEN_DAYS_SECONDS = 7L * 24L * 60L * 60L
         private const val RESET_CREDITS_TIMEOUT_MILLIS = 4_000L
         private const val AVAILABLE_RESET_CREDIT_STATUS = "available"
+        private const val MAX_ADDITIONAL_RATE_LIMITS = 32
+        private const val MAX_ADDITIONAL_RATE_LIMIT_LABEL_LENGTH = 80
 
         fun parseBalance(element: kotlinx.serialization.json.JsonElement?): Double? {
             if (element == null) return null
