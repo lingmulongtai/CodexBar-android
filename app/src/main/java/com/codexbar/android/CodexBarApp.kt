@@ -43,10 +43,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.codexbar.android.feature.dashboard.DashboardScreen
+import com.codexbar.android.feature.dashboard.DashboardPreviewScreen
 import com.codexbar.android.feature.settings.ConnectionsScreen
 import com.codexbar.android.feature.settings.SettingsScreen
 import com.codexbar.android.feature.settings.SettingsViewModel
 import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
+import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 
 private const val DashboardRoute = "dashboard"
 private const val ConnectionsRoute = "connections"
@@ -82,6 +84,7 @@ fun CodexBarApp(
     onGeminiPairingConsumed: () -> Unit = {},
     initialCodexTelemetryPairingUri: String? = null,
     onCodexTelemetryPairingConsumed: () -> Unit = {},
+    dashboardPreviewSnapshot: QuotaPresentationSnapshot? = null,
     onScreenPrivacyChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -175,6 +178,7 @@ fun CodexBarApp(
                     onCodexTelemetryPairingConsumed = onCodexTelemetryPairingConsumed,
                     onScreenPrivacyChanged = onScreenPrivacyChanged,
                     settingsViewModel = settingsViewModel,
+                    dashboardPreviewSnapshot = dashboardPreviewSnapshot,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -210,6 +214,7 @@ fun CodexBarApp(
                     onCodexTelemetryPairingConsumed = onCodexTelemetryPairingConsumed,
                     onScreenPrivacyChanged = onScreenPrivacyChanged,
                     settingsViewModel = settingsViewModel,
+                    dashboardPreviewSnapshot = dashboardPreviewSnapshot,
                     modifier = Modifier.padding(paddingValues)
                 )
             }
@@ -226,6 +231,7 @@ private fun AppNavHost(
     onCodexTelemetryPairingConsumed: () -> Unit,
     onScreenPrivacyChanged: (Boolean) -> Unit,
     settingsViewModel: SettingsViewModel,
+    dashboardPreviewSnapshot: QuotaPresentationSnapshot?,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -234,11 +240,17 @@ private fun AppNavHost(
         modifier = modifier
     ) {
         composable(DashboardRoute) {
-            DashboardScreen(
-                onNavigateToConnections = {
-                    navController.navigateTopLevel(ConnectionsRoute)
-                }
-            )
+            val navigateToConnections = {
+                navController.navigateTopLevel(ConnectionsRoute)
+            }
+            if (dashboardPreviewSnapshot == null) {
+                DashboardScreen(onNavigateToConnections = navigateToConnections)
+            } else {
+                DashboardPreviewScreen(
+                    snapshot = dashboardPreviewSnapshot,
+                    onNavigateToConnections = navigateToConnections
+                )
+            }
         }
         composable(ConnectionsRoute) {
             ConnectionsScreen(
