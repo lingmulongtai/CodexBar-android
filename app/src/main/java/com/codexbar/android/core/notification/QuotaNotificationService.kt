@@ -187,6 +187,8 @@ class QuotaNotificationService @Inject constructor(
         } else {
             primaryMetric?.usedPercent?.coerceIn(0, 100) ?: 0
         }
+        val showProgress = primaryMetric != null || primaryService == null ||
+            primaryService.balance == null && primaryService.freshness.staleReason == null
         val remaining = session.remainingMinutes()
         val remainingDuration = localizedString(R.string.duration_minutes, remaining)
         val title = localizedString(R.string.notification_monitoring_title)
@@ -195,7 +197,7 @@ class QuotaNotificationService @Inject constructor(
             privacySettings.notificationRedactionEnabled -> {
                 localizedString(R.string.notification_monitoring_hidden, remainingDuration)
             }
-            primaryService == null || primaryMetric == null -> {
+            primaryService == null || primaryMetric == null && primaryService.balance == null && primaryService.freshness.staleReason == null -> {
                 localizedString(R.string.notification_monitoring_waiting, remainingDuration)
             }
             else -> {
@@ -213,6 +215,7 @@ class QuotaNotificationService @Inject constructor(
                 text = text,
                 subText = subText,
                 progress = progress,
+                showProgress = showProgress,
                 primaryService = primaryService,
                 privacySettings = privacySettings,
                 endsAtMillis = session.endsAtMillis
@@ -224,7 +227,11 @@ class QuotaNotificationService @Inject constructor(
                 .setContentText(text)
                 .setSubText(subText)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-                .setProgress(100, progress, primaryMetric == null)
+                .apply {
+                    if (showProgress) {
+                        setProgress(100, progress, primaryMetric == null)
+                    }
+                }
                 .setContentIntent(dashboardPendingIntent())
                 .setOngoing(true)
                 .setSilent(true)
@@ -320,6 +327,7 @@ class QuotaNotificationService @Inject constructor(
         text: String,
         subText: String,
         progress: Int,
+        showProgress: Boolean,
         primaryService: ServiceQuotaPresentation?,
         privacySettings: PrivacySettings,
         endsAtMillis: Long
@@ -330,16 +338,18 @@ class QuotaNotificationService @Inject constructor(
             QuotaSeverity.Critical -> Color.rgb(234, 67, 53)
             else -> primaryService?.service?.brandColor?.toInt() ?: Color.GRAY
         }
-        val progressStyle = Notification.ProgressStyle()
-            .setStyledByProgress(true)
-            .setProgress(progress)
-            .addProgressSegment(
-                Notification.ProgressStyle.Segment(100)
-                    .setColor(progressColor)
-            )
-            .setProgressTrackerIcon(
-                Icon.createWithResource(context, R.drawable.ic_quota)
-            )
+        val progressStyle = if (showProgress) {
+            Notification.ProgressStyle()
+                .setStyledByProgress(true)
+                .setProgress(progress)
+                .addProgressSegment(
+                    Notification.ProgressStyle.Segment(100)
+                        .setColor(progressColor)
+                )
+                .setProgressTrackerIcon(
+                    Icon.createWithResource(context, R.drawable.ic_quota)
+                )
+        } else null
 
         val publicVersion = Notification.Builder(context, LIVE_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_quota)
@@ -347,7 +357,9 @@ class QuotaNotificationService @Inject constructor(
             .setContentText(localizedString(R.string.notification_quota_hidden))
             .setShowWhen(false)
             .build()
-        val criticalText = if (privacySettings.notificationRedactionEnabled) {
+        val criticalText = if (
+            privacySettings.notificationRedactionEnabled || primaryService?.primaryMetric == null
+        ) {
             localizedString(R.string.notification_live_short)
         } else {
             "$progress%"
@@ -427,6 +439,7 @@ class QuotaNotificationService @Inject constructor(
         val primaryMetric = service.primaryMetric
         if (primaryMetric == null) {
             return service.freshness.staleReason
+                ?: service.balance?.amountLabel
                 ?: localizedString(R.string.notification_waiting_for_data)
         }
         val resetText = primaryMetric.resetLabel?.let { " - $it" } ?: ""
