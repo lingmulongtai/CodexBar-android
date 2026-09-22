@@ -27,6 +27,7 @@ import com.codexbar.android.core.security.ConnectionHealthStore
 import com.codexbar.android.core.security.PrivacySettings
 import com.codexbar.android.core.security.toConnectionHealth
 import com.codexbar.android.core.widget.WidgetPrefsManager
+import com.codexbar.android.core.widget.WidgetUpdater
 import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
 import com.codexbar.android.core.workmanager.WorkManagerInitializer
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -415,6 +416,8 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(privacySettings = settings) }
         viewModelScope.launch {
             prefsManager.setPrivacySettings(settings)
+            notificationService.refreshPrivacySettings(monitoringSessionStore.activeSession())
+            WidgetUpdater.updateAll(appContext)
         }
     }
 

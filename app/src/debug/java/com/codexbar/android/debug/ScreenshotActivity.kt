@@ -57,11 +57,40 @@ class ScreenshotActivity : AppCompatActivity() {
         if (intent.getBooleanExtra(EXTRA_NOTIFICATION, false)) {
             lifecycleScope.launch {
                 prefsManager.warmCache()
+                if (intent.hasExtra("lock_screen_redacted")) {
+                    prefsManager.setPrivacySettings(prefsManager.getPrivacySettings().copy(
+                        lockScreenRedactionEnabled = intent.getBooleanExtra("lock_screen_redacted", true)
+                    ))
+                }
                 val now = System.currentTimeMillis()
                 notificationService.showMonitoringNotification(
                     snapshot,
                     MonitoringSession(now, now + 60 * 60_000L, 1L)
                 )
+                kotlinx.coroutines.delay(500)
+                val notification = getSystemService(android.app.NotificationManager::class.java)
+                    .activeNotifications.first { it.id == QuotaNotificationService.MONITORING_NOTIFICATION_ID }.notification
+                val redacted = prefsManager.getPrivacySettings().lockScreenRedactionEnabled
+                check(notification.visibility == if (redacted) android.app.Notification.VISIBILITY_PRIVATE else android.app.Notification.VISIBILITY_PUBLIC)
+                check((notification.publicVersion != null) == redacted)
+                android.util.Log.i("CodexBarNotificationTest", "PASS visibility=${notification.visibility} redacted=$redacted")
+                if (intent.getBooleanExtra("verify_privacy_toggle", false)) {
+                    val coldService = QuotaNotificationService(this@ScreenshotActivity, prefsManager)
+                    val originalSettings = prefsManager.getPrivacySettings()
+                    val manager = getSystemService(android.app.NotificationManager::class.java)
+                    prefsManager.setPrivacySettings(originalSettings.copy(notificationRedactionEnabled = true))
+                    coldService.refreshPrivacySettings(null)
+                    kotlinx.coroutines.delay(300)
+                    val hidden = manager.activeNotifications.first { it.id == QuotaNotificationService.MONITORING_NOTIFICATION_ID }.notification
+                    check(hidden.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString().contains("hidden", ignoreCase = true))
+                    check(hidden.actions.size == notification.actions.size)
+                    prefsManager.setPrivacySettings(originalSettings)
+                    coldService.refreshPrivacySettings(null)
+                    kotlinx.coroutines.delay(300)
+                    val restored = manager.activeNotifications.first { it.id == QuotaNotificationService.MONITORING_NOTIFICATION_ID }.notification
+                    check(restored.extras.getCharSequence(android.app.Notification.EXTRA_TITLE).toString() == notification.extras.getCharSequence(android.app.Notification.EXTRA_TITLE).toString())
+                    android.util.Log.i("CodexBarNotificationTest", "PASS cold-instance hide/show preserves details and actions")
+                }
             }
         }
 

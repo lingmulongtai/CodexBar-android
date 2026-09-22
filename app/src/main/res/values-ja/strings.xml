@@ -268,7 +268,8 @@
     <string name="privacy_screen_title">スクリーンショットと履歴プレビューを禁止</string>
     <string name="privacy_screen_description">トークン入力画面とアカウント画面を保護します。</string>
     <string name="privacy_lock_screen_title">ロック画面の通知を伏せる</string>
-    <string name="privacy_lock_screen_description">ロック画面には内容を伏せた通知を表示します。</string>
+    <string name="privacy_lock_screen_description">オフにするとロック画面の通知・Now Barに残量を表示できます。解除前に表示するには、Android／One UI側の通知設定でも内容の表示を許可してください。</string>
+    <string name="privacy_lock_screen_system_settings">ロック画面・Now Barの通知設定</string>
     <string name="privacy_notification_title">通知の使用量を伏せる</string>
     <string name="privacy_notification_description">通知シェードに使用量の数値を表示しません。</string>
     <string name="privacy_widget_title">ウィジェットの使用量を伏せる</string>
