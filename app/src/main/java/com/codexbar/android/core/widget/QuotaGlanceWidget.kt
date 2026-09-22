@@ -2,9 +2,10 @@ package com.codexbar.android.core.widget
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.content.res.Configuration
 import android.util.Log
-import androidx.annotation.ColorRes
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -15,6 +16,7 @@ import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
+import androidx.glance.LocalContext
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
@@ -57,8 +59,7 @@ class QuotaGlanceWidget : GlanceAppWidget(errorUiLayout = R.layout.widget_error)
     // Display state is in WidgetPrefsManager; no Glance DataStore is needed.
     override val stateDefinition = null
 
-    // Exact composes only the launcher's current size. Responsive composes every declared
-    // variant into one RemoteViews payload, which can exceed OEM launcher/Binder limits.
+    // Use only the sizes the launcher actually requests, without a predefined variant matrix.
     override val sizeMode: SizeMode = SizeMode.Exact
 
     override fun onCompositionError(
@@ -115,6 +116,7 @@ class QuotaGlanceWidget : GlanceAppWidget(errorUiLayout = R.layout.widget_error)
         val size = LocalSize.current
         val selectedServices = config.services
         val heightDp = size.height.value.toInt()
+        val compact = WidgetRenderPolicy.isCompact(size.width.value.toInt(), heightDp)
         val maxServices = WidgetRenderPolicy.maxServices(heightDp)
         val maxRows = WidgetRenderPolicy.maxRows(heightDp, config.maxRows)
         Box(
@@ -123,12 +125,24 @@ class QuotaGlanceWidget : GlanceAppWidget(errorUiLayout = R.layout.widget_error)
                 .cornerRadius(20.dp)
                 .background(GlanceTheme.colors.widgetBackground)
                 .clickable(actionStartActivity<MainActivity>())
-                .padding(16.dp)
+                .padding(horizontal = if (compact) 8.dp else 16.dp, vertical = if (compact) 4.dp else 16.dp)
         ) {
-            if (redactQuotaDetails) {
+            if (compact && (redactQuotaDetails || selectedServices.isEmpty())) {
+                Text(
+                    text = if (redactQuotaDetails) strings.quotaHidden else strings.noServices,
+                    style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 12.sp),
+                    maxLines = 1
+                )
+            } else if (redactQuotaDetails) {
                 RedactedState(strings)
             } else if (selectedServices.isEmpty()) {
                 EmptyState(strings)
+            } else if (compact) {
+                Column(modifier = GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                    selectedServices.take(WidgetRenderPolicy.compactServices(heightDp)).forEach { service ->
+                        CompactService(service, widgetPrefs, strings)
+                    }
+                }
             } else {
                 Column(modifier = GlanceModifier.fillMaxSize()) {
                     for ((index, service) in selectedServices.take(maxServices).withIndex()) {
@@ -157,6 +171,38 @@ class QuotaGlanceWidget : GlanceAppWidget(errorUiLayout = R.layout.widget_error)
                     }
                 }
             }
+        }
+    }
+
+    @Composable
+    private fun CompactService(service: AiService, prefs: WidgetPrefsManager, strings: WidgetStrings) {
+        val label = prefs.getCachedLabels(service).maxByOrNull { prefs.getCachedUtilization(service, it) }
+        val remaining = label?.let { prefs.getCachedRemainingLabel(service, it) }
+            ?: prefs.getCachedStatusMessage(service)
+            ?: strings.waitingForData
+        val severity = label?.let { severityForUtilization(prefs.getCachedUtilization(service, it)) }
+            ?: QuotaSeverity.Unknown
+        Column(modifier = GlanceModifier.fillMaxWidth().height(24.dp)) {
+            Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = if (service == AiService.COPILOT) "Copilot" else service.displayName,
+                    modifier = GlanceModifier.defaultWeight(),
+                    style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                    maxLines = 1
+                )
+                Text(
+                    text = remaining,
+                    style = TextStyle(color = severityColor(severity), fontSize = 12.sp),
+                    maxLines = 1
+                )
+            }
+            Spacer(modifier = GlanceModifier.height(2.dp))
+            LinearProgressIndicator(
+                progress = label?.let { prefs.getCachedBarProgress(service, it) }?.coerceIn(0f, 1f) ?: 0f,
+                modifier = GlanceModifier.fillMaxWidth().height(3.dp),
+                color = severityColor(severity),
+                backgroundColor = GlanceTheme.colors.surfaceVariant
+            )
         }
     }
 
@@ -418,29 +464,30 @@ class QuotaGlanceWidget : GlanceAppWidget(errorUiLayout = R.layout.widget_error)
          * Severity has to stay recognizable on both a light and a dark launcher, so the colors
          * come from resources with a values-night variant rather than one fixed value.
          */
+        @Composable
         fun severityColor(severity: QuotaSeverity): ColorProvider {
-            return WidgetResourceColorProvider(
-                when (severity) {
+            val resourceId = when (severity) {
                     QuotaSeverity.Critical -> R.color.widget_severity_critical
                     QuotaSeverity.Warning -> R.color.widget_severity_warning
                     QuotaSeverity.Redacted,
                     QuotaSeverity.Unknown -> R.color.widget_severity_unknown
                     QuotaSeverity.Good -> R.color.widget_severity_good
+            }
+            val context = LocalContext.current
+            return remember(context, resourceId) {
+                fun colorForMode(nightMode: Int): Color {
+                    val configuration = Configuration(context.resources.configuration).apply {
+                        uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or nightMode
+                    }
+                    return Color(ContextCompat.getColor(context.createConfigurationContext(configuration), resourceId))
                 }
-            )
+                // Let the launcher select the palette, even when its theme differs from the app.
+                androidx.glance.color.ColorProvider(
+                    day = colorForMode(Configuration.UI_MODE_NIGHT_NO),
+                    night = colorForMode(Configuration.UI_MODE_NIGHT_YES)
+                )
+            }
         }
-    }
-}
-
-/**
- * Resolves a color resource when the widget is rendered, so a `values-night` variant still
- * applies. Glance's own resource-backed provider is restricted to its library group.
- */
-private class WidgetResourceColorProvider(
-    @ColorRes private val resourceId: Int
-) : ColorProvider {
-    override fun getColor(context: Context): Color {
-        return Color(ContextCompat.getColor(context, resourceId))
     }
 }
 

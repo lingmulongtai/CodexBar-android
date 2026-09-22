@@ -42,16 +42,34 @@ class WidgetHostActivity : ComponentActivity() {
         val width = intent.getIntExtra("width_dp", 320).coerceIn(120, 500)
         val height = intent.getIntExtra("height_dp", 60).coerceIn(32, 500)
         val manager = AppWidgetManager.getInstance(this)
+        if (intent.getBooleanExtra("pin_widget", false)) {
+            val callback = android.app.PendingIntent.getBroadcast(
+                this, HOST_ID, android.content.Intent(this, WidgetPinReceiver::class.java),
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_MUTABLE
+            )
+            check(manager.requestPinAppWidget(ComponentName(this, QuotaWidgetReceiver::class.java), null, callback))
+            finish()
+            return
+        }
         host = object : AppWidgetHost(this, HOST_ID) {
             override fun onCreateView(context: Context, id: Int, info: android.appwidget.AppWidgetProviderInfo): AppWidgetHostView {
                 return object : AppWidgetHostView(context) {
                     override fun updateAppWidget(remoteViews: RemoteViews?) {
                         super.updateAppWidget(remoteViews)
+                        // Dimensions below describe content, without a launcher's outer padding.
+                        setPadding(0, 0, 0, 0)
                         postDelayed({
                             val texts = collectText(this)
+                            val visibleTexts = collectText(this, visibleOnly = true)
                             val result = "id=$id size=${width}x$height layout=${remoteViews?.layoutId} text=$texts"
                             Log.i(TAG, result)
                             filesDir.resolve("widget-host-result.txt").writeText(result)
+                            filesDir.resolve("widget-host-result.json").writeText(org.json.JSONObject().apply {
+                                put("width", width)
+                                put("height", height)
+                                put("text", org.json.JSONArray(texts))
+                                put("visible", org.json.JSONArray(visibleTexts))
+                            }.toString())
                         }, 500)
                     }
                 }
@@ -103,7 +121,9 @@ class WidgetHostActivity : ComponentActivity() {
                 putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, width)
                 putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, height)
                 putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, height)
-                if (!intent.getBooleanExtra("legacy_sizes", false)) {
+                if (intent.getBooleanExtra("legacy_sizes", false)) {
+                    putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, null)
+                } else {
                     putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, arrayListOf(SizeF(width.toFloat(), height.toFloat())))
                 }
             }
@@ -122,9 +142,12 @@ class WidgetHostActivity : ComponentActivity() {
 
     private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
 
-    private fun collectText(view: View): List<String> = buildList {
-        if (view is TextView) add(view.text.toString())
-        if (view is ViewGroup) for (index in 0 until view.childCount) addAll(collectText(view.getChildAt(index)))
+    private fun collectText(view: View, visibleOnly: Boolean = false): List<String> = buildList {
+        val bounds = android.graphics.Rect()
+        if (view is TextView && (!visibleOnly || (view.getGlobalVisibleRect(bounds) && bounds.height() >= view.height - 1))) {
+            add(view.text.toString())
+        }
+        if (view is ViewGroup) for (index in 0 until view.childCount) addAll(collectText(view.getChildAt(index), visibleOnly))
     }
 
     companion object {

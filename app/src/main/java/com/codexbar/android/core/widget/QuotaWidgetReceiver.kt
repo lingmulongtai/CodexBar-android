@@ -31,12 +31,12 @@ class QuotaWidgetReceiver : AppWidgetProvider() {
         val appContext = context.applicationContext
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
+                withTimeoutOrNull(8_000L) { ids.forEach { WidgetUpdater.update(appContext, it) } }
                 // Backup is local-only; first display does not depend on WorkManager.
                 ids.forEach {
                     runCatching { WorkManagerInitializer.enqueueWidgetRender(appContext, it) }
                         .onFailure { Log.w("CodexBarWidget", "Could not schedule render backup", it) }
                 }
-                withTimeoutOrNull(8_000L) { ids.forEach { WidgetUpdater.update(appContext, it) } }
             } catch (error: Exception) {
                 Log.e("CodexBarWidget", "Widget broadcast render failed", error)
             } finally {
