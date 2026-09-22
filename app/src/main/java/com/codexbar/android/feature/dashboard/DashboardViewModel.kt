@@ -2,7 +2,6 @@ package com.codexbar.android.feature.dashboard
 
 import android.content.Context
 import android.util.Log
-import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codexbar.android.core.data.QuotaHistoryStore
@@ -18,7 +17,7 @@ import com.codexbar.android.core.presentation.QuotaPresentationMapper
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.ConnectionHealthStore
-import com.codexbar.android.core.widget.QuotaGlanceWidget
+import com.codexbar.android.core.widget.WidgetUpdater
 import com.codexbar.android.core.widget.WidgetPrefsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -134,7 +133,7 @@ class DashboardViewModel @Inject constructor(
         // exact snapshot instead of waiting for a second WorkManager network request.
         try {
             snapshot.services.forEach(widgetPrefsManager::cachePresentation)
-            QuotaGlanceWidget().updateAll(appContext)
+            WidgetUpdater.updateAll(appContext)
         } catch (error: Exception) {
             // Widget rendering must not turn a successful dashboard refresh into an app error.
             Log.e(TAG, "Widget render failed after dashboard refresh", error)

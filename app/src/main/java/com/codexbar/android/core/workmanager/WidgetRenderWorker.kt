@@ -7,12 +7,11 @@ import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import android.widget.RemoteViews
-import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.codexbar.android.MainActivity
 import com.codexbar.android.R
-import com.codexbar.android.core.widget.QuotaGlanceWidget
+import com.codexbar.android.core.widget.WidgetUpdater
 import kotlinx.coroutines.CancellationException
 
 /**
@@ -31,10 +30,14 @@ class WidgetRenderWorker(
         if (appWidgetId == INVALID_APP_WIDGET_ID) return Result.failure()
 
         return try {
-            val glanceId = GlanceAppWidgetManager(applicationContext)
-                .getGlanceIdBy(appWidgetId)
-            QuotaGlanceWidget().update(applicationContext, glanceId)
-            Result.success()
+            if (WidgetUpdater.update(applicationContext, appWidgetId)) {
+                Result.success()
+            } else if (runAttemptCount < MAX_RETRY_COUNT) {
+                Result.retry()
+            } else {
+                // The updater has already published cached usage; never overwrite it with Loading.
+                Result.failure()
+            }
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {

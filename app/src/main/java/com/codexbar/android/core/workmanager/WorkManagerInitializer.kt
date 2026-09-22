@@ -1,7 +1,6 @@
 package com.codexbar.android.core.workmanager
 
 import android.content.Context
-import androidx.glance.appwidget.updateAll
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -14,7 +13,7 @@ import androidx.work.workDataOf
 import com.codexbar.android.core.monitoring.MonitoringSession
 import com.codexbar.android.core.monitoring.MonitoringSessionStore
 import com.codexbar.android.core.security.EncryptedPrefsManager
-import com.codexbar.android.core.widget.QuotaGlanceWidget
+import com.codexbar.android.core.widget.WidgetUpdater
 import com.codexbar.android.di.appSingletonEntryPointOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,7 +45,7 @@ class WorkManagerInitializer private constructor() {
                     ?: EncryptedPrefsManager(appContext)
                 prefsManager.warmCache()
                 applyRefreshPolicy(appContext, prefsManager.getRefreshInterval())
-                QuotaGlanceWidget().updateAll(appContext)
+                WidgetUpdater.updateAll(appContext)
             }
         }
 

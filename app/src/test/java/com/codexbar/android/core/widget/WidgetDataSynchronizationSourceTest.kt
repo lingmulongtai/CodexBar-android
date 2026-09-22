@@ -16,7 +16,7 @@ class WidgetDataSynchronizationSourceTest {
         val publish = dashboard.substring(publishStart)
 
         assertTrue(publish.contains("snapshot.services.forEach(widgetPrefsManager::cachePresentation)"))
-        assertTrue(publish.contains("QuotaGlanceWidget().updateAll(appContext)"))
+        assertTrue(publish.contains("WidgetUpdater.updateAll(appContext)"))
     }
 
     @Test
@@ -25,7 +25,7 @@ class WidgetDataSynchronizationSourceTest {
         val emptyRepos = worker.substringAfter("if (repos.isEmpty()) {")
             .substringBefore("return Result.success()")
 
-        assertTrue(emptyRepos.contains("QuotaGlanceWidget().updateAll(applicationContext)"))
+        assertTrue(emptyRepos.contains("WidgetUpdater.updateAll(applicationContext)"))
     }
 
     @Test

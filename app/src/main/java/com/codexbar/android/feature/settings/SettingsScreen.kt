@@ -113,6 +113,7 @@ import com.codexbar.android.core.domain.model.ProviderCategory
 import com.codexbar.android.core.domain.model.providerMetadata
 import com.codexbar.android.core.network.claude.ClaudeCompanionPairing
 import com.codexbar.android.core.security.PrivacySettings
+import com.codexbar.android.core.notification.QuotaNotificationService
 import com.codexbar.android.core.security.ConnectionHealth
 import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
 import com.codexbar.android.ui.components.providerIcon
@@ -2393,6 +2394,7 @@ private fun PrivacySection(
     settings: PrivacySettings,
     onSettingsChange: (PrivacySettings) -> Unit
 ) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -2438,6 +2440,17 @@ private fun PrivacySection(
                     onSettingsChange(settings.copy(notificationRedactionEnabled = it))
                 }
             )
+            OutlinedButton(onClick = {
+                try {
+                    context.startActivity(Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                        .putExtra(Settings.EXTRA_CHANNEL_ID, QuotaNotificationService.LIVE_CHANNEL_ID))
+                } catch (_: ActivityNotFoundException) {
+                    openAppNotificationSettings(context)
+                }
+            }) {
+                Text(stringResource(R.string.privacy_lock_screen_system_settings))
+            }
             PrivacyToggle(
                 title = stringResource(R.string.privacy_widget_title),
                 subtitle = stringResource(R.string.privacy_widget_description),

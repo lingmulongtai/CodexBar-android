@@ -268,7 +268,8 @@
     <string name="privacy_screen_title">Block screenshots and Recents preview</string>
     <string name="privacy_screen_description">Protects token entry and account screens.</string>
     <string name="privacy_lock_screen_title">Redact lock-screen notifications</string>
-    <string name="privacy_lock_screen_description">Shows a neutral lock-screen notification.</string>
+    <string name="privacy_lock_screen_description">Turn off to show quota details in lock-screen notifications and Now Bar. Android and One UI notification settings still control what can appear before unlocking.</string>
+    <string name="privacy_lock_screen_system_settings">Lock-screen and Now Bar notification settings</string>
     <string name="privacy_notification_title">Redact notification quota details</string>
     <string name="privacy_notification_description">Hides usage numbers from the notification shade.</string>
     <string name="privacy_widget_title">Redact widget quota details</string>
@@ -328,6 +329,9 @@
     <string name="widget_render_error">Couldn’t render this widget. Open CodexBar and try refreshing.</string>
     <string name="widget_refresh_description">Refresh</string>
     <string name="widget_loading">Loading…</string>
+    <string name="widget_cached_hint">Basic view · tap for widget diagnostics</string>
+    <string name="widget_diagnostics_title">Widget display status</string>
+    <string name="widget_diagnostics_description">cache: reading saved usage · compose: drawing · publish: sending to launcher · sent: sent to launcher · fallback: basic view. No network connection is needed to display saved usage.</string>
     <string name="widget_preview_five_hour">5-hour</string>
     <string name="widget_preview_seven_day">7-day</string>
     <string name="widget_preview_42_remaining">42% left</string>

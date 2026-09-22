@@ -31,7 +31,7 @@ class WidgetRefreshSourceTest {
         val nativePlaceholder = confirmSelection.indexOf(
             "AppWidgetManager.getInstance(this@WidgetConfigurationActivity).updateAppWidget("
         )
-        val initialRender = confirmSelection.indexOf("QuotaGlanceWidget().update(")
+        val initialRender = confirmSelection.indexOf("WidgetUpdater.update(")
         val successfulResult = confirmSelection.indexOf("setResult(RESULT_OK, resultValue)")
 
         assertTrue("the launcher loading layout must be replaced immediately", nativePlaceholder >= 0)
@@ -44,7 +44,7 @@ class WidgetRefreshSourceTest {
         assertTrue(confirmSelection.contains("WorkManagerInitializer.enqueueWidgetRender("))
         assertTrue(confirmSelection.contains("if (!hadExistingConfiguration)"))
         assertTrue(confirmSelection.contains("withTimeoutOrNull(IMMEDIATE_RENDER_TIMEOUT_MILLIS)"))
-        assertTrue(confirmSelection.contains(".getGlanceIdBy(appWidgetId)"))
+        assertTrue(confirmSelection.contains("WidgetUpdater.update(this@WidgetConfigurationActivity, appWidgetId)"))
         assertFalse(confirmSelection.contains(".getGlanceIdBy(intent)"))
     }
 
@@ -70,7 +70,7 @@ class WidgetRefreshSourceTest {
         assertTrue("applySavedRefreshPolicyAsync must exist", functionIndex >= 0 && functionEnd > functionIndex)
         val initializer = source.substring(functionIndex, functionEnd)
 
-        assertTrue(initializer.contains("QuotaGlanceWidget().updateAll(appContext)"))
+        assertTrue(initializer.contains("WidgetUpdater.updateAll(appContext)"))
     }
 
     @Test
@@ -79,8 +79,8 @@ class WidgetRefreshSourceTest {
 
         assertFalse(source.contains("enqueueManualQuotaRefresh"))
         assertTrue(source.contains("override fun onUpdate("))
-        assertTrue(source.contains("super.onUpdate(context, appWidgetManager, appWidgetIds)"))
-        assertTrue(source.contains("WorkManagerInitializer.enqueueWidgetRender(context, appWidgetId)"))
+        assertTrue(source.contains("withTimeoutOrNull(8_000L)"))
+        assertTrue(source.contains("WorkManagerInitializer.enqueueWidgetRender(appContext, it)"))
     }
 
     @Test
@@ -169,8 +169,8 @@ class WidgetRefreshSourceTest {
         val worker = sourceFileFromCore("workmanager/WidgetRenderWorker.kt")
         val initializer = sourceFileFromCore("workmanager/WorkManagerInitializer.kt")
 
-        assertTrue(worker.contains(".getGlanceIdBy(appWidgetId)"))
-        assertTrue(worker.contains("QuotaGlanceWidget().update(applicationContext, glanceId)"))
+        assertTrue(worker.contains("WidgetUpdater.update(applicationContext, appWidgetId)"))
+        assertTrue(worker.contains("WidgetUpdater.update(applicationContext, appWidgetId)"))
         assertFalse(worker.contains("QuotaRepository"))
         assertFalse(worker.contains("NetworkType"))
         assertTrue(initializer.contains("OneTimeWorkRequestBuilder<WidgetRenderWorker>()"))

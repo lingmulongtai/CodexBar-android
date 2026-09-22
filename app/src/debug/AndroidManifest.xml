@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
+        <receiver android:name=".debug.WidgetPinReceiver" android:exported="false" />
+        <activity
+            android:name=".debug.WidgetHostActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:theme="@style/Theme.CodexBar" />
         <activity
             android:name=".debug.ScreenshotActivity"
             android:excludeFromRecents="true"

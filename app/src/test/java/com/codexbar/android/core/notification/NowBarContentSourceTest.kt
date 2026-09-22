@@ -82,6 +82,15 @@ class NowBarContentSourceTest {
     }
 
     @Test
+    fun `Android 16 honors both lock screen visibility choices`() {
+        val platform = service.substringAfter("private fun buildPlatformMonitoringNotification(")
+            .substringBefore("private fun shortCriticalText(")
+        assertTrue(platform.contains("if (privacySettings.lockScreenRedactionEnabled) Notification.VISIBILITY_PRIVATE"))
+        assertTrue(platform.contains("else Notification.VISIBILITY_PUBLIC"))
+        assertTrue(platform.contains("setPublicVersion(publicVersion.takeIf { privacySettings.lockScreenRedactionEnabled })"))
+    }
+
+    @Test
     fun `the lock screen version still hides quota values`() {
         val platform = service.substring(
             service.indexOf("private fun buildPlatformMonitoringNotification(")

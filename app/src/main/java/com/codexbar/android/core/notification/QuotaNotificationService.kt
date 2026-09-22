@@ -37,6 +37,9 @@ class QuotaNotificationService @Inject constructor(
     @ApplicationContext private val context: Context,
     private val prefsManager: EncryptedPrefsManager
 ) {
+    @Volatile private var latestSnapshot: QuotaPresentationSnapshot? = null
+    private val retainedNotifications = java.util.concurrent.ConcurrentHashMap<Int, Notification>()
+
     companion object {
         const val CHANNEL_ID = "quota_monitor"
         const val LIVE_CHANNEL_ID = "quota_live_monitor"
@@ -102,6 +105,8 @@ class QuotaNotificationService @Inject constructor(
         snapshot: QuotaPresentationSnapshot,
         monitoringSession: MonitoringSession?
     ) {
+        latestSnapshot = snapshot
+        retainedNotifications.clear()
         if (prefsManager.isPersistentNotificationEnabled()) {
             showQuotaNotification(snapshot)
         } else {
@@ -189,6 +194,7 @@ class QuotaNotificationService @Inject constructor(
     }
 
     fun showMonitoringNotification(snapshot: QuotaPresentationSnapshot, session: MonitoringSession) {
+        latestSnapshot = snapshot
         val privacySettings = prefsManager.getPrivacySettings()
         val primaryService = snapshot.services
             .maxByOrNull { service -> service.primaryMetric?.usedPercent ?: -1 }
@@ -315,16 +321,20 @@ class QuotaNotificationService @Inject constructor(
     }
 
     fun cancelMonitoringNotification() {
+        retainedNotifications.remove(MONITORING_NOTIFICATION_ID)
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.cancel(MONITORING_NOTIFICATION_ID)
     }
 
     fun cancelQuotaNotification() {
+        retainedNotifications.remove(NOTIFICATION_ID)
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.cancel(NOTIFICATION_ID)
     }
 
     fun cancelAllNotifications() {
+        latestSnapshot = null
+        retainedNotifications.clear()
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.cancelAll()
     }
@@ -437,6 +447,10 @@ class QuotaNotificationService @Inject constructor(
                 }
             )
             .setPublicVersion(publicVersion.takeIf { privacySettings.lockScreenRedactionEnabled })
+            .setVisibility(
+                if (privacySettings.lockScreenRedactionEnabled) Notification.VISIBILITY_PRIVATE
+                else Notification.VISIBILITY_PUBLIC
+            )
             .addAction(
                 Notification.Action.Builder(
                     Icon.createWithResource(context, R.drawable.ic_refresh),
@@ -530,6 +544,43 @@ class QuotaNotificationService @Inject constructor(
     private fun localizedString(@StringRes resourceId: Int, vararg formatArgs: Any): String {
         return ContextCompat.getContextForLanguage(context)
             .getString(resourceId, *formatArgs)
+    }
+
+    /** Apply a user's privacy change immediately, without waiting for another provider request. */
+    fun refreshPrivacySettings(session: MonitoringSession?) {
+        latestSnapshot?.let {
+            val currentServices = it.services.filter { service -> prefsManager.hasCredential(service.service) }
+            publishSnapshot(it.copy(services = currentServices), session)
+            return
+        }
+        // After process death Android may still hold notifications, even though this instance has
+        // no snapshot. Recover their existing content only when detail redaction permits it.
+        val privacy = prefsManager.getPrivacySettings()
+        val manager = context.getSystemService(NotificationManager::class.java)
+        manager.activeNotifications.filter {
+            it.id == NOTIFICATION_ID || it.id == MONITORING_NOTIFICATION_ID
+        }.forEach { active ->
+            val original = retainedNotifications.getOrPut(active.id) { active.notification }
+            val channel = active.notification.channelId
+            val generic = Notification.Builder(context, channel)
+                .setSmallIcon(R.drawable.ic_quota)
+                .setContentTitle(localizedString(R.string.notification_monitoring_title))
+                .setContentText(localizedString(R.string.notification_quota_hidden))
+                .setContentIntent(original.contentIntent)
+                .setActions(*original.actions.orEmpty())
+                .setOngoing(original.flags and Notification.FLAG_ONGOING_EVENT != 0)
+                .setWhen(original.`when`)
+                .setUsesChronometer(original.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER))
+                .setChronometerCountDown(original.extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN))
+                .setShowWhen(original.extras.getBoolean(Notification.EXTRA_SHOW_WHEN))
+                .build()
+            val builder = Notification.Builder.recoverBuilder(
+                context, if (privacy.notificationRedactionEnabled) generic else original
+            )
+                .setVisibility(if (privacy.lockScreenRedactionEnabled) Notification.VISIBILITY_PRIVATE else Notification.VISIBILITY_PUBLIC)
+                .setPublicVersion(generic.takeIf { privacy.lockScreenRedactionEnabled })
+            manager.notify(active.id, builder.build())
+        }
     }
 
     private fun NotificationCompat.Builder.applyPrivacy(
