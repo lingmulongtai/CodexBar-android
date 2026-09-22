@@ -51,7 +51,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.lifecycle.lifecycleScope
 import com.codexbar.android.MainActivity
 import com.codexbar.android.R
@@ -212,6 +211,15 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                     .padding(horizontal = 16.dp, vertical = 16.dp),
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
+                                widgetPrefsManager.renderDiagnostics(appWidgetId)?.let { diagnostics ->
+                                    Card(modifier = Modifier.fillMaxWidth()) {
+                                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text(stringResource(R.string.widget_diagnostics_title), style = MaterialTheme.typography.titleSmall)
+                                            Text(diagnostics, style = MaterialTheme.typography.bodySmall)
+                                            Text(stringResource(R.string.widget_diagnostics_description), style = MaterialTheme.typography.bodySmall)
+                                        }
+                                    }
+                                }
                                 Text(
                                     text = stringResource(R.string.widget_setup_description),
                                     style = MaterialTheme.typography.bodyLarge,
@@ -436,10 +444,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
 
             try {
                 val rendered = withTimeoutOrNull(IMMEDIATE_RENDER_TIMEOUT_MILLIS) {
-                    val glanceId = GlanceAppWidgetManager(this@WidgetConfigurationActivity)
-                        .getGlanceIdBy(appWidgetId)
-                    QuotaGlanceWidget().update(this@WidgetConfigurationActivity, glanceId)
-                    true
+                    WidgetUpdater.update(this@WidgetConfigurationActivity, appWidgetId)
                 }
                 if (rendered != true) {
                     Log.w(TAG, "Immediate widget render timed out for id=$appWidgetId")
@@ -475,7 +480,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "CodexBarWidget"
-        private const val IMMEDIATE_RENDER_TIMEOUT_MILLIS = 1_500L
+        private const val IMMEDIATE_RENDER_TIMEOUT_MILLIS = 7_000L
     }
 }
 

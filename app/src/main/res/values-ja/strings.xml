@@ -328,6 +328,9 @@
     <string name="widget_render_error">ウィジェットを表示できませんでした。CodexBarを開いて更新してください。</string>
     <string name="widget_refresh_description">更新</string>
     <string name="widget_loading">読み込み中…</string>
+    <string name="widget_cached_hint">簡易表示・タップして表示状況を確認</string>
+    <string name="widget_diagnostics_title">ウィジェットの表示状況</string>
+    <string name="widget_diagnostics_description">cache: 保存済みデータの読込／compose: 描画／publish: ランチャーへ送信中／sent: 送信済み／fallback: 簡易表示。保存済み使用量の表示に通信は必要ありません。</string>
     <string name="widget_preview_five_hour">5時間</string>
     <string name="widget_preview_seven_day">7日間</string>
     <string name="widget_preview_42_remaining">残り42%</string>

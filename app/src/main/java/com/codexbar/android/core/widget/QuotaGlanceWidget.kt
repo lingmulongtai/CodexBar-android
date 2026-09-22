@@ -54,6 +54,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 class QuotaGlanceWidget : GlanceAppWidget(errorUiLayout = R.layout.widget_error) {
 
+    // Display state is in WidgetPrefsManager; no Glance DataStore is needed.
+    override val stateDefinition = null
+
     // Exact composes only the launcher's current size. Responsive composes every declared
     // variant into one RemoteViews payload, which can exceed OEM launcher/Binder limits.
     override val sizeMode: SizeMode = SizeMode.Exact
@@ -503,6 +506,6 @@ class RefreshWidgetAction : ActionCallback {
         parameters: ActionParameters
     ) {
         WorkManagerInitializer.enqueueManualQuotaRefresh(context, source = "widget")
-        QuotaGlanceWidget().update(context, glanceId)
+        WidgetUpdater.update(context, GlanceAppWidgetManager(context).getAppWidgetId(glanceId))
     }
 }

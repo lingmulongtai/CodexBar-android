@@ -73,6 +73,20 @@ class WidgetPrefsManager @Inject constructor(
         editor.apply()
     }
 
+    fun recordRender(appWidgetId: Int, stage: String, size: String, reason: String = "") {
+        prefs.edit()
+            .putString("widget_${appWidgetId}_render", "$stage | $size | $reason")
+            .putLong("widget_${appWidgetId}_render_at", System.currentTimeMillis())
+            .apply()
+    }
+
+    fun renderDiagnostics(appWidgetId: Int): String? {
+        val state = prefs.getString("widget_${appWidgetId}_render", null) ?: return null
+        val time = prefs.getLong("widget_${appWidgetId}_render_at", 0L)
+        val timestamp = java.text.DateFormat.getDateTimeInstance().format(java.util.Date(time))
+        return "#$appWidgetId · $timestamp\n$state"
+    }
+
     fun deleteServiceCache(service: AiService) {
         val prefix = "cache_${service.name}"
         val editor = prefs.edit()

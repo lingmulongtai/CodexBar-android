@@ -25,13 +25,12 @@ import com.codexbar.android.core.presentation.RefreshSourcePresentation
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.security.ConnectionHealthStore
 import com.codexbar.android.core.tile.QuotaTileService
-import com.codexbar.android.core.widget.QuotaGlanceWidget
+import com.codexbar.android.core.widget.WidgetUpdater
 import com.codexbar.android.core.widget.QuotaWidgetReceiver
 import com.codexbar.android.core.widget.WidgetPrefsManager
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import androidx.glance.appwidget.GlanceAppWidgetManager
-import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -72,7 +71,7 @@ class QuotaRefreshWorker @AssistedInject constructor(
                 )
             }
             try {
-                QuotaGlanceWidget().updateAll(applicationContext)
+                WidgetUpdater.updateAll(applicationContext)
             } catch (error: Exception) {
                 // Widget rendering cannot turn a no-op account refresh into retry work.
                 Log.e(TAG, "Widget render failed after disconnected refresh", error)
@@ -126,7 +125,7 @@ class QuotaRefreshWorker @AssistedInject constructor(
 
             // Publish both successful data and actionable provider errors to widgets.
             cacheQuotaData(snapshot)
-            QuotaGlanceWidget().updateAll(applicationContext)
+            WidgetUpdater.updateAll(applicationContext)
 
             notificationService.publishSnapshot(
                 snapshot = snapshot,
@@ -161,7 +160,7 @@ class QuotaRefreshWorker @AssistedInject constructor(
                     languageContext.getString(R.string.widget_refresh_failed)
                 )
             }
-            runCatching { QuotaGlanceWidget().updateAll(applicationContext) }
+            runCatching { WidgetUpdater.updateAll(applicationContext) }
                 .onFailure { renderError ->
                     Log.e(TAG, "Widget render failed after refresh error", renderError)
                 }
