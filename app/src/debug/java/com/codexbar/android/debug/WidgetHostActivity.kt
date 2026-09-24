@@ -158,8 +158,12 @@ class WidgetHostActivity : ComponentActivity() {
 
     private fun collectText(view: View, visibleOnly: Boolean = false): List<String> = buildList {
         val bounds = android.graphics.Rect()
-        if (view is TextView && (!visibleOnly || (view.getGlobalVisibleRect(bounds) && bounds.height() >= view.height - 1))) {
-            add(view.text.toString())
+        if (view is TextView) {
+            val layout = view.layout
+            val fullyVisible = view.getGlobalVisibleRect(bounds) && bounds.height() >= view.height - 1 &&
+                layout != null && layout.height <= view.height - view.compoundPaddingTop - view.compoundPaddingBottom &&
+                (0 until layout.lineCount).all { layout.getEllipsisCount(it) == 0 }
+            if (!visibleOnly || fullyVisible) add(view.text.toString())
         }
         if (view is ViewGroup) for (index in 0 until view.childCount) addAll(collectText(view.getChildAt(index), visibleOnly))
     }

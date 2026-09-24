@@ -104,7 +104,7 @@ class QuotaGlanceWidget(private val previewConfig: WidgetDisplayConfig? = null) 
             modifier = GlanceModifier.fillMaxSize().cornerRadius(style.cornerRadius.dp)
                 .background(Color(style.backgroundArgb))
                 .clickable(actionStartActivity<MainActivity>())
-                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .padding(horizontal = 8.dp, vertical = 3.dp)
         ) {
             when {
                 redactQuotaDetails -> RedactedState(strings, style)

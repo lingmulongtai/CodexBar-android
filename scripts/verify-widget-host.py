@@ -12,6 +12,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--adb", default="adb")
 parser.add_argument("--serial", required=True)
 parser.add_argument("--screenshots", type=Path, help="Save fresh template screenshots to this directory")
+parser.add_argument("--templates-only", action="store_true", help="Run only the ten template cases during layout iteration")
 args = parser.parse_args()
 if args.screenshots:
     args.screenshots.mkdir(parents=True, exist_ok=True)
@@ -22,13 +23,14 @@ def adb(*parts, check=True):
 
 assert adb("shell", "getprop", "ro.kernel.qemu") == "1", "Demo tests require an emulator"
 adb("shell", "appwidget", "grantbind", "--package", "com.codexbar.android", "--user", "0")
-for width, height, legacy, redacted in [
+size_cases = [] if args.templates_only else [
     (320, 40, False, False), (320, 48, False, False),
     (320, 60, False, False), (320, 80, False, False),
     (320, 120, False, False), (140, 60, False, False),
     (320, 260, True, False), (320, 60, True, False),
     (320, 60, False, True), (320, 60, False, False),
-]:
+]
+for width, height, legacy, redacted in size_cases:
     adb("shell", "am", "force-stop", "com.codexbar.android")
     adb("shell", "run-as", "com.codexbar.android", "rm", "-f", "files/widget-host-result.json")
     adb("shell", "am", "start", "-W", "-n", "com.codexbar.android/.debug.WidgetHostActivity",
@@ -36,6 +38,9 @@ for width, height, legacy, redacted in [
         "--ez", "legacy_sizes", str(legacy).lower(), "--ez", "redacted", str(redacted).lower())
     result = {}
     deadline = time.monotonic() + 20
+    ready_after = time.monotonic() + 6
+    stable_since = None
+    previous_text = None
     while time.monotonic() < deadline:
         time.sleep(0.5)
         raw = adb("shell", "run-as", "com.codexbar.android", "cat", "files/widget-host-result.json", check=False)
@@ -49,7 +54,10 @@ for width, height, legacy, redacted in [
             passed = "Codex" in result["visible"] and "62%" in result["visible"]
             if 56 <= height < 180:
                 passed = passed and "Copilot" in result["visible"] and "74%" in result["visible"]
-        if passed:
+        if text != previous_text or not passed:
+            stable_since = time.monotonic()
+        previous_text = text
+        if passed and time.monotonic() >= ready_after and time.monotonic() - stable_since >= 2:
             break
     else:
         raise AssertionError(f"Host rendering failed at {width}x{height}, legacy={legacy}, redacted={redacted}: {result}")
@@ -63,6 +71,9 @@ for template in ["LEDGER", "METERS", "COLUMNS", "TILES", "RINGS", "SEGMENTS", "V
         "--ez", "seed_demo", "true", "--ei", "width_dp", "347", "--ei", "height_dp", "69",
         "--ez", "three_services", "true", "--es", "template", template)
     deadline = time.monotonic() + 20
+    ready_after = time.monotonic() + 6
+    stable_since = None
+    previous_text = None
     result = {}
     while time.monotonic() < deadline:
         time.sleep(.5)
@@ -71,7 +82,14 @@ for template in ["LEDGER", "METERS", "COLUMNS", "TILES", "RINGS", "SEGMENTS", "V
             continue
         result = json.loads(raw)
         text = " | ".join(result["visible"])
-        if all(value in text for value in ["Codex", "Copilot", "Claude", "62%", "74%", "56%", "↻"]):
+        expected = ["Codex", "Copilot", "Claude", "62%", "74%", "56%", "↻", "79%"]
+        if template != "FOCUS":
+            expected += ["87%", "2h 18m"]
+        passed = all(value in text for value in expected)
+        if text != previous_text or not passed:
+            stable_since = time.monotonic()
+        previous_text = text
+        if passed and time.monotonic() >= ready_after and time.monotonic() - stable_since >= 2:
             break
     else:
         raise AssertionError(f"Template {template} clipped or omitted data: {result}")

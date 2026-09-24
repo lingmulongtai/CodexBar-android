@@ -85,7 +85,7 @@ private fun ProviderLine(provider: WidgetProvider, config: WidgetDisplayConfig, 
                 Spacer(GlanceModifier.width(8.dp))
                 WText(resetText(metric, config), style, 9f, modifier = GlanceModifier.width(60.dp))
                 if (!compact && style.showSecondary) WText(secondaryText(provider, config), style, 9f,
-                    modifier = GlanceModifier.width(71.dp))
+                    modifier = GlanceModifier.width(85.dp))
             }
             WidgetTemplate.DUAL -> {
                 listOfNotNull(metric, provider.secondary.takeIf { style.showSecondary }).forEach { item ->
@@ -123,7 +123,7 @@ private fun ProviderTile(provider: WidgetProvider, config: WidgetDisplayConfig, 
     val accent = style.accent(provider.service)
     val tile = style.template == WidgetTemplate.TILES
     val modifier = if (tile) GlanceModifier.fillMaxWidth().cornerRadius(10.dp)
-        .background(Color(style.foregroundArgb).copy(alpha = 0.07f)).padding(horizontal = 5.dp, vertical = 2.dp)
+        .background(Color(style.foregroundArgb).copy(alpha = 0.07f)).padding(horizontal = 5.dp)
         else GlanceModifier.fillMaxWidth()
     Column(modifier) {
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -137,27 +137,31 @@ private fun ProviderTile(provider: WidgetProvider, config: WidgetDisplayConfig, 
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 if (style.template == WidgetTemplate.RINGS) {
                     val bitmap = remember(metric.remaining, accent) { ringBitmap(metric.remaining, accent) }
-                    Image(ImageProvider(bitmap), null, GlanceModifier.size(26.dp))
+                    Image(ImageProvider(bitmap), null, GlanceModifier.size(24.dp))
                     Spacer(GlanceModifier.width(4.dp))
                 }
                 if (style.template == WidgetTemplate.VERTICAL) {
-                    Box(GlanceModifier.width(7.dp).height(25.dp).background(Color(accent).copy(alpha = 0.16f)),
+                    Box(GlanceModifier.width(7.dp).height(23.dp).background(Color(accent).copy(alpha = 0.16f)),
                         contentAlignment = Alignment.BottomCenter) {
                         metric.remaining?.let {
-                            Box(GlanceModifier.width(7.dp).height((25 * it.coerceIn(0f, 1f)).dp).background(Color(accent))) {}
+                            Box(GlanceModifier.width(7.dp).height((23 * it.coerceIn(0f, 1f)).dp).background(Color(accent))) {}
                         }
                     }
                     Spacer(GlanceModifier.width(6.dp))
                 }
-                WText(metric.percent, style, if (focus) 23f else if (tile) 17f else 19f, bold = true)
+                WText(metric.percent, style, if (focus) {
+                    if (LocalSize.current.height.value < 80) 18f else 23f
+                } else 17f, bold = true)
                 Spacer(GlanceModifier.width(4.dp))
                 WText(metric.shortLabel, style, 8f)
             }
             if (style.template == WidgetTemplate.SEGMENTS) {
                 Row(GlanceModifier.fillMaxWidth()) {
                     repeat(10) { index ->
-                        Box(GlanceModifier.defaultWeight().padding(end = 2.dp).height(4.dp).background(Color(accent)
-                            .copy(alpha = if (metric.remaining != null && index < metric.remaining * 10) 1f else 0.18f))) {}
+                        Box(GlanceModifier.defaultWeight().padding(end = 1.dp).height(2.dp)) {
+                            Box(GlanceModifier.fillMaxSize().background(Color(accent)
+                                .copy(alpha = if (metric.remaining != null && index < metric.remaining * 10) 1f else 0.18f))) {}
+                        }
                     }
                 }
             } else if (style.template in listOf(WidgetTemplate.COLUMNS, WidgetTemplate.TILES)) {
