@@ -4,13 +4,17 @@ import json
 import subprocess
 import time
 import sys
+from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8")
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--adb", default="adb")
 parser.add_argument("--serial", required=True)
+parser.add_argument("--screenshots", type=Path, help="Save fresh template screenshots to this directory")
 args = parser.parse_args()
+if args.screenshots:
+    args.screenshots.mkdir(parents=True, exist_ok=True)
 
 def adb(*parts, check=True):
     return subprocess.run([args.adb, "-s", args.serial, *parts], capture_output=True,
@@ -72,3 +76,6 @@ for template in ["LEDGER", "METERS", "COLUMNS", "TILES", "RINGS", "SEGMENTS", "V
     else:
         raise AssertionError(f"Template {template} clipped or omitted data: {result}")
     print(f"PASS template={template} 347x69: {text}", flush=True)
+    if args.screenshots:
+        with (args.screenshots / f"widget-{template.lower()}.png").open("wb") as output:
+            subprocess.run([args.adb, "-s", args.serial, "exec-out", "screencap", "-p"], stdout=output, check=True)

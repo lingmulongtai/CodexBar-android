@@ -124,6 +124,12 @@ class WidgetHostActivity : ComponentActivity() {
                 services = listOf(AiService.CODEX, AiService.COPILOT) + if (three) listOf(AiService.CLAUDE) else emptyList(),
                 style = WidgetStyle(template = WidgetTemplate.fromId(intent.getStringExtra("template")),
                     opacity = intent.getIntExtra("opacity", 68))))
+            if (intent.getBooleanExtra("update_all_demo", false)) {
+                manager.getAppWidgetIds(ComponentName(this@WidgetHostActivity, QuotaWidgetReceiver::class.java)).forEach { target ->
+                    widgetPrefs.saveWidgetConfig(target, widgetPrefs.getWidgetConfig(id))
+                }
+                com.codexbar.android.core.widget.WidgetUpdater.updateAll(this@WidgetHostActivity)
+            }
             val options = Bundle().apply {
                 putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, width)
                 putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, width)
