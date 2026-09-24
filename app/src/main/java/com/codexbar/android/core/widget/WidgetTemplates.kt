@@ -54,7 +54,7 @@ internal fun WidgetTemplates(config: WidgetDisplayConfig, providers: List<Widget
             }
         }
     } else {
-        Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+        Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.Top) {
             data.forEachIndexed { index, provider ->
                 if (index > 0) Spacer(GlanceModifier.width(6.dp))
                 Column(GlanceModifier.defaultWeight()) { ProviderTile(provider, config) }
