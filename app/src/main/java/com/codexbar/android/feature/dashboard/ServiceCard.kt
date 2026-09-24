@@ -68,7 +68,7 @@ fun ServiceCard(
             }
             if (service.metrics.isNotEmpty()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    service.metrics.take(2).forEach { metric ->
+                    (listOfNotNull(service.primaryMetric) + service.metrics.filterNot { it.id == service.primaryMetric?.id }).take(2).forEach { metric ->
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(metric.label, style = MaterialTheme.typography.labelSmall,
