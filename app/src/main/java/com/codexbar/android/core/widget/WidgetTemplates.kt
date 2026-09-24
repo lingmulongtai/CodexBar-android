@@ -47,8 +47,10 @@ internal fun WidgetTemplates(config: WidgetDisplayConfig, providers: List<Widget
             if (data.size > 1) {
                 Column(GlanceModifier.defaultWeight(), verticalAlignment = Alignment.CenterVertically) {
                     data.drop(1).forEach { provider ->
-                        WText(provider.name, style, 10f, bold = true, color = style.accent(provider.service))
-                        WText("${provider.primary?.percent ?: "—"}  ${resetText(provider.primary, config)}", style, 11f)
+                        WText(provider.name + if (provider.needsAttention) " !" else "", style, 10f,
+                            bold = true, color = style.accent(provider.service))
+                        WText(provider.primary?.let { "${it.percent}  ${resetText(it, config)}" }
+                            ?: provider.message, style, 11f)
                     }
                 }
             }
