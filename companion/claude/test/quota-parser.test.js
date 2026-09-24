@@ -65,3 +65,13 @@ test('waits for loading to finish and never forwards arbitrary plan text', () =>
     { windows: [{ label: '5-Hour', usedFraction: 0.37 }] }
   );
 });
+
+test('rejects last-known usage instead of publishing it as a fresh reading', () => {
+  assert.equal(parseClaudeUsageOutput(`Showing last-known usage
+Current session
+  38% used
+  Resets 9pm (Asia/Tokyo)`), null);
+  assert.equal(parseClaudeUsageOutput(`Current session
+  38% used
+  Showing last-known usage`), null);
+});
