@@ -460,4 +460,8 @@
     <string name="widget_template_focus">フォーカス</string>
     <string name="widget_template_dual">2枠比較</string>
     <string name="widget_template_reset">リセット優先</string>
+    <string name="validation_permission_denied">組織へのアクセスまたは使用量の参照権限がありません。組織IDとViewOrgConsumption権限を確認してください。</string>
+    <string name="credential_organization_id">組織ID</string>
+    <string name="credential_devin_org_support">DevinのSettings → Devin APIの上部にある組織IDを入力します。</string>
+    <string name="credential_devin_setup_body">ViewOrgConsumption権限を持つcog_で始まる個人アクセストークンまたはサービスユーザーキーを作成し、キーと組織IDを入力します。過去30日間に組織がDevin製品全体で消費したACUを表示します。APIはプランの上限や残りクレジットを提供しません。日次の区切りはUTC 08:00です。</string>
 </resources>

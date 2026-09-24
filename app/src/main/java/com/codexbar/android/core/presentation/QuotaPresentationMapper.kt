@@ -421,7 +421,9 @@ class QuotaPresentationMapper(
 
     private fun AppError.toPresentationMessage(): String {
         return when (this) {
-            is AppError.AuthError -> if (isTerminal) {
+            is AppError.AuthError -> if (permissionDenied) {
+                text.permissionDenied()
+            } else if (isTerminal) {
                 text.reauthenticationRequired()
             } else {
                 text.authenticationFailed()

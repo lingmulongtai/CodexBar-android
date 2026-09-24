@@ -37,6 +37,7 @@ fun providerVisualStyle(service: AiService): ProviderVisualStyle {
         AiService.MOONSHOT -> if (isDark) Color(0xFFE2E8F0) else Color(0xFF334155)
         AiService.CLINEPASS -> if (isDark) Color(0xFFFFB59E) else Color(0xFF9B3818)
         AiService.IBM_BOB -> if (isDark) Color(0xFFB4C5FF) else Color(0xFF0050D8)
+        AiService.DEVIN -> if (isDark) Color(0xFF72BBEF) else Color(0xFF176091)
         AiService.FIREWORKS -> if (isDark) Color(0xFFFFB5A0) else Color(0xFF9D3216)
     }
     val tintAlpha = if (isDark) 0.16f else 0.09f

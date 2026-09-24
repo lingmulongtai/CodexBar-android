@@ -113,5 +113,11 @@ enum class AiService(
         brandColor = 0xFFF45B3A,
         baseUrl = "https://api.fireworks.ai/",
         requiresManualCredentials = true
+    ),
+    DEVIN(
+        displayName = "Devin",
+        brandColor = 0xFF72BBEF,
+        baseUrl = "https://api.devin.ai/",
+        requiresManualCredentials = true
     )
 }
