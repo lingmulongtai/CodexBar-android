@@ -42,11 +42,33 @@ for width, height, legacy, redacted in [
         if redacted:
             passed = "Quota hidden" in text and "%" not in "".join(result["text"]) and "Basic view" not in text
         else:
-            passed = "Codex" in text and "62% left" in text and "Basic view" not in text
+            passed = "Codex" in result["visible"] and "62%" in result["visible"]
             if 56 <= height < 180:
-                passed = passed and "Copilot" in text and "74% left" in text
+                passed = passed and "Copilot" in result["visible"] and "74%" in result["visible"]
         if passed:
             break
     else:
         raise AssertionError(f"Host rendering failed at {width}x{height}, legacy={legacy}, redacted={redacted}: {result}")
     print(f"PASS {width}x{height} legacy={legacy} redacted={redacted}: {text}", flush=True)
+
+# Every selectable template must retain all three providers at the user's Niagara size.
+for template in ["LEDGER", "METERS", "COLUMNS", "TILES", "RINGS", "SEGMENTS", "VERTICAL", "FOCUS", "DUAL", "RESET"]:
+    adb("shell", "am", "force-stop", "com.codexbar.android")
+    adb("shell", "run-as", "com.codexbar.android", "rm", "-f", "files/widget-host-result.json")
+    adb("shell", "am", "start", "-W", "-n", "com.codexbar.android/.debug.WidgetHostActivity",
+        "--ez", "seed_demo", "true", "--ei", "width_dp", "347", "--ei", "height_dp", "69",
+        "--ez", "three_services", "true", "--es", "template", template)
+    deadline = time.monotonic() + 20
+    result = {}
+    while time.monotonic() < deadline:
+        time.sleep(.5)
+        raw = adb("shell", "run-as", "com.codexbar.android", "cat", "files/widget-host-result.json", check=False)
+        if not raw:
+            continue
+        result = json.loads(raw)
+        text = " | ".join(result["visible"])
+        if all(value in text for value in ["Codex", "Copilot", "Claude", "62%", "74%", "56%", "↻"]):
+            break
+    else:
+        raise AssertionError(f"Template {template} clipped or omitted data: {result}")
+    print(f"PASS template={template} 347x69: {text}", flush=True)

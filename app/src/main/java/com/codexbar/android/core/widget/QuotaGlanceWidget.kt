@@ -9,52 +9,38 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
-import androidx.glance.Image
-import androidx.glance.ImageProvider
-import androidx.glance.LocalSize
 import androidx.glance.LocalContext
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
-import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
-import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
-import androidx.glance.layout.Row
-import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
 import androidx.glance.layout.padding
-import androidx.glance.layout.size
-import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import androidx.core.content.ContextCompat
 import com.codexbar.android.MainActivity
 import com.codexbar.android.R
-import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.presentation.QuotaSeverity
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.workmanager.WorkManagerInitializer
 import com.codexbar.android.di.appSingletonEntryPointOrNull
 import kotlinx.coroutines.withTimeoutOrNull
 
-class QuotaGlanceWidget : GlanceAppWidget(errorUiLayout = R.layout.widget_error) {
+class QuotaGlanceWidget(private val previewConfig: WidgetDisplayConfig? = null) : GlanceAppWidget(errorUiLayout = R.layout.widget_error) {
 
     // Display state is in WidgetPrefsManager; no Glance DataStore is needed.
     override val stateDefinition = null
@@ -85,7 +71,7 @@ class QuotaGlanceWidget : GlanceAppWidget(errorUiLayout = R.layout.widget_error)
                 Log.w(TAG, "Could not resolve the App Widget ID for $id", error)
                 AppWidgetManager.INVALID_APPWIDGET_ID
             }
-        val config = runCatching { dependencies.widgetPrefs.getWidgetConfig(appWidgetId) }
+        val config = previewConfig ?: runCatching { dependencies.widgetPrefs.getWidgetConfig(appWidgetId) }
             .getOrElse { error ->
                 Log.e(TAG, "Could not read the configuration for id=$appWidgetId", error)
                 WidgetDisplayConfig()
@@ -113,340 +99,35 @@ class QuotaGlanceWidget : GlanceAppWidget(errorUiLayout = R.layout.widget_error)
         redactQuotaDetails: Boolean,
         strings: WidgetStrings
     ) {
-        val size = LocalSize.current
-        val selectedServices = config.services
-        val heightDp = size.height.value.toInt()
-        val compact = WidgetRenderPolicy.isCompact(size.width.value.toInt(), heightDp)
-        val maxServices = WidgetRenderPolicy.maxServices(heightDp)
-        val maxRows = WidgetRenderPolicy.maxRows(heightDp, config.maxRows)
+        val style = config.style.normalized()
         Box(
-            modifier = GlanceModifier
-                .fillMaxSize()
-                .cornerRadius(20.dp)
-                .background(GlanceTheme.colors.widgetBackground)
+            modifier = GlanceModifier.fillMaxSize().cornerRadius(style.cornerRadius.dp)
+                .background(Color(style.backgroundArgb))
                 .clickable(actionStartActivity<MainActivity>())
-                .padding(horizontal = if (compact) 8.dp else 16.dp, vertical = if (compact) 4.dp else 16.dp)
+                .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
-            if (compact && (redactQuotaDetails || selectedServices.isEmpty())) {
-                Text(
-                    text = if (redactQuotaDetails) strings.quotaHidden else strings.noServices,
-                    style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 12.sp),
-                    maxLines = 1
-                )
-            } else if (redactQuotaDetails) {
-                RedactedState(strings)
-            } else if (selectedServices.isEmpty()) {
-                EmptyState(strings)
-            } else if (compact) {
-                Column(modifier = GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                    selectedServices.take(WidgetRenderPolicy.compactServices(heightDp)).forEach { service ->
-                        CompactService(service, widgetPrefs, strings)
-                    }
-                }
-            } else {
-                Column(modifier = GlanceModifier.fillMaxSize()) {
-                    for ((index, service) in selectedServices.take(maxServices).withIndex()) {
-                        if (index > 0) {
-                            Spacer(modifier = GlanceModifier.height(4.dp))
-                            Divider()
-                            Spacer(modifier = GlanceModifier.height(8.dp))
-                        }
-                        ServiceSection(
-                            service = service,
-                            widgetPrefs = widgetPrefs,
-                            config = config.copy(maxRows = maxRows),
-                            showRefresh = index == 0,
-                            strings = strings
-                        )
-                    }
-                    if (selectedServices.size > maxServices) {
-                        Spacer(modifier = GlanceModifier.height(4.dp))
-                        Text(
-                            text = strings.moreServices(selectedServices.size - maxServices),
-                            style = TextStyle(
-                                color = GlanceTheme.colors.onSurfaceVariant,
-                                fontSize = 11.sp
-                            )
-                        )
-                    }
-                }
+            when {
+                redactQuotaDetails -> RedactedState(strings, style)
+                config.services.isEmpty() -> EmptyState(strings, style)
+                else -> WidgetTemplates(config.copy(style = style),
+                    widgetPrefs.displayData(config, strings.waitingForData))
             }
         }
     }
 
     @Composable
-    private fun CompactService(service: AiService, prefs: WidgetPrefsManager, strings: WidgetStrings) {
-        val label = prefs.getCachedLabels(service).maxByOrNull { prefs.getCachedUtilization(service, it) }
-        val remaining = label?.let { prefs.getCachedRemainingLabel(service, it) }
-            ?: prefs.getCachedStatusMessage(service)
-            ?: strings.waitingForData
-        val severity = label?.let { severityForUtilization(prefs.getCachedUtilization(service, it)) }
-            ?: QuotaSeverity.Unknown
-        Column(modifier = GlanceModifier.fillMaxWidth().height(24.dp)) {
-            Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = if (service == AiService.COPILOT) "Copilot" else service.displayName,
-                    modifier = GlanceModifier.defaultWeight(),
-                    style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 12.sp, fontWeight = FontWeight.Bold),
-                    maxLines = 1
-                )
-                Text(
-                    text = remaining,
-                    style = TextStyle(color = severityColor(severity), fontSize = 12.sp),
-                    maxLines = 1
-                )
-            }
-            Spacer(modifier = GlanceModifier.height(2.dp))
-            LinearProgressIndicator(
-                progress = label?.let { prefs.getCachedBarProgress(service, it) }?.coerceIn(0f, 1f) ?: 0f,
-                modifier = GlanceModifier.fillMaxWidth().height(3.dp),
-                color = severityColor(severity),
-                backgroundColor = GlanceTheme.colors.surfaceVariant
-            )
+    private fun EmptyState(strings: WidgetStrings, style: WidgetStyle) {
+        Column(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+            Text(strings.noServices, style = TextStyle(color = ColorProvider(Color(style.foregroundArgb)), fontSize = 12.sp))
+            Text(strings.openDetails, style = TextStyle(color = ColorProvider(Color(style.foregroundArgb)), fontSize = 10.sp))
         }
     }
 
     @Composable
-    private fun EmptyState(strings: WidgetStrings) {
-        Box(
-            modifier = GlanceModifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = strings.noServices,
-                    style = TextStyle(
-                        color = GlanceTheme.colors.onSurface,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                )
-                Spacer(modifier = GlanceModifier.height(4.dp))
-                Text(
-                    text = strings.openDetails,
-                    style = TextStyle(
-                        color = GlanceTheme.colors.onSurfaceVariant,
-                        fontSize = 12.sp
-                    )
-                )
-            }
+    private fun RedactedState(strings: WidgetStrings, style: WidgetStyle) {
+        Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(strings.quotaHidden, style = TextStyle(color = ColorProvider(Color(style.foregroundArgb)), fontSize = 12.sp))
         }
-    }
-
-    @Composable
-    private fun RedactedState(strings: WidgetStrings) {
-        Box(
-            modifier = GlanceModifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = strings.quotaHidden,
-                    style = TextStyle(
-                        color = GlanceTheme.colors.onSurface,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                )
-                Spacer(modifier = GlanceModifier.height(4.dp))
-                Text(
-                    text = strings.openDetails,
-                    style = TextStyle(
-                        color = GlanceTheme.colors.onSurfaceVariant,
-                        fontSize = 12.sp
-                    )
-                )
-            }
-        }
-    }
-
-    @Composable
-    private fun Divider() {
-        Box(
-            modifier = GlanceModifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(GlanceTheme.colors.outline)
-        ) {}
-    }
-
-    @Composable
-    private fun ServiceSection(
-        service: AiService,
-        widgetPrefs: WidgetPrefsManager,
-        config: WidgetDisplayConfig,
-        showRefresh: Boolean,
-        strings: WidgetStrings
-    ) {
-        val labels = widgetPrefs.getCachedLabels(service).take(config.maxRows)
-        val tier = widgetPrefs.getCachedTier(service)
-        val freshness = widgetPrefs.getCachedFreshness(service)
-        val statusMessage = widgetPrefs.getCachedStatusMessage(service)
-
-        Column(modifier = GlanceModifier.fillMaxWidth()) {
-            // Header: service name + tier + refresh button
-            Row(
-                modifier = GlanceModifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Service icon dot
-                Box(
-                    modifier = GlanceModifier
-                        .size(10.dp)
-                        .cornerRadius(5.dp)
-                        .background(ColorProvider(Color(service.brandColor)))
-                ) {}
-                Spacer(modifier = GlanceModifier.width(8.dp))
-
-                Text(
-                    text = service.displayName,
-                    style = TextStyle(
-                        color = GlanceTheme.colors.onSurface,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                )
-
-                if (tier != null) {
-                    Spacer(modifier = GlanceModifier.width(8.dp))
-                    Box(
-                        modifier = GlanceModifier
-                            .cornerRadius(6.dp)
-                            .background(GlanceTheme.colors.secondaryContainer)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = tier,
-                            style = TextStyle(
-                                color = GlanceTheme.colors.onSecondaryContainer,
-                                fontSize = 11.sp
-                            )
-                        )
-                    }
-                }
-
-                Spacer(modifier = GlanceModifier.defaultWeight())
-
-                if (showRefresh) {
-                    Image(
-                        provider = ImageProvider(R.drawable.ic_refresh),
-                        contentDescription = strings.refreshDescription,
-                        modifier = GlanceModifier
-                            .size(18.dp)
-                            .clickable(actionRunCallback<RefreshWidgetAction>()),
-                        colorFilter = ColorFilter.tint(GlanceTheme.colors.onSurfaceVariant)
-                    )
-                }
-            }
-
-            Spacer(modifier = GlanceModifier.height(8.dp))
-
-            if (config.showFreshness && freshness != null) {
-                Text(
-                    text = strings.updated(freshness),
-                    style = TextStyle(
-                        color = GlanceTheme.colors.onSurfaceVariant,
-                        fontSize = 11.sp
-                    )
-                )
-                Spacer(modifier = GlanceModifier.height(4.dp))
-            }
-
-            // Each usage window — same layout as app dashboard
-            for ((index, label) in labels.withIndex()) {
-                if (index > 0) Spacer(modifier = GlanceModifier.height(6.dp))
-                WindowRow(service, label, widgetPrefs, config)
-            }
-
-            // Show placeholder if no cached data yet
-            if (labels.isEmpty()) {
-                Text(
-                    text = statusMessage ?: strings.waitingForData,
-                    style = TextStyle(
-                        color = GlanceTheme.colors.onSurfaceVariant,
-                        fontSize = 12.sp
-                    )
-                )
-            }
-        }
-    }
-
-    @Composable
-    private fun WindowRow(
-        service: AiService,
-        label: String,
-        widgetPrefs: WidgetPrefsManager,
-        config: WidgetDisplayConfig
-    ) {
-        val utilization = widgetPrefs.getCachedUtilization(service, label)
-        val barProgress = widgetPrefs.getCachedBarProgress(service, label)
-        val remainingLabel = widgetPrefs.getCachedRemainingLabel(service, label)
-        val resetText = widgetPrefs.getCachedResetLabel(service, label).orEmpty()
-        val paceText = widgetPrefs.getCachedPaceLabel(service, label).orEmpty()
-        val resetPlanText = widgetPrefs.getCachedResetPlanLabel(service, label).orEmpty()
-        val severity = widgetPrefs.getCachedSeverity(service, label)
-            ?.let { runCatching { QuotaSeverity.valueOf(it) }.getOrNull() }
-            ?: severityForUtilization(utilization)
-
-        Column(modifier = GlanceModifier.fillMaxWidth()) {
-            // Label + percentage
-            Row(
-                modifier = GlanceModifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = label,
-                    style = TextStyle(
-                        color = GlanceTheme.colors.onSurfaceVariant,
-                        fontSize = 12.sp
-                    )
-                )
-                Spacer(modifier = GlanceModifier.defaultWeight())
-                Text(
-                    text = remainingLabel,
-                    style = TextStyle(
-                        color = severityColor(severity),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                )
-            }
-
-            Spacer(modifier = GlanceModifier.height(3.dp))
-
-            // Progress bar
-            QuotaProgressBar(barProgress, severity)
-
-            // Reset time
-            val detailText = listOf(
-                resetText.takeIf { config.showReset },
-                resetPlanText.ifBlank { paceText }.takeIf { config.showPace }
-            ).filterNotNull().filter { it.isNotBlank() }.joinToString(" · ")
-            if (detailText.isNotEmpty()) {
-                Spacer(modifier = GlanceModifier.height(2.dp))
-                Row(modifier = GlanceModifier.fillMaxWidth()) {
-                    Spacer(modifier = GlanceModifier.defaultWeight())
-                    Text(
-                        text = detailText,
-                        style = TextStyle(
-                            color = GlanceTheme.colors.onSurfaceVariant,
-                            fontSize = 11.sp
-                        ),
-                        maxLines = 2
-                    )
-                }
-            }
-        }
-    }
-
-    @Composable
-    private fun QuotaProgressBar(barProgress: Float, severity: QuotaSeverity) {
-        LinearProgressIndicator(
-            progress = barProgress.coerceIn(0f, 1f),
-            modifier = GlanceModifier.fillMaxWidth().height(6.dp),
-            color = severityColor(severity),
-            backgroundColor = GlanceTheme.colors.surfaceVariant
-        )
     }
 
     companion object {

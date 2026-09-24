@@ -136,7 +136,7 @@ class WidgetRefreshSourceTest {
         assertTrue(widgetPrefs.contains("fun getCachedStatusMessage("))
         assertTrue(widgetPrefs.contains("fun cacheStatusMessageIfEmpty("))
         assertTrue(worker.contains("R.string.widget_not_connected"))
-        assertTrue(widget.contains("statusMessage ?: strings.waitingForData"))
+        assertTrue(sourceFile("WidgetDisplayData.kt").contains("getCachedStatusMessage(service) ?: waiting"))
     }
 
     @Test
@@ -144,9 +144,9 @@ class WidgetRefreshSourceTest {
         val widget = sourceFile("QuotaGlanceWidget.kt")
 
         assertTrue(widget.contains("override val sizeMode: SizeMode = SizeMode.Exact"))
-        assertTrue(widget.contains("LinearProgressIndicator("))
-        assertTrue(widget.contains("WidgetRenderPolicy.maxServices("))
-        assertTrue(widget.contains("WidgetRenderPolicy.maxRows("))
+        assertTrue(sourceFile("WidgetTemplates.kt").contains("LinearProgressIndicator("))
+        assertTrue(sourceFile("WidgetTemplates.kt").contains("WidgetRenderPolicy.rowCount("))
+        assertTrue(sourceFile("WidgetDisplayData.kt").contains("selectWidgetMetrics("))
         assertFalse(widget.contains("val totalSegments"))
         assertFalse(widget.contains("SizeMode.Responsive"))
     }

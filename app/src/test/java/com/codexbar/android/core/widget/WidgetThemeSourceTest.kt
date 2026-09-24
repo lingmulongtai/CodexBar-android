@@ -20,14 +20,10 @@ class WidgetThemeSourceTest {
     ).readText().replace("\r\n", "\n")
 
     @Test
-    fun `the widget draws from the launcher theme`() {
-        assertTrue(widget.contains("GlanceTheme.colors.widgetBackground"))
-        assertTrue(widget.contains("GlanceTheme.colors.onSurface"))
-        assertTrue(widget.contains("GlanceTheme.colors.onSurfaceVariant"))
-        // The only remaining literal color is the provider's own brand dot.
-        assertEquals(1, widget.split("Color(service.brandColor)").size - 1)
-        assertFalse(widget.contains("Color.White"))
-        assertFalse(widget.contains("0xB01C1B1F"))
+    fun `custom background and foreground are applied together`() {
+        assertTrue(widget.contains("Color(style.backgroundArgb)"))
+        assertTrue(widget.contains("Color(style.foregroundArgb)"))
+        assertTrue(widget.contains("WidgetTemplates(config.copy(style = style)"))
     }
 
     @Test

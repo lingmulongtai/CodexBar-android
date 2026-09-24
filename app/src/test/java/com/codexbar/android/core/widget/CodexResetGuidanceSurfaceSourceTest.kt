@@ -11,13 +11,13 @@ class CodexResetGuidanceSurfaceSourceTest {
     @Test
     fun `widget caches and renders compact reset advice`() {
         val prefs = sourceFile("core/widget/WidgetPrefsManager.kt")
-        val widget = sourceFile("core/widget/QuotaGlanceWidget.kt")
+        val widget = sourceFile("core/widget/WidgetTemplates.kt") + sourceFile("core/widget/WidgetDisplayData.kt")
 
         assertTrue(prefs.contains("metric.resetPlan?.compactActionLabel"))
         assertTrue(prefs.contains("_reset_plan_label"))
         assertTrue(prefs.contains("fun getCachedResetPlanLabel("))
         assertTrue(widget.contains("getCachedResetPlanLabel(service, label)"))
-        assertTrue(widget.contains("resetPlanText.ifBlank { paceText }"))
+        assertTrue(widget.contains("metric.resetAdvice?.let"))
     }
 
     @Test
