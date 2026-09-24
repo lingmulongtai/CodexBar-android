@@ -437,4 +437,29 @@
         <item quantity="one">%1$d without an expiry date</item>
         <item quantity="other">%1$d without an expiry date</item>
     </plurals>
+
+    <string name="widget_studio_title">Widget studio</string>
+    <string name="widget_studio_preview_hint">347 × 69 dp · Live cached data. Preview wallpaper is illustrative. Percentages show remaining quota; ↻ shows time until reset, updated on refresh.</string>
+    <string name="widget_studio_background">Background</string>
+    <string name="widget_studio_opacity">Opacity · %1$d%%</string>
+    <string name="widget_studio_light_text">Light text</string>
+    <string name="widget_studio_dark_text">Dark text</string>
+    <string name="widget_studio_radius">Corner radius · %1$d dp</string>
+    <string name="widget_studio_font">Text size · %1$d%%</string>
+    <string name="widget_studio_secondary">Show a second quota window</string>
+    <string name="widget_studio_provider_colors">Provider colors &amp; order</string>
+    <string name="widget_studio_order_hint">The first provider leads the Focus layout. Very small sizes show fewer providers; larger text reduces density.</string>
+    <string name="widget_studio_move_up">Move up</string>
+    <string name="widget_studio_hex">RGB hex color</string>
+    <string name="widget_studio_preview_failed">Preview unavailable · Save to apply</string>
+    <string name="widget_template_ledger">Ledger</string>
+    <string name="widget_template_meters">Inline meters</string>
+    <string name="widget_template_columns">Columns</string>
+    <string name="widget_template_tiles">Tiles</string>
+    <string name="widget_template_rings">Rings</string>
+    <string name="widget_template_segments">Segments</string>
+    <string name="widget_template_vertical">Vertical</string>
+    <string name="widget_template_focus">Focus</string>
+    <string name="widget_template_dual">Dual windows</string>
+    <string name="widget_template_reset">Reset first</string>
 </resources>

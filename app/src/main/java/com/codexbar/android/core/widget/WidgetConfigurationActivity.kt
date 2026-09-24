@@ -102,10 +102,14 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             return
         }
 
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
         enableEdgeToEdge()
 
         lifecycleScope.launch {
             encryptedPrefsManager.warmCache()
+            if (!encryptedPrefsManager.getPrivacySettings().screenPrivacyEnabled) {
+                window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+            }
 
             setContent {
                 CodexBarTheme {
@@ -125,6 +129,13 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                     var showPace by remember { mutableStateOf(existingConfig.showPace) }
                     var showFreshness by remember { mutableStateOf(existingConfig.showFreshness) }
                     var maxRows by remember { mutableStateOf(existingConfig.maxRows.coerceIn(1, 6)) }
+                    var style by remember { mutableStateOf(existingConfig.style) }
+                    var serviceOrder by remember { mutableStateOf(
+                        existingConfig.services + availableServices.filterNot { it in existingConfig.services }) }
+                    val liveConfig = existingConfig.copy(
+                        services = serviceOrder.filter { checkedState[it] == true },
+                        showReset = showReset, showPace = showPace, showFreshness = showFreshness,
+                        maxRows = maxRows, style = style)
                     val anyChecked = checkedState.values.any { it }
                     val isReconfigure = existingConfig.services.isNotEmpty()
 
@@ -171,13 +182,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
 
                                         Button(
                                             onClick = {
-                                                confirmSelection(
-                                                    checkedState = checkedState,
-                                                    showReset = showReset,
-                                                    showPace = showPace,
-                                                    showFreshness = showFreshness,
-                                                    maxRows = maxRows
-                                                )
+                                                confirmSelection(liveConfig)
                                             },
                                             enabled = anyChecked,
                                             modifier = Modifier.weight(1f)
@@ -211,6 +216,10 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                     .padding(horizontal = 16.dp, vertical = 16.dp),
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
+                                WidgetStyleEditor(liveConfig) { updated ->
+                                    style = updated.style
+                                    serviceOrder = updated.services + serviceOrder.filterNot { it in updated.services }
+                                }
                                 widgetPrefsManager.renderDiagnostics(appWidgetId)?.let { diagnostics ->
                                     Card(modifier = Modifier.fillMaxWidth()) {
                                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -374,19 +383,10 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         finish()
     }
 
-    private fun confirmSelection(
-        checkedState: Map<AiService, Boolean>,
-        showReset: Boolean,
-        showPace: Boolean,
-        showFreshness: Boolean,
-        maxRows: Int
-    ) {
+    private fun confirmSelection(config: WidgetDisplayConfig) {
         if (isCompletingConfiguration) return
         isCompletingConfiguration = true
 
-        val selectedServices = checkedState
-            .filter { it.value }
-            .keys
         val hadExistingConfiguration = widgetPrefsManager
             .getWidgetConfig(appWidgetId)
             .services
@@ -395,13 +395,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         // commit() ensures data is persisted before the widget reads it
         widgetPrefsManager.saveWidgetConfig(
             appWidgetId,
-            WidgetDisplayConfig(
-                services = selectedServices.sortedBy { it.ordinal },
-                showReset = showReset,
-                showPace = showPace,
-                showFreshness = showFreshness,
-                maxRows = maxRows
-            )
+            config
         )
 
         // Configuration widgets do not reliably receive an initial onUpdate broadcast on every
