@@ -20,6 +20,8 @@ export function sanitizeTerminalOutput(value) {
 
 export function parseClaudeUsageOutput(output, now = new Date()) {
   const text = sanitizeTerminalOutput(output);
+  // Claude may show a cached reading after a rate limit. Do not timestamp that as fresh.
+  if (/showing last[- ]known usage/i.test(text)) return null;
   const usageBlock = extractUsageBlock(text);
   if (usageBlock == null || isLoadingBlock(usageBlock)) return null;
   const lines = usageBlock.split(/\r?\n/).slice(0, 80);

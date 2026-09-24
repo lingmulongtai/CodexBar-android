@@ -139,6 +139,13 @@ object ProviderCatalog {
             aliases = setOf("ibm", "bob", "bob shell", "bobcoins", "bobshell"),
             guideAnchor = "ibm-bob"
         ),
+        AiService.DEVIN to ProviderMetadata(
+            category = ProviderCategory.CODING,
+            authMode = ProviderAuthMode.API_KEY,
+            aliases = setOf("cognition", "acu", "devin", "organization consumption"),
+            guideAnchor = "devin",
+            requiresAccountReference = true
+        ),
         AiService.FIREWORKS to ProviderMetadata(
             category = ProviderCategory.MODEL_API,
             authMode = ProviderAuthMode.API_KEY,

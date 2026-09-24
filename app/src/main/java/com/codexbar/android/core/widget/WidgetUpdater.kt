@@ -84,11 +84,12 @@ object WidgetUpdater {
         val redacted = dependencies.readWidgetRedaction()
         val prefs = dependencies.widgetPrefs
         val strings = ContextCompat.getContextForLanguage(context)
-        val services = prefs.getWidgetConfig(id).services
+        val config = prefs.getWidgetConfig(id)
+        val services = config.services
         val rows = when {
             redacted -> listOf(strings.getString(R.string.widget_quota_hidden))
             services.isEmpty() -> listOf(strings.getString(R.string.widget_no_services))
-            else -> services.take(2).map { service ->
+            else -> services.take(3).map { service ->
                 val label = prefs.getCachedLabels(service).maxByOrNull { prefs.getCachedUtilization(service, it) }
                 val remaining = label?.let { prefs.getCachedRemainingLabel(service, it) }
                     ?: prefs.getCachedStatusMessage(service)
@@ -101,6 +102,8 @@ object WidgetUpdater {
             .setData(android.net.Uri.parse("codexbar://widget/$id"))
         val views = RemoteViews(context.packageName, R.layout.widget_cached).apply {
             setTextViewText(R.id.widget_cached_text, rows.joinToString("\n"))
+            setTextColor(R.id.widget_cached_text, config.style.foregroundArgb)
+            setInt(R.id.widget_cached_root, "setBackgroundColor", config.style.backgroundArgb)
             setOnClickPendingIntent(
                 R.id.widget_cached_root,
                 PendingIntent.getActivity(context, id, openConfiguration,

@@ -745,7 +745,9 @@ class SettingsViewModel @Inject constructor(
                 error.message
             )
             is AppError.AuthError -> appContext.getString(
-                if (error.isTerminal) {
+                if (error.permissionDenied) {
+                    R.string.validation_permission_denied
+                } else if (error.isTerminal) {
                     R.string.validation_authentication_required
                 } else {
                     R.string.validation_authentication_error

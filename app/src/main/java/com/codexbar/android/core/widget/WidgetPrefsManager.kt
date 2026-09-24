@@ -16,7 +16,8 @@ data class WidgetDisplayConfig(
     val showReset: Boolean = true,
     val showPace: Boolean = true,
     val showFreshness: Boolean = true,
-    val maxRows: Int = 4
+    val maxRows: Int = 4,
+    val style: WidgetStyle = WidgetStyle()
 )
 
 /**
@@ -35,6 +36,7 @@ class WidgetPrefsManager @Inject constructor(
 
     fun saveWidgetConfig(appWidgetId: Int, config: WidgetDisplayConfig) {
         val prefix = "widget_${appWidgetId}"
+        val style = config.style.normalized()
         prefs.edit()
             .putString("${prefix}_services_order", config.services.joinToString(",") { it.name })
             .putStringSet("${prefix}_services", config.services.map { it.name }.toSet())
@@ -42,6 +44,14 @@ class WidgetPrefsManager @Inject constructor(
             .putBoolean("${prefix}_show_pace", config.showPace)
             .putBoolean("${prefix}_show_freshness", config.showFreshness)
             .putInt("${prefix}_max_rows", config.maxRows.coerceIn(1, 12))
+            .putString("${prefix}_template", style.template.name)
+            .putInt("${prefix}_background", style.backgroundRgb)
+            .putInt("${prefix}_opacity", style.opacity)
+            .putString("${prefix}_foreground", style.foreground.name)
+            .putInt("${prefix}_radius", style.cornerRadius)
+            .putFloat("${prefix}_font_scale", style.fontScale)
+            .putBoolean("${prefix}_secondary", style.showSecondary)
+            .putString("${prefix}_colors", style.providerColors.entries.joinToString(",") { "${it.key.name}:${it.value}" })
             .commit()
     }
 
@@ -61,7 +71,25 @@ class WidgetPrefsManager @Inject constructor(
             showReset = prefs.getBoolean("${prefix}_show_reset", true),
             showPace = prefs.getBoolean("${prefix}_show_pace", true),
             showFreshness = prefs.getBoolean("${prefix}_show_freshness", true),
-            maxRows = prefs.getInt("${prefix}_max_rows", 4).coerceIn(1, 12)
+            maxRows = prefs.getInt("${prefix}_max_rows", 4).coerceIn(1, 12),
+            style = WidgetStyle(
+                template = WidgetTemplate.fromId(prefs.getString("${prefix}_template", null)),
+                backgroundRgb = prefs.getInt("${prefix}_background", 0x303238),
+                opacity = prefs.getInt("${prefix}_opacity", 68),
+                foreground = WidgetForeground.entries.firstOrNull {
+                    it.name == prefs.getString("${prefix}_foreground", null)
+                } ?: WidgetForeground.LIGHT,
+                cornerRadius = prefs.getInt("${prefix}_radius", 16),
+                fontScale = prefs.getFloat("${prefix}_font_scale", 1f),
+                showSecondary = prefs.getBoolean("${prefix}_secondary", true),
+                providerColors = prefs.getString("${prefix}_colors", "").orEmpty().split(",")
+                    .mapNotNull { entry ->
+                        val parts = entry.split(":")
+                        val service = parts.firstOrNull()?.toAiServiceOrNull()
+                        val rgb = parts.getOrNull(1)?.toIntOrNull()
+                        if (service != null && rgb != null) service to (rgb and 0xFFFFFF) else null
+                    }.toMap()
+            ).normalized()
         )
     }
 
@@ -109,7 +137,7 @@ class WidgetPrefsManager @Inject constructor(
 
         val labels = service.metrics.map { it.label }
         editor.putString("${prefix}_labels", labels.joinToString(","))
-        editor.putLong("${prefix}_updated_at", System.currentTimeMillis())
+        editor.putLong("${prefix}_updated_at", service.freshness.fetchedAt?.toEpochMilli() ?: 0L)
         editor.putString("${prefix}_status", service.status.name)
         editor.putString("${prefix}_freshness", service.freshness.ageLabel)
         service.freshness.staleReason?.let {
@@ -133,6 +161,10 @@ class WidgetPrefsManager @Inject constructor(
     private fun SharedPreferences.Editor.cacheMetric(prefix: String, metric: QuotaMetricPresentation) {
         val label = metric.label
         putFloat("${prefix}_${label}_util", (metric.usedFraction ?: 0.0).toFloat())
+        putBoolean("${prefix}_${label}_bounded", metric.remainingFraction?.isFinite() == true)
+        metric.remainingFraction?.takeIf { it.isFinite() }?.let {
+            putFloat("${prefix}_${label}_remaining", it.toFloat())
+        }
         putFloat("${prefix}_${label}_bar", metric.barProgress)
         putString("${prefix}_${label}_remaining_label", metric.remainingLabel)
         putString("${prefix}_${label}_used_label", metric.usedLabel)
@@ -151,6 +183,22 @@ class WidgetPrefsManager @Inject constructor(
     fun getCachedUtilization(service: AiService, label: String): Float {
         return prefs.getFloat("cache_${service.name}_${label}_util", 0f)
     }
+
+    fun getCachedRemainingFraction(service: AiService, label: String): Float? {
+        val prefix = "cache_${service.name}_${label}"
+        if (prefs.contains("${prefix}_bounded")) {
+            return if (prefs.getBoolean("${prefix}_bounded", false))
+                prefs.getFloat("${prefix}_remaining", Float.NaN).takeIf { it.isFinite() } else null
+        }
+        // Migrate old caches only when they explicitly described a bounded quota.
+        if (getCachedSeverity(service, label) in listOf(null, "Unknown", "Redacted")) return null
+        return (1f - getCachedUtilization(service, label)).coerceIn(0f, 1f)
+    }
+
+    fun getCachedResetAt(service: AiService, label: String): Long? =
+        prefs.getLong("cache_${service.name}_${label}_resets", 0L).takeIf { it > 0L }
+
+    fun getCachedStatus(service: AiService): String? = prefs.getString("cache_${service.name}_status", null)
 
     fun getCachedBarProgress(service: AiService, label: String): Float {
         return prefs.getFloat("cache_${service.name}_${label}_bar", (1f - getCachedUtilization(service, label)).coerceIn(0f, 1f))

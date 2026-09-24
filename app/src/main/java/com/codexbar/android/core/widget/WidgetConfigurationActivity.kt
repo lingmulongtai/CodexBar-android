@@ -44,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -102,10 +103,14 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             return
         }
 
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
         enableEdgeToEdge()
 
         lifecycleScope.launch {
             encryptedPrefsManager.warmCache()
+            if (!encryptedPrefsManager.getPrivacySettings().screenPrivacyEnabled) {
+                window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+            }
 
             setContent {
                 CodexBarTheme {
@@ -113,19 +118,14 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                         encryptedPrefsManager.hasCredential(it)
                     }
                     val existingConfig = widgetPrefsManager.getWidgetConfig(appWidgetId)
-                    val checkedState = remember {
-                        mutableStateMapOf<AiService, Boolean>().apply {
-                            val existingServices = existingConfig.services.toSet()
-                            availableServices.forEach { service ->
-                                this[service] = existingServices.isEmpty() || service in existingServices
-                            }
-                        }
+                    var liveConfig by rememberSaveable(stateSaver = WidgetConfigSaver) {
+                        mutableStateOf(existingConfig.copy(
+                            services = existingConfig.services.ifEmpty { availableServices }, maxRows = 2))
                     }
-                    var showReset by remember { mutableStateOf(existingConfig.showReset) }
-                    var showPace by remember { mutableStateOf(existingConfig.showPace) }
-                    var showFreshness by remember { mutableStateOf(existingConfig.showFreshness) }
-                    var maxRows by remember { mutableStateOf(existingConfig.maxRows.coerceIn(1, 6)) }
+                    val checkedState = availableServices.associateWith { it in liveConfig.services }
                     val anyChecked = checkedState.values.any { it }
+                    val widgetHeight = AppWidgetManager.getInstance(this@WidgetConfigurationActivity)
+                        .getAppWidgetOptions(appWidgetId).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)
                     val isReconfigure = existingConfig.services.isNotEmpty()
 
                     Scaffold(
@@ -171,13 +171,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
 
                                         Button(
                                             onClick = {
-                                                confirmSelection(
-                                                    checkedState = checkedState,
-                                                    showReset = showReset,
-                                                    showPace = showPace,
-                                                    showFreshness = showFreshness,
-                                                    maxRows = maxRows
-                                                )
+                                                confirmSelection(liveConfig)
                                             },
                                             enabled = anyChecked,
                                             modifier = Modifier.weight(1f)
@@ -211,6 +205,9 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                     .padding(horizontal = 16.dp, vertical = 16.dp),
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
+                                WidgetStyleEditor(liveConfig) { updated ->
+                                    liveConfig = updated
+                                }
                                 widgetPrefsManager.renderDiagnostics(appWidgetId)?.let { diagnostics ->
                                     Card(modifier = Modifier.fillMaxWidth()) {
                                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -278,7 +275,10 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                                 ServiceCheckRow(
                                                     service = service,
                                                     checked = checkedState[service] ?: false,
-                                                    onCheckedChange = { checkedState[service] = it }
+                                                    onCheckedChange = { checked ->
+                                                        liveConfig = liveConfig.copy(services = if (checked)
+                                                            liveConfig.services + service else liveConfig.services - service)
+                                                    }
                                                 )
                                             }
                                         }
@@ -307,33 +307,27 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                         ConfigToggleRow(
                                             title = stringResource(R.string.widget_setup_reset_title),
                                             subtitle = stringResource(R.string.widget_setup_reset_description),
-                                            checked = showReset,
-                                            onCheckedChange = { showReset = it }
+                                            checked = liveConfig.showReset,
+                                            onCheckedChange = { liveConfig = liveConfig.copy(showReset = it) }
                                         )
+                                        if (widgetHeight >= 100 && liveConfig.style.template !in listOf(
+                                            WidgetTemplate.LEDGER, WidgetTemplate.METERS, WidgetTemplate.DUAL, WidgetTemplate.RESET)) {
                                         ConfigToggleRow(
                                             title = stringResource(R.string.widget_setup_pace_title),
                                             subtitle = stringResource(R.string.widget_setup_pace_description),
-                                            checked = showPace,
-                                            onCheckedChange = { showPace = it }
+                                            checked = liveConfig.showPace,
+                                            onCheckedChange = { liveConfig = liveConfig.copy(showPace = it) }
                                         )
+                                        }
+                                        if (liveConfig.style.template !in listOf(WidgetTemplate.METERS, WidgetTemplate.DUAL, WidgetTemplate.RESET)) {
                                         ConfigToggleRow(
                                             title = stringResource(R.string.widget_setup_freshness_title),
                                             subtitle = stringResource(R.string.widget_setup_freshness_description),
-                                            checked = showFreshness,
-                                            onCheckedChange = { showFreshness = it }
+                                            checked = liveConfig.showFreshness,
+                                            onCheckedChange = { liveConfig = liveConfig.copy(showFreshness = it) }
                                         )
-                                        Text(
-                                            text = stringResource(R.string.widget_setup_max_rows, maxRows),
-                                            style = MaterialTheme.typography.titleMedium
-                                        )
-                                        Slider(
-                                            value = maxRows.toFloat(),
-                                            onValueChange = {
-                                                maxRows = it.roundToInt().coerceIn(1, 6)
-                                            },
-                                            valueRange = 1f..6f,
-                                            steps = 4
-                                        )
+                                        }
+
                                     }
                                 }
 
@@ -374,19 +368,10 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         finish()
     }
 
-    private fun confirmSelection(
-        checkedState: Map<AiService, Boolean>,
-        showReset: Boolean,
-        showPace: Boolean,
-        showFreshness: Boolean,
-        maxRows: Int
-    ) {
+    private fun confirmSelection(config: WidgetDisplayConfig) {
         if (isCompletingConfiguration) return
         isCompletingConfiguration = true
 
-        val selectedServices = checkedState
-            .filter { it.value }
-            .keys
         val hadExistingConfiguration = widgetPrefsManager
             .getWidgetConfig(appWidgetId)
             .services
@@ -395,13 +380,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         // commit() ensures data is persisted before the widget reads it
         widgetPrefsManager.saveWidgetConfig(
             appWidgetId,
-            WidgetDisplayConfig(
-                services = selectedServices.sortedBy { it.ordinal },
-                showReset = showReset,
-                showPace = showPace,
-                showFreshness = showFreshness,
-                maxRows = maxRows
-            )
+            config
         )
 
         // Configuration widgets do not reliably receive an initial onUpdate broadcast on every

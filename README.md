@@ -2,29 +2,29 @@
 
 > Android port of [**CodexBar**](https://github.com/steipete/CodexBar) by [@steipete](https://github.com/steipete) — the macOS menu bar app for monitoring AI service quotas.
 
-Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi Code, ElevenLabs, OpenRouter, Synthetic, Chutes, DeepSeek, Venice, Moonshot API, Cline, IBM Bob, and Fireworks AI usage in one place. Optional private companions keep Claude and Gemini authentication inside their official CLIs and add local Codex context/token telemetry without exporting session content.
+Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi Code, ElevenLabs, OpenRouter, Synthetic, Chutes, DeepSeek, Venice, Moonshot API, Cline, IBM Bob, Fireworks AI, and Devin usage in one place. Optional private companions keep Claude and Gemini authentication inside their official CLIs and add local Codex context/token telemetry without exporting session content.
 
 <p align="center">
-  <img src="docs/images/releases/v0.9.0/dashboard-material3.png" width="320" alt="v0.9.0 Material 3 dashboard in light mode" />
+  <img src="docs/images/releases/v0.9.2/usage-light.png" width="320" alt="v0.9.2 compact three-provider Usage screen" />
   &nbsp;&nbsp;
-  <img src="docs/images/releases/v0.9.0/dashboard-aurora-dark.png" width="320" alt="v0.9.0 Aurora dashboard in dark mode" />
+  <img src="docs/images/releases/v0.9.2/niagara-columns.png" width="320" alt="v0.9.2 three-provider widget in Niagara Launcher" />
 </p>
 
 <p align="center"><sub>Demo quota data is shown in screenshots. No account credentials are included.</sub></p>
 
 ## Features
 
-v0.9.1 repairs the widget render path, adds thin Niagara-friendly layouts and render diagnostics, and applies lock-screen privacy changes immediately. See the [patch notes and device-setting guidance](docs/releases/v0.9.1.md).
+v0.9.2 adds ten customizable widget layouts optimized for 347 × 69dp, a compact Usage overview, and read-only Devin organization consumption. See the [release notes](docs/releases/v0.9.2.md).
 
-- Unified quota monitoring for 18 providers: Claude, Codex, GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi Code, ElevenLabs, OpenRouter, Synthetic, Chutes, DeepSeek, Venice, Moonshot API, Cline, IBM Bob, and Fireworks AI
+- Unified quota monitoring for 19 providers: Claude, Codex, GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi Code, ElevenLabs, OpenRouter, Synthetic, Chutes, DeepSeek, Venice, Moonshot API, Cline, IBM Bob, Fireworks AI, and Devin
 - Four complete selectable design systems: the existing Material 3 UI, Liquid Glass, WinUI 3, and Aurora, each with light/dark support
-- A dashboard summary that leads with the quota window running out first, a tappable strip of every provider's remaining quota, and a needs-attention filter
+- A compact Usage overview with a fixed small header, two quota windows per provider, symmetric cards, and details on tap
 - Provider cards with animated rings, bars, exact values, reset countdowns, pace forecasts, and retained history charts
 - Codex reset-credit inventory, provider-reported model quota windows, and exact expiry details
 - Optional privacy-preserving Codex companion for current context usage and input, cached-input, output, reasoning, daily, and per-model token totals
 - Adaptive phone navigation and a two-pane large-screen dashboard
 - Quick Settings tile for at-a-glance status
-- Per-widget Android home screen customization for providers, quota windows, reset time, freshness, and pace, drawn from the launcher's own light or dark theme
+- Ten widget layouts with a live 347 × 69dp preview, background RGB and opacity, light/dark text, per-provider colors, provider order, corner radius, and text size
 - Configurable background refresh plus explicit refresh actions that supersede stale queued work
 - Built-in stable-release update prompt with a direct link to this fork's signed APK
 - Independently configurable persistent notification and time-bounded API 36 promoted Live Update, both synchronized with every dashboard refresh
@@ -149,7 +149,7 @@ Claude does not expose a supported third-party Android device-code flow for this
 
 1. Install Claude Code using [Anthropic's current setup instructions](https://code.claude.com/docs/en/setup), run `claude`, and complete browser sign-in and first-run trust prompts.
 2. Enter `/usage` and confirm that **Current session** appears.
-3. Download `CodexBar-Claude-Companion-v0.9.1.zip` from the same Release as the APK and extract it.
+3. Download `CodexBar-Claude-Companion-v0.9.2.zip` from the same Release as the APK and extract it.
 4. On Windows, run `start-windows.cmd`. On macOS or Linux, run `chmod +x start-macos-linux.sh` once and then `./start-macos-linux.sh`.
 5. Keep the phone and computer on the same trusted Wi-Fi. If the computer firewall prompts, permit Node.js on private networks only. In Claude under **Connections**, tap **Scan QR securely in CodexBar** and scan the displayed QR inside the app. Do not use the system camera. If Google Play services cannot open the scanner, paste the `CBCLAUDE1...` pairing code, then tap **Pair & verify Claude companion**.
 
@@ -175,7 +175,7 @@ Do not extract bearer tokens from browser DevTools unless you are debugging loca
 
 #### Optional private Codex telemetry companion
 
-OpenAI's subscription quota response does not contain local Codex CLI context-window or token-count history. To add those insights without uploading session content, install `CodexBar-Codex-Telemetry-Companion-v0.9.1.zip` from the same GitHub Release as the app:
+OpenAI's subscription quota response does not contain local Codex CLI context-window or token-count history. To add those insights without uploading session content, install `CodexBar-Codex-Telemetry-Companion-v0.9.2.zip` from the same GitHub Release as the app:
 
 1. Install Node.js 20 or newer on the computer where Codex CLI or Codex desktop stores `~/.codex/sessions`.
 2. Extract the companion archive. On Windows, run `start-windows.cmd`; on macOS or Linux, run `./start-macos-linux.sh`.
@@ -186,7 +186,7 @@ The scanner is bounded to recent session files and reads only `token_count` plus
 
 ### Gemini (Google)
 
-Direct Gemini OAuth inside the Android app remains disabled. CodexBar does not copy Gemini CLI credentials, embed a Google client secret, or call the internal `cloudcode-pa` service. Instead, the v0.9.1 companion drives the official Gemini CLI's documented `/stats` view and sends only a sanitized quota snapshot over your trusted local network.
+Direct Gemini OAuth inside the Android app remains disabled. CodexBar does not copy Gemini CLI credentials, embed a Google client secret, or call the internal `cloudcode-pa` service. Instead, the v0.9.2 companion drives the official Gemini CLI's documented `/stats` view and sends only a sanitized quota snapshot over your trusted local network.
 
 #### Install and pair the private companion
 
@@ -198,7 +198,7 @@ gemini
 ```
 
 2. Complete Google's sign-in in that official CLI, then exit it.
-3. Download `CodexBar-Gemini-Companion-v0.9.1.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
+3. Download `CodexBar-Gemini-Companion-v0.9.2.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
 4. On Windows, double-click `start-windows.cmd`. On macOS or Linux, run `./start-macos-linux.sh`. The first launch installs only the versions pinned in `package-lock.json`.
 5. Keep the phone and computer on the same trusted Wi-Fi. If the computer firewall prompts, permit private networks only.
 6. Scan the displayed QR code with the phone and choose CodexBar, or paste the complete `codexbar://gemini-pair?...` value into the Gemini card.
@@ -298,6 +298,12 @@ The key is sent only as a bearer credential to the fixed Cline HTTPS host, redir
 Create an API key in the IBM Bob portal, paste it into the IBM Bob card, and select **Validate & connect**. The app reads the profile and aggregates the monthly Bobcoin usage and budget across visible teams, preserving the earliest reported refresh time.
 
 API keys use IBM Bob's `Apikey` scheme, while structurally valid JWT credentials use `Bearer`. Regional endpoints returned by the profile are accepted only when they are HTTPS hosts strictly under `bob.ibm.com`; URL user info, ports, paths, queries, fragments, and lookalike domains are rejected. The encrypted credential is never logged, and prompts or coding history are not requested.
+
+### Devin
+
+Create a `cog_` personal access token or service-user key with **ViewOrgConsumption**, then enter it and the **organization ID** in Connections → Devin. Both are available through Devin Settings → Devin API. The app makes read-only requests to the [official organization consumption endpoint](https://docs.devin.ai/api-reference/v3/consumption/organizations-consumption-daily), available across plans.
+
+Devin shows **organization ACUs consumed over the last 30 days**, across Devin products. Daily boundaries use 08:00 UTC. This API does not expose a subscription limit or remaining credits, so CodexBar does not invent a percentage or reset countdown. A 403 indicates missing organization access or permission; 401 means the key needs replacing. No session creation, prompts, or inference requests are made.
 
 ### Fireworks AI
 

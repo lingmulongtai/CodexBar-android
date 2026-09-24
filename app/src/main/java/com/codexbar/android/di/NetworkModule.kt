@@ -14,6 +14,7 @@ import com.codexbar.android.core.network.cursor.CursorApiService
 import com.codexbar.android.core.network.deepseek.DeepSeekApiService
 import com.codexbar.android.core.network.elevenlabs.ElevenLabsApiService
 import com.codexbar.android.core.network.fireworks.FireworksApiService
+import com.codexbar.android.core.network.devin.DevinApiService
 import com.codexbar.android.core.network.kimi.KimiApiService
 import com.codexbar.android.core.network.ibmbob.IbmBobApiService
 import com.codexbar.android.core.network.moonshot.MoonshotApiService
@@ -416,6 +417,21 @@ object NetworkModule {
             .create(IbmBobApiService::class.java)
     }
 
+    // --- Devin AI ---
+
+    @Provides
+    @Singleton
+    fun provideDevinApiService(
+        @ProviderCredentialClient client: OkHttpClient,
+        json: Json
+    ): DevinApiService {
+        return Retrofit.Builder()
+            .baseUrl(AiService.DEVIN.baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(DevinApiService::class.java)
+    }
     // --- Fireworks AI ---
 
     @Provides

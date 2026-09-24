@@ -8,7 +8,17 @@ This companion keeps Anthropic authentication inside the official Claude Code CL
 - The current official Claude Code CLI, already signed in
 - The computer and Android phone on the same trusted Wi-Fi network
 
-Install Claude Code using Anthropic's current instructions, then run `claude` once. Complete browser sign-in, the first-run prompts, and any workspace trust prompt. Confirm that `/usage` shows **Current session** before starting the companion.
+Claude Pro/Max usage is shared across Claude Desktop, claude.ai, and Claude Code. You can continue using the desktop app; the companion only needs the official CLI signed into the same subscription. Desktop sign-in alone does not sign the separate CLI in.
+
+Install Claude Code using Anthropic's current instructions. On Windows, open PowerShell and run:
+
+```powershell
+Set-Location $env:USERPROFILE
+claude auth login --claudeai
+claude
+```
+
+Start from your home directory because the companion opens its CLI there. Complete browser sign-in, the first-run prompts, and any workspace trust prompt. Confirm that `/usage` shows **Current session** before starting the companion.
 
 Do not use `claude setup-token` for this app. Anthropic documents that token for inference automation; it does not include the `user:profile` permission required to read plan usage.
 
@@ -34,7 +44,8 @@ On Android, open CodexBar → **Connections** → **Claude**, tap **Scan QR secu
 
 ## Troubleshooting
 
-- If no snapshot is available, run `claude` directly in a terminal, finish sign-in/trust prompts, enter `/usage`, then restart the companion.
+- If `/usage` says **Showing last-known usage**, the companion waits for a fresh reading instead of presenting cached quota as newly collected. Retry after the provider rate limit clears.
+- If no snapshot is available, run `claude` from your home directory in a terminal, finish sign-in/trust prompts, enter `/usage`, then restart the companion.
 - If Windows installed the npm launcher instead of the native CLI, run `start-windows.cmd --claude-command claude.cmd`.
 - On macOS, the companion verifies and restores the executable bit on the pinned `node-pty` helper before every native PTY launch. If that fixed helper is missing, reinstall the companion dependencies instead of weakening system security settings.
 - If the computer's address changes, CodexBar looks for the companion again on the phone's current subnet and re-pairs itself once the stored key authenticates the snapshot. Scanning a new QR is only needed when the pairing identity itself changed.

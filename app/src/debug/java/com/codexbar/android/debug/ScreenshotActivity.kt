@@ -133,6 +133,9 @@ private fun ScreenshotActivity.createScreenshotSnapshot(now: Instant): QuotaPres
         UsageWindow("7-Day", 0.44, now.plusSeconds(5L * 24L * 60L * 60L), 7L * 24L * 60L * 60L)
     )
     val quotas = listOf(
+        QuotaInfo(service = AiService.COPILOT,
+            windows = listOf(UsageWindow("Premium", 0.26, now.plusSeconds(86400), 2592000)),
+            extraUsage = null, tier = "Pro", fetchedAt = now.minusSeconds(30)),
         QuotaInfo(
             service = AiService.CODEX,
             windows = codexWindows,
@@ -184,7 +187,11 @@ private fun ScreenshotActivity.createScreenshotSnapshot(now: Instant): QuotaPres
             tier = "Last 30 days: USD 12.84",
             fetchedAt = now.minusSeconds(68)
         )
-    )
+    ).let { data ->
+        if (intent.getBooleanExtra("personal", false)) data.filter {
+            it.service in listOf(AiService.CODEX, AiService.COPILOT, AiService.CLAUDE)
+        } else data
+    }
 
     val text = AndroidQuotaPresentationText(this)
     val paceCalculator = QuotaPaceCalculator(text)

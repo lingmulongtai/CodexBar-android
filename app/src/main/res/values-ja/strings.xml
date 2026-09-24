@@ -435,4 +435,33 @@
     <plurals name="codex_reset_credits_no_expiry">
         <item quantity="other">期限なし %1$d回</item>
     </plurals>
+
+    <string name="widget_studio_title">ウィジェットスタジオ</string>
+    <string name="widget_studio_preview_hint">347 × 69 dp · 保存済みの使用量を表示。壁紙はプレビュー用です。％は残量、↻は次回リセットまでの時間（更新時に再計算）。</string>
+    <string name="widget_studio_background">背景</string>
+    <string name="widget_studio_opacity">不透明度 · %1$d%%</string>
+    <string name="widget_studio_light_text">明るい文字</string>
+    <string name="widget_studio_dark_text">暗い文字</string>
+    <string name="widget_studio_radius">角丸 · %1$d dp</string>
+    <string name="widget_studio_font">文字サイズ · %1$d%%</string>
+    <string name="widget_studio_secondary">2つ目の使用量枠を表示</string>
+    <string name="widget_studio_provider_colors">サービスの色と並び順</string>
+    <string name="widget_studio_order_hint">先頭のサービスは「フォーカス」で大きく表示します。極小サイズや大きい文字では表示件数が減ります。</string>
+    <string name="widget_studio_move_up">上へ</string>
+    <string name="widget_studio_hex">RGBカラーコード</string>
+    <string name="widget_studio_preview_failed">プレビューを表示できません · 保存して適用</string>
+    <string name="widget_template_ledger">整列表</string>
+    <string name="widget_template_meters">横メーター</string>
+    <string name="widget_template_columns">3列</string>
+    <string name="widget_template_tiles">タイル</string>
+    <string name="widget_template_rings">リング</string>
+    <string name="widget_template_segments">分割メーター</string>
+    <string name="widget_template_vertical">縦メーター</string>
+    <string name="widget_template_focus">フォーカス</string>
+    <string name="widget_template_dual">2枠比較</string>
+    <string name="widget_template_reset">リセット優先</string>
+    <string name="validation_permission_denied">組織へのアクセスまたは使用量の参照権限がありません。組織IDとViewOrgConsumption権限を確認してください。</string>
+    <string name="credential_organization_id">組織ID</string>
+    <string name="credential_devin_org_support">DevinのSettings → Devin APIの上部にある組織IDを入力します。</string>
+    <string name="credential_devin_setup_body">ViewOrgConsumption権限を持つcog_で始まる個人アクセストークンまたはサービスユーザーキーを作成し、キーと組織IDを入力します。過去30日間に組織がDevin製品全体で消費したACUを表示します。APIはプランの上限や残りクレジットを提供しません。日次の区切りはUTC 08:00です。</string>
 </resources>

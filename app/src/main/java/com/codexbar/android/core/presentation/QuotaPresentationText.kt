@@ -27,6 +27,7 @@ interface QuotaPresentationText {
     fun currencyRemaining(currency: String, amount: String): String
     fun noFreshData(): String
     fun reauthenticationRequired(): String
+    fun permissionDenied(): String
     fun authenticationFailed(): String
     fun notConnected(): String
     fun networkUnavailable(): String
@@ -93,6 +94,7 @@ object EnglishQuotaPresentationText : QuotaPresentationText {
     override fun currencyRemaining(currency: String, amount: String): String = "$currency $amount left"
     override fun noFreshData(): String = "No fresh data"
     override fun reauthenticationRequired(): String = "Reauthentication required"
+    override fun permissionDenied(): String = "Organization access or usage permission required"
     override fun authenticationFailed(): String = "Authentication failed"
     override fun notConnected(): String = "Not connected"
     override fun networkUnavailable(): String = "Network unavailable"
@@ -194,6 +196,7 @@ class AndroidQuotaPresentationText(
     override fun noFreshData(): String = string(R.string.presentation_no_fresh_data)
     override fun reauthenticationRequired(): String =
         string(R.string.presentation_reauthentication_required)
+    override fun permissionDenied(): String = string(R.string.validation_permission_denied)
     override fun authenticationFailed(): String = string(R.string.presentation_authentication_failed)
     override fun notConnected(): String = string(R.string.status_not_connected)
     override fun networkUnavailable(): String = string(R.string.presentation_network_unavailable)

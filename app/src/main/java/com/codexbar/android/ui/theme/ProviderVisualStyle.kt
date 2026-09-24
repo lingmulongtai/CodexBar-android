@@ -1,13 +1,11 @@
 package com.codexbar.android.ui.theme
 
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.unit.dp
 import com.codexbar.android.core.domain.model.AiService
 
 data class ProviderVisualStyle(
@@ -39,118 +37,14 @@ fun providerVisualStyle(service: AiService): ProviderVisualStyle {
         AiService.MOONSHOT -> if (isDark) Color(0xFFE2E8F0) else Color(0xFF334155)
         AiService.CLINEPASS -> if (isDark) Color(0xFFFFB59E) else Color(0xFF9B3818)
         AiService.IBM_BOB -> if (isDark) Color(0xFFB4C5FF) else Color(0xFF0050D8)
+        AiService.DEVIN -> if (isDark) Color(0xFF72BBEF) else Color(0xFF176091)
         AiService.FIREWORKS -> if (isDark) Color(0xFFFFB5A0) else Color(0xFF9D3216)
     }
     val tintAlpha = if (isDark) 0.16f else 0.09f
-    val shape = when (service) {
-        AiService.CLAUDE -> RoundedCornerShape(
-            topStart = 30.dp,
-            topEnd = 30.dp,
-            bottomEnd = 10.dp,
-            bottomStart = 30.dp
-        )
-        AiService.CODEX -> RoundedCornerShape(
-            topStart = 30.dp,
-            topEnd = 10.dp,
-            bottomEnd = 30.dp,
-            bottomStart = 30.dp
-        )
-        AiService.GEMINI -> RoundedCornerShape(
-            topStart = 10.dp,
-            topEnd = 30.dp,
-            bottomEnd = 30.dp,
-            bottomStart = 30.dp
-        )
-        AiService.COPILOT -> RoundedCornerShape(24.dp)
-        AiService.CURSOR -> RoundedCornerShape(
-            topStart = 8.dp,
-            topEnd = 24.dp,
-            bottomEnd = 24.dp,
-            bottomStart = 24.dp
-        )
-        AiService.ZAI -> RoundedCornerShape(
-            topStart = 24.dp,
-            topEnd = 8.dp,
-            bottomEnd = 24.dp,
-            bottomStart = 24.dp
-        )
-        AiService.ZENMUX -> RoundedCornerShape(
-            topStart = 24.dp,
-            topEnd = 24.dp,
-            bottomEnd = 8.dp,
-            bottomStart = 24.dp
-        )
-        AiService.KIMI -> RoundedCornerShape(
-            topStart = 24.dp,
-            topEnd = 8.dp,
-            bottomEnd = 24.dp,
-            bottomStart = 24.dp
-        )
-        AiService.ELEVENLABS -> RoundedCornerShape(
-            topStart = 8.dp,
-            topEnd = 24.dp,
-            bottomEnd = 24.dp,
-            bottomStart = 24.dp
-        )
-        AiService.OPENROUTER -> RoundedCornerShape(
-            topStart = 24.dp,
-            topEnd = 24.dp,
-            bottomEnd = 24.dp,
-            bottomStart = 8.dp
-        )
-        AiService.SYNTHETIC -> RoundedCornerShape(
-            topStart = 24.dp,
-            topEnd = 24.dp,
-            bottomEnd = 8.dp,
-            bottomStart = 24.dp
-        )
-        AiService.CHUTES -> RoundedCornerShape(
-            topStart = 24.dp,
-            topEnd = 8.dp,
-            bottomEnd = 24.dp,
-            bottomStart = 24.dp
-        )
-        AiService.DEEPSEEK -> RoundedCornerShape(
-            topStart = 8.dp,
-            topEnd = 24.dp,
-            bottomEnd = 24.dp,
-            bottomStart = 24.dp
-        )
-        AiService.VENICE -> RoundedCornerShape(
-            topStart = 24.dp,
-            topEnd = 24.dp,
-            bottomEnd = 8.dp,
-            bottomStart = 24.dp
-        )
-        AiService.MOONSHOT -> RoundedCornerShape(
-            topStart = 24.dp,
-            topEnd = 8.dp,
-            bottomEnd = 24.dp,
-            bottomStart = 24.dp
-        )
-        AiService.CLINEPASS -> RoundedCornerShape(
-            topStart = 8.dp,
-            topEnd = 24.dp,
-            bottomEnd = 24.dp,
-            bottomStart = 24.dp
-        )
-        AiService.IBM_BOB -> RoundedCornerShape(
-            topStart = 24.dp,
-            topEnd = 24.dp,
-            bottomEnd = 8.dp,
-            bottomStart = 24.dp
-        )
-        AiService.FIREWORKS -> RoundedCornerShape(
-            topStart = 24.dp,
-            topEnd = 8.dp,
-            bottomEnd = 24.dp,
-            bottomStart = 24.dp
-        )
-    }
     return ProviderVisualStyle(
         accent = accent,
         onAccent = if (accent.luminance() > 0.45f) Color(0xFF101014) else Color.White,
         container = accent.copy(alpha = tintAlpha).compositeOver(colors.surfaceContainerLow),
-        shape = shape
+        shape = MaterialTheme.shapes.large
     )
 }

@@ -22,6 +22,8 @@ import com.codexbar.android.core.presentation.AndroidQuotaPresentationText
 import com.codexbar.android.core.presentation.QuotaPresentationMapper
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.widget.QuotaWidgetReceiver
+import com.codexbar.android.core.widget.WidgetStyle
+import com.codexbar.android.core.widget.WidgetTemplate
 import com.codexbar.android.core.widget.WidgetDisplayConfig
 import com.codexbar.android.core.widget.WidgetPrefsManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -107,15 +109,27 @@ class WidgetHostActivity : ComponentActivity() {
             ))
             encryptedPrefs.setRefreshInterval(0L)
             val now = Instant.now()
+            val three = intent.getBooleanExtra("three_services", false)
             val snapshot = QuotaPresentationMapper(text = AndroidQuotaPresentationText(this@WidgetHostActivity)).map(
                 quotas = listOf(
-                    QuotaInfo(AiService.CODEX, listOf(UsageWindow("5-Hour", 0.38, now.plusSeconds(7200), 18000)), null, "Plus", now),
+                    QuotaInfo(AiService.CODEX, listOf(UsageWindow("5-Hour", 0.38, now.plusSeconds(7200), 18000), UsageWindow("Weekly", 0.21, now.plusSeconds(273600), 604800)), null, "Plus", now),
                     QuotaInfo(AiService.COPILOT, listOf(UsageWindow("Premium", 0.26, now.plusSeconds(86400), 2592000)), null, "Pro", now)
-                ),
+                ) + if (three) listOf(QuotaInfo(AiService.CLAUDE,
+                    listOf(UsageWindow("5-Hour", 0.13, now.plusSeconds(8280), 18000),
+                        UsageWindow("Weekly", 0.44, now.plusSeconds(435600), 604800)), null, "Pro", now)) else emptyList(),
                 generatedAt = now
             )
             snapshot.services.forEach(widgetPrefs::cachePresentation)
-            widgetPrefs.saveWidgetConfig(id, WidgetDisplayConfig(services = listOf(AiService.CODEX, AiService.COPILOT)))
+            widgetPrefs.saveWidgetConfig(id, WidgetDisplayConfig(
+                services = listOf(AiService.CODEX, AiService.COPILOT) + if (three) listOf(AiService.CLAUDE) else emptyList(),
+                style = WidgetStyle(template = WidgetTemplate.fromId(intent.getStringExtra("template")),
+                    opacity = intent.getIntExtra("opacity", 68))))
+            if (intent.getBooleanExtra("update_all_demo", false)) {
+                manager.getAppWidgetIds(ComponentName(this@WidgetHostActivity, QuotaWidgetReceiver::class.java)).forEach { target ->
+                    widgetPrefs.saveWidgetConfig(target, widgetPrefs.getWidgetConfig(id))
+                }
+                com.codexbar.android.core.widget.WidgetUpdater.updateAll(this@WidgetHostActivity)
+            }
             val options = Bundle().apply {
                 putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, width)
                 putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, width)
@@ -144,8 +158,12 @@ class WidgetHostActivity : ComponentActivity() {
 
     private fun collectText(view: View, visibleOnly: Boolean = false): List<String> = buildList {
         val bounds = android.graphics.Rect()
-        if (view is TextView && (!visibleOnly || (view.getGlobalVisibleRect(bounds) && bounds.height() >= view.height - 1))) {
-            add(view.text.toString())
+        if (view is TextView) {
+            val layout = view.layout
+            val fullyVisible = view.getGlobalVisibleRect(bounds) && bounds.height() >= view.height - 1 &&
+                layout != null && layout.height <= view.height - view.compoundPaddingTop - view.compoundPaddingBottom &&
+                (0 until layout.lineCount).all { layout.getEllipsisCount(it) == 0 }
+            if (!visibleOnly || fullyVisible) add(view.text.toString())
         }
         if (view is ViewGroup) for (index in 0 until view.childCount) addAll(collectText(view.getChildAt(index), visibleOnly))
     }

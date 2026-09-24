@@ -8,7 +8,8 @@ sealed class AppError {
     data class AuthError(
         val service: AiService,
         val isTerminal: Boolean, // true = re-auth required, false = transient
-        val message: String = ""
+        val message: String = "",
+        val permissionDenied: Boolean = false
     ) : AppError()
 
     data class RateLimited(val retryAt: Instant? = null) : AppError()
