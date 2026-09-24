@@ -9,7 +9,7 @@ class CodexResetPlanUiSourceTest {
         .first { File(it, "src/main/AndroidManifest.xml").isFile }
 
     @Test
-    fun `reset guidance is visible on dashboard cards and details`() {
+    fun `reset guidance remains in details while overview stays compact`() {
         val sourceDir = File(
             appDir,
             "src/main/java/com/codexbar/android/feature/dashboard"
@@ -22,7 +22,8 @@ class CodexResetPlanUiSourceTest {
         assertTrue(banner.contains("plan.deadlineLabel"))
         assertTrue(banner.contains("plan.budgetLabel"))
         assertTrue(banner.contains("R.string.reset_plan_title"))
-        assertTrue(card.windowed("ResetPlanBanner".length).count { it == "ResetPlanBanner" } >= 2)
+        assertTrue(card.contains("metric.resetLabel"))
+        assertTrue(!card.contains("CodexTelemetryCompactCard("))
         assertTrue(details.contains("metric.resetPlan?.let"))
         assertTrue(details.contains("ResetPlanBanner("))
     }
