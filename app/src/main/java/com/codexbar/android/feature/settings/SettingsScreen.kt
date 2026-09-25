@@ -116,7 +116,7 @@ import com.codexbar.android.core.security.PrivacySettings
 import com.codexbar.android.core.notification.QuotaNotificationService
 import com.codexbar.android.core.security.ConnectionHealth
 import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
-import com.codexbar.android.ui.components.providerIcon
+import com.codexbar.android.ui.components.ProviderIcon
 import com.codexbar.android.ui.theme.providerVisualStyle
 import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -981,12 +981,7 @@ private fun ServiceCredentialSection(
                     border = BorderStroke(1.dp, visualStyle.accent.copy(alpha = 0.3f))
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = service.providerIcon(),
-                            contentDescription = service.displayName,
-                            tint = visualStyle.accent,
-                            modifier = Modifier.size(24.dp)
-                        )
+                        ProviderIcon(service, modifier = Modifier.size(28.dp))
                     }
                 }
                 Spacer(modifier = Modifier.width(12.dp))

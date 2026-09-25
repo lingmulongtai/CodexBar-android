@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--adb", default="adb")
 parser.add_argument("--serial", required=True)
 parser.add_argument("--screenshots", type=Path, help="Save fresh template screenshots to this directory")
-parser.add_argument("--templates-only", action="store_true", help="Run only the ten template cases during layout iteration")
+parser.add_argument("--templates-only", action="store_true", help="Run only the template cases during layout iteration")
 args = parser.parse_args()
 if args.screenshots:
     args.screenshots.mkdir(parents=True, exist_ok=True)
@@ -64,7 +64,7 @@ for width, height, legacy, redacted in size_cases:
     print(f"PASS {width}x{height} legacy={legacy} redacted={redacted}: {text}", flush=True)
 
 # Every selectable template must retain all three providers at the user's Niagara size.
-for template in ["LEDGER", "METERS", "COLUMNS", "TILES", "RINGS", "SEGMENTS", "VERTICAL", "FOCUS", "DUAL", "RESET"]:
+for template in ["LEDGER", "METERS", "COLUMNS", "TILES", "RINGS", "SEGMENTS", "VERTICAL", "FOCUS", "DUAL", "RESET", "DUAL_SEGMENTS", "SEGMENTS_DUAL"]:
     adb("shell", "am", "force-stop", "com.codexbar.android")
     adb("shell", "run-as", "com.codexbar.android", "rm", "-f", "files/widget-host-result.json")
     adb("shell", "am", "start", "-W", "-n", "com.codexbar.android/.debug.WidgetHostActivity",
@@ -97,3 +97,32 @@ for template in ["LEDGER", "METERS", "COLUMNS", "TILES", "RINGS", "SEGMENTS", "V
     if args.screenshots:
         with (args.screenshots / f"widget-{template.lower()}.png").open("wb") as output:
             subprocess.run([args.adb, "-s", args.serial, "exec-out", "screencap", "-p"], stdout=output, check=True)
+
+# New dual-segment layouts must respect redaction/secondary visibility and narrow hosts.
+for template in ["DUAL_SEGMENTS", "SEGMENTS_DUAL"]:
+    for width, redacted, secondary in [(347, True, True), (347, False, False), (240, False, True)]:
+        adb("shell", "am", "force-stop", "com.codexbar.android")
+        adb("shell", "run-as", "com.codexbar.android", "rm", "-f", "files/widget-host-result.json")
+        adb("shell", "am", "start", "-W", "-n", "com.codexbar.android/.debug.WidgetHostActivity",
+            "--ez", "seed_demo", "true", "--ei", "width_dp", str(width), "--ei", "height_dp", "69",
+            "--ez", "three_services", "true", "--es", "template", template,
+            "--ez", "redacted", str(redacted).lower(), "--ez", "show_secondary", str(secondary).lower())
+        deadline = time.monotonic() + 20
+        ready_after = time.monotonic() + 6
+        while time.monotonic() < deadline:
+            time.sleep(.5)
+            raw = adb("shell", "run-as", "com.codexbar.android", "cat", "files/widget-host-result.json", check=False)
+            if not raw:
+                continue
+            result = json.loads(raw)
+            text = " | ".join(result["visible"])
+            if redacted:
+                passed = "Quota hidden" in text and "%" not in "".join(result["text"])
+            else:
+                passed = all(value in text for value in ["Codex", "Copilot", "Claude", "62%", "74%", "56%"])
+                passed = passed and "79%" not in text and "87%" not in text
+            if passed and time.monotonic() >= ready_after:
+                break
+        else:
+            raise AssertionError(f"Template options failed: {template} {width=} {redacted=} {secondary=}: {result}")
+        print(f"PASS options {template} {width=} {redacted=} {secondary=}", flush=True)

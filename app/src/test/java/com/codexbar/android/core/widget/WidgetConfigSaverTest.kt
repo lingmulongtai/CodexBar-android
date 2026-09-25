@@ -13,7 +13,10 @@ class WidgetConfigSaverTest {
                 opacity = 37, foreground = WidgetForeground.DARK, cornerRadius = 8, fontScale = .9f,
                 providerColors = mapOf(AiService.CODEX to 0x123456), showSecondary = false))
         val scope = object : SaverScope { override fun canBeSaved(value: Any) = true }
-        val saved = with(WidgetConfigSaver) { scope.save(config) }!!
-        assertEquals(config, WidgetConfigSaver.restore(saved))
+        WidgetTemplate.entries.forEach { template ->
+            val themed = config.copy(style = config.style.copy(template = template))
+            val saved = with(WidgetConfigSaver) { scope.save(themed) }!!
+            assertEquals(themed, WidgetConfigSaver.restore(saved))
+        }
     }
 }

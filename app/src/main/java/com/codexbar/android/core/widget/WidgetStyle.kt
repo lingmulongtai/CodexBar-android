@@ -7,7 +7,7 @@ import kotlin.math.roundToInt
 
 /** Stable IDs are persisted; never use enum ordinals for a widget's appearance. */
 enum class WidgetTemplate {
-    LEDGER, METERS, COLUMNS, TILES, RINGS, SEGMENTS, VERTICAL, FOCUS, DUAL, RESET;
+    LEDGER, METERS, COLUMNS, TILES, RINGS, SEGMENTS, VERTICAL, FOCUS, DUAL, RESET, DUAL_SEGMENTS, SEGMENTS_DUAL;
 
     companion object {
         fun fromId(id: String?): WidgetTemplate = entries.firstOrNull { it.name == id } ?: LEDGER

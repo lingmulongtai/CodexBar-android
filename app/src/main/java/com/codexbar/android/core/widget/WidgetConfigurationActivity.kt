@@ -58,7 +58,7 @@ import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.workmanager.WorkManagerInitializer
-import com.codexbar.android.ui.components.providerIcon
+import com.codexbar.android.ui.components.ProviderIcon
 import com.codexbar.android.ui.theme.CodexBarStateColors
 import com.codexbar.android.ui.theme.CodexBarTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -311,7 +311,8 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                             onCheckedChange = { liveConfig = liveConfig.copy(showReset = it) }
                                         )
                                         if (widgetHeight >= 100 && liveConfig.style.template !in listOf(
-                                            WidgetTemplate.LEDGER, WidgetTemplate.METERS, WidgetTemplate.DUAL, WidgetTemplate.RESET)) {
+                                            WidgetTemplate.LEDGER, WidgetTemplate.METERS, WidgetTemplate.DUAL, WidgetTemplate.DUAL_SEGMENTS,
+                                            WidgetTemplate.SEGMENTS_DUAL, WidgetTemplate.RESET)) {
                                         ConfigToggleRow(
                                             title = stringResource(R.string.widget_setup_pace_title),
                                             subtitle = stringResource(R.string.widget_setup_pace_description),
@@ -319,7 +320,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                             onCheckedChange = { liveConfig = liveConfig.copy(showPace = it) }
                                         )
                                         }
-                                        if (liveConfig.style.template !in listOf(WidgetTemplate.METERS, WidgetTemplate.DUAL, WidgetTemplate.RESET)) {
+                                        if (liveConfig.style.template !in listOf(WidgetTemplate.METERS, WidgetTemplate.DUAL, WidgetTemplate.DUAL_SEGMENTS, WidgetTemplate.RESET)) {
                                         ConfigToggleRow(
                                             title = stringResource(R.string.widget_setup_freshness_title),
                                             subtitle = stringResource(R.string.widget_setup_freshness_description),
@@ -530,12 +531,7 @@ private fun ServiceCheckRow(
                 color = accent.copy(alpha = 0.14f)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = service.providerIcon(),
-                        contentDescription = null,
-                        modifier = Modifier.size(22.dp),
-                        tint = accent
-                    )
+                    ProviderIcon(service, modifier = Modifier.size(26.dp))
                 }
             }
             Spacer(modifier = Modifier.width(12.dp))

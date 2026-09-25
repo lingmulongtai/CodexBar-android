@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.glance.appwidget.compose
+import com.codexbar.android.ui.components.ProviderOrderEditor
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +32,16 @@ import kotlin.math.roundToInt
 internal fun WidgetStyleEditor(config: WidgetDisplayConfig, onChange: (WidgetDisplayConfig) -> Unit) {
     val style = config.style
     Text(stringResource(R.string.widget_studio_title), style = MaterialTheme.typography.headlineSmall)
+    if (config.services.isNotEmpty()) {
+        Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResource(R.string.provider_order_title), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.widget_provider_order_hint), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ProviderOrderEditor(config.services) { onChange(config.copy(services = it)) }
+            }
+        }
+    }
     WidgetLivePreview(config)
     Text(stringResource(R.string.widget_studio_preview_hint), style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -83,17 +94,7 @@ internal fun WidgetStyleEditor(config: WidgetDisplayConfig, onChange: (WidgetDis
                 WidgetColorEditor(style.accent(current) and 0xFFFFFF) { rgb ->
                     onChange(config.copy(style = style.copy(providerColors = style.providerColors + (current to rgb))))
                 }
-                Text(stringResource(R.string.widget_studio_order_hint), style = MaterialTheme.typography.bodySmall)
-                config.services.forEachIndexed { index, service ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(service.displayName, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                        TextButton(enabled = index > 0, onClick = {
-                            val order = config.services.toMutableList()
-                            order[index] = order[index - 1]; order[index - 1] = service
-                            onChange(config.copy(services = order))
-                        }) { Text(stringResource(R.string.widget_studio_move_up)) }
-                    }
-                }
+
             }
         }
     }
@@ -168,4 +169,6 @@ internal fun WidgetTemplate.titleResource(): Int = when (this) {
     WidgetTemplate.FOCUS -> R.string.widget_template_focus
     WidgetTemplate.DUAL -> R.string.widget_template_dual
     WidgetTemplate.RESET -> R.string.widget_template_reset
+    WidgetTemplate.DUAL_SEGMENTS -> R.string.widget_template_dual_segments
+    WidgetTemplate.SEGMENTS_DUAL -> R.string.widget_template_segments_dual
 }
