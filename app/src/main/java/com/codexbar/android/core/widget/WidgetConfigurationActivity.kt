@@ -58,7 +58,7 @@ import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.workmanager.WorkManagerInitializer
-import com.codexbar.android.ui.components.providerIcon
+import com.codexbar.android.ui.components.ProviderIcon
 import com.codexbar.android.ui.theme.CodexBarStateColors
 import com.codexbar.android.ui.theme.CodexBarTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -530,12 +530,7 @@ private fun ServiceCheckRow(
                 color = accent.copy(alpha = 0.14f)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = service.providerIcon(),
-                        contentDescription = null,
-                        modifier = Modifier.size(22.dp),
-                        tint = accent
-                    )
+                    ProviderIcon(service, modifier = Modifier.size(26.dp))
                 }
             }
             Spacer(modifier = Modifier.width(12.dp))

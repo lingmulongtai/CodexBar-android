@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -29,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.codexbar.android.R
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaStatus
-import com.codexbar.android.ui.components.providerIcon
+import com.codexbar.android.ui.components.ProviderIcon
 import com.codexbar.android.ui.theme.CodexBarSpacing
 import com.codexbar.android.ui.theme.CodexBarStateColors
 import com.codexbar.android.ui.theme.providerVisualStyle
@@ -59,8 +58,7 @@ fun ServiceCard(
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(service.service.providerIcon(), null, tint = visualStyle.accent,
-                    modifier = Modifier.size(20.dp))
+                ProviderIcon(service.service, modifier = Modifier.size(24.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(service.service.displayName, style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)

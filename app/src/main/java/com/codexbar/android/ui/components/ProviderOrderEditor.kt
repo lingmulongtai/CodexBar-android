@@ -22,6 +22,8 @@ fun ProviderOrderEditor(services: List<AiService>, onChange: (List<AiService>) -
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("${index + 1}", Modifier.width(28.dp), style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ProviderIcon(service, Modifier.size(24.dp))
+                Spacer(Modifier.width(10.dp))
                 Text(service.displayName, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
                 IconButton(enabled = index > 0, onClick = { onChange(services.moved(index, index - 1)) }) {

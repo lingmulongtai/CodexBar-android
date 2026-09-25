@@ -41,7 +41,7 @@ import com.codexbar.android.core.presentation.ExtraUsagePresentation
 import com.codexbar.android.core.presentation.QuotaMetricPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaStatus
-import com.codexbar.android.ui.components.providerIcon
+import com.codexbar.android.ui.components.ProviderIcon
 import com.codexbar.android.ui.theme.CodexBarSpacing
 import com.codexbar.android.ui.theme.CodexBarStateColors
 import com.codexbar.android.ui.theme.providerVisualStyle
@@ -192,12 +192,7 @@ private fun ServiceDetailHeader(service: ServiceQuotaPresentation, accent: Color
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(CodexBarSpacing.medium)
     ) {
-        Icon(
-            imageVector = service.service.providerIcon(),
-            contentDescription = service.service.displayName,
-            modifier = Modifier.size(40.dp),
-            tint = accent
-        )
+        ProviderIcon(service.service, modifier = Modifier.size(40.dp))
         Column(modifier = Modifier.weight(1f)) {
             val subtitle = listOfNotNull(service.tier, service.accountLabel)
                 .joinToString(" - ")

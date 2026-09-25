@@ -1,43 +1,48 @@
 package com.codexbar.android.ui.components
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.AltRoute
-import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.Bolt
-import androidx.compose.material.icons.rounded.Code
-import androidx.compose.material.icons.rounded.DataUsage
-import androidx.compose.material.icons.rounded.Psychology
-import androidx.compose.material.icons.rounded.Terminal
-import androidx.compose.material.icons.rounded.Hub
-import androidx.compose.material.icons.rounded.Mouse
-import androidx.compose.material.icons.rounded.RecordVoiceOver
-import androidx.compose.material.icons.rounded.Science
-import androidx.compose.material.icons.rounded.SsidChart
-import androidx.compose.material.icons.rounded.Water
-import androidx.compose.material.icons.rounded.Explore
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
 
-fun AiService.providerIcon(): ImageVector {
-    return when (this) {
-        AiService.CLAUDE -> Icons.Rounded.Psychology
-        AiService.CODEX -> Icons.Rounded.Terminal
-        AiService.GEMINI -> Icons.Rounded.AutoAwesome
-        AiService.COPILOT -> Icons.Rounded.Code
-        AiService.CURSOR -> Icons.Rounded.Mouse
-        AiService.ZAI -> Icons.Rounded.DataUsage
-        AiService.ZENMUX -> Icons.Rounded.Hub
-        AiService.KIMI -> Icons.Rounded.Bolt
-        AiService.ELEVENLABS -> Icons.Rounded.RecordVoiceOver
-        AiService.OPENROUTER -> Icons.AutoMirrored.Rounded.AltRoute
-        AiService.SYNTHETIC -> Icons.Rounded.Science
-        AiService.CHUTES -> Icons.Rounded.SsidChart
-        AiService.DEEPSEEK -> Icons.Rounded.Water
-        AiService.VENICE -> Icons.Rounded.Explore
-        AiService.MOONSHOT -> Icons.Rounded.AutoAwesome
-        AiService.CLINEPASS -> Icons.Rounded.Code
-        AiService.IBM_BOB -> Icons.Rounded.DataUsage
-        AiService.DEVIN -> Icons.Rounded.Terminal
-        AiService.FIREWORKS -> Icons.Rounded.Bolt
+/** Bundled first-party artwork; provenance and notices are in docs/provider-icons.md. */
+@DrawableRes
+fun AiService.providerIcon(): Int = when (this) {
+    AiService.CLAUDE -> R.drawable.provider_claude
+    AiService.CODEX -> R.drawable.provider_codex
+    AiService.GEMINI -> R.drawable.provider_gemini
+    AiService.COPILOT -> R.drawable.provider_copilot
+    AiService.CURSOR -> R.drawable.provider_cursor
+    AiService.ZAI -> R.drawable.provider_zai
+    AiService.ZENMUX -> R.drawable.provider_zenmux
+    AiService.KIMI -> R.drawable.provider_kimi
+    AiService.ELEVENLABS -> R.drawable.provider_elevenlabs
+    AiService.OPENROUTER -> R.drawable.provider_openrouter
+    AiService.SYNTHETIC -> R.drawable.provider_synthetic
+    AiService.CHUTES -> R.drawable.provider_chutes
+    AiService.DEEPSEEK -> R.drawable.provider_deepseek
+    AiService.VENICE -> R.drawable.provider_venice
+    AiService.MOONSHOT -> R.drawable.provider_moonshot
+    AiService.CLINEPASS -> R.drawable.provider_clinepass
+    AiService.IBM_BOB -> R.drawable.provider_ibm_bob
+    AiService.FIREWORKS -> R.drawable.provider_fireworks
+    AiService.DEVIN -> R.drawable.provider_devin
+}
+
+@Composable
+fun ProviderIcon(service: AiService, modifier: Modifier = Modifier.size(24.dp)) {
+    // A neutral light plate preserves the official colors and contrast in either app theme.
+    Surface(modifier, shape = RoundedCornerShape(4.dp), color = Color.White) {
+        Image(painterResource(service.providerIcon()), contentDescription = null,
+            modifier = Modifier.padding(2.dp))
     }
 }

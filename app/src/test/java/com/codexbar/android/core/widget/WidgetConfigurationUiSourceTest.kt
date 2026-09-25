@@ -19,6 +19,6 @@ class WidgetConfigurationUiSourceTest {
         assertTrue(source.contains(".widthIn(max = 720.dp)"))
         assertTrue(source.contains("MaterialTheme.shapes.extraLarge"))
         assertTrue(source.contains("CodexBarStateColors.providerAccent(service)"))
-        assertTrue(source.contains("service.providerIcon()"))
+        assertTrue(source.contains("ProviderIcon(service,"))
     }
 }
