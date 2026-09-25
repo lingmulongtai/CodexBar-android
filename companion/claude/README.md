@@ -6,7 +6,7 @@ This companion keeps Anthropic authentication inside the official Claude Code CL
 
 - Node.js 20 or newer
 - The current official Claude Code CLI, already signed in
-- The computer and Android phone on the same trusted Wi-Fi network
+- The computer and Android phone on the same trusted Wi-Fi network, or connected through Tailscale
 
 Claude Pro/Max usage is shared across Claude Desktop, claude.ai, and Claude Code. You can continue using the desktop app; the companion only needs the official CLI signed into the same subscription. Desktop sign-in alone does not sign the separate CLI in.
 
@@ -52,6 +52,18 @@ npm start
 The companion opens one dedicated official Claude Code terminal with tools disabled and reuses it for every refresh. It runs `/usage`, waits for loading to finish and the complete view to stabilize, parses only quota labels, percentages, reset text, an allowlisted plan name, and freshness, then discards the raw terminal output. It never serves Anthropic tokens, prompts, responses, files, email addresses, or session text.
 
 On Android, open CodexBar → **Connections** → **Claude**, tap **Scan QR securely in CodexBar**, and scan the displayed QR. Do not use the system camera or another scanner: the QR contains the local pairing password and is intentionally not a web/app link. If Google Play services cannot open the in-app scanner, paste the displayed `CBCLAUDE1...` code into the hidden pairing field. Tap **Pair & verify Claude companion** and keep the companion window running while current usage is needed.
+
+### Connect across networks with Tailscale
+
+Keep Tailscale connected on both devices. Find the computer's Tailscale IPv4 address with `tailscale ip -4`, then pass that address explicitly when starting the companion. For example, on Windows, replace this example address with your computer's:
+
+```text
+start-windows.cmd --address 100.90.0.10
+```
+
+Scan the newly displayed QR in CodexBar and verify the connection again, even if a previous QR used the same pairing key. This saves the Tailscale address instead of the old LAN address. CodexBar supports numeric Tailscale IPv4 addresses in `100.64.0.0/10`; MagicDNS names and IPv6 are not supported. Automatic LAN discovery does not search Tailscale peers.
+
+Using this computer as an exit node is compatible with this connection, but does not automatically change the companion's listening address. Ensure your tailnet access policy allows the phone to reach the computer on TCP port `43823`, and include CodexBar if the phone uses Tailscale app-based split tunneling. No router forwarding or public port is required. See Tailscale's [device connection guide](https://tailscale.com/docs/how-to/connect-to-devices).
 
 ## Troubleshooting
 
