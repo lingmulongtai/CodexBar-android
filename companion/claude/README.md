@@ -13,12 +13,23 @@ Claude Pro/Max usage is shared across Claude Desktop, claude.ai, and Claude Code
 Install Claude Code using Anthropic's current instructions. On Windows, open PowerShell and run:
 
 ```powershell
-Set-Location $env:USERPROFILE
 claude auth login --claudeai
+$workspaceDir = Join-Path $env:USERPROFILE '.codexbar\claude-workspace'
+New-Item -ItemType Directory -Path $workspaceDir -Force | Out-Null
+Set-Location -LiteralPath $workspaceDir
 claude
 ```
 
-Start from your home directory because the companion opens its CLI there. Complete browser sign-in, the first-run prompts, and any workspace trust prompt. Confirm that `/usage` shows **Current session** before starting the companion.
+On macOS or Linux, use the same dedicated workspace:
+
+```shell
+claude auth login --claudeai
+mkdir -p "$HOME/.codexbar/claude-workspace"
+cd "$HOME/.codexbar/claude-workspace"
+claude
+```
+
+Complete browser sign-in, the first-run prompts, and the trust prompt for this dedicated workspace. Confirm that `/usage` shows **Current session**, then enter `/exit` before starting the companion. The companion reuses this stable, initially empty directory on every launch. Do not use the home directory itself: Claude can ask for trust again on every launch there, leaving unattended collection waiting at that prompt.
 
 Do not use `claude setup-token` for this app. Anthropic documents that token for inference automation; it does not include the `user:profile` permission required to read plan usage.
 
@@ -45,7 +56,7 @@ On Android, open CodexBar → **Connections** → **Claude**, tap **Scan QR secu
 ## Troubleshooting
 
 - If `/usage` says **Showing last-known usage**, the companion waits for a fresh reading instead of presenting cached quota as newly collected. Retry after the provider rate limit clears.
-- If no snapshot is available, run `claude` from your home directory in a terminal, finish sign-in/trust prompts, enter `/usage`, then restart the companion.
+- If no snapshot is available, run `claude` from `~/.codexbar/claude-workspace` in a terminal, finish sign-in/trust prompts, enter `/usage`, then restart the companion. If upgrading from an earlier companion, confirm trust once for this new dedicated workspace; your Claude login and CodexBar pairing key stay unchanged.
 - If Windows installed the npm launcher instead of the native CLI, run `start-windows.cmd --claude-command claude.cmd`.
 - On macOS, the companion verifies and restores the executable bit on the pinned `node-pty` helper before every native PTY launch. If that fixed helper is missing, reinstall the companion dependencies instead of weakening system security settings.
 - If the computer's address changes, CodexBar looks for the companion again on the phone's current subnet and re-pairs itself once the stored key authenticates the snapshot. Scanning a new QR is only needed when the pairing identity itself changed.

@@ -1,4 +1,6 @@
 import os from 'node:os';
+import path from 'node:path';
+import { mkdirSync } from 'node:fs';
 import pty from 'node-pty';
 import { ensureNodePtyHelperExecutable } from './node-pty-runtime.js';
 import { isClaudeUsageLoading, parseClaudeUsageOutput } from './quota-parser.js';
@@ -8,6 +10,7 @@ const MAX_CAPTURE_LENGTH = 256 * 1024;
 export class ClaudeUsageSession {
   constructor({
     command = 'claude',
+    homeDirectory = os.homedir(),
     startupDelayMillis = 6_000,
     commandDelayMillis = 350,
     timeoutMillis = 45_000,
@@ -16,6 +19,7 @@ export class ClaudeUsageSession {
     spawn = pty.spawn
   } = {}) {
     this.command = command;
+    this.workingDirectory = path.join(homeDirectory, '.codexbar', 'claude-workspace');
     this.startupDelayMillis = startupDelayMillis;
     this.commandDelayMillis = commandDelayMillis;
     this.timeoutMillis = timeoutMillis;
@@ -57,7 +61,7 @@ export class ClaudeUsageSession {
       pending.timeoutTimer = setTimeout(() => {
         this.finishPending(
           new Error(
-            'Claude Code did not return complete plan usage. Run `claude` once, finish sign-in and trust prompts, then confirm `/usage` works.'
+            'Claude Code did not return complete plan usage. Run `claude` in ~/.codexbar/claude-workspace, finish sign-in and trust prompts, then confirm `/usage` works.'
           )
         );
       }, this.timeoutMillis);
@@ -79,12 +83,13 @@ export class ClaudeUsageSession {
 
   ensureTerminal() {
     if (this.terminal != null) return false;
+    mkdirSync(this.workingDirectory, { recursive: true, mode: 0o700 });
     ensureNodePtyHelperExecutable();
     const terminal = this.spawn(this.command, ['--allowed-tools', ''], {
       name: 'xterm-color',
       cols: 120,
       rows: 60,
-      cwd: os.homedir(),
+      cwd: this.workingDirectory,
       env: {
         ...process.env,
         NO_COLOR: '1'
