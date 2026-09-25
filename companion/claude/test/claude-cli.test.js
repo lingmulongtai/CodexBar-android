@@ -29,8 +29,9 @@ test('uses a persistent dedicated workspace and reuses the Claude PTY for stable
       writes.push(value);
       if (value !== '/usage\r') return;
       setTimeout(() => dataHandler('Account & Usage\nCurrent session\nLoading...\n'), 1);
+      setTimeout(() => dataHandler('Account & Usage\nCurrent\u001b['), 5);
       setTimeout(() => dataHandler(
-        'Account & Usage\nCurrent session\n25% used\nCurrent week (all models)\n40% used\nPlan: Pro\n'
+        '1Csession\n25% used\nCurrent\u001b[1Cweek (all models)\n40% used\nPlan: Pro\n'
       ), 8);
     },
     kill() {

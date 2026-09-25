@@ -40,6 +40,35 @@ test('converts remaining percentage to used fraction', () => {
   assert.ok(parsed.windows[0].resetsAtEpochSeconds > Math.floor(NOW.getTime() / 1000));
 });
 
+test('parses Windows cursor-spaced quota headings and reset text', () => {
+  const rendered = [
+    'Account\u001b[C&\u001b[0CUsage',
+    'C\u001b[32murrent\u001b[0m \u001b[2Csession',
+    '3%used',
+    'Resets\u001b[1Cin\u001b[1C2h\u001b[1C30m',
+    'Current\u009b1Cweek\u001b[1C(all\u001b[1Cmodels)',
+    '0%used',
+    'Current\u001b[1Cweek\u001b[1C(Sonnet\u001b[1Conly)',
+    '4%used'
+  ].join('\r\n');
+
+  assert.deepEqual(parseClaudeUsageOutput(rendered, NOW), {
+    windows: [
+      { label: '5-Hour', usedFraction: 0.03, resetsAtEpochSeconds: 1787452200 },
+      { label: '7-Day', usedFraction: 0 },
+      { label: 'Sonnet', usedFraction: 0.04 }
+    ]
+  });
+  assert.equal(sanitizeTerminalOutput('Current\u001b[999999Csession'), 'Current session');
+});
+
+test('keeps Windows cursor-spaced stale and incomplete readings unavailable', () => {
+  const usage = 'Current\u001b[1Csession\n3%used\n';
+  assert.equal(parseClaudeUsageOutput(usage + 'Showing\u001b[1Clast-known\u001b[1Cusage', NOW), null);
+  assert.equal(parseClaudeUsageOutput(usage + 'Loading...', NOW), null);
+  assert.equal(parseClaudeUsageOutput('Total\u001b[1Ccost:\u001b[1C37%', NOW), null);
+});
+
 test('accepts enterprise output with only a current session limit', () => {
   const parsed = parseClaudeUsageOutput('Current session\n12% used\n', NOW);
 

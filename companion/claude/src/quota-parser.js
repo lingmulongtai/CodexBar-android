@@ -1,4 +1,5 @@
 const ANSI_PATTERN = /[\u001B\u009B][[\]()#;?]*(?:(?:(?:[a-zA-Z\d]*(?:;[-a-zA-Z\d\/#&.:=?%@~_]+)*)?\u0007)|(?:(?:\d{1,4}(?:[;:]\d{0,4})*)?[\dA-PR-TZcf-nq-uy=><~]))/g;
+const CURSOR_FORWARD_PATTERN = /(?:\u001B\[|\u009B)\d*C/g;
 const MAX_CAPTURE_LENGTH = 256 * 1024;
 const MAX_WINDOWS = 8;
 
@@ -13,7 +14,10 @@ const WINDOW_LABELS = [
 export function sanitizeTerminalOutput(value) {
   return value
     .slice(-MAX_CAPTURE_LENGTH)
+    // Claude's Windows renderer uses cursor movement for gaps between words.
+    .replace(CURSOR_FORWARD_PATTERN, ' ')
     .replace(ANSI_PATTERN, '')
+    .replace(/[ \t]+/g, ' ')
     .replace(/\u0008/g, '')
     .replace(/\r(?!\n)/g, '\n');
 }
