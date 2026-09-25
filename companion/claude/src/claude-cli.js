@@ -2,10 +2,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { mkdirSync } from 'node:fs';
 import pty from 'node-pty';
+import xterm from '@xterm/headless';
 import { ensureNodePtyHelperExecutable } from './node-pty-runtime.js';
 import { isClaudeUsageLoading, parseClaudeUsageOutput } from './quota-parser.js';
 
-const MAX_CAPTURE_LENGTH = 256 * 1024;
+const TERMINAL_COLUMNS = 120;
+const TERMINAL_ROWS = 60;
 
 export class ClaudeUsageSession {
   constructor({
@@ -27,6 +29,7 @@ export class ClaudeUsageSession {
     this.minimumObservationMillis = minimumObservationMillis;
     this.spawn = spawn;
     this.terminal = null;
+    this.screen = null;
     this.pending = null;
   }
 
@@ -41,6 +44,8 @@ export class ClaudeUsageSession {
         reject,
         now,
         capture: '',
+        pendingWrites: 0,
+        waitingForScreen: false,
         active: false,
         requestSentAt: 0,
         candidateFingerprint: null,
@@ -73,7 +78,10 @@ export class ClaudeUsageSession {
       this.finishPending(new Error('Claude usage session closed'));
     }
     const terminal = this.terminal;
+    const screen = this.screen;
     this.terminal = null;
+    this.screen = null;
+    screen?.dispose();
     try {
       terminal?.kill();
     } catch {
@@ -85,20 +93,38 @@ export class ClaudeUsageSession {
     if (this.terminal != null) return false;
     mkdirSync(this.workingDirectory, { recursive: true, mode: 0o700 });
     ensureNodePtyHelperExecutable();
-    const terminal = this.spawn(this.command, ['--allowed-tools', ''], {
-      name: 'xterm-color',
-      cols: 120,
-      rows: 60,
-      cwd: this.workingDirectory,
-      env: {
-        ...process.env,
-        NO_COLOR: '1'
-      }
+    const screen = new xterm.Terminal({
+      cols: TERMINAL_COLUMNS,
+      rows: TERMINAL_ROWS,
+      scrollback: 0,
+      allowProposedApi: true
     });
+    let terminal;
+    try {
+      terminal = this.spawn(this.command, ['--allowed-tools', ''], {
+        name: 'xterm-color',
+        cols: TERMINAL_COLUMNS,
+        rows: TERMINAL_ROWS,
+        cwd: this.workingDirectory,
+        env: {
+          ...process.env,
+          NO_COLOR: '1'
+        }
+      });
+    } catch (error) {
+      screen.dispose();
+      throw error;
+    }
     this.terminal = terminal;
-    terminal.onData((data) => this.handleData(data));
+    this.screen = screen;
+    terminal.onData((data) => {
+      if (this.terminal === terminal) this.handleData(data);
+    });
     terminal.onExit(({ exitCode }) => {
-      if (this.terminal === terminal) this.terminal = null;
+      if (this.terminal !== terminal) return;
+      this.terminal = null;
+      this.screen = null;
+      screen.dispose();
       if (this.pending != null) {
         this.finishPending(
           new Error(`Claude Code exited before plan usage was available (${exitCode})`)
@@ -109,21 +135,48 @@ export class ClaudeUsageSession {
   }
 
   handleData(data) {
+    const screen = this.screen;
+    if (screen == null) return;
     const pending = this.pending;
-    if (pending == null || !pending.active) return;
-    pending.capture = (pending.capture + data).slice(-MAX_CAPTURE_LENGTH);
-    clearTimeout(pending.settleTimer);
+    const active = pending?.active === true;
+    if (active) pending.pendingWrites += 1;
+    // Keep one bounded screen for the PTY: ConPTY sends changes to existing cells,
+    // not complete lines. Ignoring cursor movement loses unchanged weekly labels.
+    screen.write(data, () => {
+      if (this.screen !== screen || !active || this.pending !== pending) return;
+      pending.pendingWrites -= 1;
+      const buffer = screen.buffer.active;
+      pending.capture = Array.from({ length: screen.rows }, (_, row) =>
+        buffer.getLine(buffer.baseY + row)?.translateToString(true) ?? ''
+      ).join('\n');
+      this.handleScreen(pending);
+      if (pending.waitingForScreen && pending.pendingWrites === 0) {
+        this.finishStableCandidate(pending);
+      }
+    });
+  }
 
+  handleScreen(pending) {
     if (isClaudeUsageLoading(pending.capture)) {
+      clearTimeout(pending.settleTimer);
+      pending.settleTimer = null;
+      pending.waitingForScreen = false;
       pending.candidateFingerprint = null;
       return;
     }
     const parsed = parseClaudeUsageOutput(pending.capture, pending.now);
     if (parsed == null) {
+      clearTimeout(pending.settleTimer);
+      pending.settleTimer = null;
+      pending.waitingForScreen = false;
       pending.candidateFingerprint = null;
       return;
     }
-    pending.candidateFingerprint = JSON.stringify(parsed);
+    const fingerprint = JSON.stringify(parsed);
+    if (fingerprint === pending.candidateFingerprint && pending.settleTimer != null) return;
+    clearTimeout(pending.settleTimer);
+    pending.waitingForScreen = false;
+    pending.candidateFingerprint = fingerprint;
     pending.settleTimer = setTimeout(
       () => this.finishStableCandidate(pending),
       this.parseSettleMillis
@@ -132,6 +185,11 @@ export class ClaudeUsageSession {
 
   finishStableCandidate(pending) {
     if (this.pending !== pending || pending.candidateFingerprint == null) return;
+    if (pending.pendingWrites > 0) {
+      pending.waitingForScreen = true;
+      return;
+    }
+    pending.waitingForScreen = false;
     const elapsed = Date.now() - pending.requestSentAt;
     if (elapsed < this.minimumObservationMillis) {
       pending.settleTimer = setTimeout(

@@ -10,7 +10,8 @@ if errorlevel 1 goto :missing_node
 for /f %%V in ('node -p "process.versions.node.split('.')[0]"') do set "NODE_MAJOR=%%V"
 if %NODE_MAJOR% LSS 20 goto :missing_node
 
-if not exist "node_modules\node-pty\package.json" (
+node -e "require.resolve('node-pty'); require.resolve('@xterm/headless'); require.resolve('qrcode-terminal')" >nul 2>nul
+if errorlevel 1 (
   echo Installing the pinned companion dependencies...
   call npm ci --omit=dev
   if errorlevel 1 goto :failed

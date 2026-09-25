@@ -14,6 +14,7 @@
     "smoke:pty": "node scripts/pty-smoke.js"
   },
   "dependencies": {
+    "@xterm/headless": "6.0.0",
     "node-pty": "1.1.0",
     "qrcode-terminal": "0.12.0"
   },

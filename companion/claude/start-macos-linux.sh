@@ -13,7 +13,7 @@ node -e "if (Number(process.versions.node.split('.')[0]) < 20) process.exit(1)" 
   exit 1
 }
 
-if [ ! -f node_modules/node-pty/package.json ]; then
+if ! node -e "require.resolve('node-pty'); require.resolve('@xterm/headless'); require.resolve('qrcode-terminal')" >/dev/null 2>&1; then
   echo "Installing the pinned companion dependencies..."
   npm ci --omit=dev
 fi

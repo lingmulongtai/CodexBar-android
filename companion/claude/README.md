@@ -49,7 +49,7 @@ npm ci --omit=dev
 npm start
 ```
 
-The companion opens one dedicated official Claude Code terminal with tools disabled and reuses it for every refresh. It runs `/usage`, waits for loading to finish and the complete view to stabilize, parses only quota labels, percentages, reset text, an allowlisted plan name, and freshness, then discards the raw terminal output. It never serves Anthropic tokens, prompts, responses, files, email addresses, or session text.
+The companion opens one dedicated official Claude Code terminal with tools disabled and reuses it for every refresh. It runs `/usage`, reconstructs the visible screen in bounded memory so partial redraws preserve every quota window, and waits for loading to finish and the values to stabilize. It parses only quota labels, percentages, reset text, an allowlisted plan name, and freshness. Raw terminal content is not logged or served. The companion never includes Anthropic tokens, prompts, responses, files, email addresses, or session text in its network responses.
 
 On Android, open CodexBar → **Connections** → **Claude**, tap **Scan QR securely in CodexBar**, and scan the displayed QR. Do not use the system camera or another scanner: the QR contains the local pairing password and is intentionally not a web/app link. If Google Play services cannot open the in-app scanner, paste the displayed `CBCLAUDE1...` code into the hidden pairing field. Tap **Pair & verify Claude companion** and keep the companion window running while current usage is needed.
 
