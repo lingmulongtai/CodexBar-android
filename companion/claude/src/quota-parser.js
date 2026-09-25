@@ -36,10 +36,18 @@ export function parseClaudeUsageOutput(output, now = new Date()) {
     const line = compactLine(lines[index]);
     const label = labelForLine(line);
     if (label == null || seenLabels.has(label.toLowerCase())) continue;
-    const nearby = lines.slice(index, index + 7).map(compactLine).join(' ');
+    const nearbyLines = [line];
+    for (const candidate of lines.slice(index + 1, index + 7).map(compactLine)) {
+      if (labelForLine(candidate) != null || /^(?:Extra usage|Plan:|Tier:|Subscription:)/i.test(candidate)) break;
+      nearbyLines.push(candidate);
+    }
+    const nearby = nearbyLines.join(' ');
+    if (isLoadingBlock(nearby)) return null;
     const usedFraction = parseUsedFraction(nearby);
-    if (usedFraction == null) continue;
-    const resetsAtEpochSeconds = parseReset(nearby, now);
+    // A visible but incomplete window must not borrow the next window's value.
+    if (usedFraction == null) return null;
+    const resetLine = nearbyLines.find((candidate) => /\bresets?\b/i.test(candidate));
+    const resetsAtEpochSeconds = resetLine == null ? null : parseReset(resetLine, now);
     windows.push({
       label,
       usedFraction,
@@ -116,13 +124,29 @@ function parseReset(value, now) {
     }
   }
 
-  const clock = normalized.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+  const calendar = normalized.match(/^(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2}),?\s+(?:at\s+)?(.+)$/i);
+  const clock = (calendar?.[3] ?? normalized).match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i);
   if (clock) {
+    const clockHour = Number(clock[1]);
+    const minute = Number(clock[2] ?? 0);
+    if (clockHour < 1 || clockHour > 12 || minute > 59) return null;
     let hour = Number(clock[1]) % 12;
     if (clock[3].toLowerCase() === 'pm') hour += 12;
     const candidate = new Date(now);
-    candidate.setHours(hour, Number(clock[2]), 0, 0);
-    if (candidate <= now) candidate.setDate(candidate.getDate() + 1);
+    if (calendar) {
+      const month = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+        .indexOf(calendar[1].slice(0, 3).toLowerCase());
+      const day = Number(calendar[2]);
+      candidate.setMonth(month, day);
+      candidate.setHours(hour, minute, 0, 0);
+      if (candidate.getMonth() !== month || candidate.getDate() !== day) return null;
+      if (candidate <= now) candidate.setFullYear(candidate.getFullYear() + 1);
+      if (candidate.getMonth() !== month || candidate.getDate() !== day ||
+          candidate.getTime() - now.getTime() > 31 * 24 * 60 * 60 * 1_000) return null;
+    } else {
+      candidate.setHours(hour, minute, 0, 0);
+      if (candidate <= now) candidate.setDate(candidate.getDate() + 1);
+    }
     return Math.floor(candidate.getTime() / 1000);
   }
 
