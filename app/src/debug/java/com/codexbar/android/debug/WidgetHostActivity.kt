@@ -123,6 +123,7 @@ class WidgetHostActivity : ComponentActivity() {
             widgetPrefs.saveWidgetConfig(id, WidgetDisplayConfig(
                 services = listOf(AiService.CODEX, AiService.COPILOT) + if (three) listOf(AiService.CLAUDE) else emptyList(),
                 style = WidgetStyle(template = WidgetTemplate.fromId(intent.getStringExtra("template")),
+                    showSecondary = intent.getBooleanExtra("show_secondary", true),
                     opacity = intent.getIntExtra("opacity", 68))))
             if (intent.getBooleanExtra("update_all_demo", false)) {
                 manager.getAppWidgetIds(ComponentName(this@WidgetHostActivity, QuotaWidgetReceiver::class.java)).forEach { target ->

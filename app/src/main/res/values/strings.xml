@@ -474,4 +474,6 @@
     <string name="dashboard_order_hint">Use the arrows to choose the order on Usage. Changes are saved automatically; each widget has its own order.</string>
     <string name="dashboard_order_automatic">Use automatic order</string>
     <string name="widget_provider_order_hint">Use ↑ ↓ to rearrange. Rows run top to bottom; columns run left to right. The preview updates below.</string>
+    <string name="widget_template_dual_segments">Dual Segments</string>
+    <string name="widget_template_segments_dual">Stacked Segments</string>
 </resources>

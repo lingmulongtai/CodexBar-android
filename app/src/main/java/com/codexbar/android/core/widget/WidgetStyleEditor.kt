@@ -169,4 +169,6 @@ internal fun WidgetTemplate.titleResource(): Int = when (this) {
     WidgetTemplate.FOCUS -> R.string.widget_template_focus
     WidgetTemplate.DUAL -> R.string.widget_template_dual
     WidgetTemplate.RESET -> R.string.widget_template_reset
+    WidgetTemplate.DUAL_SEGMENTS -> R.string.widget_template_dual_segments
+    WidgetTemplate.SEGMENTS_DUAL -> R.string.widget_template_segments_dual
 }

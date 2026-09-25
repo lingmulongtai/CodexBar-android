@@ -472,4 +472,6 @@
     <string name="dashboard_order_hint">矢印でUsageの表示順を変更できます。自動で保存されます。ウィジェットの順番は個別に設定できます。</string>
     <string name="dashboard_order_automatic">自動の並び順に戻す</string>
     <string name="widget_provider_order_hint">↑ ↓ で並び替え。行は上から下、列は左から右の順に表示されます。下のプレビューで確認できます。</string>
+    <string name="widget_template_dual_segments">横2枠セグメント</string>
+    <string name="widget_template_segments_dual">縦2段セグメント</string>
 </resources>

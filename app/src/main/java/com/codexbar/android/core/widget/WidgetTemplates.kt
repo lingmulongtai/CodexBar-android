@@ -21,13 +21,13 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 
-/** All ten templates share the same cached, privacy-filtered values and remain native text. */
+/** All templates share the same cached, privacy-filtered values and remain native text. */
 @Composable
 internal fun WidgetTemplates(config: WidgetDisplayConfig, providers: List<WidgetProvider>) {
     val size = LocalSize.current
     val style = config.style.normalized()
     val rows = style.template in listOf(WidgetTemplate.LEDGER, WidgetTemplate.METERS,
-        WidgetTemplate.DUAL, WidgetTemplate.RESET) || size.width.value < 270
+        WidgetTemplate.DUAL, WidgetTemplate.DUAL_SEGMENTS, WidgetTemplate.RESET) || size.width.value < 270
     val count = if (rows) WidgetRenderPolicy.rowCount(size.height.value, style.fontScale) else 3
     val data = providers.take(count)
     if (rows) {
@@ -87,11 +87,15 @@ private fun ProviderLine(provider: WidgetProvider, config: WidgetDisplayConfig, 
                 if (!compact && style.showSecondary) WText(secondaryText(provider, config), style, 9f,
                     modifier = GlanceModifier.width(85.dp))
             }
-            WidgetTemplate.DUAL -> {
+            WidgetTemplate.DUAL, WidgetTemplate.DUAL_SEGMENTS -> {
                 listOfNotNull(metric, provider.secondary.takeIf { style.showSecondary }).forEach { item ->
                     Column(GlanceModifier.defaultWeight().padding(horizontal = 4.dp)) {
                         WText("${item.shortLabel} ${item.percent} ${resetText(item, config)}", style, 9f)
-                        Track(item.remaining, accent, GlanceModifier.fillMaxWidth().height(2.dp))
+                        if (style.template == WidgetTemplate.DUAL_SEGMENTS) {
+                            SegmentedTrack(item.remaining, accent)
+                        } else {
+                            Track(item.remaining, accent, GlanceModifier.fillMaxWidth().height(2.dp))
+                        }
                     }
                 }
             }
@@ -133,6 +137,13 @@ private fun ProviderTile(provider: WidgetProvider, config: WidgetDisplayConfig, 
         }
         if (metric == null) {
             WText(provider.message, style, 10f)
+        } else if (style.template == WidgetTemplate.SEGMENTS_DUAL) {
+            listOfNotNull(metric, provider.secondary.takeIf { style.showSecondary }).forEach { item ->
+                Column(GlanceModifier.fillMaxWidth().padding(top = 3.dp)) {
+                    WText("${item.shortLabel} ${item.percent} ${resetText(item, config)}", style, 9f)
+                    SegmentedTrack(item.remaining, accent)
+                }
+            }
         } else {
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 if (style.template == WidgetTemplate.RINGS) {
@@ -156,14 +167,7 @@ private fun ProviderTile(provider: WidgetProvider, config: WidgetDisplayConfig, 
                 WText(metric.shortLabel, style, 8f)
             }
             if (style.template == WidgetTemplate.SEGMENTS) {
-                Row(GlanceModifier.fillMaxWidth()) {
-                    repeat(10) { index ->
-                        Box(GlanceModifier.defaultWeight().padding(end = 1.dp).height(2.dp)) {
-                            Box(GlanceModifier.fillMaxSize().background(Color(accent)
-                                .copy(alpha = if (metric.remaining != null && index < metric.remaining * 10) 1f else 0.18f))) {}
-                        }
-                    }
-                }
+                SegmentedTrack(metric.remaining, accent)
             } else if (style.template in listOf(WidgetTemplate.COLUMNS, WidgetTemplate.TILES)) {
                 Track(metric.remaining, accent, GlanceModifier.fillMaxWidth().height(2.dp))
             }
@@ -180,6 +184,19 @@ private fun resetText(metric: WidgetMetric?, config: WidgetDisplayConfig): Strin
 
 private fun secondaryText(provider: WidgetProvider, config: WidgetDisplayConfig): String =
     provider.secondary?.let { "${it.shortLabel} ${it.percent} ${resetText(it, config)}" }.orEmpty()
+
+@Composable
+private fun SegmentedTrack(remaining: Float?, accent: Int) {
+    Row(GlanceModifier.fillMaxWidth()) {
+        // Glance supports at most ten direct Row children; padding supplies the gaps.
+        repeat(10) { index ->
+            Box(GlanceModifier.defaultWeight().padding(end = 1.dp).height(2.dp)) {
+                Box(GlanceModifier.fillMaxSize().background(Color(accent).copy(
+                    alpha = if (remaining != null && index < remaining.coerceIn(0f, 1f) * 10) 1f else 0.18f))) {}
+            }
+        }
+    }
+}
 
 @Composable
 private fun Track(remaining: Float?, accent: Int, modifier: GlanceModifier) {

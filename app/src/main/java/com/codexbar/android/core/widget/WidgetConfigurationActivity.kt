@@ -311,7 +311,8 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                             onCheckedChange = { liveConfig = liveConfig.copy(showReset = it) }
                                         )
                                         if (widgetHeight >= 100 && liveConfig.style.template !in listOf(
-                                            WidgetTemplate.LEDGER, WidgetTemplate.METERS, WidgetTemplate.DUAL, WidgetTemplate.RESET)) {
+                                            WidgetTemplate.LEDGER, WidgetTemplate.METERS, WidgetTemplate.DUAL, WidgetTemplate.DUAL_SEGMENTS,
+                                            WidgetTemplate.SEGMENTS_DUAL, WidgetTemplate.RESET)) {
                                         ConfigToggleRow(
                                             title = stringResource(R.string.widget_setup_pace_title),
                                             subtitle = stringResource(R.string.widget_setup_pace_description),
@@ -319,7 +320,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                             onCheckedChange = { liveConfig = liveConfig.copy(showPace = it) }
                                         )
                                         }
-                                        if (liveConfig.style.template !in listOf(WidgetTemplate.METERS, WidgetTemplate.DUAL, WidgetTemplate.RESET)) {
+                                        if (liveConfig.style.template !in listOf(WidgetTemplate.METERS, WidgetTemplate.DUAL, WidgetTemplate.DUAL_SEGMENTS, WidgetTemplate.RESET)) {
                                         ConfigToggleRow(
                                             title = stringResource(R.string.widget_setup_freshness_title),
                                             subtitle = stringResource(R.string.widget_setup_freshness_description),
