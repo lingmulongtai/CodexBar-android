@@ -28,4 +28,4 @@ The first software-rendered emulator run exceeded the host check deadline under 
 
 ## Limits
 
-These screenshots are emulator evidence, not a physical Niagara Launcher acceptance test. No release tag, signed release or publication was created for this change. The APK is a debug build; it is not an in-place signed update for the installed release app.
+These screenshots are emulator evidence, not a physical Niagara Launcher acceptance test. These implementation captures preceded release preparation; see the [v0.9.3 release captures](../releases/v0.9.3/README.md) for the versioned release evidence. The APK is a debug build; it is not an in-place signed update for the installed release app.
