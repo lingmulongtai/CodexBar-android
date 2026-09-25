@@ -38,6 +38,7 @@ class DashboardViewModel @Inject constructor(
     private val monitoringSessionStore: MonitoringSessionStore,
     private val notificationService: QuotaNotificationService,
     private val widgetPrefsManager: WidgetPrefsManager,
+    private val orderPrefs: DashboardOrderPrefs,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
@@ -50,6 +51,13 @@ class DashboardViewModel @Inject constructor(
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    private val _providerOrder = MutableStateFlow(orderPrefs.load())
+    val providerOrder: StateFlow<List<AiService>> = _providerOrder.asStateFlow()
+
+    fun setProviderOrder(order: List<AiService>) {
+        _providerOrder.value = orderPrefs.save(order)
+    }
 
     init {
         refresh()

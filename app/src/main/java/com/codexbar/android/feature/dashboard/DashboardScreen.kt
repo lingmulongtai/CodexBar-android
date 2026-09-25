@@ -21,6 +21,12 @@ import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import com.codexbar.android.ui.components.ProviderOrderEditor
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -69,6 +75,7 @@ fun DashboardScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val providerOrder by viewModel.providerOrder.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.refresh()
@@ -80,7 +87,9 @@ fun DashboardScreen(
         onRefresh = viewModel::refresh,
         onNavigateToConnections = onNavigateToConnections,
         initialSelectedService = initialSelectedService,
-        onInitialSelectionConsumed = onInitialSelectionConsumed
+        onInitialSelectionConsumed = onInitialSelectionConsumed,
+        providerOrder = providerOrder,
+        onProviderOrderChange = viewModel::setProviderOrder
     )
 }
 
@@ -89,7 +98,10 @@ fun DashboardPreviewScreen(
     snapshot: QuotaPresentationSnapshot,
     onNavigateToConnections: () -> Unit = {}
 ) {
+    var order by remember { mutableStateOf(emptyList<AiService>()) }
     DashboardContent(
+        providerOrder = order,
+        onProviderOrderChange = { order = it },
         uiState = DashboardUiState.Content(snapshot),
         isRefreshing = false,
         onRefresh = {},
@@ -105,11 +117,35 @@ private fun DashboardContent(
     onRefresh: () -> Unit,
     onNavigateToConnections: () -> Unit,
     initialSelectedService: AiService? = null,
-    onInitialSelectionConsumed: () -> Unit = {}
+    onInitialSelectionConsumed: () -> Unit = {},
+    providerOrder: List<AiService> = emptyList(),
+    onProviderOrderChange: (List<AiService>) -> Unit = {}
 ) {
     val themeProfile = LocalCodexBarThemeProfile.current
     var selectedServiceName by remember { mutableStateOf<String?>(null) }
     var showOnlyAttention by rememberSaveable { mutableStateOf(false) }
+    var showOrder by rememberSaveable { mutableStateOf(false) }
+    val services = (uiState as? DashboardUiState.Content)?.snapshot?.services.orEmpty()
+    val orderedServices = remember(services, providerOrder) {
+        DashboardProviderOrder.apply(services, providerOrder) { it.service }
+    }
+    if (showOrder) {
+        ModalBottomSheet(onDismissRequest = { showOrder = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.provider_order_title), style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.dashboard_order_hint), style = MaterialTheme.typography.bodyMedium)
+                ProviderOrderEditor(orderedServices.map { it.service }, onProviderOrderChange)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton(onClick = { onProviderOrderChange(emptyList()) }, enabled = providerOrder.isNotEmpty()) {
+                        Text(stringResource(R.string.dashboard_order_automatic))
+                    }
+                    Button(onClick = { showOrder = false }) { Text(stringResource(R.string.provider_order_done)) }
+                }
+            }
+        }
+    }
 
     // A notification or Now Bar entry names the provider it was opened for.
     LaunchedEffect(initialSelectedService) {
@@ -130,6 +166,9 @@ private fun DashboardContent(
             TopAppBar(
                 title = { Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge) },
                 actions = {
+                    if (services.size > 1) {
+                        TextButton(onClick = { showOrder = true }) { Text(stringResource(R.string.provider_order_action)) }
+                    }
                     IconButton(onClick = onRefresh, enabled = !isRefreshing) {
                         Icon(
                             imageVector = Icons.Rounded.Refresh,
@@ -177,7 +216,7 @@ private fun DashboardContent(
                                     stringResource(R.string.dashboard_needs_attention, it)
                                 }
                             val paneService = explicitlySelectedService
-                                ?: state.snapshot.services.first()
+                                ?: orderedServices.first()
                             val summary = remember(state.snapshot) {
                                 state.snapshot.toDashboardSummary()
                             }
@@ -185,9 +224,9 @@ private fun DashboardContent(
                             // selection must not leave the list empty with no way back.
                             val filterAttention = showOnlyAttention && summary.attentionCount > 0
                             val visibleServices = if (filterAttention) {
-                                state.snapshot.services.filter { it.needsAttention() }
+                                orderedServices.filter { it.needsAttention() }
                             } else {
-                                state.snapshot.services
+                                orderedServices
                             }
 
                             if (useTwoPane) {
