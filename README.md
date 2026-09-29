@@ -190,6 +190,8 @@ Download `CodexBar-Antigravity-Companion-v0.9.4.zip` from the same Release as th
 
 Keep Antigravity open and the PC awake. The optional tray resident starts at sign-in and recovers after a crash. For different networks, connect the phone and PC to Tailscale and pair using the PC's `100.x` address on port `43824`. Google credentials, conversations and files stay on the PC. Only explicitly reported model quotas are shown; weekly limits and credit balances are not inferred. These internal IDE endpoints may change after an Antigravity update.
 
+The current source checkout also includes a [Windows Control Center](companion/windows-control-center/README.md) that combines Claude, Antigravity, Gemini CLI, and Codex telemetry into one tray dashboard with per-provider pairing QR codes. It retains existing Claude and Antigravity phone pairings and reads Antigravity 2.0 weekly/five-hour model-group windows. This Control Center is newer than the v0.9.4 release archives above.
+
 ### Gemini (Google)
 
 Direct Gemini OAuth inside the Android app remains disabled. CodexBar does not copy Gemini CLI credentials, embed a Google client secret, or call the internal `cloudcode-pa` service. Instead, the v0.9.4 companion drives the official Gemini CLI's documented `/stats` view and sends only a sanitized quota snapshot over your trusted local network.
