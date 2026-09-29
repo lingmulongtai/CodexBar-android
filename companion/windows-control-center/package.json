@@ -1,0 +1,14 @@
+{
+  "name": "@codexbar/windows-control-center",
+  "version": "0.9.4",
+  "private": true,
+  "description": "One Windows tray dashboard and private Android bridge for four PC-linked providers",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check src/providers.js && node --check src/snapshot-client.js && node --check src/status.js && node --check src/qr.js && node --check scripts/windows-worker.js"
+  },
+  "dependencies": { "qrcode": "1.5.4" },
+  "license": "MIT"
+}
