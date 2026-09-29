@@ -31,13 +31,36 @@ test('model-config fallback works and local CSRF credentials never enter snapsho
     discover: async () => [{ ports: [12345], csrf: 'local-secret' }],
     request: async (port, csrf, method) => {
       calls.push(method);
-      if (method === 'GetUserStatus') throw new Error('Account private@example.test local-secret');
+      if (method !== 'GetCommandModelConfigs') throw new Error('Account private@example.test local-secret');
       return { clientModelConfigs: [{ label: 'Gemini', quotaInfo: { remainingFraction: 0.5 } }] };
     }
   });
-  assert.deepEqual(calls, ['GetUserStatus', 'GetCommandModelConfigs']);
+  assert.deepEqual(calls, ['RetrieveUserQuotaSummary', 'GetUserStatus', 'GetCommandModelConfigs']);
   assert.deepEqual(result, { windows: [{ label: 'Gemini', usedFraction: 0.5 }] });
   await assert.rejects(collectAntigravityUsage({ discover: async () => [] }), { code: 'SERVER_NOT_FOUND' });
+});
+
+test('parses Antigravity 2.0 grouped weekly and five-hour quotas without exporting account data', () => {
+  const resetTime = new Date((now + 3600) * 1000).toISOString();
+  const response = { response: { email: 'private@example.test', groups: [
+    { displayName: 'Gemini Models', buckets: [
+      { bucketId: 'gemini-weekly', remainingFraction: 0.875, resetTime },
+      { bucketId: 'gemini-5h', remainingFraction: 1, resetTime }
+    ] },
+    { displayName: 'Claude and GPT models', buckets: [
+      { bucketId: '3p-weekly', remainingFraction: 0.5, resetTime },
+      { bucketId: '3p-5h', remainingFraction: 0.75, resetTime }
+    ] }
+  ] } };
+  assert.deepEqual(parseModelQuotas(response, now), { windows: [
+    { label: 'Gemini models · Weekly', usedFraction: 0.125, resetsAtEpochSeconds: now + 3600 },
+    { label: 'Gemini models · 5 hours', usedFraction: 0, resetsAtEpochSeconds: now + 3600 },
+    { label: 'Claude/GPT models · Weekly', usedFraction: 0.5, resetsAtEpochSeconds: now + 3600 },
+    { label: 'Claude/GPT models · 5 hours', usedFraction: 0.25, resetsAtEpochSeconds: now + 3600 }
+  ] });
+  assert.throws(() => parseModelQuotas({ response: { groups: [{ buckets: [
+    { bucketId: 'gemini-5h', remainingFraction: '1' }
+  ] }] } }, now));
 });
 
 test('distinguishes absent server, failed endpoint and response without measured quota', async () => {

@@ -1,16 +1,16 @@
 # Antigravity companion (Windows)
 
-Read-only model quotas from the running, signed-in Antigravity IDE. Google credentials remain on the PC. This is independent of Gemini CLI and Claude subscriptions.
+Read-only model quotas from the running, signed-in Antigravity Windows app or IDE. Google credentials remain on the PC. This is independent of Gemini CLI and Claude subscriptions.
 
-Requires Windows, Node.js 20+, and the Antigravity IDE running on this PC. No prompts or inference requests are sent. The adapter reads `GetUserStatus`, falling back to `GetCommandModelConfigs`, on a loopback port owned by the Antigravity language-server process. Its local CSRF token is used only in memory. These internal IDE methods can change in future versions.
+Requires Windows, Node.js 20+, and Antigravity running on this PC. No prompts or inference requests are sent. The adapter reads `RetrieveUserQuotaSummary` in Antigravity 2.0, falling back to `GetUserStatus` and `GetCommandModelConfigs` for older IDE versions, on a loopback port owned by the Antigravity language-server process. Its local CSRF token is used only in memory. These internal methods can change in future versions.
 
 ## Connect
 
-1. Open Antigravity and sign in there.
+1. Open the Antigravity app or IDE and sign in there.
 2. Run `start-windows.cmd --address YOUR_PRIVATE_IPV4`. For different networks, use the PC's Tailscale `100.x` address; keep both devices connected to the same tailnet. Selecting an exit node alone does not pair CodexBar.
 3. In the updated Android app, open **Connections → Antigravity → Scan QR securely in CodexBar**, then **Pair & verify**. Keep the QR secret; do not use another camera app.
 
-The default port is **43824**. HMAC authentication, per-request nonces and AES-256-GCM protect snapshots on the private connection. Only model labels, measured usage fractions, reset times and snapshot timestamps leave the PC. Identity, email, OAuth tokens, prompts, files and conversations are excluded. Missing quotas remain unavailable rather than being reported as unused. These are IDE model quotas; weekly/global/credit balances are not inferred.
+The default port is **43824**. HMAC authentication, per-request nonces and AES-256-GCM protect snapshots on the private connection. Only quota labels, measured usage fractions, reset times and snapshot timestamps leave the PC. Identity, email, OAuth tokens, prompts, files and conversations are excluded. Missing quotas remain unavailable rather than being reported as unused. Antigravity 2.0 exposes Gemini and Claude/GPT model-group weekly and five-hour windows; these are Antigravity quotas, separate from the providers' own subscriptions. Credit balances are not inferred.
 
 ## Stay running
 

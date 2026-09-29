@@ -14,9 +14,10 @@ export async function discoverServers() {
   const script = String.raw`
 $ErrorActionPreference = 'Stop'
 $listeners = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue)
-$servers = @(Get-CimInstance Win32_Process -Filter "Name = 'language_server_windows_x64.exe'" | Where-Object {
-  $_.ExecutablePath -match '\\Antigravity\\.*\\extensions\\antigravity\\bin\\language_server_windows_x64\.exe$'
-} | Select-Object -First 3 | ForEach-Object {
+$servers = @(Get-CimInstance Win32_Process -Filter "Name = 'language_server_windows_x64.exe' OR Name = 'language_server.exe'" | Where-Object {
+  ($_.Name -eq 'language_server.exe' -and $_.ExecutablePath -match '\\Antigravity\\resources\\bin\\language_server\.exe$') -or
+  ($_.Name -eq 'language_server_windows_x64.exe' -and $_.ExecutablePath -match '\\Antigravity\\.*\\extensions\\antigravity\\bin\\language_server_windows_x64\.exe$')
+} | Sort-Object @{ Expression = { if ($_.Name -eq 'language_server.exe') { 0 } else { 1 } } } | Select-Object -First 3 | ForEach-Object {
   $csrf = [regex]::Match($_.CommandLine, '--csrf_token(?:=|\s+)"?([^\s"]+)').Groups[1].Value
   $serverPid = $_.ProcessId
   $ports = @($listeners | Where-Object { $_.OwningProcess -eq $serverPid -and $_.LocalAddress -eq '127.0.0.1' } | Select-Object -ExpandProperty LocalPort -Unique | Sort-Object | Select-Object -First 6)
@@ -51,7 +52,7 @@ export async function collectAntigravityUsage({ discover = discoverServers, requ
   let receivedResponse = false;
   for (const server of servers) {
     for (const port of server.ports) {
-      for (const method of ['GetUserStatus', 'GetCommandModelConfigs']) {
+      for (const method of ['RetrieveUserQuotaSummary', 'GetUserStatus', 'GetCommandModelConfigs']) {
         try {
           const response = await request(port, server.csrf, method);
           receivedResponse = true;
@@ -68,7 +69,7 @@ export async function collectAntigravityUsage({ discover = discoverServers, requ
 function collectionFailure(code) {
   const messages = {
     DISCOVERY_FAILED: 'Cannot inspect the Antigravity local server',
-    SERVER_NOT_FOUND: 'Open Antigravity IDE to make its local server available',
+    SERVER_NOT_FOUND: 'Open the Antigravity app or IDE to make its local server available',
     LOCAL_API_UNAVAILABLE: 'Antigravity local quota endpoint is unavailable',
     QUOTA_UNAVAILABLE: 'Antigravity did not report measured model quotas'
   };
