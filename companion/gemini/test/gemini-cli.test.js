@@ -45,7 +45,7 @@ test('does not confirm Gemini CLI authentication or folder-trust prompts', async
     kill: () => {}
   });
   await assert.rejects(collectGeminiQuota({ startupDelayMillis: 10, timeoutMillis: 2000, homeDirectory, spawn }),
-    /Complete Gemini CLI sign-in and folder trust/);
+    { code: 'SETUP_REQUIRED' });
   assert.equal(writes, 0);
   removeTestHome(homeDirectory);
 });

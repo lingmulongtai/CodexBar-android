@@ -335,7 +335,7 @@ function Set-CardData($id, $row) {
                 }
             } catch { }
             $card.data.Text = $diagnostic
-        } elseif ($id -eq 'gemini') { $card.data.Text = 'Open Gemini CLI, complete its sign-in, and check /stats.' }
+        } elseif ($id -eq 'gemini') { $card.data.Text = 'Complete sign-in and folder trust in the dedicated Gemini workspace, verify /model, then Restart bridge.' }
         elseif ($id -eq 'claude') { $card.data.Text = 'Check Claude Code sign-in and /usage in its dedicated workspace.' }
         else { $card.data.Text = 'Codex session telemetry is not available yet.' }
         return

@@ -58,7 +58,9 @@ export async function collectGeminiQuota({
         screen.lastIndexOf('select a login method')
       );
       if (setupAt > readyAt) {
-        finish(new Error('Complete Gemini CLI sign-in and folder trust in the dedicated workspace'));
+        const error = new Error('Complete Gemini CLI sign-in and folder trust in the dedicated workspace');
+        error.code = 'SETUP_REQUIRED';
+        finish(error);
         return;
       }
       if (readyAt < 0) return;
