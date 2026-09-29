@@ -37,5 +37,15 @@ test('model-config fallback works and local CSRF credentials never enter snapsho
   });
   assert.deepEqual(calls, ['GetUserStatus', 'GetCommandModelConfigs']);
   assert.deepEqual(result, { windows: [{ label: 'Gemini', usedFraction: 0.5 }] });
-  await assert.rejects(collectAntigravityUsage({ discover: async () => [] }), /Open Antigravity/);
+  await assert.rejects(collectAntigravityUsage({ discover: async () => [] }), { code: 'SERVER_NOT_FOUND' });
+});
+
+test('distinguishes absent server, failed endpoint and response without measured quota', async () => {
+  await assert.rejects(collectAntigravityUsage({ discover: async () => { throw new Error('private path'); } }),
+    { code: 'DISCOVERY_FAILED' });
+  const discover = async () => [{ ports: [12345], csrf: 'local-secret' }];
+  await assert.rejects(collectAntigravityUsage({ discover, request: async () => { throw new Error('private response'); } }),
+    { code: 'LOCAL_API_UNAVAILABLE' });
+  await assert.rejects(collectAntigravityUsage({ discover, request: async () => ({ clientModelConfigs: [] }) }),
+    { code: 'QUOTA_UNAVAILABLE' });
 });

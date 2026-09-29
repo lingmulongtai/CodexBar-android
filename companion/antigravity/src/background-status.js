@@ -3,20 +3,24 @@ import path from 'node:path';
 
 export function createBackgroundStatus(filePath) {
   const states = new Set(['starting', 'refreshed', 'refresh-failed', 'listening', 'stopping']);
+  const failureCodes = new Set(['DISCOVERY_FAILED', 'SERVER_NOT_FOUND', 'LOCAL_API_UNAVAILABLE', 'QUOTA_UNAVAILABLE']);
   let lastSuccess = null;
   let consecutiveFailures = 0;
-  return (state) => {
+  let failureCode = null;
+  return (state, detail = null) => {
     if (filePath == null || !states.has(state)) return;
     const now = Math.floor(Date.now() / 1000);
     if (state === 'refreshed') {
       lastSuccess = now;
       consecutiveFailures = 0;
+      failureCode = null;
     } else if (state === 'refresh-failed') {
       consecutiveFailures += 1;
+      failureCode = failureCodes.has(detail) ? detail : 'LOCAL_API_UNAVAILABLE';
     }
     // Fixed fields only: never persist the QR, pairing identity or CLI output.
     const status = { pid: process.pid, state, updatedAtEpochSeconds: now,
-      lastSuccessEpochSeconds: lastSuccess, consecutiveFailures };
+      lastSuccessEpochSeconds: lastSuccess, consecutiveFailures, failureCode };
     try {
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       const temporary = `${filePath}.${process.pid}.tmp`;
