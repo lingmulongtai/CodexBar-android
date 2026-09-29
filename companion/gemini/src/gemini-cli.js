@@ -63,7 +63,7 @@ export async function collectGeminiQuota({
       }
       if (readyAt < 0) return;
       commandSent = true;
-      terminal.write('/stats model\r');
+      terminal.write('/model\r');
     }, 250);
     const timeoutTimer = setTimeout(() => {
       finish(new Error('Gemini CLI did not return model quota data before the timeout'));

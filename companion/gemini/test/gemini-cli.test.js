@@ -30,7 +30,7 @@ test('requests the official model quota view without sending an inference prompt
   };
   const result = await collectGeminiQuota({ command: 'gemini.cmd', startupDelayMillis: 1,
     timeoutMillis: 2000, now: new Date('2026-07-16T12:00:00Z'), homeDirectory, spawn });
-  assert.deepEqual(writes, ['/stats model\r']);
+  assert.deepEqual(writes, ['/model\r']);
   assert.equal(result.windows[0].usedFraction, 0.25);
   removeTestHome(homeDirectory);
 });
