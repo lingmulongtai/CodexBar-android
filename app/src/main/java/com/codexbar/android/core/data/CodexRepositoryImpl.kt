@@ -2,6 +2,7 @@ package com.codexbar.android.core.data
 
 import com.codexbar.android.core.auth.codexAccountId
 import com.codexbar.android.core.auth.codexTokenExpiresAt
+import com.codexbar.android.core.auth.resetTrackingAccountKey
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.CodexResetCredits
@@ -339,7 +340,7 @@ class CodexRepositoryImpl @Inject constructor(
             response = response,
             resetCredits = resetCredits.await(),
             telemetry = telemetry.await()
-        )
+        ).copy(resetTrackingAccountKey = credential.resetTrackingAccountKey())
     }
 
     private fun mapToQuotaInfo(

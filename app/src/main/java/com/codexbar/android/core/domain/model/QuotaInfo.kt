@@ -10,7 +10,8 @@ data class QuotaInfo(
     val fetchedAt: Instant,
     val notices: Set<QuotaNotice> = emptySet(),
     val codexResetCredits: CodexResetCredits? = null,
-    val codexTelemetry: CodexTelemetry? = null
+    val codexTelemetry: CodexTelemetry? = null,
+    val resetTrackingAccountKey: String? = null
 )
 
 data class CodexResetCredits(
