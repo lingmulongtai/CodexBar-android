@@ -12,6 +12,7 @@ import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.domain.model.QuotaNotice
 import com.codexbar.android.core.domain.model.Result
 import com.codexbar.android.core.network.codex.CodexApiService
+import com.codexbar.android.core.network.codex.CodexDto
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.codex.telemetry.CodexTelemetryClient
 import com.codexbar.android.core.security.EncryptedPrefsManager
@@ -28,6 +29,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.test.runCurrent
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.`when`
@@ -92,6 +97,35 @@ class CodexRepositoryImplTest {
     @After
     fun tearDown() {
         mockWebServer.shutdown()
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `overlapping refreshes cannot collect reset balances out of order`() = runTest {
+        val firstResponse = CompletableDeferred<Unit>()
+        var usageCalls = 0
+        val gatedApi = object : CodexApiService {
+            override suspend fun getUsage(authorization: String, accountId: String?, userAgent: String):
+                retrofit2.Response<CodexDto.UsageResponse> {
+                usageCalls++
+                if (usageCalls == 1) firstResponse.await()
+                return retrofit2.Response.success(CodexDto.UsageResponse())
+            }
+
+            override suspend fun getRateLimitResetCredits(authorization: String, accountId: String?, userAgent: String) =
+                retrofit2.Response.success(CodexDto.ResetCreditsResponse(availableCount = 1))
+        }
+        val serialRepository = CodexRepositoryImpl(gatedApi, tokenRefreshService, prefsManager,
+            TokenRefreshCoordinator(), codexTelemetryClient)
+        val first = async { serialRepository.fetchQuota() }
+        runCurrent()
+        val second = async { serialRepository.fetchQuota() }
+        runCurrent()
+        assertEquals("the second refresh must wait for the first snapshot", 1, usageCalls)
+        firstResponse.complete(Unit)
+        assertTrue(first.await() is Result.Success)
+        assertTrue(second.await() is Result.Success)
+        assertEquals(2, usageCalls)
     }
 
     @Test

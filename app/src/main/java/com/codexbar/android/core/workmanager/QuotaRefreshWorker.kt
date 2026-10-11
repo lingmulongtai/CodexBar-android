@@ -13,6 +13,7 @@ import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.data.QuotaHistoryStore
+import com.codexbar.android.core.data.QuotaResetMonitor
 import com.codexbar.android.core.data.QuotaRepositoryRegistry
 import com.codexbar.android.core.domain.model.QuotaInfo
 import com.codexbar.android.core.monitoring.MonitoringSessionStore
@@ -46,6 +47,7 @@ class QuotaRefreshWorker @AssistedInject constructor(
     private val notificationService: QuotaNotificationService,
     private val widgetPrefsManager: WidgetPrefsManager,
     private val quotaHistoryStore: QuotaHistoryStore,
+    private val quotaResetMonitor: QuotaResetMonitor,
     private val monitoringSessionStore: MonitoringSessionStore
 ) : CoroutineWorker(context, workerParams) {
 
@@ -102,6 +104,7 @@ class QuotaRefreshWorker @AssistedInject constructor(
 
             val privacySettings = prefsManager.getPrivacySettings()
             val now = Instant.now()
+            quotaResetMonitor.observe(successfulQuotas)
             val paceByMetricKey = if (successfulQuotas.isNotEmpty()) {
                 quotaHistoryStore.record(successfulQuotas)
                 quotaHistoryStore.paceFor(successfulQuotas, now)
@@ -131,13 +134,6 @@ class QuotaRefreshWorker @AssistedInject constructor(
                 snapshot = snapshot,
                 monitoringSession = monitoringSessionStore.activeSession()
             )
-
-            if (
-                successfulQuotas.isNotEmpty() &&
-                prefsManager.isPersistentNotificationEnabled()
-            ) {
-                checkForResets(successfulQuotas)
-            }
 
             // Request tile update
             TileService.requestListeningState(
@@ -172,27 +168,6 @@ class QuotaRefreshWorker @AssistedInject constructor(
     private fun cacheQuotaData(snapshot: QuotaPresentationSnapshot) {
         for (service in snapshot.services) {
             widgetPrefsManager.cachePresentation(service)
-        }
-    }
-
-    private suspend fun checkForResets(quotas: List<QuotaInfo>) {
-        val now = Instant.now()
-        for (quota in quotas) {
-            val previousResetTimes = prefsManager.loadResetTimes(quota.service)
-
-            // Detect resets: previous resetsAt was in the future, now it's in the past
-            for (window in quota.windows) {
-                val previousResetAt = previousResetTimes[window.label] ?: continue
-                if (previousResetAt.isBefore(now) && window.resetsAt != null && window.resetsAt.isAfter(now)) {
-                    notificationService.showResetNotification(quota.service, window.label)
-                }
-            }
-
-            // Save current reset times for next comparison
-            prefsManager.saveResetTimes(
-                quota.service,
-                quota.windows.map { it.label to it.resetsAt }
-            )
         }
     }
 

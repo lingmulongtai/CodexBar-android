@@ -18,7 +18,7 @@ class SettingsValidationSourceTest {
 
         val validationCall = source.indexOf("val result = repo.validateCredential(credential)")
         val successBranch = source.indexOf("is Result.Success -> {", startIndex = validationCall)
-        val saveCredential = source.indexOf("prefsManager.saveCredential(service, credential)", startIndex = successBranch)
+        val saveCredential = source.indexOf("quotaResetMonitor.saveCredential(service, credential)", startIndex = successBranch)
         val failureBranch = source.indexOf("is Result.Failure ->", startIndex = successBranch)
 
         assertTrue("manual validation must validate the candidate credential", validationCall >= 0)
@@ -43,7 +43,7 @@ class SettingsValidationSourceTest {
         )
         val successBranch = deviceFlow.indexOf("is Result.Success -> {", transientValidation)
         val persistence = deviceFlow.indexOf(
-            "prefsManager.saveCredential(service, credential)",
+            "quotaResetMonitor.saveCredential(service, credential)",
             successBranch
         )
         val cancellationCatch = deviceFlow.indexOf("catch (e: CancellationException)")

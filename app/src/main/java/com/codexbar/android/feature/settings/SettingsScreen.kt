@@ -217,6 +217,14 @@ fun SettingsScreen(
 
                 NotificationsSection(
                     persistentEnabled = uiState.persistentNotificationEnabled,
+                    resetEnabled = uiState.resetNotificationEnabled,
+                    onResetToggle = { enabled ->
+                        viewModel.setResetNotificationEnabled(enabled)
+                        if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            !context.hasNotificationPermission()) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    },
                     notificationsAllowed = notificationsAllowed,
                     isMonitoring = uiState.isMonitoring,
                     durationMinutes = uiState.monitoringDurationMinutes,
@@ -2288,6 +2296,8 @@ private fun RefreshIntervalSection(
 @Composable
 private fun NotificationsSection(
     persistentEnabled: Boolean,
+    resetEnabled: Boolean,
+    onResetToggle: (Boolean) -> Unit,
     notificationsAllowed: Boolean,
     isMonitoring: Boolean,
     durationMinutes: Long,
@@ -2359,6 +2369,15 @@ private fun NotificationsSection(
                 TextButton(onClick = onOpenNotificationSettings) {
                     Text(stringResource(R.string.action_open_notification_settings))
                 }
+            }
+
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.notifications_reset_title), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.notifications_reset_description), style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(checked = resetEnabled, onCheckedChange = onResetToggle)
             }
 
             Text(

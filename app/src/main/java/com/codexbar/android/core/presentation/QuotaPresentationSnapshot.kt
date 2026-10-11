@@ -1,6 +1,7 @@
 package com.codexbar.android.core.presentation
 
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.domain.model.QuotaResetActivity
 import java.time.Instant
 
 data class QuotaPresentationSnapshot(
@@ -22,7 +23,8 @@ data class ServiceQuotaPresentation(
     val freshness: FreshnessPresentation,
     val supportedActions: Set<QuotaAction>,
     val codexResetCredits: CodexResetCreditsPresentation? = null,
-    val codexTelemetry: CodexTelemetryPresentation? = null
+    val codexTelemetry: CodexTelemetryPresentation? = null,
+    val resetHistory: List<QuotaResetActivity> = emptyList()
 )
 
 data class CodexResetCreditsPresentation(

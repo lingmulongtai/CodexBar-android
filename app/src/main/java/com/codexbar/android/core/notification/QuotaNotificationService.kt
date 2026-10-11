@@ -14,11 +14,14 @@ import android.os.Bundle
 import androidx.annotation.RequiresApi
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.codexbar.android.EXTRA_DASHBOARD_SERVICE
 import com.codexbar.android.MainActivity
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.domain.model.QuotaResetActivity
+import com.codexbar.android.core.domain.model.QuotaResetKind
 import com.codexbar.android.core.monitoring.MonitoringActionReceiver
 import com.codexbar.android.core.monitoring.MonitoringSession
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
@@ -339,25 +342,38 @@ class QuotaNotificationService @Inject constructor(
         manager.cancelAll()
     }
 
-    fun showResetNotification(service: AiService, windowLabel: String) {
+    fun showResetActivityNotification(service: AiService, activity: QuotaResetActivity) {
+        if (activity.kind == QuotaResetKind.CREDITS_DECREASED ||
+            !prefsManager.isResetNotificationEnabled() ||
+            !NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+        val detail = when (activity.kind) {
+            QuotaResetKind.WINDOW_RESET -> localizedString(R.string.notification_reset_window, activity.windowLabel.orEmpty())
+            QuotaResetKind.CREDITS_ADDED -> localizedString(R.string.notification_reset_credits_added,
+                activity.count, activity.availableCount ?: 0)
+            QuotaResetKind.CREDITS_EXPIRING -> localizedString(R.string.notification_reset_credits_expiring)
+            QuotaResetKind.CREDITS_DECREASED -> return
+        }
         val privacySettings = prefsManager.getPrivacySettings()
         val contentTitle = if (privacySettings.notificationRedactionEnabled) {
             localizedString(R.string.notification_reset_title)
+        } else if (activity.kind != QuotaResetKind.WINDOW_RESET) {
+            localizedString(R.string.notification_reset_credits_title)
         } else {
             localizedString(R.string.notification_reset_service_title, service.displayName)
         }
         val contentText = if (privacySettings.notificationRedactionEnabled) {
             localizedString(R.string.notification_reset_generic)
         } else {
-            localizedString(R.string.notification_reset_window, windowLabel)
+            detail
         }
 
         val notification = NotificationCompat.Builder(context, RESET_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_quota)
             .setContentTitle(contentTitle)
             .setContentText(contentText)
-            .setContentIntent(dashboardPendingIntent())
+            .setContentIntent(dashboardPendingIntent(service))
             .setAutoCancel(true)
+            .setGroup("quota_reset_${service.name}")
             .applyPrivacy(
                 privacySettings = privacySettings,
                 channelId = RESET_CHANNEL_ID,
@@ -366,9 +382,11 @@ class QuotaNotificationService @Inject constructor(
             )
             .build()
 
-        val notificationId = RESET_NOTIFICATION_ID_BASE + "${service.name}_$windowLabel".hashCode().and(0xFFFF)
+        val notificationId = RESET_NOTIFICATION_ID_BASE + "${service.name}_${activity.kind}_${activity.windowLabel}".hashCode().and(0xFFFF)
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(notificationId, notification)
+        try { manager.notify(notificationId, notification) } catch (_: SecurityException) {
+            // Permission may be revoked between the check and publishing.
+        }
     }
 
     @RequiresApi(36)
@@ -548,6 +566,7 @@ class QuotaNotificationService @Inject constructor(
 
     /** Apply a user's privacy change immediately, without waiting for another provider request. */
     fun refreshPrivacySettings(session: MonitoringSession?) {
+        cancelResetNotifications()
         latestSnapshot?.let {
             val currentServices = it.services.filter { service -> prefsManager.hasCredential(service.service) }
             publishSnapshot(it.copy(services = currentServices), session)
@@ -581,6 +600,14 @@ class QuotaNotificationService @Inject constructor(
                 .setPublicVersion(generic.takeIf { privacy.lockScreenRedactionEnabled })
             manager.notify(active.id, builder.build())
         }
+    }
+
+    fun cancelResetNotifications(service: AiService? = null) {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.activeNotifications.filter { entry ->
+            entry.notification.channelId == RESET_CHANNEL_ID &&
+                (service == null || entry.notification.group == "quota_reset_${service.name}")
+        }.forEach { manager.cancel(it.tag, it.id) }
     }
 
     private fun NotificationCompat.Builder.applyPrivacy(

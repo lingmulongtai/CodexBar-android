@@ -7,6 +7,7 @@ import com.codexbar.android.R
 import com.codexbar.android.core.auth.AccountLinkManager
 import com.codexbar.android.core.auth.DeviceAuthSession
 import com.codexbar.android.core.data.QuotaHistoryStore
+import com.codexbar.android.core.data.QuotaResetMonitor
 import com.codexbar.android.core.data.QuotaRepositoryRegistry
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppThemeStyle
@@ -58,6 +59,7 @@ class SettingsViewModel @Inject constructor(
     private val prefsManager: EncryptedPrefsManager,
     private val connectionHealthStore: ConnectionHealthStore,
     private val quotaHistoryStore: QuotaHistoryStore,
+    private val quotaResetMonitor: QuotaResetMonitor,
     private val widgetPrefsManager: WidgetPrefsManager,
     private val monitoringSessionStore: MonitoringSessionStore,
     private val notificationService: QuotaNotificationService,
@@ -84,6 +86,7 @@ class SettingsViewModel @Inject constructor(
                         prefsManager.getRefreshInterval()
                     ),
                     persistentNotificationEnabled = prefsManager.isPersistentNotificationEnabled(),
+                    resetNotificationEnabled = prefsManager.isResetNotificationEnabled(),
                     isMonitoring = monitoringSession != null,
                     monitoringDurationMinutes = monitoringSessionStore.preferredDurationMinutes(),
                     monitoringRemainingMinutes = monitoringSession?.remainingMinutes(),
@@ -225,7 +228,7 @@ class SettingsViewModel @Inject constructor(
             val result = repo.validateCredential(credential)
             val validationResult = when (result) {
                 is Result.Success -> {
-                    prefsManager.saveCredential(service, credential)
+                    quotaResetMonitor.saveCredential(service, credential)
                     connectionHealthStore.update(service, ConnectionHealth.CONNECTED)
                     ValidationResult.Success
                 }
@@ -282,7 +285,7 @@ class SettingsViewModel @Inject constructor(
                     val result = repositoryFor(service).validateCredential(credential)
                 ) {
                     is Result.Success -> {
-                        prefsManager.saveCredential(service, credential)
+                        quotaResetMonitor.saveCredential(service, credential)
                         connectionHealthStore.update(service, ConnectionHealth.CONNECTED)
                         ValidationResult.Success
                     }
@@ -380,6 +383,14 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setResetNotificationEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(resetNotificationEnabled = enabled) }
+        viewModelScope.launch {
+            prefsManager.setResetNotificationEnabled(enabled)
+            if (!enabled) notificationService.cancelResetNotifications()
+        }
+    }
+
     fun setMonitoringDuration(minutes: Long) {
         val bounded = minutes.coerceIn(
             MonitoringSessionStore.MIN_DURATION_MINUTES,
@@ -474,6 +485,7 @@ class SettingsViewModel @Inject constructor(
             antigravityPairingMutex.withLock { prefsManager.deleteCredential(service) }
             connectionHealthStore.clear(service)
             quotaHistoryStore.deleteService(service)
+            quotaResetMonitor.forgetService(service)
             widgetPrefsManager.deleteServiceCache(service)
         }
     }
@@ -484,6 +496,7 @@ class SettingsViewModel @Inject constructor(
             SettingsUiState(
                 refreshIntervalMinutes = it.refreshIntervalMinutes,
                 persistentNotificationEnabled = it.persistentNotificationEnabled,
+                resetNotificationEnabled = it.resetNotificationEnabled,
                 isMonitoring = it.isMonitoring,
                 monitoringDurationMinutes = it.monitoringDurationMinutes,
                 monitoringRemainingMinutes = it.monitoringRemainingMinutes,
@@ -495,6 +508,7 @@ class SettingsViewModel @Inject constructor(
             antigravityPairingMutex.withLock { prefsManager.deleteAllCredentials() }
             connectionHealthStore.clearAll()
             AiService.entries.forEach { quotaHistoryStore.deleteService(it) }
+            AiService.entries.forEach { quotaResetMonitor.forgetService(it) }
             widgetPrefsManager.deleteAllServiceCaches()
         }
     }
@@ -674,7 +688,7 @@ class SettingsViewModel @Inject constructor(
             val result = repositoryFor(AiService.GEMINI).validateCredential(credential)
             when (result) {
                 is Result.Success -> {
-                    prefsManager.saveCredential(AiService.GEMINI, credential)
+                    quotaResetMonitor.saveCredential(AiService.GEMINI, credential)
                     connectionHealthStore.update(AiService.GEMINI, ConnectionHealth.CONNECTED)
                     updateGeminiValidation(
                         isValidating = false,
@@ -859,7 +873,7 @@ class SettingsViewModel @Inject constructor(
                 is Result.Success -> {
                     antigravityPairingMutex.withLock {
                         if (generation != antigravityPairingGeneration) return@launch
-                        prefsManager.saveCredential(AiService.ANTIGRAVITY, credential)
+                        quotaResetMonitor.saveCredential(AiService.ANTIGRAVITY, credential)
                     }
                     if (generation != antigravityPairingGeneration) return@launch
                     connectionHealthStore.update(AiService.ANTIGRAVITY, ConnectionHealth.CONNECTED)
@@ -1012,7 +1026,7 @@ class SettingsViewModel @Inject constructor(
             val result = repositoryFor(AiService.CLAUDE).validateCredential(credential)
             when (result) {
                 is Result.Success -> {
-                    prefsManager.saveCredential(AiService.CLAUDE, credential)
+                    quotaResetMonitor.saveCredential(AiService.CLAUDE, credential)
                     connectionHealthStore.update(AiService.CLAUDE, ConnectionHealth.CONNECTED)
                     updateClaudeValidation(
                         isValidating = false,

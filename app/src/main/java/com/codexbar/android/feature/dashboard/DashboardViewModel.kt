@@ -5,6 +5,8 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codexbar.android.core.data.QuotaHistoryStore
+import com.codexbar.android.core.data.QuotaResetHistoryStore
+import com.codexbar.android.core.data.QuotaResetMonitor
 import com.codexbar.android.core.data.QuotaRepositoryRegistry
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
@@ -25,6 +27,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
 import javax.inject.Inject
@@ -35,6 +38,8 @@ class DashboardViewModel @Inject constructor(
     private val prefsManager: EncryptedPrefsManager,
     private val connectionHealthStore: ConnectionHealthStore,
     private val quotaHistoryStore: QuotaHistoryStore,
+    private val quotaResetHistoryStore: QuotaResetHistoryStore,
+    private val quotaResetMonitor: QuotaResetMonitor,
     private val monitoringSessionStore: MonitoringSessionStore,
     private val notificationService: QuotaNotificationService,
     private val widgetPrefsManager: WidgetPrefsManager,
@@ -60,7 +65,21 @@ class DashboardViewModel @Inject constructor(
     }
 
     init {
+        viewModelScope.launch {
+            quotaResetHistoryStore.history.collect { history ->
+                _uiState.update { state ->
+                    if (state is DashboardUiState.Content) state.copy(snapshot = state.snapshot.copy(
+                        services = state.snapshot.services.map { it.copy(resetHistory =
+                            if (state.snapshot.privacy.redactSensitiveValues) emptyList() else history[it.service].orEmpty()) }
+                    )) else state
+                }
+            }
+        }
         refresh()
+    }
+
+    fun clearResetHistory(service: AiService) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { quotaResetHistoryStore.clearHistory(service) }
     }
 
     fun refresh() {
@@ -105,6 +124,7 @@ class DashboardViewModel @Inject constructor(
                 }
 
                 val now = Instant.now()
+                quotaResetMonitor.observe(successfulQuotas)
                 quotaHistoryStore.record(successfulQuotas)
                 val paceByMetricKey = quotaHistoryStore.paceFor(successfulQuotas, now)
                 val historyByMetricKey = quotaHistoryStore.historyFor(successfulQuotas)
@@ -130,7 +150,11 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    private suspend fun publishSnapshot(snapshot: QuotaPresentationSnapshot) {
+    private suspend fun publishSnapshot(baseSnapshot: QuotaPresentationSnapshot) {
+        val snapshot = baseSnapshot.copy(services = baseSnapshot.services.map {
+            it.copy(resetHistory = if (baseSnapshot.privacy.redactSensitiveValues) emptyList() else
+                quotaResetHistoryStore.history.value[it.service].orEmpty())
+        })
         _uiState.value = DashboardUiState.Content(snapshot)
         notificationService.publishSnapshot(
             snapshot = snapshot,

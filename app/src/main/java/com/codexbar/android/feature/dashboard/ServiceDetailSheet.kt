@@ -59,6 +59,7 @@ fun ServiceDetailSheet(
     onDismiss: () -> Unit,
     onRefresh: () -> Unit,
     onManageConnection: () -> Unit,
+    onClearResetHistory: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     ModalBottomSheet(
@@ -69,6 +70,7 @@ fun ServiceDetailSheet(
             service = service,
             onRefresh = onRefresh,
             onManageConnection = onManageConnection,
+            onClearResetHistory = onClearResetHistory,
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
@@ -84,6 +86,7 @@ fun ServiceDetailPane(
     service: ServiceQuotaPresentation,
     onRefresh: () -> Unit,
     onManageConnection: () -> Unit,
+    onClearResetHistory: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val visualStyle = providerVisualStyle(service.service)
@@ -108,6 +111,7 @@ fun ServiceDetailPane(
             service = service,
             onRefresh = onRefresh,
             onManageConnection = onManageConnection,
+            onClearResetHistory = onClearResetHistory,
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
@@ -121,6 +125,7 @@ private fun ServiceDetailContent(
     service: ServiceQuotaPresentation,
     onRefresh: () -> Unit,
     onManageConnection: () -> Unit,
+    onClearResetHistory: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val accent = providerVisualStyle(service.service).accent
@@ -137,6 +142,7 @@ private fun ServiceDetailContent(
                 expanded = true
             )
         }
+        ResetHistoryCard(activities = service.resetHistory, onClear = onClearResetHistory)
         service.codexTelemetry?.let { telemetry ->
             SectionTitle(stringResource(R.string.codex_telemetry_section_title))
             CodexTelemetryDetail(telemetry = telemetry, accent = accent)
