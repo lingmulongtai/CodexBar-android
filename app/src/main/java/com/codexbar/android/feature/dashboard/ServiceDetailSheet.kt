@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.codexbar.android.R
+import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.presentation.ExtraUsagePresentation
 import com.codexbar.android.core.presentation.QuotaMetricPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
@@ -59,6 +60,7 @@ fun ServiceDetailSheet(
     onDismiss: () -> Unit,
     onRefresh: () -> Unit,
     onManageConnection: () -> Unit,
+    onClearResetHistory: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     ModalBottomSheet(
@@ -69,6 +71,7 @@ fun ServiceDetailSheet(
             service = service,
             onRefresh = onRefresh,
             onManageConnection = onManageConnection,
+            onClearResetHistory = onClearResetHistory,
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
@@ -84,6 +87,7 @@ fun ServiceDetailPane(
     service: ServiceQuotaPresentation,
     onRefresh: () -> Unit,
     onManageConnection: () -> Unit,
+    onClearResetHistory: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val visualStyle = providerVisualStyle(service.service)
@@ -108,6 +112,7 @@ fun ServiceDetailPane(
             service = service,
             onRefresh = onRefresh,
             onManageConnection = onManageConnection,
+            onClearResetHistory = onClearResetHistory,
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
@@ -121,6 +126,7 @@ private fun ServiceDetailContent(
     service: ServiceQuotaPresentation,
     onRefresh: () -> Unit,
     onManageConnection: () -> Unit,
+    onClearResetHistory: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val accent = providerVisualStyle(service.service).accent
@@ -137,6 +143,7 @@ private fun ServiceDetailContent(
                 expanded = true
             )
         }
+        ResetHistoryCard(activities = service.resetHistory, onClear = onClearResetHistory)
         service.codexTelemetry?.let { telemetry ->
             SectionTitle(stringResource(R.string.codex_telemetry_section_title))
             CodexTelemetryDetail(telemetry = telemetry, accent = accent)
@@ -240,6 +247,9 @@ private fun ServiceStateSummary(service: ServiceQuotaPresentation, accent: Color
             verticalArrangement = Arrangement.spacedBy(CodexBarSpacing.small)
         ) {
             DetailRow(stringResource(R.string.detail_status), service.status.toDetailLabel(), statusColor)
+            if (service.service == AiService.GEMINI) {
+                DetailRow(stringResource(R.string.detail_usage_source), stringResource(R.string.gemini_cli_usage_source))
+            }
             DetailRow(stringResource(R.string.detail_freshness), service.freshness.ageLabel)
             service.freshness.staleReason?.let {
                 DetailRow(stringResource(R.string.detail_reason), it, statusColor)

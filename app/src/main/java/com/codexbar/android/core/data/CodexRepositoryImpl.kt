@@ -2,6 +2,7 @@ package com.codexbar.android.core.data
 
 import com.codexbar.android.core.auth.codexAccountId
 import com.codexbar.android.core.auth.codexTokenExpiresAt
+import com.codexbar.android.core.auth.resetTrackingAccountKey
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppError
 import com.codexbar.android.core.domain.model.CodexResetCredits
@@ -25,6 +26,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -42,8 +45,11 @@ class CodexRepositoryImpl @Inject constructor(
     private val tokenRefreshCoordinator: TokenRefreshCoordinator,
     private val codexTelemetryClient: CodexTelemetryClient
 ) : QuotaRepository {
+    private val fetchMutex = Mutex()
 
-    override suspend fun fetchQuota(): Result<QuotaInfo, AppError> {
+    override suspend fun fetchQuota(): Result<QuotaInfo, AppError> = fetchMutex.withLock { fetchQuotaLocked() }
+
+    private suspend fun fetchQuotaLocked(): Result<QuotaInfo, AppError> {
         val storedCredential = prefsManager.loadCredential(AiService.CODEX)
             as? Credential.CodexCredential
             ?: return Result.Failure(AppError.CredentialNotFound(AiService.CODEX))
@@ -339,7 +345,7 @@ class CodexRepositoryImpl @Inject constructor(
             response = response,
             resetCredits = resetCredits.await(),
             telemetry = telemetry.await()
-        )
+        ).copy(resetTrackingAccountKey = credential.resetTrackingAccountKey())
     }
 
     private fun mapToQuotaInfo(

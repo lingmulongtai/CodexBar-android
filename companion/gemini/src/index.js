@@ -12,9 +12,10 @@ const identity = loadOrCreateIdentity();
 const address = chooseLocalAddress(options.address);
 let latestSnapshot = null;
 let refreshing = false;
+let setupRequired = false;
 
 async function refreshSnapshot() {
-  if (refreshing) return;
+  if (refreshing || setupRequired) return;
   refreshing = true;
   try {
     const parsed = await collectGeminiQuota({ command: options.geminiCommand });
@@ -28,6 +29,7 @@ async function refreshSnapshot() {
     };
     safeStatus(`Quota snapshot refreshed (${parsed.windows.length} window${parsed.windows.length === 1 ? '' : 's'}).`);
   } catch (error) {
+    if (error?.code === 'SETUP_REQUIRED') setupRequired = true;
     safeStatus(`Quota refresh failed: ${safeErrorMessage(error)}`);
   } finally {
     refreshing = false;

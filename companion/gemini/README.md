@@ -2,10 +2,12 @@
 
 This companion keeps Google authentication inside the official Gemini CLI and serves only a sanitized quota snapshot to CodexBar for Android over the local network.
 
+These are **Gemini CLI quotas**, separate from usage in Google's Gemini Windows and web apps. Automatic Gemini Apps collection is not supported by this companion. To check those limits, open [Gemini Apps](https://gemini.google.com/app) and choose **Settings → Usage Limits**, following [Google's usage-limit guide](https://support.google.com/gemini/answer/16275805?hl=en).
+
 Requirements:
 
 - Node.js 20 or newer
-- The current official `@google/gemini-cli`, already signed in
+- The current official `@google/gemini-cli`, supporting `--screen-reader`, already signed in
 - The computer and Android phone on the same trusted Wi-Fi network
 
 If needed, install and sign in to the official CLI first:
@@ -28,7 +30,7 @@ npm ci --omit=dev
 npm start
 ```
 
-The companion opens a dedicated official Gemini CLI terminal in screen-reader mode, runs `/stats`, parses only model label, used percentage, reset duration, and tier, then discards the raw terminal output. It never serves Google tokens, prompts, files, email addresses, or session content.
+Before starting the bridge, launch `gemini` once from `~/.codexbar/gemini-workspace`, complete the folder-trust and browser sign-in prompts yourself, verify `/model` shows the model usage limits, and exit. The companion always uses that dedicated workspace; it does not trust your home folder or answer authentication prompts. It opens an official Gemini CLI terminal in screen-reader mode, runs `/model`, parses only model label, used percentage, reset duration, and tier, then discards the raw terminal output. It never serves Google tokens, prompts, files, email addresses, or session content.
 
 Scan the displayed QR code with the system camera. CodexBar opens the Gemini settings card with the pairing value hidden; tap **Pair & verify companion** to make the first authenticated request.
 

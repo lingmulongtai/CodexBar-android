@@ -114,19 +114,21 @@ class WidgetConfigurationActivity : AppCompatActivity() {
 
             setContent {
                 CodexBarTheme {
-                    val availableServices = AiService.entries.filter {
+                    val connectedServices = AiService.entries.filter {
                         encryptedPrefsManager.hasCredential(it)
                     }
                     val existingConfig = widgetPrefsManager.getWidgetConfig(appWidgetId)
+                    val isReconfigure = widgetPrefsManager.hasWidgetConfig(appWidgetId)
+                    val availableServices = WidgetSelectionPolicy.choices(connectedServices, existingConfig.services)
                     var liveConfig by rememberSaveable(stateSaver = WidgetConfigSaver) {
                         mutableStateOf(existingConfig.copy(
-                            services = existingConfig.services.ifEmpty { availableServices }, maxRows = 2))
+                            services = WidgetSelectionPolicy.initialSelection(connectedServices,
+                                existingConfig.services, isReconfigure), maxRows = 2))
                     }
                     val checkedState = availableServices.associateWith { it in liveConfig.services }
-                    val anyChecked = checkedState.values.any { it }
+                    val canSave = WidgetSelectionPolicy.canSave(liveConfig.services, isReconfigure)
                     val widgetHeight = AppWidgetManager.getInstance(this@WidgetConfigurationActivity)
                         .getAppWidgetOptions(appWidgetId).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)
-                    val isReconfigure = existingConfig.services.isNotEmpty()
 
                     Scaffold(
                         topBar = {
@@ -173,7 +175,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                             onClick = {
                                                 confirmSelection(liveConfig)
                                             },
-                                            enabled = anyChecked,
+                                            enabled = canSave,
                                             modifier = Modifier.weight(1f)
                                         ) {
                                             Text(
@@ -250,9 +252,11 @@ class WidgetConfigurationActivity : AppCompatActivity() {
 
                                         if (availableServices.isEmpty()) {
                                             Text(
-                                                text = stringResource(R.string.widget_setup_connect_first),
+                                                text = stringResource(if (isReconfigure) R.string.widget_no_services
+                                                    else R.string.widget_setup_connect_first),
                                                 style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.error
+                                                color = if (isReconfigure) MaterialTheme.colorScheme.onSurfaceVariant
+                                                    else MaterialTheme.colorScheme.error
                                             )
                                             OutlinedButton(onClick = ::openAppConnections) {
                                                 Text(
@@ -275,6 +279,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                                                 ServiceCheckRow(
                                                     service = service,
                                                     checked = checkedState[service] ?: false,
+                                                    connected = service in connectedServices,
                                                     onCheckedChange = { checked ->
                                                         liveConfig = liveConfig.copy(services = if (checked)
                                                             liveConfig.services + service else liveConfig.services - service)
@@ -373,10 +378,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         if (isCompletingConfiguration) return
         isCompletingConfiguration = true
 
-        val hadExistingConfiguration = widgetPrefsManager
-            .getWidgetConfig(appWidgetId)
-            .services
-            .isNotEmpty()
+        val hadExistingConfiguration = widgetPrefsManager.hasWidgetConfig(appWidgetId)
 
         // commit() ensures data is persisted before the widget reads it
         widgetPrefsManager.saveWidgetConfig(
@@ -498,6 +500,7 @@ private fun ConfigToggleRow(
 private fun ServiceCheckRow(
     service: AiService,
     checked: Boolean,
+    connected: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
     val accent = CodexBarStateColors.providerAccent(service)
@@ -535,11 +538,14 @@ private fun ServiceCheckRow(
                 }
             }
             Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = service.displayName,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = service.displayName, style = MaterialTheme.typography.titleMedium)
+                if (!connected) {
+                    Text(text = stringResource(R.string.status_not_connected),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
             Checkbox(
                 checked = checked,
                 onCheckedChange = null

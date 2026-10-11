@@ -89,7 +89,8 @@ fun DashboardScreen(
         initialSelectedService = initialSelectedService,
         onInitialSelectionConsumed = onInitialSelectionConsumed,
         providerOrder = providerOrder,
-        onProviderOrderChange = viewModel::setProviderOrder
+        onProviderOrderChange = viewModel::setProviderOrder,
+        onClearResetHistory = viewModel::clearResetHistory
     )
 }
 
@@ -119,7 +120,8 @@ private fun DashboardContent(
     initialSelectedService: AiService? = null,
     onInitialSelectionConsumed: () -> Unit = {},
     providerOrder: List<AiService> = emptyList(),
-    onProviderOrderChange: (List<AiService>) -> Unit = {}
+    onProviderOrderChange: (List<AiService>) -> Unit = {},
+    onClearResetHistory: (AiService) -> Unit = {}
 ) {
     val themeProfile = LocalCodexBarThemeProfile.current
     var selectedServiceName by remember { mutableStateOf<String?>(null) }
@@ -254,6 +256,7 @@ private fun DashboardContent(
                                     ) {
                                         ServiceDetailPane(
                                             service = paneService,
+                                            onClearResetHistory = { onClearResetHistory(paneService.service) },
                                             onRefresh = onRefresh,
                                             onManageConnection = onNavigateToConnections
                                         )
@@ -283,6 +286,7 @@ private fun DashboardContent(
                 explicitlySelectedService?.let { service ->
                     ServiceDetailSheet(
                         service = service,
+                        onClearResetHistory = { onClearResetHistory(service.service) },
                         onDismiss = { selectedServiceName = null },
                         onRefresh = onRefresh,
                         onManageConnection = {

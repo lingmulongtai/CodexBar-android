@@ -34,6 +34,10 @@ class WidgetPrefsManager @Inject constructor(
 
     // --- Per-widget service selection ---
 
+    fun hasWidgetConfig(appWidgetId: Int): Boolean =
+        prefs.contains("widget_${appWidgetId}_services_order") ||
+            prefs.contains("widget_${appWidgetId}_services")
+
     fun saveWidgetConfig(appWidgetId: Int, config: WidgetDisplayConfig) {
         val prefix = "widget_${appWidgetId}"
         val style = config.style.normalized()

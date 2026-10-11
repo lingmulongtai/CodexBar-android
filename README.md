@@ -5,16 +5,16 @@
 Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT), GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi Code, ElevenLabs, OpenRouter, Synthetic, Chutes, DeepSeek, Venice, Moonshot API, Cline, IBM Bob, Fireworks AI, Devin, and Antigravity usage in one place. Optional private companions keep Claude and Gemini authentication inside their official CLIs and add local Codex context/token telemetry without exporting session content.
 
 <p align="center">
-  <img src="docs/images/releases/v0.9.4/usage-light.png" width="320" alt="v0.9.4 compact four-provider Usage screen" />
+  <img src="docs/images/releases/v0.9.5/usage-light.png" width="320" alt="v0.9.5 compact four-provider Usage screen" />
   &nbsp;&nbsp;
-  <img src="docs/images/releases/v0.9.4/widget-dual_segments.png" width="320" alt="v0.9.4 dual segmented widget at 347 by 69dp" />
+  <img src="docs/images/releases/v0.9.5/widget-dual-segments.png" width="320" alt="v0.9.5 dual segmented widget at 347 by 69dp" />
 </p>
 
 <p align="center"><sub>Demo quota data is shown in screenshots. No account credentials are included.</sub></p>
 
 ## Features
 
-v0.9.4 adds Antigravity desktop model quotas, distinct compact model labels, and Windows tray companions that start at sign-in and recover after failures. Claude also recovers stalled quota sessions automatically. See the [release notes](docs/releases/v0.9.4.md).
+v0.9.5 adds independent reset alerts and on-device reset history, fixes editing widgets after disconnecting a provider, and distinguishes Gemini Apps usage from Gemini CLI quotas. See the [release notes](docs/releases/v0.9.5.md).
 
 - Unified quota monitoring for 20 providers: Claude, Codex, GitHub Copilot, Gemini, Cursor, z.ai, ZenMux, Kimi Code, ElevenLabs, OpenRouter, Synthetic, Chutes, DeepSeek, Venice, Moonshot API, Cline, IBM Bob, Fireworks AI, Devin, and Antigravity
 - Four complete selectable design systems: the existing Material 3 UI, Liquid Glass, WinUI 3, and Aurora, each with light/dark support
@@ -32,10 +32,19 @@ v0.9.4 adds Antigravity desktop model quotas, distinct compact model labels, and
 - Now Bar entries that name the provider and its remaining quota, summarize the other monitored providers when expanded, and open that provider's detail when tapped
 - Secure device-code account connection for Codex and GitHub Copilot, plus an encrypted local Claude Code companion that never exports Anthropic credentials
 - Claude companion pairing from one QR scan or a pasted code, and automatic reconnection when the companion's computer receives a new local address
-- Push alert when quota resets (fully replenished)
+- Independent reset alerts for quota-window renewals, increases in available Codex resets, and resets expiring within 24 hours
+- On-device reset history with detected times, balance changes, expiry reminders, and a clear-history action
 - DataStore + Android Keystore-backed credential storage
 - English and Japanese per-app language selection
 - Dynamic color for Material 3, light/dark appearance, selectable visual styles, and responsive widget layouts
+
+### Reset alerts and widget editing
+
+In **Settings → Notifications**, reset alerts can be enabled independently of the persistent notification. Both dashboard refreshes and background updates detect changes; Android notification permission is required. Alerts follow successful refreshes, so the refresh interval, network failures, and Android battery restrictions can delay them.
+
+Open a provider's detail to see its reset history, retained for up to 90 days and 100 events per provider. The first successful response establishes a baseline. Later responses record quota-window renewals and net changes in Codex reset balances. A decrease can mean use or expiry; this is an observed activity log, not the provider's complete redemption history. Changes between refreshes can be missed. Clearing the log keeps the detection baseline, while disconnecting or replacing an account clears its history. The log is excluded from Android backups.
+
+Existing widgets keep disconnected providers available in their editor so they can be deselected without reconnecting. An existing widget can also be saved with no providers; reopening it preserves that empty selection.
 
 ## Selectable design systems and Codex insights
 
@@ -149,7 +158,7 @@ Claude does not expose a supported third-party Android device-code flow for this
 
 1. Install Claude Code using [Anthropic's current setup instructions](https://code.claude.com/docs/en/setup), complete browser sign-in, then finish the first-run and folder-trust prompts from `~/.codexbar/claude-workspace` as described in the [companion setup guide](companion/claude/README.md).
 2. Enter `/usage` and confirm that **Current session** appears.
-3. Download `CodexBar-Claude-Companion-v0.9.4.zip` from the same Release as the APK and extract it.
+3. Download `CodexBar-Claude-Companion-v0.9.5.zip` from the same Release as the APK and extract it.
 4. On Windows, run `start-windows.cmd`. On macOS or Linux, run `chmod +x start-macos-linux.sh` once and then `./start-macos-linux.sh`.
 5. Keep the phone and computer on the same trusted Wi-Fi, or use the [Tailscale setup](companion/claude/README.md#connect-across-networks-with-tailscale) for different networks. If the computer firewall prompts, permit Node.js on private networks only. In Claude under **Connections**, tap **Scan QR securely in CodexBar** and scan the displayed QR inside the app. Do not use the system camera. If Google Play services cannot open the scanner, paste the `CBCLAUDE1...` pairing code, then tap **Pair & verify Claude companion**.
 
@@ -175,7 +184,7 @@ Do not extract bearer tokens from browser DevTools unless you are debugging loca
 
 #### Optional private Codex telemetry companion
 
-OpenAI's subscription quota response does not contain local Codex CLI context-window or token-count history. To add those insights without uploading session content, install `CodexBar-Codex-Telemetry-Companion-v0.9.4.zip` from the same GitHub Release as the app:
+OpenAI's subscription quota response does not contain local Codex CLI context-window or token-count history. To add those insights without uploading session content, install `CodexBar-Codex-Telemetry-Companion-v0.9.5.zip` from the same GitHub Release as the app:
 
 1. Install Node.js 20 or newer on the computer where Codex CLI or Codex desktop stores `~/.codex/sessions`.
 2. Extract the companion archive. On Windows, run `start-windows.cmd`; on macOS or Linux, run `./start-macos-linux.sh`.
@@ -186,13 +195,19 @@ The scanner is bounded to recent session files and reads only `token_count` plus
 
 ### Antigravity
 
-Download `CodexBar-Antigravity-Companion-v0.9.4.zip` from the same Release as the APK. The Windows [Antigravity companion](companion/antigravity/README.md) reads model quotas and reset times from the running, signed-in Antigravity IDE. In **Connections → Antigravity**, scan its private QR with the in-app scanner. This account usage is separate from Gemini CLI and Claude subscriptions.
+Download `CodexBar-Antigravity-Companion-v0.9.5.zip` from the same Release as the APK. The Windows [Antigravity companion](companion/antigravity/README.md) reads model quotas and reset times from the running, signed-in Antigravity IDE. In **Connections → Antigravity**, scan its private QR with the in-app scanner. This account usage is separate from Gemini CLI and Claude subscriptions.
 
 Keep Antigravity open and the PC awake. The optional tray resident starts at sign-in and recovers after a crash. For different networks, connect the phone and PC to Tailscale and pair using the PC's `100.x` address on port `43824`. Google credentials, conversations and files stay on the PC. Only explicitly reported model quotas are shown; weekly limits and credit balances are not inferred. These internal IDE endpoints may change after an Antigravity update.
 
+The source checkout also includes a [Windows Control Center](companion/windows-control-center/README.md) that combines Claude, Antigravity, Gemini CLI, and Codex telemetry into one tray dashboard with per-provider pairing QR codes. It retains existing Claude and Antigravity phone pairings and reads Antigravity 2.0 weekly/five-hour model-group windows. Follow its setup guide to install it from the source checkout.
+
 ### Gemini (Google)
 
-Direct Gemini OAuth inside the Android app remains disabled. CodexBar does not copy Gemini CLI credentials, embed a Google client secret, or call the internal `cloudcode-pa` service. Instead, the v0.9.4 companion drives the official Gemini CLI's documented `/stats` view and sends only a sanitized quota snapshot over your trusted local network.
+**Gemini Apps and Gemini CLI have separate usage limits.** The existing companion monitors Gemini CLI; it does not report the usage shown in Google's Windows or web app. Android connection settings and provider details identify that source explicitly. The connection card also opens Gemini Apps, where **Settings → Usage Limits** shows the app's usage as described in [Google's official help](https://support.google.com/gemini/answer/16275805?hl=en).
+
+Automatic Gemini Apps usage collection is not implemented. Inspection of the installed Google Gemini for Windows 1.14.0 on 2026-10-11 did not find an exposed quota API or a local quota export interface. The app's authenticated session is not copied into the companion.
+
+Direct Gemini OAuth inside the Android app remains disabled. CodexBar does not copy Gemini CLI credentials, embed a Google client secret, or call the internal `cloudcode-pa` service. Instead, the v0.9.5 companion drives the official Gemini CLI's `/model` view and sends only a sanitized quota snapshot over your trusted local network. Gemini CLI 0.61.0 or newer is required.
 
 #### Install and pair the private companion
 
@@ -203,8 +218,8 @@ npm install -g @google/gemini-cli@latest
 gemini
 ```
 
-2. Complete Google's sign-in in that official CLI, then exit it.
-3. Download `CodexBar-Gemini-Companion-v0.9.4.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
+2. Launch the official CLI from `~/.codexbar/gemini-workspace`, complete Google's sign-in and folder-trust prompts, verify `/model` shows usage limits, then exit it. Create that workspace first if needed.
+3. Download `CodexBar-Gemini-Companion-v0.9.5.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
 4. On Windows, double-click `start-windows.cmd`. On macOS or Linux, run `./start-macos-linux.sh`. The first launch installs only the versions pinned in `package-lock.json`.
 5. Keep the phone and computer on the same trusted Wi-Fi. If the computer firewall prompts, permit private networks only.
 6. Scan the displayed QR code with the phone and choose CodexBar, or paste the complete `codexbar://gemini-pair?...` value into the Gemini card.
@@ -216,7 +231,7 @@ The pairing key is a local-device password: do not post it in screenshots, logs,
 Troubleshooting:
 
 - **Pairing verification fails:** confirm the companion still says it is ready, both devices use the same Wi-Fi, private-network firewall access is allowed, and both clocks use automatic time.
-- **The companion cannot collect quota:** open the official `gemini` command normally, finish sign-in or any first-run prompts, verify `/stats` shows model usage, exit, and restart the companion.
+- **The companion cannot collect quota:** open the official `gemini` command in its dedicated workspace, finish sign-in or any first-run prompts, verify `/model` shows model usage, exit, and restart the companion. Background collection stays paused while setup is required.
 - **Android stops refreshing Gemini:** the computer may be asleep, its IP may have changed, or the Wi-Fi may isolate clients. Restart and re-pair; do not expose the port through router forwarding or a public tunnel.
 
 This design follows the official Gemini CLI's documented [usage and quota command](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/quota-and-pricing.md) without using its OAuth credential to access Google's backend from a third-party client. Direct Android OAuth remains fail-closed because Google's [limited-input device flow](https://developers.google.com/identity/protocols/oauth2/limited-input-device) is not a general Android authorization mechanism and does not make Gemini CLI's internal quota service a supported API.

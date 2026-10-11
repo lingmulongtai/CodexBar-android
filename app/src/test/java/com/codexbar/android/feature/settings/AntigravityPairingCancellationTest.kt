@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModelStore
 import com.codexbar.android.core.auth.AccountLinkManager
 import com.codexbar.android.core.data.QuotaHistoryStore
+import com.codexbar.android.core.data.QuotaResetMonitor
 import com.codexbar.android.core.data.QuotaRepositoryRegistry
 import com.codexbar.android.core.domain.model.*
 import com.codexbar.android.core.domain.repository.QuotaRepository
@@ -47,7 +48,7 @@ class AntigravityPairingCancellationTest {
             val vm = SettingsViewModel(
                 QuotaRepositoryRegistry(AiService.entries.associateWith { repository }),
                 mock(AccountLinkManager::class.java), mock(CodexTelemetryClient::class.java),
-                prefs, health, mock(QuotaHistoryStore::class.java), mock(WidgetPrefsManager::class.java),
+                prefs, health, mock(QuotaHistoryStore::class.java), mock(QuotaResetMonitor::class.java), mock(WidgetPrefsManager::class.java),
                 mock(MonitoringSessionStore::class.java), mock(QuotaNotificationService::class.java),
                 mock(Context::class.java)
             )

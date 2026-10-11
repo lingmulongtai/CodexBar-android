@@ -35,8 +35,8 @@ async function refreshSnapshot() {
     safeStatus(`Quota snapshot refreshed (${parsed.windows.length} window${parsed.windows.length === 1 ? '' : 's'}).`);
     reportStatus('refreshed');
   } catch (error) {
-    safeStatus('Quota refresh failed. Open Antigravity on this PC and check its sign-in.');
-    reportStatus('refresh-failed');
+    safeStatus('Quota refresh failed. Check the local source and Windows companion status.');
+    reportStatus('refresh-failed', error?.code);
   } finally {
     refreshing = false;
   }

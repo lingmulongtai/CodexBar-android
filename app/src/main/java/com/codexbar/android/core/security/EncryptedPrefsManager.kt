@@ -293,6 +293,16 @@ class EncryptedPrefsManager @Inject constructor(
         updateCache(updated)
     }
 
+    fun isResetNotificationEnabled(): Boolean {
+        refreshCacheAsync()
+        return cachedSettings.resetNotificationEnabled
+    }
+
+    suspend fun setResetNotificationEnabled(enabled: Boolean) {
+        val updated = dataStore.edit { prefs -> prefs[KEY_RESET_NOTIFICATIONS_ENABLED] = enabled }
+        updateCache(updated)
+    }
+
     fun getPrivacySettings(): PrivacySettings {
         refreshCacheAsync()
         return cachedSettings.privacySettings
@@ -384,6 +394,7 @@ class EncryptedPrefsManager @Inject constructor(
                 .toSet(),
             refreshIntervalMinutes = prefs[KEY_REFRESH_INTERVAL] ?: DEFAULT_REFRESH_INTERVAL_MINUTES,
             persistentNotificationEnabled = prefs[KEY_NOTIFICATIONS_ENABLED] ?: true,
+            resetNotificationEnabled = prefs[KEY_RESET_NOTIFICATIONS_ENABLED] ?: true,
             appThemeStyle = AppThemeStyle.fromStoredValue(prefs[KEY_APP_THEME_STYLE]),
             privacySettings = PrivacySettings(
                 screenPrivacyEnabled = prefs[KEY_PRIVACY_SCREEN_ENABLED] ?: true,
@@ -544,6 +555,7 @@ class EncryptedPrefsManager @Inject constructor(
         val credentialServices: Set<AiService> = emptySet(),
         val refreshIntervalMinutes: Long = DEFAULT_REFRESH_INTERVAL_MINUTES,
         val persistentNotificationEnabled: Boolean = true,
+        val resetNotificationEnabled: Boolean = true,
         val appThemeStyle: AppThemeStyle = AppThemeStyle.MATERIAL_3,
         val privacySettings: PrivacySettings = FAIL_CLOSED_PRIVACY_SETTINGS
     )
@@ -556,6 +568,7 @@ class EncryptedPrefsManager @Inject constructor(
 
         private val KEY_REFRESH_INTERVAL = longPreferencesKey("refresh_interval_minutes")
         private val KEY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
+        private val KEY_RESET_NOTIFICATIONS_ENABLED = booleanPreferencesKey("reset_notifications_enabled")
         private val KEY_APP_THEME_STYLE = stringPreferencesKey("app_theme_style")
         private val KEY_PRIVACY_SCREEN_ENABLED = booleanPreferencesKey("privacy_screen_enabled")
         private val KEY_PRIVACY_LOCK_SCREEN_REDACTION_ENABLED =

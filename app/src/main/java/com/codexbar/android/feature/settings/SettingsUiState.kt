@@ -11,6 +11,7 @@ data class SettingsUiState(
     },
     val refreshIntervalMinutes: Long = 30L,
     val persistentNotificationEnabled: Boolean = true,
+    val resetNotificationEnabled: Boolean = true,
     val isMonitoring: Boolean = false,
     val monitoringDurationMinutes: Long = 60L,
     val monitoringRemainingMinutes: Long? = null,

@@ -3,6 +3,7 @@ package com.codexbar.android.core.security
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 import com.codexbar.android.core.data.QuotaHistoryStore
+import com.codexbar.android.core.data.QuotaResetHistoryStore
 import com.codexbar.android.core.monitoring.MonitoringSessionStore
 import com.codexbar.android.core.widget.WidgetPrefsManager
 import org.junit.Assert.assertEquals
@@ -48,6 +49,8 @@ class BackupRulesTest {
     }
 
     private fun assertSecurePrefsExcluded(excludes: List<Element>) {
+        assertTrue(excludes.any { it.getAttribute("domain") == "sharedpref" &&
+            it.getAttribute("path") == QuotaResetHistoryStore.BACKUP_PATH })
         assertTrue(
             excludes.any { exclude ->
                 exclude.getAttribute("domain") == "sharedpref" &&

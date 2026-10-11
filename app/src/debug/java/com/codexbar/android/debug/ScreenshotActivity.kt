@@ -18,6 +18,8 @@ import com.codexbar.android.core.domain.model.CodexTokenTotals
 import com.codexbar.android.core.domain.model.CodexTokenUsage
 import com.codexbar.android.core.domain.model.ExtraUsage
 import com.codexbar.android.core.domain.model.QuotaInfo
+import com.codexbar.android.core.domain.model.QuotaResetActivity
+import com.codexbar.android.core.domain.model.QuotaResetKind
 import com.codexbar.android.core.domain.model.UsageWindow
 import com.codexbar.android.core.monitoring.MonitoringSession
 import com.codexbar.android.core.notification.QuotaNotificationService
@@ -52,6 +54,11 @@ class ScreenshotActivity : AppCompatActivity() {
             isAppearanceLightNavigationBars = !darkTheme
         }
         val snapshot = createScreenshotSnapshot(Instant.now())
+
+        if (intent.getBooleanExtra("verify_reset_alerts", false)) {
+            check(intent.getBooleanExtra("seed_demo", false)) { "Use only on a disposable demo emulator" }
+            lifecycleScope.launch { verifyResetAlerts() }
+        }
 
         // Opt in only on a disposable screenshot emulator with notification permission granted.
         if (intent.getBooleanExtra(EXTRA_NOTIFICATION, false)) {
@@ -113,6 +120,48 @@ class ScreenshotActivity : AppCompatActivity() {
         const val EXTRA_THEME = "theme"
         const val EXTRA_DARK_THEME = "dark_theme"
         const val EXTRA_NOTIFICATION = "notification"
+    }
+
+    private suspend fun verifyResetAlerts() {
+        prefsManager.warmCache()
+        prefsManager.setPersistentNotificationEnabled(false)
+        prefsManager.setResetNotificationEnabled(true)
+        val privacy = prefsManager.getPrivacySettings()
+        prefsManager.setPrivacySettings(privacy.copy(notificationRedactionEnabled = false,
+            lockScreenRedactionEnabled = true))
+        val manager = getSystemService(android.app.NotificationManager::class.java)
+        notificationService.cancelResetNotifications()
+        val activity = QuotaResetActivity(QuotaResetKind.CREDITS_ADDED, System.currentTimeMillis(),
+            count = 2, availableCount = 3)
+        notificationService.showResetActivityNotification(AiService.CODEX, activity)
+        kotlinx.coroutines.delay(300)
+        val alert = manager.activeNotifications.single {
+            it.notification.channelId == QuotaNotificationService.RESET_CHANNEL_ID
+        }.notification
+        check(alert.extras.getCharSequence(android.app.Notification.EXTRA_TITLE).toString() ==
+            getString(com.codexbar.android.R.string.notification_reset_credits_title))
+        check(alert.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString() ==
+            getString(com.codexbar.android.R.string.notification_reset_credits_added, 2, 3))
+        check(alert.visibility == android.app.Notification.VISIBILITY_PRIVATE && alert.publicVersion != null)
+        prefsManager.setPrivacySettings(privacy.copy(notificationRedactionEnabled = true))
+        notificationService.refreshPrivacySettings(null)
+        kotlinx.coroutines.delay(300)
+        check(manager.activeNotifications.none { it.notification.channelId == QuotaNotificationService.RESET_CHANNEL_ID })
+        notificationService.showResetActivityNotification(AiService.CODEX, activity)
+        kotlinx.coroutines.delay(300)
+        val hidden = manager.activeNotifications.single {
+            it.notification.channelId == QuotaNotificationService.RESET_CHANNEL_ID
+        }.notification
+        check(hidden.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString() ==
+            getString(com.codexbar.android.R.string.notification_reset_generic))
+        notificationService.cancelResetNotifications(AiService.CODEX)
+        prefsManager.setResetNotificationEnabled(false)
+        notificationService.showResetActivityNotification(AiService.CODEX, activity)
+        kotlinx.coroutines.delay(300)
+        check(manager.activeNotifications.none { it.notification.channelId == QuotaNotificationService.RESET_CHANNEL_ID })
+        prefsManager.setResetNotificationEnabled(true)
+        prefsManager.setPrivacySettings(privacy)
+        android.util.Log.i("CodexBarResetTest", "PASS independent alerts, balance content, lock-screen redaction, privacy cancellation and disabled alerts")
     }
 }
 
@@ -226,12 +275,24 @@ private fun ScreenshotActivity.createScreenshotSnapshot(now: Instant): QuotaPres
             }
         }
     }
-    return QuotaPresentationMapper(text = text).map(
+    val snapshot = QuotaPresentationMapper(text = text).map(
         quotas = quotas,
         generatedAt = now,
         paceByMetricKey = pace,
         historyByMetricKey = history
     )
+    return if (intent.getBooleanExtra("reset_history", false)) snapshot.copy(
+        services = snapshot.services.map { service ->
+            if (service.service != AiService.CODEX) service else service.copy(resetHistory = listOf(
+                QuotaResetActivity(QuotaResetKind.CREDITS_ADDED, now.minusSeconds(120).toEpochMilli(),
+                    count = 2, availableCount = 3),
+                QuotaResetActivity(QuotaResetKind.WINDOW_RESET, now.minusSeconds(3600).toEpochMilli(),
+                    windowLabel = "5-Hour", boundaryEpochSeconds = now.minusSeconds(3660).epochSecond),
+                QuotaResetActivity(QuotaResetKind.CREDITS_DECREASED, now.minusSeconds(7200).toEpochMilli(),
+                    count = 1, availableCount = 1)
+            ))
+        }
+    ) else snapshot
 }
 
 private fun demoHistory(window: UsageWindow, now: Instant): List<QuotaHistorySample> {
