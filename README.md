@@ -32,10 +32,19 @@ v0.9.4 adds Antigravity desktop model quotas, distinct compact model labels, and
 - Now Bar entries that name the provider and its remaining quota, summarize the other monitored providers when expanded, and open that provider's detail when tapped
 - Secure device-code account connection for Codex and GitHub Copilot, plus an encrypted local Claude Code companion that never exports Anthropic credentials
 - Claude companion pairing from one QR scan or a pasted code, and automatic reconnection when the companion's computer receives a new local address
-- Push alert when quota resets (fully replenished)
+- Independent reset alerts for quota-window renewals, increases in available Codex resets, and resets expiring within 24 hours
+- On-device reset history with detected times, balance changes, expiry reminders, and a clear-history action
 - DataStore + Android Keystore-backed credential storage
 - English and Japanese per-app language selection
 - Dynamic color for Material 3, light/dark appearance, selectable visual styles, and responsive widget layouts
+
+### Reset alerts and widget editing (current source)
+
+In **Settings → Notifications**, reset alerts can be enabled independently of the persistent notification. Both dashboard refreshes and background updates detect changes; Android notification permission is required. Alerts follow successful refreshes, so the refresh interval, network failures, and Android battery restrictions can delay them.
+
+Open a provider's detail to see its reset history, retained for up to 90 days and 100 events per provider. The first successful response establishes a baseline. Later responses record quota-window renewals and net changes in Codex reset balances. A decrease can mean use or expiry; this is an observed activity log, not the provider's complete redemption history. Changes between refreshes can be missed. Clearing the log keeps the detection baseline, while disconnecting or replacing an account clears its history. The log is excluded from Android backups.
+
+Existing widgets keep disconnected providers available in their editor so they can be deselected without reconnecting. An existing widget can also be saved with no providers; reopening it preserves that empty selection.
 
 ## Selectable design systems and Codex insights
 
@@ -193,6 +202,10 @@ Keep Antigravity open and the PC awake. The optional tray resident starts at sig
 The current source checkout also includes a [Windows Control Center](companion/windows-control-center/README.md) that combines Claude, Antigravity, Gemini CLI, and Codex telemetry into one tray dashboard with per-provider pairing QR codes. It retains existing Claude and Antigravity phone pairings and reads Antigravity 2.0 weekly/five-hour model-group windows. This Control Center is newer than the v0.9.4 release archives above.
 
 ### Gemini (Google)
+
+**Gemini Apps and Gemini CLI have separate usage limits.** The existing companion monitors Gemini CLI; it does not report the usage shown in Google's Windows or web app. Android connection settings and provider details identify that source explicitly. The connection card also opens Gemini Apps, where **Settings → Usage Limits** shows the app's usage as described in [Google's official help](https://support.google.com/gemini/answer/16275805?hl=en).
+
+Automatic Gemini Apps usage collection is not implemented. Inspection of the installed Google Gemini for Windows 1.14.0 on 2026-10-11 did not find an exposed quota API or a local quota export interface. The app's authenticated session is not copied into the companion. These source changes are newer than the release archives linked below.
 
 Direct Gemini OAuth inside the Android app remains disabled. CodexBar does not copy Gemini CLI credentials, embed a Google client secret, or call the internal `cloudcode-pa` service. Instead, the v0.9.4 companion drives the official Gemini CLI's documented `/stats` view and sends only a sanitized quota snapshot over your trusted local network.
 

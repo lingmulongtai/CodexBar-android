@@ -2,6 +2,8 @@
 
 This companion keeps Google authentication inside the official Gemini CLI and serves only a sanitized quota snapshot to CodexBar for Android over the local network.
 
+These are **Gemini CLI quotas**, separate from usage in Google's Gemini Windows and web apps. Automatic Gemini Apps collection is not supported by this companion. To check those limits, open [Gemini Apps](https://gemini.google.com/app) and choose **Settings → Usage Limits**, following [Google's usage-limit guide](https://support.google.com/gemini/answer/16275805?hl=en).
+
 Requirements:
 
 - Node.js 20 or newer
