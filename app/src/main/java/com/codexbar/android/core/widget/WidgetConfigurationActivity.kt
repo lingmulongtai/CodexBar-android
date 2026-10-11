@@ -252,9 +252,11 @@ class WidgetConfigurationActivity : AppCompatActivity() {
 
                                         if (availableServices.isEmpty()) {
                                             Text(
-                                                text = stringResource(R.string.widget_setup_connect_first),
+                                                text = stringResource(if (isReconfigure) R.string.widget_no_services
+                                                    else R.string.widget_setup_connect_first),
                                                 style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.error
+                                                color = if (isReconfigure) MaterialTheme.colorScheme.onSurfaceVariant
+                                                    else MaterialTheme.colorScheme.error
                                             )
                                             OutlinedButton(onClick = ::openAppConnections) {
                                                 Text(
