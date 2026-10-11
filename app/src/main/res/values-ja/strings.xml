@@ -365,6 +365,10 @@
     <string name="notification_reset_credits_expiring">利用可能なCodexリセットが24時間以内に期限切れになります。</string>
     <string name="notifications_reset_title">リセット通知</string>
     <string name="notifications_reset_description">使用枠の定期リセット、Codexリセット残数の増加、24時間以内の期限切れを通知します。常駐通知とは独立した設定です。更新間隔やAndroidの省電力制御により通知が遅れる場合があります。</string>
+    <string name="detail_usage_source">使用量の取得元</string>
+    <string name="gemini_cli_usage_source">Gemini CLI（Gemini Appsとは別の使用枠）</string>
+    <string name="credential_gemini_apps_usage">この接続で表示するのはGemini CLIの使用枠です。GoogleのGemini Windows・Webアプリの使用枠は別で、現時点ではCodexBarの自動取得に対応していません。Gemini Appsを開き、設定内の使用量画面から確認できます。</string>
+    <string name="action_open_gemini_apps_usage">Gemini Appsを開いて使用量を確認</string>
     <string name="reset_history_title">リセット履歴</string>
     <string name="reset_history_description">この端末で検出した変化を最大100件・90日間記録します。残数の減少には利用と期限切れが含まれます。更新の間に起きた変化は記録できない場合があります。</string>
     <string name="reset_history_empty">初回の正常な更新後から変化を記録します。</string>

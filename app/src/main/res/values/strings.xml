@@ -365,6 +365,10 @@
     <string name="notification_reset_credits_expiring">An available Codex reset expires within 24 hours.</string>
     <string name="notifications_reset_title">Reset alerts</string>
     <string name="notifications_reset_description">Notify when quota windows reset, Codex reset balances increase, or a reset expires within 24 hours. Independent of the persistent notification. Updates follow the refresh interval and may be delayed by Android.</string>
+    <string name="detail_usage_source">Usage source</string>
+    <string name="gemini_cli_usage_source">Gemini CLI (separate from Gemini Apps)</string>
+    <string name="credential_gemini_apps_usage">This connection shows Gemini CLI quotas. Google Gemini for Windows and the web has separate usage limits, which CodexBar cannot retrieve automatically yet. Open Gemini Apps and select Settings → Usage Limits to check them.</string>
+    <string name="action_open_gemini_apps_usage">Open Gemini Apps to check usage</string>
     <string name="reset_history_title">Reset history</string>
     <string name="reset_history_description">Changes observed on this device, up to 100 entries for 90 days. Balance decreases can mean use or expiry. Changes between refreshes may be missed.</string>
     <string name="reset_history_empty">History starts after the first successful refresh.</string>

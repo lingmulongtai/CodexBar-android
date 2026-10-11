@@ -1306,6 +1306,7 @@ private fun GeminiCompanionSetup(
     onPairingCodeChange: (String) -> Unit,
     onConnect: () -> Unit
 ) {
+    val context = LocalContext.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
@@ -1326,6 +1327,17 @@ private fun GeminiCompanionSetup(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Text(
+                text = stringResource(R.string.credential_gemini_apps_usage),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            OutlinedButton(
+                onClick = { openAuthUrl(context, "https://gemini.google.com/app") },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.action_open_gemini_apps_usage))
+            }
             Text(
                 text = stringResource(R.string.credential_gemini_companion_steps),
                 style = MaterialTheme.typography.bodySmall,

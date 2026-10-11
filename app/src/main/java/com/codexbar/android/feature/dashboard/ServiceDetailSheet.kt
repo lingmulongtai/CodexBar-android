@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.codexbar.android.R
+import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.presentation.ExtraUsagePresentation
 import com.codexbar.android.core.presentation.QuotaMetricPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
@@ -246,6 +247,9 @@ private fun ServiceStateSummary(service: ServiceQuotaPresentation, accent: Color
             verticalArrangement = Arrangement.spacedBy(CodexBarSpacing.small)
         ) {
             DetailRow(stringResource(R.string.detail_status), service.status.toDetailLabel(), statusColor)
+            if (service.service == AiService.GEMINI) {
+                DetailRow(stringResource(R.string.detail_usage_source), stringResource(R.string.gemini_cli_usage_source))
+            }
             DetailRow(stringResource(R.string.detail_freshness), service.freshness.ageLabel)
             service.freshness.staleReason?.let {
                 DetailRow(stringResource(R.string.detail_reason), it, statusColor)
