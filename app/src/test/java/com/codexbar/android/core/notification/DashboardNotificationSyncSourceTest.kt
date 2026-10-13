@@ -15,7 +15,7 @@ class DashboardNotificationSyncSourceTest {
             "src/main/java/com/codexbar/android/feature/dashboard/DashboardViewModel.kt"
         ).readText().replace("\r\n", "\n")
 
-        assertTrue(source.contains("_uiState.value = DashboardUiState.Content(snapshot)"))
+        assertTrue(source.contains("_uiState.value = DashboardUiState.Content(snapshot,"))
         assertTrue(source.contains("notificationService.publishSnapshot("))
         assertTrue(source.contains("monitoringSession = monitoringSessionStore.activeSession()"))
     }
