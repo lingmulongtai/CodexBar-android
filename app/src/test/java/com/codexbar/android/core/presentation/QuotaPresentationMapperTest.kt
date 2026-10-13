@@ -24,6 +24,15 @@ import java.time.ZoneOffset
 import java.util.Locale
 
 class QuotaPresentationMapperTest {
+    @Test fun `old Windows observations preserve age and never get a fresh badge`() {
+        val now = Instant.parse("2026-10-14T00:00:00Z")
+        val quota = QuotaInfo(AiService.CODEX, listOf(UsageWindow("Session", 0.25, null)), null,
+            fetchedAt = now.minusSeconds(5400), isStale = true)
+        val service = mapper.map(listOf(quota), generatedAt = now).services.single()
+        assertEquals(ServiceQuotaStatus.Stale, service.status)
+        assertEquals(FreshnessState.Stale, service.freshness.state)
+        assertEquals(quota.fetchedAt, service.freshness.fetchedAt)
+    }
     private val now = Instant.parse("2026-07-13T00:00:00Z")
     private val mapper = QuotaPresentationMapper(Clock.fixed(now, ZoneOffset.UTC))
 

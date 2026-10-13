@@ -512,4 +512,19 @@
     <string name="validation_antigravity_companion_failed">Couldn’t verify Antigravity. Keep the IDE signed in and the companion running. Check Wi-Fi or Tailscale, private-network firewall access and automatic clocks. Detail: %1$s</string>
     <string name="validation_antigravity_clipboard_empty">No CBANTIGRAVITY1 pairing code was found. Copy the code from the Antigravity companion.</string>
     <string name="validation_antigravity_scanner_failed">Couldn’t open the secure scanner. Check Google Play services or paste the CBANTIGRAVITY1 pairing code.</string>
+    <string name="desktop_title">Win-CodexBar</string>
+    <string name="desktop_description">Open Advanced → Android sharing in Win-CodexBar Mobile on Windows, enable sharing, then paste its pairing code here. Use the same LAN or Tailscale network. Successful Windows providers become the selected usage source. Gemini is Gemini CLI usage.</string>
+    <string name="desktop_pairing_code">Windows pairing code</string>
+    <string name="desktop_paste">Paste</string>
+    <string name="desktop_connect">Connect</string>
+    <string name="desktop_connected">Connected to Windows</string>
+    <string name="desktop_connection_failed">Could not connect. Check the pairing code, Windows sharing, network and firewall.</string>
+    <string name="desktop_pairing_invalid">Invalid pairing code. Paste the complete code copied from Windows.</string>
+    <string name="desktop_authentication_failed">Windows rejected the pairing. Copy its current code and connect again.</string>
+    <string name="desktop_response_invalid">Could not read Windows usage. Update both apps to compatible versions.</string>
+    <string name="desktop_services_description">Choose the services to receive from Windows. Turning one off returns to its saved phone connection. Phone credentials are preserved.</string>
+    <string name="desktop_disconnect">Disconnect Windows</string>
+    <string name="desktop_provider_managed">Usage comes from Win-CodexBar. Manage this account on Windows.</string>
+    <string name="desktop_use_phone_source">Use saved phone connection</string>
+    <string name="desktop_refresh">Refresh Windows providers</string>
 </resources>

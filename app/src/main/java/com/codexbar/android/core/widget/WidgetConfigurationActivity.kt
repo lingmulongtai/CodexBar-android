@@ -115,7 +115,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             setContent {
                 CodexBarTheme {
                     val connectedServices = AiService.entries.filter {
-                        encryptedPrefsManager.hasCredential(it)
+                        encryptedPrefsManager.hasQuotaSource(it)
                     }
                     val existingConfig = widgetPrefsManager.getWidgetConfig(appWidgetId)
                     val isReconfigure = widgetPrefsManager.hasWidgetConfig(appWidgetId)

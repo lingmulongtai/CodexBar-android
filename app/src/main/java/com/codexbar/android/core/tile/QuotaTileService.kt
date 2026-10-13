@@ -35,7 +35,7 @@ class QuotaTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
-        if (AiService.entries.any { prefsManager.hasCredential(it) }) {
+        if (AiService.entries.any { prefsManager.hasQuotaSource(it) }) {
             WorkManagerInitializer.enqueueManualQuotaRefresh(this, source = "tile")
             updateTile(subtitleOverride = localizedString(R.string.tile_refreshing))
             return
@@ -68,7 +68,7 @@ class QuotaTileService : TileService() {
     private fun updateTile(subtitleOverride: String? = null) {
         val tile = qsTile ?: return
 
-        val hasAnyCredential = AiService.entries.any { prefsManager.hasCredential(it) }
+        val hasAnyCredential = AiService.entries.any { prefsManager.hasQuotaSource(it) }
 
         if (!hasAnyCredential) {
             tile.state = Tile.STATE_INACTIVE
@@ -94,7 +94,7 @@ class QuotaTileService : TileService() {
             return localizedString(R.string.tile_quota_hidden)
         }
 
-        val services = AiService.entries.filter { prefsManager.hasCredential(it) }
+        val services = AiService.entries.filter { prefsManager.hasQuotaSource(it) }
         val cachedService = services
             .mapNotNull { service ->
                 val labels = widgetPrefsManager.getCachedLabels(service)

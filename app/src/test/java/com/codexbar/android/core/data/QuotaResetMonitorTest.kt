@@ -10,6 +10,11 @@ import com.codexbar.android.core.notification.QuotaNotificationService
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import java.time.Instant
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
+import org.junit.Assert.*
+import com.codexbar.android.core.domain.model.DesktopBridgeCredential
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -17,6 +22,48 @@ import org.mockito.MockedStatic
 import org.mockito.Mockito.*
 
 class QuotaResetMonitorTest {
+    @Test fun `source switch discards old publication and preserves native credentials`() = runTest {
+        val prefs = mock(EncryptedPrefsManager::class.java)
+        val store = mock(QuotaResetHistoryStore::class.java)
+        val notices = mock(QuotaNotificationService::class.java)
+        val monitor = QuotaResetMonitor(store, prefs, notices)
+        val old = monitor.sourceRevision()
+        val desktop = DesktopBridgeCredential("127.0.0.1", 43825, "5b017391-6dc4-4ab7-b0ad-2255dada62d7", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+        monitor.updateDesktopSource(desktop, setOf(AiService.CODEX)) {}
+        var published = false
+        assertFalse(monitor.consumeIfCurrent(old) { published = true })
+        assertFalse(published)
+        verify(prefs).saveDesktopBridge(desktop, setOf(AiService.CODEX))
+        AiService.entries.forEach { verify(prefs, never()).deleteCredential(it) }
+        verify(store).deleteService(AiService.CODEX)
+    }
+
+    @Test fun `obsolete pairing is rejected after waiting for publication lock`() = runTest {
+        val prefs = mock(EncryptedPrefsManager::class.java)
+        val monitor = QuotaResetMonitor(mock(QuotaResetHistoryStore::class.java), prefs, mock(QuotaNotificationService::class.java))
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val valid = AtomicBoolean(true)
+        val publisher = launch { monitor.consumeIfCurrent(0) { entered.complete(Unit); release.await() } }
+        entered.await()
+        var applied = true
+        val pairing = launch { applied = monitor.updateDesktopSource(null, emptySet(), valid = valid::get) {} }
+        valid.set(false)
+        release.complete(Unit)
+        publisher.join(); pairing.join()
+        assertFalse(applied)
+        verifyNoInteractions(prefs)
+    }
+
+    @Test fun `delete all invalidates results even when a response arrives later`() = runTest {
+        val prefs = mock(EncryptedPrefsManager::class.java)
+        val monitor = QuotaResetMonitor(mock(QuotaResetHistoryStore::class.java), prefs, mock(QuotaNotificationService::class.java))
+        val before = monitor.sourceRevision()
+        monitor.deleteAllSources {}
+        assertFalse(monitor.consumeIfCurrent(before) { fail("Old snapshot was published") })
+        verify(prefs).deleteAllCredentials()
+        assertEquals(monitor.sourceRevision(), monitor.sourceChanges.value)
+    }
     private lateinit var color: MockedStatic<android.graphics.Color>
 
     @Before fun mockAndroidColor() {

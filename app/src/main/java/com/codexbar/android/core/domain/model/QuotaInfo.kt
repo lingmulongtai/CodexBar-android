@@ -11,7 +11,9 @@ data class QuotaInfo(
     val notices: Set<QuotaNotice> = emptySet(),
     val codexResetCredits: CodexResetCredits? = null,
     val codexTelemetry: CodexTelemetry? = null,
-    val resetTrackingAccountKey: String? = null
+    val resetTrackingAccountKey: String? = null,
+    val isStale: Boolean = false,
+    val historyEligible: Boolean = true
 )
 
 data class CodexResetCredits(

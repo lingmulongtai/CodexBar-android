@@ -17,6 +17,8 @@ import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.domain.model.CodexTelemetryCredential
 import com.codexbar.android.core.domain.model.Credential
+import com.codexbar.android.core.domain.model.DesktopBridgeCredential
+import com.codexbar.android.core.network.desktop.DesktopBridgePairing
 import com.codexbar.android.core.domain.model.ProviderSecretKind
 import com.codexbar.android.core.domain.model.providerMetadata
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -39,6 +41,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 private const val SECURE_DATASTORE_NAME = "codexbar_secure_prefs"
 private const val DEFAULT_REFRESH_INTERVAL_MINUTES = 30L
@@ -56,6 +60,7 @@ class EncryptedPrefsManager @Inject constructor(
 ) {
     private val dataStore = context.secureDataStore
     private val valueCipher = AndroidKeyStoreValueCipher()
+    private val cacheMutex = Mutex()
     private val cacheScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Volatile
@@ -78,20 +83,14 @@ class EncryptedPrefsManager @Inject constructor(
             if (initialPrefs?.containsLegacyGeminiTokens() == true) add(AiService.GEMINI)
             if (initialPrefs?.containsLegacyClaudeTokens() == true) add(AiService.CLAUDE)
         }
-        val prefs = if (servicesToRemove.isNotEmpty()) {
+        if (servicesToRemove.isNotEmpty()) {
             dataStore.edit { mutablePrefs ->
                 servicesToRemove.forEach { service ->
                     mutablePrefs.removeServiceEntries(service)
                 }
             }
-        } else {
-            initialPrefs
         }
-        if (prefs == null) {
-            updateCachedSettings(CachedSettings())
-        } else {
-            updateCache(prefs)
-        }
+        updateCache()
     }
 
     suspend fun saveCredential(service: AiService, credential: Credential) {
@@ -108,7 +107,7 @@ class EncryptedPrefsManager @Inject constructor(
         require(credential !is Credential.AntigravityCompanionCredential || service == AiService.ANTIGRAVITY) {
             "Antigravity pairing does not match provider"
         }
-        val updated = dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs.removeServiceEntries(service)
             val prefix = service.name
 
@@ -175,7 +174,7 @@ class EncryptedPrefsManager @Inject constructor(
                 }
             }
         }
-        updateCache(updated)
+        updateCache()
     }
 
     suspend fun loadCredential(service: AiService): Credential? {
@@ -187,7 +186,7 @@ class EncryptedPrefsManager @Inject constructor(
         host: String
     ): Boolean {
         var applied = false
-        val updated = dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             // Disconnect and re-pair also use this transaction, so an in-flight scan cannot
             // restore a deleted pairing or overwrite a newer one.
             if (readCredential(prefs, AiService.ANTIGRAVITY) == expected) {
@@ -195,7 +194,7 @@ class EncryptedPrefsManager @Inject constructor(
                 applied = true
             }
         }
-        updateCache(updated)
+        updateCache()
         return applied
     }
 
@@ -204,7 +203,7 @@ class EncryptedPrefsManager @Inject constructor(
         host: String
     ): Boolean {
         var applied = false
-        val updated = dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             // Disconnect and re-pair also use this transaction, so an in-flight scan cannot
             // restore a deleted pairing or overwrite a newer one.
             if (readCredential(prefs, AiService.CLAUDE) == expected) {
@@ -212,7 +211,7 @@ class EncryptedPrefsManager @Inject constructor(
                 applied = true
             }
         }
-        updateCache(updated)
+        updateCache()
         return applied
     }
 
@@ -249,19 +248,55 @@ class EncryptedPrefsManager @Inject constructor(
         dataStore.edit { prefs -> prefs.removeCodexTelemetryEntries() }
     }
 
+    suspend fun saveDesktopBridge(credential: DesktopBridgeCredential?, services: Set<AiService>) {
+        credential?.let(DesktopBridgePairing::validate)
+        require(credential != null || services.isEmpty())
+        dataStore.edit { prefs ->
+            prefs.asMap().keys.filter { it.name.startsWith(DESKTOP_PREFIX) }.forEach { key ->
+                @Suppress("UNCHECKED_CAST")
+                prefs.remove(key as Preferences.Key<Any>)
+            }
+            if (credential != null) {
+                prefs.putEncryptedString("${DESKTOP_PREFIX}host", credential.host)
+                prefs[longPreferencesKey("${DESKTOP_PREFIX}port")] = credential.port.toLong()
+                prefs.putEncryptedString("${DESKTOP_PREFIX}id", credential.companionId)
+                prefs.putEncryptedString("${DESKTOP_PREFIX}key", credential.sharedKeyBase64Url)
+                prefs[stringPreferencesKey("${DESKTOP_PREFIX}services")] = services.joinToString(",") { it.name }
+            }
+        }
+        updateCache()
+    }
+
+    fun desktopBridgeCredential(): DesktopBridgeCredential? = cachedSettings.desktopCredential
+    fun desktopServices(): Set<AiService> = cachedSettings.desktopServices
+    fun usesDesktopBridge(service: AiService): Boolean = cachedSettings.desktopCredential != null && service in cachedSettings.desktopServices
+    fun hasQuotaSource(service: AiService): Boolean = hasCredential(service) || usesDesktopBridge(service)
+
+    private fun readDesktopCredential(prefs: Preferences): DesktopBridgeCredential? = runCatching {
+        val host = prefs.getEncryptedString("${DESKTOP_PREFIX}host") ?: return null
+        val port = prefs[longPreferencesKey("${DESKTOP_PREFIX}port")]?.takeIf { it in 1024..65535 }?.toInt() ?: return null
+        val id = prefs.getEncryptedString("${DESKTOP_PREFIX}id") ?: return null
+        val key = prefs.getEncryptedString("${DESKTOP_PREFIX}key") ?: return null
+        DesktopBridgeCredential(host, port, id, key).also(DesktopBridgePairing::validate)
+    }.getOrNull()
+
     suspend fun deleteCredential(service: AiService) {
-        val updated = dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs.removeServiceEntries(service)
         }
-        updateCache(updated)
+        updateCache()
     }
 
     suspend fun deleteAllCredentials() {
-        val updated = dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             AiService.entries.forEach { prefs.removeServiceEntries(it) }
             prefs.removeCodexTelemetryEntries()
+            prefs.asMap().keys.filter { it.name.startsWith(DESKTOP_PREFIX) }.forEach { key ->
+                @Suppress("UNCHECKED_CAST")
+                prefs.remove(key as Preferences.Key<Any>)
+            }
         }
-        updateCache(updated)
+        updateCache()
     }
 
     fun hasCredential(service: AiService): Boolean {
@@ -275,10 +310,10 @@ class EncryptedPrefsManager @Inject constructor(
     }
 
     suspend fun setRefreshInterval(minutes: Long) {
-        val updated = dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_REFRESH_INTERVAL] = minutes
         }
-        updateCache(updated)
+        updateCache()
     }
 
     fun isPersistentNotificationEnabled(): Boolean {
@@ -287,10 +322,10 @@ class EncryptedPrefsManager @Inject constructor(
     }
 
     suspend fun setPersistentNotificationEnabled(enabled: Boolean) {
-        val updated = dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_NOTIFICATIONS_ENABLED] = enabled
         }
-        updateCache(updated)
+        updateCache()
     }
 
     fun isResetNotificationEnabled(): Boolean {
@@ -299,8 +334,8 @@ class EncryptedPrefsManager @Inject constructor(
     }
 
     suspend fun setResetNotificationEnabled(enabled: Boolean) {
-        val updated = dataStore.edit { prefs -> prefs[KEY_RESET_NOTIFICATIONS_ENABLED] = enabled }
-        updateCache(updated)
+        dataStore.edit { prefs -> prefs[KEY_RESET_NOTIFICATIONS_ENABLED] = enabled }
+        updateCache()
     }
 
     fun getPrivacySettings(): PrivacySettings {
@@ -309,24 +344,24 @@ class EncryptedPrefsManager @Inject constructor(
     }
 
     suspend fun setPrivacySettings(settings: PrivacySettings) {
-        val updated = dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_PRIVACY_SCREEN_ENABLED] = settings.screenPrivacyEnabled
             prefs[KEY_PRIVACY_LOCK_SCREEN_REDACTION_ENABLED] = settings.lockScreenRedactionEnabled
             prefs[KEY_PRIVACY_NOTIFICATION_REDACTION_ENABLED] = settings.notificationRedactionEnabled
             prefs[KEY_PRIVACY_WIDGET_REDACTION_ENABLED] = settings.widgetRedactionEnabled
         }
-        updateCache(updated)
+        updateCache()
     }
 
     suspend fun setAppThemeStyle(style: AppThemeStyle) {
-        val updated = dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_APP_THEME_STYLE] = style.name
         }
-        updateCache(updated)
+        updateCache()
     }
 
     suspend fun saveResetTimes(service: AiService, windows: List<Pair<String, Instant?>>) {
-        val updated = dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             windows.forEach { (label, resetsAt) ->
                 val key = longPreferencesKey("${service.name}_${label}_resets_at")
                 if (resetsAt != null) {
@@ -336,7 +371,7 @@ class EncryptedPrefsManager @Inject constructor(
                 }
             }
         }
-        updateCache(updated)
+        updateCache()
     }
 
     suspend fun loadResetTimes(service: AiService): Map<String, Instant> {
@@ -362,7 +397,7 @@ class EncryptedPrefsManager @Inject constructor(
                 try {
                     warmCache()
                 } catch (_: Exception) {
-                    updateCachedSettings(CachedSettings())
+                    updateCache()
                     synchronized(this@EncryptedPrefsManager) {
                         cacheRefreshStarted = false
                     }
@@ -387,8 +422,11 @@ class EncryptedPrefsManager @Inject constructor(
         }
     }
 
-    private fun updateCache(prefs: Preferences) {
+    private suspend fun updateCache() = cacheMutex.withLock {
+        val prefs = readPreferences()
         updateCachedSettings(CachedSettings(
+            desktopCredential = readDesktopCredential(prefs),
+            desktopServices = prefs[stringPreferencesKey("${DESKTOP_PREFIX}services")].orEmpty().split(',').mapNotNull { name -> AiService.entries.find { it.name == name } }.toSet(),
             credentialServices = AiService.entries
                 .filter { service -> readCredential(prefs, service) != null }
                 .toSet(),
@@ -552,6 +590,8 @@ class EncryptedPrefsManager @Inject constructor(
     }
 
     private data class CachedSettings(
+        val desktopCredential: DesktopBridgeCredential? = null,
+        val desktopServices: Set<AiService> = emptySet(),
         val credentialServices: Set<AiService> = emptySet(),
         val refreshIntervalMinutes: Long = DEFAULT_REFRESH_INTERVAL_MINUTES,
         val persistentNotificationEnabled: Boolean = true,
@@ -565,6 +605,7 @@ class EncryptedPrefsManager @Inject constructor(
         const val SECURE_DATASTORE_BACKUP_PATH = "datastore/$SECURE_DATASTORE_NAME.preferences_pb"
 
         private const val CODEX_TELEMETRY_PREFIX = "LOCAL_CODEX_TELEMETRY_"
+        private const val DESKTOP_PREFIX = "LOCAL_WINDOWS_BRIDGE_"
 
         private val KEY_REFRESH_INTERVAL = longPreferencesKey("refresh_interval_minutes")
         private val KEY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")

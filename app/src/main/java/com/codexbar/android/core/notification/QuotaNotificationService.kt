@@ -104,7 +104,7 @@ class QuotaNotificationService @Inject constructor(
      * Publishes one immutable presentation snapshot to every enabled notification surface.
      * The persistent status and the user-started Live Update are intentionally independent.
      */
-    fun publishSnapshot(
+    @Synchronized fun publishSnapshot(
         snapshot: QuotaPresentationSnapshot,
         monitoringSession: MonitoringSession?
     ) {
@@ -121,6 +121,12 @@ class QuotaNotificationService @Inject constructor(
         } else {
             cancelMonitoringNotification()
         }
+    }
+
+    @Synchronized fun discardServices(services: Set<AiService>, monitoringSession: MonitoringSession?) {
+        latestSnapshot?.let { snapshot ->
+            publishSnapshot(snapshot.copy(services = snapshot.services.filterNot { it.service in services }), monitoringSession)
+        } ?: run { cancelQuotaNotification(); cancelMonitoringNotification() }
     }
 
     fun showQuotaNotification(snapshot: QuotaPresentationSnapshot) {
@@ -565,10 +571,10 @@ class QuotaNotificationService @Inject constructor(
     }
 
     /** Apply a user's privacy change immediately, without waiting for another provider request. */
-    fun refreshPrivacySettings(session: MonitoringSession?) {
+    @Synchronized fun refreshPrivacySettings(session: MonitoringSession?) {
         cancelResetNotifications()
         latestSnapshot?.let {
-            val currentServices = it.services.filter { service -> prefsManager.hasCredential(service.service) }
+            val currentServices = it.services.filter { service -> prefsManager.hasQuotaSource(service.service) }
             publishSnapshot(it.copy(services = currentServices), session)
             return
         }

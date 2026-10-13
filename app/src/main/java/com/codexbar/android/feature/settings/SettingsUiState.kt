@@ -18,7 +18,8 @@ data class SettingsUiState(
     val appThemeStyle: AppThemeStyle = AppThemeStyle.MATERIAL_3,
     val privacySettings: PrivacySettings = PrivacySettings(),
     val showDeleteConfirmDialog: Boolean = false,
-    val disconnectConfirmService: AiService? = null
+    val disconnectConfirmService: AiService? = null,
+    val desktop: DesktopConnectionState = DesktopConnectionState()
 )
 
 data class ServiceCredentialState(
@@ -38,6 +39,7 @@ data class ServiceCredentialState(
     val accountLinkPrompt: AccountLinkPrompt? = null,
     val validationResult: ValidationResult? = null,
     val isConnected: Boolean = false,
+    val isDesktopSource: Boolean = false,
     val connectionHealth: ConnectionHealth = ConnectionHealth.UNKNOWN,
     val hasUnsavedChanges: Boolean = false
 )
