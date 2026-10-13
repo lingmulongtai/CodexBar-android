@@ -282,8 +282,15 @@ class EncryptedPrefsManager @Inject constructor(
     fun desktopBridgeCredential(): DesktopBridgeCredential? = cachedSettings.desktopCredential
     fun acquisitionSettings(): AcquisitionSettings = cachedSettings.acquisition
     fun desktopServices(): Set<AiService> = cachedSettings.acquisition.desktopServices
-    fun usesDesktopBridge(service: AiService): Boolean = cachedSettings.desktopCredential != null && cachedSettings.acquisition.routesToDesktop(service)
-    fun hasQuotaSource(service: AiService): Boolean = cachedSettings.acquisition.hasSource(service, hasCredential(service))
+    fun usesDesktopBridge(service: AiService): Boolean {
+        val settings = cachedSettings
+        return settings.desktopCredential != null && settings.acquisition.routesToDesktop(service)
+    }
+    fun hasQuotaSource(service: AiService): Boolean {
+        refreshCacheAsync()
+        val settings = cachedSettings
+        return settings.acquisition.hasSource(service, service in settings.credentialServices)
+    }
 
     private fun readAcquisition(prefs: Preferences): AcquisitionSettings {
         fun services(key: String): Set<AiService>? = prefs[stringPreferencesKey("$DESKTOP_PREFIX$key")]?.split(',')

@@ -49,6 +49,9 @@ class CodexRepositoryImplTest {
     private lateinit var prefsManager: EncryptedPrefsManager
     private lateinit var codexTelemetryClient: CodexTelemetryClient
     private lateinit var repository: CodexRepositoryImpl
+    private lateinit var color: org.mockito.MockedStatic<android.graphics.Color>
+    private fun sourceMonitor() = QuotaResetMonitor(mock(QuotaResetHistoryStore::class.java), prefsManager,
+        mock(com.codexbar.android.core.notification.QuotaNotificationService::class.java))
     private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true; isLenient = true }
 
     private val testCredential = Credential.CodexCredential(
@@ -59,6 +62,7 @@ class CodexRepositoryImplTest {
 
     @Before
     fun setup() {
+        color = org.mockito.Mockito.mockStatic(android.graphics.Color::class.java)
         mockWebServer = MockWebServer()
         mockWebServer.start()
 
@@ -90,13 +94,20 @@ class CodexRepositoryImplTest {
             tokenRefreshService,
             prefsManager,
             TokenRefreshCoordinator(),
-            codexTelemetryClient
+            codexTelemetryClient, sourceMonitor()
         )
     }
 
     @After
     fun tearDown() {
         mockWebServer.shutdown()
+        color.close()
+    }
+
+    @Test fun `Windows routing prevents queued native quota and token requests`() = runTest {
+        `when`(prefsManager.usesDesktopBridge(AiService.CODEX)).thenReturn(true)
+        assertTrue(repository.fetchQuota() is Result.Failure)
+        assertEquals(0, mockWebServer.requestCount)
     }
 
     @Test
@@ -116,7 +127,7 @@ class CodexRepositoryImplTest {
                 retrofit2.Response.success(CodexDto.ResetCreditsResponse(availableCount = 1))
         }
         val serialRepository = CodexRepositoryImpl(gatedApi, tokenRefreshService, prefsManager,
-            TokenRefreshCoordinator(), codexTelemetryClient)
+            TokenRefreshCoordinator(), codexTelemetryClient, sourceMonitor())
         val first = async { serialRepository.fetchQuota() }
         runCurrent()
         val second = async { serialRepository.fetchQuota() }
@@ -495,7 +506,7 @@ class CodexRepositoryImplTest {
             tokenRefreshService,
             prefsManager,
             TokenRefreshCoordinator(),
-            telemetryClient
+            telemetryClient, sourceMonitor()
         )
         mockWebServer.enqueue(
             MockResponse().setResponseCode(200).setBody(
@@ -530,7 +541,7 @@ class CodexRepositoryImplTest {
             tokenRefreshService,
             prefsManager,
             TokenRefreshCoordinator(),
-            failingClient
+            failingClient, sourceMonitor()
         )
         mockWebServer.enqueue(
             MockResponse().setResponseCode(200).setBody(

@@ -91,13 +91,15 @@ object RepositoryModule {
         tokenRefreshService: CodexTokenRefreshService,
         prefsManager: EncryptedPrefsManager,
         tokenRefreshCoordinator: TokenRefreshCoordinator,
-        codexTelemetryClient: CodexTelemetryClient
+        codexTelemetryClient: CodexTelemetryClient,
+        sourceMonitor: com.codexbar.android.core.data.QuotaResetMonitor
     ): QuotaRepository = CodexRepositoryImpl(
         apiService,
         tokenRefreshService,
         prefsManager,
         tokenRefreshCoordinator,
-        codexTelemetryClient
+        codexTelemetryClient,
+        sourceMonitor
     )
 
     @Provides

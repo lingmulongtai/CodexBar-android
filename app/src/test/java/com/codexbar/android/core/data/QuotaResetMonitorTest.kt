@@ -22,6 +22,18 @@ import org.mockito.MockedStatic
 import org.mockito.Mockito.*
 
 class QuotaResetMonitorTest {
+    @Test fun `completed token rotation survives mode changes but cannot resurrect deleted credentials`() = runTest {
+        val prefs = mock(EncryptedPrefsManager::class.java)
+        val original = Credential.CodexCredential("access", "old-refresh", accountId = "account")
+        val refreshed = original.copy(accessToken = "rotated", refreshToken = "new-refresh")
+        `when`(prefs.loadCredential(AiService.CODEX)).thenReturn(original)
+        `when`(prefs.usesDesktopBridge(AiService.CODEX)).thenReturn(true)
+        val monitor = QuotaResetMonitor(mock(QuotaResetHistoryStore::class.java), prefs, mock(QuotaNotificationService::class.java))
+        assertTrue(monitor.saveRefreshedCredential(AiService.CODEX, original, refreshed))
+        `when`(prefs.loadCredential(AiService.CODEX)).thenReturn(null)
+        assertFalse(monitor.saveRefreshedCredential(AiService.CODEX, original, refreshed))
+        verify(prefs, times(1)).saveCredential(AiService.CODEX, refreshed)
+    }
     @Test fun `source switch discards old publication and preserves native credentials`() = runTest {
         val prefs = mock(EncryptedPrefsManager::class.java)
         `when`(prefs.acquisitionSettings()).thenReturn(com.codexbar.android.core.domain.model.AcquisitionSettings())

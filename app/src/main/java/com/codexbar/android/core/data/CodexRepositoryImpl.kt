@@ -43,13 +43,15 @@ class CodexRepositoryImpl @Inject constructor(
     private val tokenRefreshService: CodexTokenRefreshService,
     private val prefsManager: EncryptedPrefsManager,
     private val tokenRefreshCoordinator: TokenRefreshCoordinator,
-    private val codexTelemetryClient: CodexTelemetryClient
+    private val codexTelemetryClient: CodexTelemetryClient,
+    private val sourceMonitor: QuotaResetMonitor
 ) : QuotaRepository {
     private val fetchMutex = Mutex()
 
     override suspend fun fetchQuota(): Result<QuotaInfo, AppError> = fetchMutex.withLock { fetchQuotaLocked() }
 
     private suspend fun fetchQuotaLocked(): Result<QuotaInfo, AppError> {
+        if (prefsManager.usesDesktopBridge(AiService.CODEX)) return Result.Failure(AppError.ServiceUnavailable)
         val storedCredential = prefsManager.loadCredential(AiService.CODEX)
             as? Credential.CodexCredential
             ?: return Result.Failure(AppError.CredentialNotFound(AiService.CODEX))
@@ -64,6 +66,7 @@ class CodexRepositoryImpl @Inject constructor(
         }
 
         return try {
+            if (prefsManager.usesDesktopBridge(AiService.CODEX)) return Result.Failure(AppError.ServiceUnavailable)
             val response = apiService.getUsage(
                 authorization = "Bearer ${usableCredential.accessToken}",
                 accountId = usableCredential.accountId
@@ -78,6 +81,7 @@ class CodexRepositoryImpl @Inject constructor(
                 401 -> {
                     when (val refreshed = refreshToken(usableCredential)) {
                         is TokenRefreshResult.Success -> {
+                            if (prefsManager.usesDesktopBridge(AiService.CODEX)) return Result.Failure(AppError.ServiceUnavailable)
                             val retryResponse = apiService.getUsage(
                                 authorization = "Bearer ${refreshed.credential.accessToken}",
                                 accountId = refreshed.credential.accountId
@@ -152,6 +156,7 @@ class CodexRepositoryImpl @Inject constructor(
         credential: Credential.CodexCredential
     ): TokenRefreshResult {
         return tokenRefreshCoordinator.withRefreshLock(AiService.CODEX) {
+            if (prefsManager.usesDesktopBridge(AiService.CODEX)) return@withRefreshLock TokenRefreshResult.TransientFailure(AppError.ServiceUnavailable)
             val activeCredential = prefsManager.loadCredential(AiService.CODEX)
                 as? Credential.CodexCredential
                 ?: return@withRefreshLock TokenRefreshResult.PermanentFailure(
@@ -189,12 +194,10 @@ class CodexRepositoryImpl @Inject constructor(
                             ?.let { Instant.now().plusSeconds(it.toLong()) }
                             ?: codexTokenExpiresAt(body.accessToken)
                     )
-                    val currentCredential = prefsManager.loadCredential(AiService.CODEX)
-                        as? Credential.CodexCredential
-                    if (currentCredential?.matchesRefreshSubject(activeCredential) == true) {
-                        prefsManager.saveCredential(AiService.CODEX, newCredential)
+                    if (sourceMonitor.saveRefreshedCredential(AiService.CODEX, activeCredential, newCredential)) {
                         TokenRefreshResult.Success(newCredential)
                     } else {
+                        val currentCredential = prefsManager.loadCredential(AiService.CODEX) as? Credential.CodexCredential
                         currentCredential?.let {
                             TokenRefreshResult.Success(it.withDerivedClaims())
                         } ?: TokenRefreshResult.PermanentFailure(

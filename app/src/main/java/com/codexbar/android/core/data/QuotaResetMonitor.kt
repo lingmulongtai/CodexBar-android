@@ -129,6 +129,20 @@ class QuotaResetMonitor @Inject constructor(
         }
     }
 
+    suspend fun deleteNativeSource(service: AiService, cleanup: suspend () -> Unit) =
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                withContext(NonCancellable) {
+                    prefsManager.deleteCredential(service)
+                    store.deleteService(service)
+                    notificationService.cancelResetNotifications(service)
+                    revision.incrementAndGet()
+                    cleanup()
+                    _sourceChanges.value = revision.get()
+                }
+            }
+        }
+
     suspend fun saveCredential(service: AiService, credential: Credential) = withContext(Dispatchers.IO) {
         mutex.withLock {
             val previous = prefsManager.loadCredential(service)
@@ -144,4 +158,14 @@ class QuotaResetMonitor @Inject constructor(
             }
         }
     }
+
+    /** Keep completed token rotation across mode changes, without restoring deleted/replaced accounts. */
+    suspend fun saveRefreshedCredential(service: AiService, expected: Credential, refreshed: Credential): Boolean =
+        withContext(Dispatchers.IO + NonCancellable) {
+            mutex.withLock {
+                if (prefsManager.loadCredential(service) != expected) return@withLock false
+                prefsManager.saveCredential(service, refreshed)
+                true
+            }
+        }
 }

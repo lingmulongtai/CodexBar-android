@@ -506,11 +506,14 @@ class SettingsViewModel @Inject constructor(
         }
         viewModelScope.launch {
             // The optional Codex telemetry pairing is independent from the OAuth account.
-            antigravityPairingMutex.withLock { prefsManager.deleteCredential(service) }
-            connectionHealthStore.clear(service)
-            quotaHistoryStore.deleteService(service)
-            quotaResetMonitor.forgetService(service)
-            widgetPrefsManager.deleteServiceCache(service)
+            antigravityPairingMutex.withLock {
+                quotaResetMonitor.deleteNativeSource(service) {
+                    connectionHealthStore.clear(service)
+                    quotaHistoryStore.deleteService(service)
+                    widgetPrefsManager.deleteServiceCache(service)
+                    notificationService.discardServices(setOf(service), monitoringSessionStore.activeSession())
+                }
+            }
         }
     }
 
