@@ -695,7 +695,8 @@ private fun SettingsSectionHeader(
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.headlineSmall
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface
         )
         Text(
             text = description,
