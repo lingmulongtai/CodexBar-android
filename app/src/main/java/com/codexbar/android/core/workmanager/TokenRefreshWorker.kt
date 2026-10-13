@@ -101,6 +101,7 @@ class TokenRefreshWorker @AssistedInject constructor(
                     }
 
                     is RefreshOutcome.Failure -> {
+                        if (prefsManager.loadCredential(service) != credential) return@consumeIfCurrent
                         tokenRefreshStateStore.save(
                             service,
                             retryPolicy.failure(
@@ -173,6 +174,7 @@ class TokenRefreshWorker @AssistedInject constructor(
                     grantType = "refresh_token",
                     refreshToken = activeCredential.refreshToken
                 )
+                if (prefsManager.usesDesktopBridge(AiService.CODEX)) return@withRefreshLock RefreshOutcome.NotNeeded
                 val response = codexTokenRefreshService.refreshToken(request)
                 if (response.isSuccessful) {
                     val body = response.body() ?: return@withRefreshLock RefreshOutcome.Failure()

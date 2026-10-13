@@ -173,6 +173,7 @@ class CodexRepositoryImpl @Inject constructor(
                     grantType = "refresh_token",
                     refreshToken = activeCredential.refreshToken
                 )
+                if (prefsManager.usesDesktopBridge(AiService.CODEX)) return@withRefreshLock TokenRefreshResult.TransientFailure(AppError.ServiceUnavailable)
                 val response = tokenRefreshService.refreshToken(request)
 
                 if (response.isSuccessful) {
@@ -331,6 +332,7 @@ class CodexRepositoryImpl @Inject constructor(
         val credential = prefsManager.loadCodexTelemetryCredential() ?: return null
         return try {
             withTimeoutOrNull(TELEMETRY_TIMEOUT_MILLIS) {
+                if (prefsManager.usesDesktopBridge(AiService.CODEX)) return@withTimeoutOrNull null
                 codexTelemetryClient.fetchSnapshot(credential)
             }
         } catch (error: CancellationException) {

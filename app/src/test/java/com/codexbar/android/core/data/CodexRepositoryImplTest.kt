@@ -129,6 +129,29 @@ class CodexRepositoryImplTest {
         verify(prefsManager, never()).loadCodexTelemetryCredential()
     }
 
+    @Test fun `Windows switch while loading refresh credential prevents OAuth request`() = runTest {
+        val expired = testCredential.copy(expiresAt = Instant.now().minusSeconds(60))
+        var loads = 0
+        `when`(prefsManager.loadCredential(AiService.CODEX)).thenAnswer {
+            if (++loads == 2) `when`(prefsManager.usesDesktopBridge(AiService.CODEX)).thenReturn(true)
+            expired
+        }
+        assertTrue(repository.fetchQuota() is Result.Failure)
+        assertEquals(2, loads)
+        assertEquals(0, mockWebServer.requestCount)
+    }
+
+    @Test fun `Windows switch while loading telemetry credential prevents telemetry request`() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("{}"))
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("{}"))
+        `when`(prefsManager.loadCodexTelemetryCredential()).thenAnswer {
+            `when`(prefsManager.usesDesktopBridge(AiService.CODEX)).thenReturn(true)
+            CodexTelemetryCredential("127.0.0.1", 43822, "test-companion", "test-key")
+        }
+        assertTrue(repository.fetchQuota() is Result.Success)
+        assertTrue(mockingDetails(codexTelemetryClient).invocations.isEmpty())
+    }
+
     @Test
     @OptIn(ExperimentalCoroutinesApi::class)
     fun `overlapping refreshes cannot collect reset balances out of order`() = runTest {
