@@ -27,6 +27,7 @@ class QuotaResetHistoryStore @Inject constructor(@ApplicationContext context: Co
         val activities = buildMap {
             for (quota in quotas) {
                 if (!quota.historyEligible || quota.isStale) continue
+                val legacy = archiveLegacy(quota.service, editor)
                 val key = scopedKey(quota.service, quota.resetTrackingAccountKey)
                 val previous = loadState(key).takeIf { prefs.getString(key, null) != null }
                     ?: loadState(quota.service).takeIf { it.accountKey == quota.resetTrackingAccountKey }
@@ -35,7 +36,7 @@ class QuotaResetHistoryStore @Inject constructor(@ApplicationContext context: Co
                 editor.putString(key, json.encodeToString(transition.state))
                 editor.putString("active:${quota.service.name}", key)
                 editor.putString(quota.service.name, json.encodeToString(transition.state))
-                pruneScopes(quota.service, key, transition.state, editor)
+                pruneScopes(quota.service, key, transition.state, editor, legacy)
                 if (transition.activities.isNotEmpty()) put(quota.service, transition.activities)
             }
         }
@@ -65,14 +66,24 @@ class QuotaResetHistoryStore @Inject constructor(@ApplicationContext context: Co
     /** Hide the old source's log until its next observation, retaining scoped baselines. */
     @Synchronized
     fun deactivate(service: AiService) {
-        prefs.edit().remove(service.name).remove("active:${service.name}").commit()
+        val editor = prefs.edit()
+        archiveLegacy(service, editor)
+        editor.remove(service.name).remove("active:${service.name}").commit()
         _history.value = loadHistory()
     }
 
     private fun scopedKey(service: AiService, accountKey: String?) = "scoped:${service.name}:${historyScope(accountKey)}"
-    private fun pruneScopes(service: AiService, currentKey: String, current: QuotaResetState, editor: android.content.SharedPreferences.Editor) {
+    private fun archiveLegacy(service: AiService, editor: android.content.SharedPreferences.Editor): Map<String, QuotaResetState> {
+        if (prefs.getString(service.name, null) == null) return emptyMap()
+        val state = loadState(service)
+        val key = scopedKey(service, state.accountKey)
+        if (prefs.getString(key, null) != null) return emptyMap()
+        editor.putString(key, json.encodeToString(state))
+        return mapOf(key to state)
+    }
+    private fun pruneScopes(service: AiService, currentKey: String, current: QuotaResetState, editor: android.content.SharedPreferences.Editor, legacy: Map<String, QuotaResetState>) {
         val prefix = "scoped:${service.name}:"
-        val states = prefs.all.orEmpty().keys.filter { it.startsWith(prefix) }.associateWith(::loadState) + (currentKey to current)
+        val states = prefs.all.orEmpty().keys.filter { it.startsWith(prefix) }.associateWith(::loadState) + legacy + (currentKey to current)
         val cutoff = System.currentTimeMillis() - QuotaResetTracker.RETENTION_MILLIS
         val keep = states.entries.filter { it.value.fetchedAtEpochMillis >= cutoff }
             .sortedByDescending { it.value.fetchedAtEpochMillis }.take(8).map { it.key }.toSet()

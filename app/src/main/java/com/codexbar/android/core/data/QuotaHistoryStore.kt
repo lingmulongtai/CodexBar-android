@@ -27,6 +27,7 @@ class QuotaHistoryStore @Inject constructor(
 
     @Synchronized fun record(quotas: List<QuotaInfo>) {
         val editor = prefs.edit()
+        val written = mutableSetOf<String>()
         for (quota in quotas) {
             if (!quota.historyEligible || quota.isStale) continue
             val scopeKey = "scope:${quota.service.name}"
@@ -42,8 +43,8 @@ class QuotaHistoryStore @Inject constructor(
                     if (!prefs.contains(target)) editor.putString(target, prefs.getString(key, null))
                     editor.remove(key)
                 }
+                editor.remove(scopeKey)
             }
-            if (scope == null) editor.remove(scopeKey) else editor.putString(scopeKey, scope)
             for (window in quota.windows) {
                 val key = historyKey(quota, window.label)
                 val sample = QuotaHistorySample(
@@ -58,8 +59,9 @@ class QuotaHistoryStore @Inject constructor(
                     now = sample.fetchedAt
                 )
                 editor.putString(key, samples.joinToString("\n") { it.serialize() })
+                written += key
             }
-            pruneScopes(quota, editor)
+            pruneScopes(quota, editor, written)
         }
         editor.apply()
     }
@@ -114,7 +116,7 @@ class QuotaHistoryStore @Inject constructor(
             .toList(), Instant.now())
     }
 
-    private fun pruneScopes(quota: QuotaInfo, editor: SharedPreferences.Editor) {
+    private fun pruneScopes(quota: QuotaInfo, editor: SharedPreferences.Editor, written: Set<String>) {
         val now = System.currentTimeMillis()
         val indexKey = "scopes:${quota.service.name}"
         val times = prefs.getString(indexKey, null).orEmpty().lineSequence().mapNotNull { line ->
@@ -126,6 +128,7 @@ class QuotaHistoryStore @Inject constructor(
         editor.putString(indexKey, retained.entries.joinToString("\n") { "${it.key}:${it.value}" })
         val prefix = "${quota.service.name}:scoped:"
         prefs.all.keys.filter { it.startsWith(prefix) }.forEach { key ->
+            if (key in written) return@forEach
             if (key.removePrefix(prefix).substringBefore(':') !in retained) editor.remove(key)
             else {
                 val recent = loadSamples(key)

@@ -18,6 +18,21 @@ import org.mockito.Mockito.*
 class QuotaResetHistoryStoreTest {
     private val now = Instant.now()
 
+    @Test fun `legacy reset state is archived before either a mode switch or a new account observation`() {
+        for (deactivateFirst in listOf(true, false)) {
+            val fixture = fixture()
+            val store = QuotaResetHistoryStore(fixture.context)
+            store.record(listOf(quota(1)))
+            store.record(listOf(quota(2, 1)))
+            val legacyHistory = store.history.value.getValue(AiService.CODEX)
+            fixture.saved.keys.filter { it.startsWith("scoped:") || it.startsWith("active:") }.toList().forEach(fixture.saved::remove)
+            if (deactivateFirst) store.deactivate(AiService.CODEX)
+            store.record(listOf(quota(20, 2).copy(resetTrackingAccountKey = "PC")))
+            assertTrue(store.record(listOf(quota(2, 3))).isEmpty())
+            assertEquals(legacyHistory, store.history.value.getValue(AiService.CODEX))
+        }
+    }
+
     @Test fun `phone and PC retain separate histories and notification baselines when modes switch`() {
         val store = QuotaResetHistoryStore(fixture().context)
         val phone = quota(1).copy(resetTrackingAccountKey = "phone:account")
@@ -92,7 +107,7 @@ class QuotaResetHistoryStoreTest {
         emptyList(), null, fetchedAt = now.plusSeconds(seconds),
         codexResetCredits = CodexResetCredits(count, emptyList()))
 
-    private class Fixture(val context: Context, var commitSucceeds: Boolean = true)
+    private class Fixture(val context: Context, val saved: MutableMap<String, String>, var commitSucceeds: Boolean = true)
 
     private fun fixture(): Fixture {
         val context = mock(Context::class.java)
@@ -100,7 +115,7 @@ class QuotaResetHistoryStoreTest {
         val editor = mock(SharedPreferences.Editor::class.java)
         val saved = mutableMapOf<String, String>()
         val pending = mutableMapOf<String, String?>()
-        val fixture = Fixture(context)
+        val fixture = Fixture(context, saved)
         `when`(context.getSharedPreferences(QuotaResetHistoryStore.PREFS_NAME, Context.MODE_PRIVATE)).thenReturn(prefs)
         `when`(prefs.getString(anyString(), isNull())).thenAnswer { saved[it.getArgument<String>(0)] }
         `when`(prefs.all).thenAnswer { saved.toMap() }
