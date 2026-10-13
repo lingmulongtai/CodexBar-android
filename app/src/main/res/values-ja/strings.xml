@@ -517,6 +517,9 @@
     <string name="desktop_connect">接続</string>
     <string name="desktop_connected">Windowsに接続しました</string>
     <string name="desktop_connection_failed">接続できません。コード、Windowsの共有、ネットワーク、ファイアウォールを確認してください。</string>
+    <string name="desktop_pairing_invalid">コードの形式が無効です。Windowsからコピーしたコードを省略せず貼り付けてください。</string>
+    <string name="desktop_authentication_failed">Windowsが接続を拒否しました。現在のコードをコピーし直して接続してください。</string>
+    <string name="desktop_response_invalid">Windowsの使用量を読み取れません。両方のアプリを対応するバージョンに更新してください。</string>
     <string name="desktop_services_description">Windowsから受信するサービスを選択します。オフにするとスマホの保存済み接続に戻ります。スマホの認証情報は保持されます。</string>
     <string name="desktop_disconnect">Windowsの接続を解除</string>
     <string name="desktop_provider_managed">Win-CodexBarから使用量を受信しています。アカウントはWindowsで管理してください。</string>

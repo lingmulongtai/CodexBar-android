@@ -519,6 +519,9 @@
     <string name="desktop_connect">Connect</string>
     <string name="desktop_connected">Connected to Windows</string>
     <string name="desktop_connection_failed">Could not connect. Check the pairing code, Windows sharing, network and firewall.</string>
+    <string name="desktop_pairing_invalid">Invalid pairing code. Paste the complete code copied from Windows.</string>
+    <string name="desktop_authentication_failed">Windows rejected the pairing. Copy its current code and connect again.</string>
+    <string name="desktop_response_invalid">Could not read Windows usage. Update both apps to compatible versions.</string>
     <string name="desktop_services_description">Choose the services to receive from Windows. Turning one off returns to its saved phone connection. Phone credentials are preserved.</string>
     <string name="desktop_disconnect">Disconnect Windows</string>
     <string name="desktop_provider_managed">Usage comes from Win-CodexBar. Manage this account on Windows.</string>

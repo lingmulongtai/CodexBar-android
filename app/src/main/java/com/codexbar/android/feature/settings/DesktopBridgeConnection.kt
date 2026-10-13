@@ -9,6 +9,8 @@ import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.DesktopBridgeCredential
 import com.codexbar.android.core.monitoring.MonitoringSessionStore
 import com.codexbar.android.core.network.desktop.DesktopBridgeClient
+import com.codexbar.android.core.network.desktop.DesktopBridgeAuthenticationException
+import com.codexbar.android.core.network.desktop.DesktopBridgeProtocolException
 import com.codexbar.android.core.network.desktop.DesktopBridgePairing
 import com.codexbar.android.core.notification.QuotaNotificationService
 import com.codexbar.android.core.security.ConnectionHealthStore
@@ -97,8 +99,14 @@ internal class DesktopBridgeConnection(
         job = scope.launch {
             try { action(expected)
             } catch (error: CancellationException) { throw error
-            } catch (_: Exception) {
-                if (expected == generation) mutableState.update { it.copy(result = ValidationResult.Failure(context.getString(R.string.desktop_connection_failed))) }
+            } catch (error: Exception) {
+                val message = when (error) {
+                    is IllegalArgumentException -> R.string.desktop_pairing_invalid
+                    is DesktopBridgeAuthenticationException -> R.string.desktop_authentication_failed
+                    is DesktopBridgeProtocolException -> R.string.desktop_response_invalid
+                    else -> R.string.desktop_connection_failed
+                }
+                if (expected == generation) mutableState.update { it.copy(result = ValidationResult.Failure(context.getString(message))) }
             } finally {
                 if (expected == generation) mutableState.update { it.copy(busy = false) }
             }
