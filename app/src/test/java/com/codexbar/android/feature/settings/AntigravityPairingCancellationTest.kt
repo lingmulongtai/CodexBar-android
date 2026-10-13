@@ -2,6 +2,7 @@ package com.codexbar.android.feature.settings
 
 import android.content.Context
 import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewModelScope
 import com.codexbar.android.core.auth.AccountLinkManager
 import com.codexbar.android.core.data.QuotaHistoryStore
 import com.codexbar.android.core.data.QuotaResetMonitor
@@ -16,6 +17,7 @@ import com.codexbar.android.core.security.*
 import com.codexbar.android.core.widget.WidgetPrefsManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.*
 import org.junit.Assert.assertFalse
 import org.junit.Test
@@ -26,12 +28,13 @@ class AntigravityPairingCancellationTest {
     @Test fun `delete all does not resurrect a pairing when validation returns late`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val store = ViewModelStore()
+        val response = CompletableDeferred<Unit>()
+        var scopeJob: Job? = null
         val color = mockStatic(android.graphics.Color::class.java)
         color.`when`<Int> { android.graphics.Color.rgb(anyInt(), anyInt(), anyInt()) }
             .thenAnswer { call -> (0xFF shl 24) or (call.getArgument<Int>(0) shl 16) or
                 (call.getArgument<Int>(1) shl 8) or call.getArgument<Int>(2) }
         try {
-            val response = CompletableDeferred<Unit>()
             val repository = object : QuotaRepository {
                 override suspend fun fetchQuota(): Result<QuotaInfo, AppError> = error("unused")
                 override suspend fun validateCredential(): Result<Unit, AppError> = error("unused")
@@ -45,13 +48,15 @@ class AntigravityPairingCancellationTest {
             `when`(prefs.getPrivacySettings()).thenReturn(PrivacySettings())
             val health = mock(ConnectionHealthStore::class.java)
             `when`(health.health).thenReturn(MutableStateFlow(emptyMap()))
+            val resetMonitor = QuotaResetMonitor(mock(com.codexbar.android.core.data.QuotaResetHistoryStore::class.java), prefs, mock(QuotaNotificationService::class.java))
             val vm = SettingsViewModel(
                 QuotaRepositoryRegistry(AiService.entries.associateWith { repository }, prefs, mock(com.codexbar.android.core.data.DesktopQuotaSource::class.java)),
                 mock(AccountLinkManager::class.java), mock(CodexTelemetryClient::class.java), mock(com.codexbar.android.core.network.desktop.DesktopBridgeClient::class.java),
-                prefs, health, mock(QuotaHistoryStore::class.java), QuotaResetMonitor(mock(com.codexbar.android.core.data.QuotaResetHistoryStore::class.java), prefs, mock(QuotaNotificationService::class.java)), mock(WidgetPrefsManager::class.java),
+                prefs, health, mock(QuotaHistoryStore::class.java), resetMonitor, mock(WidgetPrefsManager::class.java),
                 mock(MonitoringSessionStore::class.java), mock(QuotaNotificationService::class.java),
                 mock(Context::class.java)
             )
+            scopeJob = vm.viewModelScope.coroutineContext[Job]
             store.put("test", vm)
             runCurrent()
             val code = "CBANTIGRAVITY1|127.0.0.1|43824|5b017391-6dc4-4ab7-b0ad-2255dada62d7|AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
@@ -59,13 +64,16 @@ class AntigravityPairingCancellationTest {
             runCurrent()
             vm.deleteAllCredentials()
             runCurrent()
+            resetMonitor.sourceChanges.first { it > 0 }
             response.complete(Unit)
             runCurrent()
             verify(prefs).deleteAllCredentials()
             verify(prefs, never()).saveCredential(AiService.ANTIGRAVITY, AntigravityCompanionPairing.parse(code))
             assertFalse(vm.uiState.value.serviceStates.getValue(AiService.ANTIGRAVITY).isConnected)
         } finally {
+            response.complete(Unit)
             store.clear()
+            withContext(NonCancellable) { scopeJob?.join() }
             color.close()
             Dispatchers.resetMain()
         }
