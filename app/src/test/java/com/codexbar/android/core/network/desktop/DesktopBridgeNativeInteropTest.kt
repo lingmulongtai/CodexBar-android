@@ -19,5 +19,9 @@ class DesktopBridgeNativeInteropTest {
         assertEquals(0.25, codex.windows.first().usedFraction, 0.0)
         assertEquals(300L * 60, codex.windows.first().windowDurationSeconds)
         assertNull(codex.subjectId)
+        val local = checkNotNull(codex.localUsage)
+        assertEquals(12500L, local.todayTokens)
+        assertEquals(250000L, local.thirtyDayTokens)
+        assertEquals(0.25, checkNotNull(local.todayCostUsd), 0.0)
     }
 }
