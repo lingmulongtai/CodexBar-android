@@ -110,6 +110,25 @@ class CodexRepositoryImplTest {
         assertEquals(0, mockWebServer.requestCount)
     }
 
+    @Test fun `Windows switch during quota request stops optional phone collectors`() = runTest {
+        var requests = 0
+        val switchingApi = object : CodexApiService {
+            override suspend fun getUsage(authorization: String, accountId: String?, userAgent: String): retrofit2.Response<CodexDto.UsageResponse> {
+                `when`(prefsManager.usesDesktopBridge(AiService.CODEX)).thenReturn(true)
+                return retrofit2.Response.success(CodexDto.UsageResponse())
+            }
+            override suspend fun getRateLimitResetCredits(authorization: String, accountId: String?, userAgent: String): retrofit2.Response<CodexDto.ResetCreditsResponse> {
+                requests++
+                return retrofit2.Response.success(CodexDto.ResetCreditsResponse(credits = emptyList(), availableCount = 0))
+            }
+        }
+        val changing = CodexRepositoryImpl(switchingApi, tokenRefreshService, prefsManager,
+            TokenRefreshCoordinator(), codexTelemetryClient, sourceMonitor())
+        changing.fetchQuota()
+        assertEquals(0, requests)
+        verify(prefsManager, never()).loadCodexTelemetryCredential()
+    }
+
     @Test
     @OptIn(ExperimentalCoroutinesApi::class)
     fun `overlapping refreshes cannot collect reset balances out of order`() = runTest {

@@ -292,6 +292,7 @@ class CodexRepositoryImpl @Inject constructor(
         return try {
             withContext(Dispatchers.IO) {
                 withTimeoutOrNull(RESET_CREDITS_TIMEOUT_MILLIS) {
+                    if (prefsManager.usesDesktopBridge(AiService.CODEX)) return@withTimeoutOrNull null
                     val response = apiService.getRateLimitResetCredits(
                         authorization = "Bearer ${credential.accessToken}",
                         accountId = credential.accountId
@@ -326,6 +327,7 @@ class CodexRepositoryImpl @Inject constructor(
     }
 
     private suspend fun fetchTelemetryBestEffort(): CodexTelemetry? {
+        if (prefsManager.usesDesktopBridge(AiService.CODEX)) return null
         val credential = prefsManager.loadCodexTelemetryCredential() ?: return null
         return try {
             withTimeoutOrNull(TELEMETRY_TIMEOUT_MILLIS) {
