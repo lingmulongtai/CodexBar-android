@@ -44,7 +44,7 @@
         "applicationCategory": "UtilitiesApplication",
         "description": "An open-source Android app for monitoring AI service quotas, reset times, pace, and usage history.",
         "downloadUrl": "https://github.com/lingmulongtai/CodexBar-android/releases/latest/download/app-release.apk",
-        "softwareVersion": "0.9.6",
+        "softwareVersion": "0.9.7",
         "license": "https://opensource.org/license/mit",
         "offers": {
           "@type": "Offer",
@@ -100,7 +100,7 @@
           <div class="hero-copy">
             <div class="eyebrow reveal">
               <span class="status-dot" aria-hidden="true"></span>
-              v0.9.6 · Android 8.0+
+              v0.9.7 · Android 8.0+
             </div>
 
             <h1 id="hero-title" class="reveal">
@@ -151,10 +151,10 @@
             <div class="phone hero-phone">
               <div class="phone-sensor" aria-hidden="true"></div>
               <img
-                src="./images/releases/v0.9.0/dashboard-aurora-dark.png"
-                alt="AuroraテーマのCodex使用量ダッシュボード。残量、ペース、リセット計画を表示している"
-                width="1080"
-                height="2400"
+                src="./images/releases/v0.9.7/windows-usage.png"
+                alt="Windowsから受信したClaude、Codex、GitHub Copilotの使用量ダッシュボード"
+                width="540"
+                height="1200"
                 fetchpriority="high"
               />
             </div>
@@ -176,6 +176,30 @@
           <div><strong>4</strong><span>visual themes</span></div>
           <div><strong>24/7</strong><span>at-a-glance status</span></div>
           <div><strong>0</strong><span>hosted backends</span></div>
+        </div>
+      </section>
+
+      <section class="section" id="windows" aria-labelledby="windows-title">
+        <div class="shell">
+          <div class="section-heading centered reveal">
+            <span class="kicker">MOBILE CONNECT</span>
+            <h2 id="windows-title">取得はスマホでも、Windowsでも。</h2>
+            <p>Win-CodexBar + Mobile Connectと接続すれば、PCの使用枠・トークン数・推定費用をスマホで確認できます。スマホで取得するモードと切り替えられ、接続情報と履歴は保持します。</p>
+            <p>Tailscaleは同じネットワークに接続するだけ。スマホのexit nodeは不要です。PCは起動したままにしてください。GeminiはGemini CLIの使用量です。</p>
+            <a class="button button-secondary" href="https://github.com/lingmulongtai/Win-CodexBar-Mobile-Connect/releases/latest/download/Win-CodexBar-Mobile-Connect.exe">Windows用EXEをダウンロード ↓</a>
+            <a class="button button-secondary" href="https://github.com/lingmulongtai/Win-CodexBar-Mobile-Connect/blob/main/README.ja-JP.md">設定と変更点を見る ↗</a>
+          </div>
+          <div class="insight-grid">
+            <article class="insight-card reveal">
+              <h3>取得方法を選ぶ</h3>
+              <img src="./images/releases/v0.9.7/android-windows-mode.png" width="540" height="1200" loading="lazy" alt="Windowsでまとめて取得するAndroidの設定画面" style="width:100%;height:auto" />
+            </article>
+            <article class="insight-card reveal">
+              <h3>PCのローカル集計まで</h3>
+              <img src="./images/releases/v0.9.7/android-pc-local-usage.png" width="540" height="1200" loading="lazy" alt="このPCのトークン数と推定費用を表示するAndroid画面" style="width:100%;height:auto" />
+            </article>
+          </div>
+          <p>画面はエミュレーターの検証用データです。USD費用は推定値で、請求額とは異なります。Windows版は署名なし、Android APKは署名付きです。</p>
         </div>
       </section>
 
