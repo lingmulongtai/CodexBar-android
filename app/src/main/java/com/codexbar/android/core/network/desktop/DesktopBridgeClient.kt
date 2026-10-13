@@ -167,7 +167,7 @@ open class DesktopBridgeClient @Inject constructor(
         }
     }
 
-    private fun validateSnapshot(snapshot: DesktopBridgeSnapshot, now: Instant) {
+    internal fun validateSnapshot(snapshot: DesktopBridgeSnapshot, now: Instant) {
         if (snapshot.schemaVersion != 1 || snapshot.source != SNAPSHOT_SOURCE ||
             snapshot.providers.size > 32 || snapshot.providers.map { it.id }.toSet().size != snapshot.providers.size ||
             snapshot.generatedAtEpochSeconds < now.epochSecond - MAX_CLOCK_SKEW_SECONDS ||
@@ -204,6 +204,22 @@ open class DesktopBridgeClient @Inject constructor(
                 if (credits.availableCount < 0 || credits.expiresAtEpochSeconds.size > 64 ||
                     credits.expiresAtEpochSeconds.any { it !in 0..now.epochSecond + 366L * 24 * 60 * 60 }) {
                     throw DesktopBridgeProtocolException("Invalid Windows reset credits")
+                }
+            }
+            provider.localUsage?.let { usage ->
+                val validDate = runCatching { java.time.LocalDate.parse(usage.todayDate) }.isSuccess
+                val validPeriod = usage.reportingPeriod == null || usage.reportingPeriod in setOf("all", "month-to-date") ||
+                    usage.reportingPeriod.removePrefix("rolling:").toIntOrNull()?.let {
+                        usage.reportingPeriod == "rolling:$it" && it in 1..365
+                    } == true
+                if (!validDate || usage.todayDate.length != 10 || !validPeriod ||
+                    usage.updatedAtEpochSeconds !in 0..now.epochSecond + MAX_CLOCK_SKEW_SECONDS ||
+                    listOfNotNull(usage.todayTokens, usage.thirtyDayTokens, usage.periodTokens).any { it < 0 } ||
+                    listOfNotNull(usage.todayCostUsd, usage.thirtyDayCostUsd, usage.periodCostUsd).any { !it.isFinite() || it !in 0.0..1e12 } ||
+                    (usage.reportingPeriod == null && (usage.periodTokens != null || usage.periodCostUsd != null)) ||
+                    usage.topModel?.matches(Regex("[A-Za-z0-9_.:-]{1,64}")) == false ||
+                    usage.incompleteRequestCount?.let { it < 0 } == true) {
+                    throw DesktopBridgeProtocolException("Invalid Windows local totals")
                 }
             }
         }

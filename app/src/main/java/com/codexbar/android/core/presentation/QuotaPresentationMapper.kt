@@ -28,7 +28,8 @@ class QuotaPresentationMapper(
         privacy: PrivacyPresentation = PrivacyPresentation(),
         source: RefreshSourcePresentation = RefreshSourcePresentation.Unknown,
         paceByMetricKey: Map<String, PacePresentation> = emptyMap(),
-        historyByMetricKey: Map<String, List<QuotaHistorySample>> = emptyMap()
+        historyByMetricKey: Map<String, List<QuotaHistorySample>> = emptyMap(),
+        desktopServices: Set<AiService> = emptySet()
     ): QuotaPresentationSnapshot {
         val successfulServices = quotas.map { quota ->
             val metrics = quota.windows.mapIndexed { index, window ->
@@ -82,14 +83,16 @@ class QuotaPresentationMapper(
                     },
                 codexTelemetry = quota.codexTelemetry
                     ?.takeUnless { privacy.redactSensitiveValues }
-                    ?.let { mapCodexTelemetry(it, locale) }
+                    ?.let { mapCodexTelemetry(it, locale) },
+                isDesktopSource = quota.isDesktopSource,
+                desktopLocalUsage = quota.desktopLocalUsage?.takeUnless { privacy.redactSensitiveValues }
             )
         }
 
         val failedServices = errors
             .filterKeys { service -> successfulServices.none { it.service == service } }
             .map { (service, error) ->
-                mapError(service, error, generatedAt)
+                mapError(service, error, generatedAt).copy(isDesktopSource = service in desktopServices)
             }
 
         val services = (successfulServices + failedServices)

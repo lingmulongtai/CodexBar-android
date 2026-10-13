@@ -24,7 +24,9 @@ data class ServiceQuotaPresentation(
     val supportedActions: Set<QuotaAction>,
     val codexResetCredits: CodexResetCreditsPresentation? = null,
     val codexTelemetry: CodexTelemetryPresentation? = null,
-    val resetHistory: List<QuotaResetActivity> = emptyList()
+    val resetHistory: List<QuotaResetActivity> = emptyList(),
+    val isDesktopSource: Boolean = false,
+    val desktopLocalUsage: com.codexbar.android.core.domain.model.DesktopLocalUsage? = null
 )
 
 data class CodexResetCreditsPresentation(

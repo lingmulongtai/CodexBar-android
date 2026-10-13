@@ -107,7 +107,11 @@ class DesktopQuotaSource @Inject constructor(
             codexResetCredits = if (service == AiService.CODEX) resetCredits?.let { CodexResetCredits(it.availableCount, it.expiresAtEpochSeconds.map(Instant::ofEpochSecond)) } else null,
             resetTrackingAccountKey = subjectId?.let { "desktop:$companionId:$it" },
             isStale = now.epochSecond - updatedAtEpochSeconds > FRESH_OBSERVATION_SECONDS,
-            historyEligible = subjectId != null && now.epochSecond - updatedAtEpochSeconds <= FRESH_OBSERVATION_SECONDS
+            historyEligible = subjectId != null && now.epochSecond - updatedAtEpochSeconds <= FRESH_OBSERVATION_SECONDS,
+            isDesktopSource = true,
+            desktopLocalUsage = localUsage?.let { DesktopLocalUsage(it.updatedAtEpochSeconds, it.todayDate,
+                it.todayTokens, it.thirtyDayTokens, it.periodTokens, it.todayCostUsd, it.thirtyDayCostUsd,
+                it.periodCostUsd, it.reportingPeriod, it.topModel, it.incompleteRequestCount) }
         )
         private const val FRESH_OBSERVATION_SECONDS = 35L * 60
     }

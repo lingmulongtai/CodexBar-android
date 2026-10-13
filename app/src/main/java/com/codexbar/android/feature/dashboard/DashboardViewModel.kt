@@ -156,7 +156,8 @@ class DashboardViewModel @Inject constructor(
                         generatedAt = now,
                         privacy = privacy,
                         paceByMetricKey = paceByMetricKey,
-                        historyByMetricKey = historyByMetricKey
+                        historyByMetricKey = historyByMetricKey,
+                        desktopServices = prefsManager.desktopServices()
                     )
                     publishSnapshot(snapshot)
                 }

@@ -129,7 +129,8 @@ class QuotaRefreshWorker @AssistedInject constructor(
                     source = RefreshSourcePresentation.Trigger(
                         inputData.getString(WorkManagerInitializer.KEY_REFRESH_SOURCE) ?: "periodic"
                     ),
-                    paceByMetricKey = paceByMetricKey
+                    paceByMetricKey = paceByMetricKey,
+                    desktopServices = prefsManager.desktopServices()
                 )
 
                 // Publish both successful data and actionable provider errors to widgets.
