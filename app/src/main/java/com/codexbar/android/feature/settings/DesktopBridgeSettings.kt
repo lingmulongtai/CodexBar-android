@@ -75,6 +75,10 @@ internal fun DesktopBridgeSettings(state: SettingsUiState, viewModel: SettingsVi
                     TextButton(onClick = { showExceptions = !showExceptions }) { Text(stringResource(R.string.desktop_exceptions)) }
                     if (showExceptions) {
                         Text(stringResource(R.string.desktop_services_description), style = MaterialTheme.typography.bodySmall)
+                        TextButton(onClick = viewModel::clearPhoneExceptions,
+                            enabled = !state.desktop.busy && state.desktop.phoneExceptions.isNotEmpty()) {
+                            Text(stringResource(R.string.desktop_all_windows))
+                        }
                         AiService.entries.forEach { service ->
                             Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {

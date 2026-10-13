@@ -522,7 +522,8 @@
     <string name="desktop_pairing_invalid">Invalid pairing code. Paste the complete code copied from Windows.</string>
     <string name="desktop_authentication_failed">Windows rejected the pairing. Copy its current code and connect again.</string>
     <string name="desktop_response_invalid">Could not read Windows usage. Update both apps to compatible versions.</string>
-    <string name="desktop_services_description">Turn on a switch to use that service’s saved phone connection. All other services follow Windows. Selecting Windows mode again clears these exceptions.</string>
+    <string name="desktop_services_description">Turn on a switch to use that service’s saved phone connection. All other services follow Windows. These choices survive mode changes.</string>
+    <string name="desktop_all_windows">Use Windows for all services</string>
     <string name="acquisition_phone">Collect on this phone</string>
     <string name="acquisition_windows">Collect on Windows</string>
     <string name="acquisition_phone_description">Use each saved phone connection. Windows pairing is retained.</string>

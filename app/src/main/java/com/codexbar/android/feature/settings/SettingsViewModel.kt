@@ -170,6 +170,7 @@ class SettingsViewModel @Inject constructor(
     fun refreshDesktopProviders() = desktopConnection.refreshProviders()
     fun setDesktopService(service: AiService, enabled: Boolean) = desktopConnection.select(service, enabled)
     fun setAcquisitionMode(mode: com.codexbar.android.core.domain.model.AcquisitionMode) = desktopConnection.setMode(mode)
+    fun clearPhoneExceptions() = desktopConnection.clearPhoneExceptions()
     fun disconnectDesktopBridge() = desktopConnection.disconnect()
     fun updateField(service: AiService, field: String, value: String) {
         _uiState.update { state ->

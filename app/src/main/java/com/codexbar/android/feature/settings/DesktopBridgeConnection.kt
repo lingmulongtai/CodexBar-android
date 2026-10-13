@@ -100,8 +100,12 @@ internal class DesktopBridgeConnection(
         val credential = prefs.desktopBridgeCredential()
         if (mode == AcquisitionMode.WINDOWS && credential == null) return@operation
         val settings = prefs.acquisitionSettings()
-        apply(credential, settings.copy(mode = mode,
-            phoneExceptions = if (mode == AcquisitionMode.WINDOWS) emptySet() else settings.phoneExceptions), it)
+        apply(credential, settings.copy(mode = mode), it)
+    }
+
+    fun clearPhoneExceptions() = operation {
+        val credential = prefs.desktopBridgeCredential() ?: return@operation
+        apply(credential, prefs.acquisitionSettings().copy(phoneExceptions = emptySet()), it)
     }
 
     fun disconnect() {

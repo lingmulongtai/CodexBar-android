@@ -520,7 +520,8 @@
     <string name="desktop_pairing_invalid">コードの形式が無効です。Windowsからコピーしたコードを省略せず貼り付けてください。</string>
     <string name="desktop_authentication_failed">Windowsが接続を拒否しました。現在のコードをコピーし直して接続してください。</string>
     <string name="desktop_response_invalid">Windowsの使用量を読み取れません。両方のアプリを対応するバージョンに更新してください。</string>
-    <string name="desktop_services_description">スイッチをオンにしたサービスだけ、スマホの保存済み接続を使います。それ以外はWindowsから受信します。Windowsモードを選び直すと例外を解除します。</string>
+    <string name="desktop_services_description">スイッチをオンにしたサービスだけ、スマホの保存済み接続を使います。それ以外はWindowsから受信します。この選択はモードを切り替えても保持します。</string>
+    <string name="desktop_all_windows">すべてWindowsから取得する</string>
     <string name="acquisition_phone">スマホで取得</string>
     <string name="acquisition_windows">Windowsでまとめて取得</string>
     <string name="acquisition_phone_description">スマホの保存済み接続を使います。Windowsのペアリングは保持します。</string>
