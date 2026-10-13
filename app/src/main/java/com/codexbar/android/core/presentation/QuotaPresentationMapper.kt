@@ -51,7 +51,7 @@ class QuotaPresentationMapper(
                 service = quota.service,
                 accountLabel = null,
                 tier = if (privacy.redactSensitiveValues) null else quota.tier,
-                status = if (privacy.redactSensitiveValues) ServiceQuotaStatus.Redacted else ServiceQuotaStatus.Fresh,
+                status = when { privacy.redactSensitiveValues -> ServiceQuotaStatus.Redacted; quota.isStale -> ServiceQuotaStatus.Stale; else -> ServiceQuotaStatus.Fresh },
                 primaryMetric = primary,
                 metrics = metrics,
                 extraUsage = quota.extraUsage?.let { mapExtraUsage(it, locale, privacy) },
@@ -59,7 +59,7 @@ class QuotaPresentationMapper(
                 freshness = FreshnessPresentation(
                     fetchedAt = quota.fetchedAt,
                     ageLabel = formatAge(quota.fetchedAt, generatedAt),
-                    state = FreshnessState.Fresh
+                    state = if (quota.isStale) FreshnessState.Stale else FreshnessState.Fresh
                 ),
                 supportedActions = setOf(
                     QuotaAction.OpenDashboard,

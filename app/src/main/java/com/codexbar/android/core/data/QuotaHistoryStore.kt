@@ -24,9 +24,14 @@ class QuotaHistoryStore @Inject constructor(
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val calculator = QuotaPaceCalculator(AndroidQuotaPresentationText(context))
 
-    fun record(quotas: List<QuotaInfo>) {
+    @Synchronized fun record(quotas: List<QuotaInfo>) {
         val editor = prefs.edit()
         for (quota in quotas) {
+            val scopeKey = "scope:${quota.service.name}"
+            val scope = quota.resetTrackingAccountKey
+            if (prefs.getString(scopeKey, null) != scope) deleteService(quota.service)
+            if (scope == null) editor.remove(scopeKey) else editor.putString(scopeKey, scope)
+            if (!quota.historyEligible || quota.isStale) continue
             for (window in quota.windows) {
                 val key = historyKey(quota.service, window.label)
                 val sample = QuotaHistorySample(
@@ -47,6 +52,7 @@ class QuotaHistoryStore @Inject constructor(
     fun paceFor(quotas: List<QuotaInfo>, now: Instant): Map<String, PacePresentation> {
         return buildMap {
             for (quota in quotas) {
+                if (!quota.historyEligible || quota.isStale) continue
                 for (window in quota.windows) {
                     put(
                         QuotaPresentationMapper.metricKey(quota.service, window.label),
@@ -64,6 +70,7 @@ class QuotaHistoryStore @Inject constructor(
     fun historyFor(quotas: List<QuotaInfo>): Map<String, List<QuotaHistorySample>> {
         return buildMap {
             for (quota in quotas) {
+                if (!quota.historyEligible || quota.isStale) continue
                 for (window in quota.windows) {
                     put(
                         QuotaPresentationMapper.metricKey(quota.service, window.label),
@@ -76,9 +83,10 @@ class QuotaHistoryStore @Inject constructor(
         }
     }
 
-    fun deleteService(service: AiService) {
+    @Synchronized fun deleteService(service: AiService) {
         val prefix = "${service.name}:"
         val editor = prefs.edit()
+        editor.remove("scope:${service.name}")
         prefs.all.keys.filter { it.startsWith(prefix) }.forEach { editor.remove(it) }
         editor.apply()
     }
