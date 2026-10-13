@@ -55,6 +55,7 @@ class DashboardViewModel @Inject constructor(
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
     private val _isRefreshing = MutableStateFlow(false)
+    private var refreshPending = false
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
     private val _providerOrder = MutableStateFlow(orderPrefs.load())
@@ -65,6 +66,15 @@ class DashboardViewModel @Inject constructor(
     }
 
     init {
+        viewModelScope.launch {
+            quotaResetMonitor.sourceChanges.collect { revision ->
+                if (revision > 0) {
+                    _uiState.value = DashboardUiState.Loading
+                    refreshPending = true
+                    refresh()
+                }
+            }
+        }
         viewModelScope.launch {
             quotaResetHistoryStore.history.collect { history ->
                 _uiState.update { state ->
@@ -85,11 +95,14 @@ class DashboardViewModel @Inject constructor(
     fun refresh() {
         if (_isRefreshing.value) return
         _isRefreshing.value = true
+        refreshPending = false
 
         viewModelScope.launch {
             try {
+                val sourceRevision = quotaResetMonitor.sourceRevision()
+                prefsManager.warmCache()
                 val repos = repositoryRegistry.entries().mapNotNull { (service, repository) ->
-                    if (prefsManager.loadCredential(service) == null) return@mapNotNull null
+                    if (!prefsManager.hasQuotaSource(service)) return@mapNotNull null
                     service to repository
                 }
 
@@ -98,7 +111,7 @@ class DashboardViewModel @Inject constructor(
                         emptyList(),
                         generatedAt = Instant.now()
                     )
-                    publishSnapshot(snapshot)
+                    quotaResetMonitor.consumeIfCurrent(sourceRevision) { publishSnapshot(snapshot) }
                     return@launch
                 }
 
@@ -108,44 +121,48 @@ class DashboardViewModel @Inject constructor(
 
                 val results = deferreds.map { it.await() }
 
-                val successfulQuotas = mutableListOf<com.codexbar.android.core.domain.model.QuotaInfo>()
-                val errors = mutableMapOf<AiService, AppError>()
+                quotaResetMonitor.consumeIfCurrent(sourceRevision) {
 
-                for ((service, result) in results) {
-                    connectionHealthStore.record(service, result)
-                    when (result) {
-                        is Result.Success -> {
-                            successfulQuotas.add(result.value)
-                        }
-                        is Result.Failure -> {
-                            errors[service] = result.error
+                    val successfulQuotas = mutableListOf<com.codexbar.android.core.domain.model.QuotaInfo>()
+                    val errors = mutableMapOf<AiService, AppError>()
+
+                    for ((service, result) in results) {
+                        connectionHealthStore.record(service, result)
+                        when (result) {
+                            is Result.Success -> {
+                                successfulQuotas.add(result.value)
+                            }
+                            is Result.Failure -> {
+                                errors[service] = result.error
+                            }
                         }
                     }
+
+                    val now = Instant.now()
+                    quotaResetMonitor.observeCurrent(successfulQuotas)
+                    quotaHistoryStore.record(successfulQuotas)
+                    val paceByMetricKey = quotaHistoryStore.paceFor(successfulQuotas, now)
+                    val historyByMetricKey = quotaHistoryStore.historyFor(successfulQuotas)
+                    val privacySettings = prefsManager.getPrivacySettings()
+                    val privacy = PrivacyPresentation(
+                        redactSensitiveValues = false,
+                        lockScreenRedacted = privacySettings.lockScreenRedactionEnabled,
+                        widgetRedacted = privacySettings.widgetRedactionEnabled
+                    )
+
+                    val snapshot = presentationMapper.map(
+                        quotas = successfulQuotas,
+                        errors = errors,
+                        generatedAt = now,
+                        privacy = privacy,
+                        paceByMetricKey = paceByMetricKey,
+                        historyByMetricKey = historyByMetricKey
+                    )
+                    publishSnapshot(snapshot)
                 }
-
-                val now = Instant.now()
-                quotaResetMonitor.observe(successfulQuotas)
-                quotaHistoryStore.record(successfulQuotas)
-                val paceByMetricKey = quotaHistoryStore.paceFor(successfulQuotas, now)
-                val historyByMetricKey = quotaHistoryStore.historyFor(successfulQuotas)
-                val privacySettings = prefsManager.getPrivacySettings()
-                val privacy = PrivacyPresentation(
-                    redactSensitiveValues = false,
-                    lockScreenRedacted = privacySettings.lockScreenRedactionEnabled,
-                    widgetRedacted = privacySettings.widgetRedactionEnabled
-                )
-
-                val snapshot = presentationMapper.map(
-                    quotas = successfulQuotas,
-                    errors = errors,
-                    generatedAt = now,
-                    privacy = privacy,
-                    paceByMetricKey = paceByMetricKey,
-                    historyByMetricKey = historyByMetricKey
-                )
-                publishSnapshot(snapshot)
             } finally {
                 _isRefreshing.value = false
+                if (refreshPending) refresh()
             }
         }
     }

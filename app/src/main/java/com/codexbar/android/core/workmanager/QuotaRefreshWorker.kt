@@ -35,6 +35,7 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.CancellationException
 import java.time.Instant
 
 @HiltWorker
@@ -57,26 +58,29 @@ class QuotaRefreshWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         prefsManager.warmCache()
+        val sourceRevision = quotaResetMonitor.sourceRevision()
         val repos = repositoryRegistry.entries().mapNotNull { (service, repository) ->
-            if (prefsManager.loadCredential(service) == null) return@mapNotNull null
+            if (!prefsManager.hasQuotaSource(service)) return@mapNotNull null
             service to repository
         }
 
         if (repos.isEmpty()) {
-            // A widget can outlive its selected account. Always replace the provider's
-            // initial loading layout even when there is no network work to perform.
-            val languageContext = ContextCompat.getContextForLanguage(applicationContext)
-            AiService.entries.forEach { service ->
-                widgetPrefsManager.cacheStatusMessageIfEmpty(
-                    service,
-                    languageContext.getString(R.string.widget_not_connected)
-                )
-            }
-            try {
-                WidgetUpdater.updateAll(applicationContext)
-            } catch (error: Exception) {
-                // Widget rendering cannot turn a no-op account refresh into retry work.
-                Log.e(TAG, "Widget render failed after disconnected refresh", error)
+            quotaResetMonitor.consumeIfCurrent(sourceRevision) {
+                // A widget can outlive its selected account. Always replace the provider's
+                // initial loading layout even when there is no network work to perform.
+                val languageContext = ContextCompat.getContextForLanguage(applicationContext)
+                AiService.entries.forEach { service ->
+                    widgetPrefsManager.cacheStatusMessageIfEmpty(
+                        service,
+                        languageContext.getString(R.string.widget_not_connected)
+                    )
+                }
+                try {
+                    WidgetUpdater.updateAll(applicationContext)
+                } catch (error: Exception) {
+                    // Widget rendering cannot turn a no-op account refresh into retry work.
+                    Log.e(TAG, "Widget render failed after disconnected refresh", error)
+                }
             }
             return Result.success()
         }
@@ -88,78 +92,84 @@ class QuotaRefreshWorker @AssistedInject constructor(
                 }.awaitAll()
             }
 
-            val successfulQuotas = mutableListOf<QuotaInfo>()
-            val errors = mutableMapOf<AiService, AppError>()
-            for ((service, result) in refreshResults) {
-                connectionHealthStore.record(service, result)
-                when (result) {
-                    is com.codexbar.android.core.domain.model.Result.Success -> {
-                        successfulQuotas.add(result.value)
-                    }
-                    is com.codexbar.android.core.domain.model.Result.Failure -> {
-                        errors[service] = result.error
+            var successful = false
+            val accepted = quotaResetMonitor.consumeIfCurrent(sourceRevision) {
+                val successfulQuotas = mutableListOf<QuotaInfo>()
+                val errors = mutableMapOf<AiService, AppError>()
+                for ((service, result) in refreshResults) {
+                    connectionHealthStore.record(service, result)
+                    when (result) {
+                        is com.codexbar.android.core.domain.model.Result.Success -> {
+                            successfulQuotas.add(result.value)
+                        }
+                        is com.codexbar.android.core.domain.model.Result.Failure -> {
+                            errors[service] = result.error
+                        }
                     }
                 }
-            }
 
-            val privacySettings = prefsManager.getPrivacySettings()
-            val now = Instant.now()
-            quotaResetMonitor.observe(successfulQuotas)
-            val paceByMetricKey = if (successfulQuotas.isNotEmpty()) {
-                quotaHistoryStore.record(successfulQuotas)
-                quotaHistoryStore.paceFor(successfulQuotas, now)
-            } else {
-                emptyMap()
-            }
-            val snapshot = presentationMapper.map(
-                quotas = successfulQuotas,
-                errors = errors,
-                generatedAt = now,
-                privacy = PrivacyPresentation(
-                    redactSensitiveValues = false,
-                    lockScreenRedacted = privacySettings.lockScreenRedactionEnabled,
-                    widgetRedacted = privacySettings.widgetRedactionEnabled
-                ),
-                source = RefreshSourcePresentation.Trigger(
-                    inputData.getString(WorkManagerInitializer.KEY_REFRESH_SOURCE) ?: "periodic"
-                ),
-                paceByMetricKey = paceByMetricKey
-            )
-
-            // Publish both successful data and actionable provider errors to widgets.
-            cacheQuotaData(snapshot)
-            WidgetUpdater.updateAll(applicationContext)
-
-            notificationService.publishSnapshot(
-                snapshot = snapshot,
-                monitoringSession = monitoringSessionStore.activeSession()
-            )
-
-            // Request tile update
-            TileService.requestListeningState(
-                applicationContext,
-                ComponentName(applicationContext, QuotaTileService::class.java)
-            )
-
-            WorkManagerInitializer.scheduleNextMonitoringRefresh(applicationContext)
-
-            if (successfulQuotas.isEmpty()) {
-                Result.retry()
-            } else {
-                Result.success()
-            }
-        } catch (error: Exception) {
-            val languageContext = ContextCompat.getContextForLanguage(applicationContext)
-            repos.forEach { (service, _) ->
-                widgetPrefsManager.cacheStatusMessageIfEmpty(
-                    service,
-                    languageContext.getString(R.string.widget_refresh_failed)
+                val privacySettings = prefsManager.getPrivacySettings()
+                val now = Instant.now()
+                quotaResetMonitor.observeCurrent(successfulQuotas)
+                val paceByMetricKey = if (successfulQuotas.isNotEmpty()) {
+                    quotaHistoryStore.record(successfulQuotas)
+                    quotaHistoryStore.paceFor(successfulQuotas, now)
+                } else {
+                    emptyMap()
+                }
+                val snapshot = presentationMapper.map(
+                    quotas = successfulQuotas,
+                    errors = errors,
+                    generatedAt = now,
+                    privacy = PrivacyPresentation(
+                        redactSensitiveValues = false,
+                        lockScreenRedacted = privacySettings.lockScreenRedactionEnabled,
+                        widgetRedacted = privacySettings.widgetRedactionEnabled
+                    ),
+                    source = RefreshSourcePresentation.Trigger(
+                        inputData.getString(WorkManagerInitializer.KEY_REFRESH_SOURCE) ?: "periodic"
+                    ),
+                    paceByMetricKey = paceByMetricKey
                 )
+
+                // Publish both successful data and actionable provider errors to widgets.
+                cacheQuotaData(snapshot)
+                WidgetUpdater.updateAll(applicationContext)
+
+                notificationService.publishSnapshot(
+                    snapshot = snapshot,
+                    monitoringSession = monitoringSessionStore.activeSession()
+                )
+
+                // Request tile update
+                TileService.requestListeningState(
+                    applicationContext,
+                    ComponentName(applicationContext, QuotaTileService::class.java)
+                )
+
+                WorkManagerInitializer.scheduleNextMonitoringRefresh(applicationContext)
+
+                successful = successfulQuotas.isNotEmpty()
             }
-            runCatching { WidgetUpdater.updateAll(applicationContext) }
-                .onFailure { renderError ->
-                    Log.e(TAG, "Widget render failed after refresh error", renderError)
+            if (!accepted || successful) Result.success() else {
+                Result.retry()
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            quotaResetMonitor.consumeIfCurrent(sourceRevision) {
+                val languageContext = ContextCompat.getContextForLanguage(applicationContext)
+                repos.forEach { (service, _) ->
+                    widgetPrefsManager.cacheStatusMessageIfEmpty(
+                        service,
+                        languageContext.getString(R.string.widget_refresh_failed)
+                    )
                 }
+                runCatching { WidgetUpdater.updateAll(applicationContext) }
+                    .onFailure { renderError ->
+                        Log.e(TAG, "Widget render failed after refresh error", renderError)
+                    }
+            }
             Log.e(TAG, "Quota refresh worker failed", error)
             Result.retry()
         }
