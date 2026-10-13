@@ -18,6 +18,8 @@ import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.domain.model.CodexTelemetryCredential
 import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.domain.model.DesktopBridgeCredential
+import com.codexbar.android.core.domain.model.AcquisitionMode
+import com.codexbar.android.core.domain.model.AcquisitionSettings
 import com.codexbar.android.core.network.desktop.DesktopBridgePairing
 import com.codexbar.android.core.domain.model.ProviderSecretKind
 import com.codexbar.android.core.domain.model.providerMetadata
@@ -249,8 +251,15 @@ class EncryptedPrefsManager @Inject constructor(
     }
 
     suspend fun saveDesktopBridge(credential: DesktopBridgeCredential?, services: Set<AiService>) {
+        saveDesktopSource(credential, AcquisitionSettings(
+            if (credential != null && services.isNotEmpty()) AcquisitionMode.WINDOWS else AcquisitionMode.PHONE,
+            services, AiService.entries.toSet() - services
+        ))
+    }
+
+    suspend fun saveDesktopSource(credential: DesktopBridgeCredential?, settings: AcquisitionSettings) {
         credential?.let(DesktopBridgePairing::validate)
-        require(credential != null || services.isEmpty())
+        require(credential != null || settings.mode == AcquisitionMode.PHONE)
         dataStore.edit { prefs ->
             prefs.asMap().keys.filter { it.name.startsWith(DESKTOP_PREFIX) }.forEach { key ->
                 @Suppress("UNCHECKED_CAST")
@@ -261,16 +270,30 @@ class EncryptedPrefsManager @Inject constructor(
                 prefs[longPreferencesKey("${DESKTOP_PREFIX}port")] = credential.port.toLong()
                 prefs.putEncryptedString("${DESKTOP_PREFIX}id", credential.companionId)
                 prefs.putEncryptedString("${DESKTOP_PREFIX}key", credential.sharedKeyBase64Url)
-                prefs[stringPreferencesKey("${DESKTOP_PREFIX}services")] = services.joinToString(",") { it.name }
+                prefs[stringPreferencesKey("${DESKTOP_PREFIX}services")] = settings.desktopServices.joinToString(",") { it.name }
+                prefs[stringPreferencesKey("${DESKTOP_PREFIX}mode")] = settings.mode.name
+                prefs[stringPreferencesKey("${DESKTOP_PREFIX}advertised")] = settings.advertisedServices.joinToString(",") { it.name }
+                prefs[stringPreferencesKey("${DESKTOP_PREFIX}phone_exceptions")] = settings.phoneExceptions.joinToString(",") { it.name }
             }
         }
         updateCache()
     }
 
     fun desktopBridgeCredential(): DesktopBridgeCredential? = cachedSettings.desktopCredential
-    fun desktopServices(): Set<AiService> = cachedSettings.desktopServices
-    fun usesDesktopBridge(service: AiService): Boolean = cachedSettings.desktopCredential != null && service in cachedSettings.desktopServices
-    fun hasQuotaSource(service: AiService): Boolean = hasCredential(service) || usesDesktopBridge(service)
+    fun acquisitionSettings(): AcquisitionSettings = cachedSettings.acquisition
+    fun desktopServices(): Set<AiService> = cachedSettings.acquisition.desktopServices
+    fun usesDesktopBridge(service: AiService): Boolean = cachedSettings.desktopCredential != null && cachedSettings.acquisition.routesToDesktop(service)
+    fun hasQuotaSource(service: AiService): Boolean = cachedSettings.acquisition.hasSource(service, hasCredential(service))
+
+    private fun readAcquisition(prefs: Preferences): AcquisitionSettings {
+        fun services(key: String): Set<AiService>? = prefs[stringPreferencesKey("$DESKTOP_PREFIX$key")]?.split(',')
+            ?.mapNotNull { name -> AiService.entries.find { it.name == name } }?.toSet()
+        return AcquisitionSettings.restore(
+            readDesktopCredential(prefs) != null,
+            prefs[stringPreferencesKey("${DESKTOP_PREFIX}mode")],
+            services("services").orEmpty(), services("advertised"), services("phone_exceptions")
+        )
+    }
 
     private fun readDesktopCredential(prefs: Preferences): DesktopBridgeCredential? = runCatching {
         val host = prefs.getEncryptedString("${DESKTOP_PREFIX}host") ?: return null
@@ -426,7 +449,7 @@ class EncryptedPrefsManager @Inject constructor(
         val prefs = readPreferences()
         updateCachedSettings(CachedSettings(
             desktopCredential = readDesktopCredential(prefs),
-            desktopServices = prefs[stringPreferencesKey("${DESKTOP_PREFIX}services")].orEmpty().split(',').mapNotNull { name -> AiService.entries.find { it.name == name } }.toSet(),
+            acquisition = readAcquisition(prefs),
             credentialServices = AiService.entries
                 .filter { service -> readCredential(prefs, service) != null }
                 .toSet(),
@@ -591,7 +614,7 @@ class EncryptedPrefsManager @Inject constructor(
 
     private data class CachedSettings(
         val desktopCredential: DesktopBridgeCredential? = null,
-        val desktopServices: Set<AiService> = emptySet(),
+        val acquisition: AcquisitionSettings = AcquisitionSettings(),
         val credentialServices: Set<AiService> = emptySet(),
         val refreshIntervalMinutes: Long = DEFAULT_REFRESH_INTERVAL_MINUTES,
         val persistentNotificationEnabled: Boolean = true,
