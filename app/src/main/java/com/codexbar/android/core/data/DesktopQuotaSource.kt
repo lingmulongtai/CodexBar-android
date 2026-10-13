@@ -15,7 +15,8 @@ import kotlinx.coroutines.sync.withLock
 class DesktopQuotaSource @Inject constructor(
     private val client: DesktopBridgeClient,
     private val prefs: EncryptedPrefsManager,
-    private val sourceMonitor: QuotaResetMonitor
+    private val sourceMonitor: QuotaResetMonitor,
+    private val coordinator: DesktopSourceCoordinator
 ) {
     private val mutex = Mutex()
     private var cachedCredential: DesktopBridgeCredential? = null
@@ -24,25 +25,52 @@ class DesktopQuotaSource @Inject constructor(
     private var cachedFailure: Exception? = null
     private var cachedRevision = -1L
 
+    /** Fetch once before choosing repositories, so newly enabled Windows providers appear. */
+    suspend fun prepareRefresh(): Long {
+        val revision = sourceMonitor.sourceRevision()
+        val credential = prefs.desktopBridgeCredential() ?: return revision
+        val settings = prefs.acquisitionSettings()
+        if (settings.mode != AcquisitionMode.WINDOWS) return revision
+        return mutex.withLock {
+            val snapshot = try { snapshot(credential, revision) }
+            catch (error: CancellationException) { throw error }
+            catch (_: Exception) { return@withLock revision }
+            val advertised = snapshot.providers.mapNotNull { serviceFor(it.id) }.toSet()
+            if (advertised == settings.advertisedServices) return@withLock revision
+            val applied = coordinator.update(credential, settings.copy(advertisedServices = advertised), valid = {
+                sourceMonitor.sourceRevision() == revision && prefs.desktopBridgeCredential() == credential &&
+                    prefs.acquisitionSettings() == settings
+            })
+            if (!applied) return@withLock revision
+            sourceMonitor.sourceRevision().also { cachedRevision = it }
+        }
+    }
+
+    // Caller holds mutex. Both a successful snapshot and an offline result are single-flight.
+    private suspend fun snapshot(credential: DesktopBridgeCredential, revision: Long): DesktopBridgeSnapshot {
+        val age = System.nanoTime() - cachedAtNanos
+        if (cachedCredential == credential && cachedRevision == revision && age in 0..5_000_000_000L) {
+            cachedFailure?.let { throw it }
+            return checkNotNull(cached)
+        }
+        try {
+            return client.fetchSnapshot(credential).also {
+                cached = it; cachedFailure = null
+                cachedCredential = credential; cachedRevision = revision; cachedAtNanos = System.nanoTime()
+            }
+        } catch (error: CancellationException) { throw error
+        } catch (error: Exception) {
+            cached = null; cachedFailure = error
+            cachedCredential = credential; cachedRevision = revision; cachedAtNanos = System.nanoTime()
+            throw error
+        }
+    }
+
     suspend fun fetchQuota(service: AiService): Result<QuotaInfo, AppError> {
         val credential = prefs.desktopBridgeCredential() ?: return Result.Failure(AppError.CredentialNotFound(service))
         val revision = sourceMonitor.sourceRevision()
         return try {
-            val snapshot = mutex.withLock {
-                val age = System.nanoTime() - cachedAtNanos
-                if (cachedCredential == credential && cachedRevision == revision && age in 0..5_000_000_000L) {
-                    cachedFailure?.let { throw it }
-                    checkNotNull(cached)
-                } else {
-                    try {
-                        client.fetchSnapshot(credential).also { cached = it; cachedFailure = null; cachedCredential = credential; cachedRevision = revision; cachedAtNanos = System.nanoTime() }
-                    } catch (error: CancellationException) { throw error
-                    } catch (error: Exception) {
-                        cached = null; cachedFailure = error; cachedCredential = credential; cachedRevision = revision; cachedAtNanos = System.nanoTime()
-                        throw error
-                    }
-                }
-            }
+            val snapshot = mutex.withLock { snapshot(credential, revision) }
             val provider = snapshot.providers.find { serviceFor(it.id) == service }
                 ?: return Result.Failure(AppError.ServiceUnavailable)
             if (provider.status == "needsAuthentication" || provider.status == "expiredSession") {

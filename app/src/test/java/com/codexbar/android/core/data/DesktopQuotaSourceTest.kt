@@ -11,6 +11,42 @@ import org.junit.Test
 import org.mockito.Mockito.*
 
 class DesktopQuotaSourceTest {
+    @Test fun `bulk refresh discovers unavailable providers while preserving phone exceptions`() = runTest {
+        val prefs = mock(EncryptedPrefsManager::class.java)
+        val credential = DesktopBridgeCredential("100.64.1.2", 43825, "id", "key")
+        var settings = AcquisitionSettings(AcquisitionMode.WINDOWS, setOf(AiService.CODEX), setOf(AiService.CLAUDE))
+        var revision = 0L
+        `when`(prefs.desktopBridgeCredential()).thenReturn(credential)
+        `when`(prefs.acquisitionSettings()).thenAnswer { settings }
+        val monitor = mock(QuotaResetMonitor::class.java)
+        `when`(monitor.sourceRevision()).thenAnswer { revision }
+        val coordinator = mock(DesktopSourceCoordinator::class.java)
+        `when`(coordinator.update(any(), any() ?: settings, any() ?: { true })).thenAnswer { call ->
+            if (call.getArgument<() -> Boolean>(2).invoke()) {
+                settings = call.getArgument(1); revision++; true
+            } else false
+        }
+        var calls = 0
+        val client = object : DesktopBridgeClient(Json) {
+            override suspend fun fetchSnapshot(credential: DesktopBridgeCredential, now: Instant): DesktopBridgeSnapshot {
+                calls++
+                return DesktopBridgeSnapshot(1, "win-codexbar", now.epochSecond, listOf(
+                    DesktopProvider("codex", now.epochSecond, "ready", windows = listOf(DesktopWindow("Session", 0.2))),
+                    DesktopProvider("claude", now.epochSecond, "needsAuthentication", windows = emptyList()),
+                    DesktopProvider("gemini", now.epochSecond, "unavailable", windows = emptyList())))
+            }
+        }
+        val source = DesktopQuotaSource(client, prefs, monitor, coordinator)
+        assertEquals(1L, source.prepareRefresh())
+        assertEquals(setOf(AiService.CODEX, AiService.CLAUDE, AiService.GEMINI), settings.advertisedServices)
+        assertEquals(setOf(AiService.CLAUDE), settings.phoneExceptions)
+        source.fetchQuota(AiService.CODEX)
+        assertEquals(1, calls)
+        settings = settings.copy(mode = AcquisitionMode.PHONE)
+        source.prepareRefresh()
+        assertEquals(1, calls)
+    }
+
     @Test fun `canonical Windows ids distinguish Kimi Coding from Moonshot API`() {
         assertEquals(AiService.KIMI, DesktopQuotaSource.serviceFor("kimi"))
         assertEquals(AiService.MOONSHOT, DesktopQuotaSource.serviceFor("kimik2"))
@@ -28,7 +64,7 @@ class DesktopQuotaSourceTest {
                     listOf("codex", "claude").map { DesktopProvider(it, now.epochSecond, "ready", windows = listOf(DesktopWindow("Session", 0.25)), resetCredits = DesktopResetCredits(0, emptyList())) })
             }
         }
-        val source = DesktopQuotaSource(client, prefs, mock(QuotaResetMonitor::class.java))
+        val source = DesktopQuotaSource(client, prefs, mock(QuotaResetMonitor::class.java), mock(DesktopSourceCoordinator::class.java))
         assertTrue(source.fetchQuota(AiService.CODEX) is Result.Success)
         assertTrue(source.fetchQuota(AiService.CLAUDE) is Result.Success)
         assertEquals(1, calls)
@@ -47,7 +83,7 @@ class DesktopQuotaSourceTest {
                 throw java.io.IOException("offline")
             }
         }
-        val source = DesktopQuotaSource(client, prefs, mock(QuotaResetMonitor::class.java))
+        val source = DesktopQuotaSource(client, prefs, mock(QuotaResetMonitor::class.java), mock(DesktopSourceCoordinator::class.java))
         assertTrue(source.fetchQuota(AiService.CODEX) is Result.Failure)
         assertTrue(source.fetchQuota(AiService.CLAUDE) is Result.Failure)
         assertEquals(1, calls)

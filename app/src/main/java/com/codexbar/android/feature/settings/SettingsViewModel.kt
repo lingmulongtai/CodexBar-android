@@ -79,6 +79,9 @@ class SettingsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            quotaResetMonitor.sourceChanges.collect { if (it > 0) desktopConnection.syncSaved() }
+        }
+        viewModelScope.launch {
             desktopConnection.state.collect { desktop ->
                 _uiState.update { state -> state.copy(desktop = desktop, serviceStates = state.serviceStates.mapValues { (service, value) ->
                     value.copy(isDesktopSource = service in desktop.services, isConnected = prefsManager.hasQuotaSource(service))
@@ -166,6 +169,7 @@ class SettingsViewModel @Inject constructor(
     fun connectDesktopBridge() = desktopConnection.connect()
     fun refreshDesktopProviders() = desktopConnection.refreshProviders()
     fun setDesktopService(service: AiService, enabled: Boolean) = desktopConnection.select(service, enabled)
+    fun setAcquisitionMode(mode: com.codexbar.android.core.domain.model.AcquisitionMode) = desktopConnection.setMode(mode)
     fun disconnectDesktopBridge() = desktopConnection.disconnect()
     fun updateField(service: AiService, field: String, value: String) {
         _uiState.update { state ->

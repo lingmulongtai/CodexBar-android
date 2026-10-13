@@ -58,7 +58,7 @@ class QuotaRefreshWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         prefsManager.warmCache()
-        val sourceRevision = quotaResetMonitor.sourceRevision()
+        val sourceRevision = repositoryRegistry.prepareRefresh()
         val repos = repositoryRegistry.entries().mapNotNull { (service, repository) ->
             if (!prefsManager.hasQuotaSource(service)) return@mapNotNull null
             service to repository

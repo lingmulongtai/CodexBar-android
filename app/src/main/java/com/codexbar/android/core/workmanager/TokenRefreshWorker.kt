@@ -39,8 +39,10 @@ class TokenRefreshWorker @AssistedInject constructor(
     private val retryPolicy = TokenRefreshRetryPolicy()
 
     override suspend fun doWork(): Result {
+        prefsManager.warmCache()
         val results = coroutineScope {
             AiService.entries
+                .filterNot(prefsManager::usesDesktopBridge)
                 .mapNotNull { service ->
                     prefsManager.loadCredential(service)?.let { credential -> service to credential }
                 }
@@ -52,6 +54,7 @@ class TokenRefreshWorker @AssistedInject constructor(
     }
 
     private suspend fun refreshIfDue(service: AiService, credential: Credential): RefreshRunResult {
+        if (prefsManager.usesDesktopBridge(service)) return RefreshRunResult.Skipped
         val nowMillis = System.currentTimeMillis()
         val credentialFingerprint = tokenRefreshStateStore.fingerprintFor(service, credential)
         val previousState = tokenRefreshStateStore.load(service)
@@ -61,6 +64,7 @@ class TokenRefreshWorker @AssistedInject constructor(
 
             TokenRefreshAttemptDecision.Attempt -> {
                 val outcome = refreshIfNeeded(credential)
+                if (prefsManager.usesDesktopBridge(service)) return RefreshRunResult.Skipped
                 when (outcome) {
                     is RefreshOutcome.Success,
                     is RefreshOutcome.NotNeeded -> {
@@ -138,6 +142,7 @@ class TokenRefreshWorker @AssistedInject constructor(
         }
 
         return tokenRefreshCoordinator.withRefreshLock(AiService.CODEX) {
+            if (prefsManager.usesDesktopBridge(AiService.CODEX)) return@withRefreshLock RefreshOutcome.NotNeeded
             val activeCredential = prefsManager.loadCredential(AiService.CODEX)
                 as? Credential.CodexCredential
                 ?: return@withRefreshLock RefreshOutcome.NotNeeded
@@ -179,7 +184,7 @@ class TokenRefreshWorker @AssistedInject constructor(
                     )
                     val currentCredential = prefsManager.loadCredential(AiService.CODEX)
                         as? Credential.CodexCredential
-                    if (currentCredential?.matchesRefreshSubject(activeCredential) == true) {
+                    if (!prefsManager.usesDesktopBridge(AiService.CODEX) && currentCredential?.matchesRefreshSubject(activeCredential) == true) {
                         prefsManager.saveCredential(AiService.CODEX, newCredential)
                         RefreshOutcome.Success(newCredential)
                     } else {

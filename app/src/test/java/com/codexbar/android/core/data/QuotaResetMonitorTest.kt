@@ -24,6 +24,7 @@ import org.mockito.Mockito.*
 class QuotaResetMonitorTest {
     @Test fun `source switch discards old publication and preserves native credentials`() = runTest {
         val prefs = mock(EncryptedPrefsManager::class.java)
+        `when`(prefs.acquisitionSettings()).thenReturn(com.codexbar.android.core.domain.model.AcquisitionSettings())
         val store = mock(QuotaResetHistoryStore::class.java)
         val notices = mock(QuotaNotificationService::class.java)
         val monitor = QuotaResetMonitor(store, prefs, notices)
@@ -33,7 +34,8 @@ class QuotaResetMonitorTest {
         var published = false
         assertFalse(monitor.consumeIfCurrent(old) { published = true })
         assertFalse(published)
-        verify(prefs).saveDesktopBridge(desktop, setOf(AiService.CODEX))
+        verify(prefs).saveDesktopSource(desktop, com.codexbar.android.core.domain.model.AcquisitionSettings(
+            com.codexbar.android.core.domain.model.AcquisitionMode.WINDOWS, setOf(AiService.CODEX), AiService.entries.toSet() - AiService.CODEX))
         AiService.entries.forEach { verify(prefs, never()).deleteCredential(it) }
         verify(store).deactivate(AiService.CODEX)
         verify(store, never()).deleteService(AiService.CODEX)

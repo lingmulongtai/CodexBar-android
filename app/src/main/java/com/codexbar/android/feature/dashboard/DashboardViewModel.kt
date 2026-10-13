@@ -99,8 +99,8 @@ class DashboardViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val sourceRevision = quotaResetMonitor.sourceRevision()
                 prefsManager.warmCache()
+                val sourceRevision = repositoryRegistry.prepareRefresh()
                 val repos = repositoryRegistry.entries().mapNotNull { (service, repository) ->
                     if (!prefsManager.hasQuotaSource(service)) return@mapNotNull null
                     service to repository

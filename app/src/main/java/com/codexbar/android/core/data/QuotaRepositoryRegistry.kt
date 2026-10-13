@@ -37,4 +37,6 @@ class QuotaRepositoryRegistry @Inject constructor(
     fun entries(): List<Pair<AiService, QuotaRepository>> = AiService.entries.map { service ->
         service to repositoryFor(service)
     }
+
+    suspend fun prepareRefresh(): Long = desktop.prepareRefresh()
 }
