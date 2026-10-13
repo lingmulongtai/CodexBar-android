@@ -46,7 +46,7 @@ class AntigravityPairingCancellationTest {
             val health = mock(ConnectionHealthStore::class.java)
             `when`(health.health).thenReturn(MutableStateFlow(emptyMap()))
             val vm = SettingsViewModel(
-                QuotaRepositoryRegistry(AiService.entries.associateWith { repository }),
+                QuotaRepositoryRegistry(AiService.entries.associateWith { repository }, prefs, mock(com.codexbar.android.core.data.DesktopQuotaSource::class.java)),
                 mock(AccountLinkManager::class.java), mock(CodexTelemetryClient::class.java),
                 prefs, health, mock(QuotaHistoryStore::class.java), mock(QuotaResetMonitor::class.java), mock(WidgetPrefsManager::class.java),
                 mock(MonitoringSessionStore::class.java), mock(QuotaNotificationService::class.java),
