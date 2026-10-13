@@ -394,6 +394,8 @@ fun ConnectionsScreen(
                     totalCount = AiService.entries.size
                 )
 
+                DesktopBridgeSettings(uiState, viewModel)
+
                 ProviderDirectoryControls(
                     query = providerSearchQuery,
                     onQueryChange = { providerSearchQuery = it },
@@ -1081,6 +1083,11 @@ private fun ServiceCredentialSection(
             }
 
             if (expanded) {
+                if (state.isDesktopSource) {
+                    Text(stringResource(R.string.desktop_provider_managed))
+                    OutlinedButton(onClick = onDisconnect) { Text(stringResource(R.string.desktop_use_phone_source)) }
+                    return@Column
+                }
                 when {
                     service == AiService.ANTIGRAVITY -> AntigravityCompanionSetup(
                         state = state,

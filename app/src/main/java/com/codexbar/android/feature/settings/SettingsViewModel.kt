@@ -9,6 +9,9 @@ import com.codexbar.android.core.auth.DeviceAuthSession
 import com.codexbar.android.core.data.QuotaHistoryStore
 import com.codexbar.android.core.data.QuotaResetMonitor
 import com.codexbar.android.core.data.QuotaRepositoryRegistry
+import com.codexbar.android.core.data.DesktopQuotaSource
+import com.codexbar.android.core.network.desktop.DesktopBridgeClient
+import com.codexbar.android.core.network.desktop.DesktopBridgePairing
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.domain.model.AppError
@@ -56,6 +59,7 @@ class SettingsViewModel @Inject constructor(
     private val repositoryRegistry: QuotaRepositoryRegistry,
     private val accountLinkManager: AccountLinkManager,
     private val codexTelemetryClient: CodexTelemetryClient,
+    private val desktopPairingClient: DesktopBridgeClient,
     private val prefsManager: EncryptedPrefsManager,
     private val connectionHealthStore: ConnectionHealthStore,
     private val quotaHistoryStore: QuotaHistoryStore,
@@ -71,8 +75,16 @@ class SettingsViewModel @Inject constructor(
     private var antigravityPairingJob: Job? = null
     private var antigravityPairingGeneration = 0L
     private val antigravityPairingMutex = Mutex()
+    private val desktopConnection = DesktopBridgeConnection(viewModelScope, desktopPairingClient, prefsManager, quotaResetMonitor, connectionHealthStore, quotaHistoryStore, widgetPrefsManager, monitoringSessionStore, notificationService, appContext)
 
     init {
+        viewModelScope.launch {
+            desktopConnection.state.collect { desktop ->
+                _uiState.update { state -> state.copy(desktop = desktop, serviceStates = state.serviceStates.mapValues { (service, value) ->
+                    value.copy(isDesktopSource = service in desktop.services, isConnected = prefsManager.hasQuotaSource(service))
+                }) }
+            }
+        }
         viewModelScope.launch {
             connectionHealthStore.health.collect(::applyConnectionHealth)
         }
@@ -98,6 +110,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     private suspend fun loadSavedCredentials() {
+        _uiState.update { state -> state.copy(serviceStates = state.serviceStates.mapValues { (_, value) -> value.copy(isConnected = false, isDesktopSource = false) }) }
         for (service in AiService.entries) {
             val credential = prefsManager.loadCredential(service) ?: continue
             val state = when (credential) {
@@ -146,8 +159,14 @@ class SettingsViewModel @Inject constructor(
                 )
             }
         }
+        desktopConnection.initialize()
     }
 
+    fun updateDesktopPairingCode(code: String) = desktopConnection.updateCode(code)
+    fun connectDesktopBridge() = desktopConnection.connect()
+    fun refreshDesktopProviders() = desktopConnection.refreshProviders()
+    fun setDesktopService(service: AiService, enabled: Boolean) = desktopConnection.select(service, enabled)
+    fun disconnectDesktopBridge() = desktopConnection.disconnect()
     fun updateField(service: AiService, field: String, value: String) {
         _uiState.update { state ->
             val current = state.serviceStates[service] ?: ServiceCredentialState()
@@ -467,6 +486,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun disconnectService(service: AiService) {
+        if (prefsManager.usesDesktopBridge(service)) { setDesktopService(service, false); dismissDisconnectConfirmDialog(); return }
         if (service == AiService.ANTIGRAVITY) cancelAntigravityPairing()
         val currentState = _uiState.value.serviceStates[service] ?: ServiceCredentialState()
         _uiState.update { state ->
@@ -491,6 +511,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun deleteAllCredentials() {
+        desktopConnection.cancelPending()
         cancelAntigravityPairing()
         _uiState.update {
             SettingsUiState(
@@ -505,11 +526,15 @@ class SettingsViewModel @Inject constructor(
             )
         }
         viewModelScope.launch {
-            antigravityPairingMutex.withLock { prefsManager.deleteAllCredentials() }
-            connectionHealthStore.clearAll()
-            AiService.entries.forEach { quotaHistoryStore.deleteService(it) }
-            AiService.entries.forEach { quotaResetMonitor.forgetService(it) }
-            widgetPrefsManager.deleteAllServiceCaches()
+            antigravityPairingMutex.withLock {
+                quotaResetMonitor.deleteAllSources {
+                    connectionHealthStore.clearAll()
+                    AiService.entries.forEach { quotaHistoryStore.deleteService(it) }
+                    widgetPrefsManager.deleteAllServiceCaches()
+                    notificationService.discardServices(AiService.entries.toSet(), monitoringSessionStore.activeSession())
+                }
+            }
+            desktopConnection.initialize()
         }
     }
 
