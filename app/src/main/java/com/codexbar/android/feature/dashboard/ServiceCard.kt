@@ -103,7 +103,8 @@ fun ServiceCard(
                     style = MaterialTheme.typography.bodyMedium, maxLines = 2,
                     overflow = TextOverflow.Ellipsis)
             }
-            Text(service.freshness.staleReason ?: service.freshness.ageLabel,
+            Text(stringResource(if (service.isDesktopSource) R.string.usage_source_windows else R.string.usage_source_phone) + " · " +
+                (service.freshness.staleReason ?: service.freshness.ageLabel),
                 style = MaterialTheme.typography.labelSmall,
                 color = if (service.needsAttention()) MaterialTheme.colorScheme.error
                     else MaterialTheme.colorScheme.onSurfaceVariant,

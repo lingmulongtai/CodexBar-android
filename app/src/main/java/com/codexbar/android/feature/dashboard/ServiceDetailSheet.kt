@@ -136,6 +136,7 @@ private fun ServiceDetailContent(
     ) {
         ServiceDetailHeader(service, accent)
         ServiceStateSummary(service, accent)
+        service.desktopLocalUsage?.let { DesktopLocalUsageCard(it) }
         service.codexResetCredits?.let { credits ->
             CodexResetCreditsCard(
                 credits = credits,
@@ -247,6 +248,8 @@ private fun ServiceStateSummary(service: ServiceQuotaPresentation, accent: Color
             verticalArrangement = Arrangement.spacedBy(CodexBarSpacing.small)
         ) {
             DetailRow(stringResource(R.string.detail_status), service.status.toDetailLabel(), statusColor)
+            DetailRow(stringResource(R.string.detail_usage_source), stringResource(
+                if (service.isDesktopSource) R.string.usage_source_windows else R.string.usage_source_phone))
             if (service.service == AiService.GEMINI) {
                 DetailRow(stringResource(R.string.detail_usage_source), stringResource(R.string.gemini_cli_usage_source))
             }

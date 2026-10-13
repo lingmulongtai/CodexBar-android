@@ -208,7 +208,8 @@ private fun DashboardContent(
 
                     is DashboardUiState.Content -> {
                         if (state.snapshot.services.isEmpty()) {
-                            EmptyState(onOpenConnections = onNavigateToConnections)
+                            EmptyState(onOpenConnections = onNavigateToConnections,
+                                windowsMode = state.acquisitionMode == com.codexbar.android.core.domain.model.AcquisitionMode.WINDOWS)
                         } else {
                             val failedServices = state.snapshot.services
                                 .filter { it.needsAttention() }
@@ -388,7 +389,7 @@ private fun CardList(
 }
 
 @Composable
-private fun EmptyState(onOpenConnections: () -> Unit) {
+private fun EmptyState(onOpenConnections: () -> Unit, windowsMode: Boolean = false) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -410,7 +411,7 @@ private fun EmptyState(onOpenConnections: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = stringResource(R.string.dashboard_empty_message),
+                text = stringResource(if (windowsMode) R.string.desktop_empty_message else R.string.dashboard_empty_message),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center

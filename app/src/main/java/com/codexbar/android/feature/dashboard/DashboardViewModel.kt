@@ -173,7 +173,7 @@ class DashboardViewModel @Inject constructor(
             it.copy(resetHistory = if (baseSnapshot.privacy.redactSensitiveValues) emptyList() else
                 quotaResetHistoryStore.history.value[it.service].orEmpty())
         })
-        _uiState.value = DashboardUiState.Content(snapshot)
+        _uiState.value = DashboardUiState.Content(snapshot, prefsManager.acquisitionSettings().mode)
         notificationService.publishSnapshot(
             snapshot = snapshot,
             monitoringSession = monitoringSessionStore.activeSession()
