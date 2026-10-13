@@ -29,7 +29,7 @@ internal fun DesktopBridgeSettings(state: SettingsUiState, viewModel: SettingsVi
             AcquisitionMode.entries.forEach { mode ->
                 val title = if (mode == AcquisitionMode.PHONE) R.string.acquisition_phone else R.string.acquisition_windows
                 val description = if (mode == AcquisitionMode.PHONE) R.string.acquisition_phone_description else R.string.acquisition_windows_description
-                val enabled = !state.desktop.busy && (mode == AcquisitionMode.PHONE || state.desktop.connected)
+                val enabled = mode == AcquisitionMode.PHONE || state.desktop.connected
                 Row(Modifier.fillMaxWidth().selectable(selected = state.desktop.mode == mode,
                     enabled = enabled, role = Role.RadioButton, onClick = { viewModel.setAcquisitionMode(mode) }),
                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {

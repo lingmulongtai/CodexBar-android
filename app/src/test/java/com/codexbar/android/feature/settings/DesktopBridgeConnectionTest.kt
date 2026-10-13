@@ -33,7 +33,8 @@ class DesktopBridgeConnectionTest {
             val notices = mock(com.codexbar.android.core.notification.QuotaNotificationService::class.java)
             val monitor = com.codexbar.android.core.data.QuotaResetMonitor(
                 mock(com.codexbar.android.core.data.QuotaResetHistoryStore::class.java), prefs, notices)
-            val connection = DesktopBridgeConnection(this, mock(DesktopBridgeClient::class.java), prefs, monitor,
+            val clientForPhoneTest = mock(DesktopBridgeClient::class.java)
+            val connection = DesktopBridgeConnection(this, clientForPhoneTest, prefs, monitor,
                 mock(com.codexbar.android.core.security.ConnectionHealthStore::class.java),
                 mock(com.codexbar.android.core.data.QuotaHistoryStore::class.java),
                 mock(com.codexbar.android.core.widget.WidgetPrefsManager::class.java),
@@ -48,6 +49,15 @@ class DesktopBridgeConnectionTest {
             assertEquals(setOf(com.codexbar.android.core.domain.model.AiService.CLAUDE), settings.phoneExceptions)
             assertEquals(setOf(com.codexbar.android.core.domain.model.AiService.CODEX), settings.advertisedServices)
             assertEquals(credential, prefs.desktopBridgeCredential())
+            connection.setMode(com.codexbar.android.core.domain.model.AcquisitionMode.PHONE)
+            advanceUntilIdle()
+            connection.state.first { !it.busy }
+            connection.initialize()
+            advanceUntilIdle()
+            verifyNoInteractions(clientForPhoneTest)
+            connection.setMode(com.codexbar.android.core.domain.model.AcquisitionMode.WINDOWS)
+            advanceUntilIdle()
+            connection.state.first { !it.busy }
             connection.clearPhoneExceptions()
             advanceUntilIdle()
             connection.state.first { !it.busy }

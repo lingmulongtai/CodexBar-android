@@ -66,7 +66,7 @@ internal class DesktopBridgeConnection(
 
     fun initialize() {
         syncSaved()
-        if (prefs.desktopBridgeCredential() != null) refreshProviders()
+        if (prefs.desktopBridgeCredential() != null && prefs.acquisitionSettings().mode == AcquisitionMode.WINDOWS) refreshProviders()
     }
 
     fun updateCode(code: String) { mutableState.update { it.copy(pairingCode = code, result = null) } }
@@ -96,11 +96,14 @@ internal class DesktopBridgeConnection(
         apply(credential, settings.copy(phoneExceptions = exceptions), it)
     }
 
-    fun setMode(mode: AcquisitionMode) = operation {
+    fun setMode(mode: AcquisitionMode) {
+        cancelPending()
+        operation {
         val credential = prefs.desktopBridgeCredential()
         if (mode == AcquisitionMode.WINDOWS && credential == null) return@operation
         val settings = prefs.acquisitionSettings()
         apply(credential, settings.copy(mode = mode), it)
+        }
     }
 
     fun clearPhoneExceptions() = operation {
