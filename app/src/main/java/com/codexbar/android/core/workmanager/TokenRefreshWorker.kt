@@ -12,6 +12,7 @@ import com.codexbar.android.core.network.codex.CodexDto
 import com.codexbar.android.core.network.codex.CodexTokenRefreshService
 import com.codexbar.android.core.network.RetryAfter
 import com.codexbar.android.core.security.EncryptedPrefsManager
+import com.codexbar.android.core.data.QuotaResetMonitor
 import com.codexbar.android.core.security.ConnectionHealth
 import com.codexbar.android.core.security.ConnectionHealthStore
 import com.codexbar.android.core.security.TokenRefreshAttemptDecision
@@ -33,14 +34,17 @@ class TokenRefreshWorker @AssistedInject constructor(
     private val prefsManager: EncryptedPrefsManager,
     private val connectionHealthStore: ConnectionHealthStore,
     private val tokenRefreshCoordinator: TokenRefreshCoordinator,
-    private val tokenRefreshStateStore: TokenRefreshStateStore
+    private val tokenRefreshStateStore: TokenRefreshStateStore,
+    private val sourceMonitor: QuotaResetMonitor
 ) : CoroutineWorker(context, workerParams) {
 
     private val retryPolicy = TokenRefreshRetryPolicy()
 
     override suspend fun doWork(): Result {
+        prefsManager.warmCache()
         val results = coroutineScope {
             AiService.entries
+                .filterNot(prefsManager::usesDesktopBridge)
                 .mapNotNull { service ->
                     prefsManager.loadCredential(service)?.let { credential -> service to credential }
                 }
@@ -52,6 +56,8 @@ class TokenRefreshWorker @AssistedInject constructor(
     }
 
     private suspend fun refreshIfDue(service: AiService, credential: Credential): RefreshRunResult {
+        val sourceRevision = sourceMonitor.sourceRevision()
+        if (prefsManager.usesDesktopBridge(service)) return RefreshRunResult.Skipped
         val nowMillis = System.currentTimeMillis()
         val credentialFingerprint = tokenRefreshStateStore.fingerprintFor(service, credential)
         val previousState = tokenRefreshStateStore.load(service)
@@ -61,7 +67,10 @@ class TokenRefreshWorker @AssistedInject constructor(
 
             TokenRefreshAttemptDecision.Attempt -> {
                 val outcome = refreshIfNeeded(credential)
-                when (outcome) {
+                var result = RefreshRunResult.Skipped
+                sourceMonitor.consumeIfCurrent(sourceRevision) {
+                    if (prefsManager.usesDesktopBridge(service)) return@consumeIfCurrent
+                    result = when (outcome) {
                     is RefreshOutcome.Success,
                     is RefreshOutcome.NotNeeded -> {
                         val currentCredential = when (outcome) {
@@ -92,6 +101,7 @@ class TokenRefreshWorker @AssistedInject constructor(
                     }
 
                     is RefreshOutcome.Failure -> {
+                        if (prefsManager.loadCredential(service) != credential) return@consumeIfCurrent
                         tokenRefreshStateStore.save(
                             service,
                             retryPolicy.failure(
@@ -112,7 +122,9 @@ class TokenRefreshWorker @AssistedInject constructor(
                         )
                         RefreshRunResult(shouldRetryWork = !outcome.terminal)
                     }
+                    }
                 }
+                result
             }
         }
     }
@@ -138,6 +150,7 @@ class TokenRefreshWorker @AssistedInject constructor(
         }
 
         return tokenRefreshCoordinator.withRefreshLock(AiService.CODEX) {
+            if (prefsManager.usesDesktopBridge(AiService.CODEX)) return@withRefreshLock RefreshOutcome.NotNeeded
             val activeCredential = prefsManager.loadCredential(AiService.CODEX)
                 as? Credential.CodexCredential
                 ?: return@withRefreshLock RefreshOutcome.NotNeeded
@@ -161,6 +174,7 @@ class TokenRefreshWorker @AssistedInject constructor(
                     grantType = "refresh_token",
                     refreshToken = activeCredential.refreshToken
                 )
+                if (prefsManager.usesDesktopBridge(AiService.CODEX)) return@withRefreshLock RefreshOutcome.NotNeeded
                 val response = codexTokenRefreshService.refreshToken(request)
                 if (response.isSuccessful) {
                     val body = response.body() ?: return@withRefreshLock RefreshOutcome.Failure()
@@ -177,10 +191,7 @@ class TokenRefreshWorker @AssistedInject constructor(
                             ?.let { Instant.now().plusSeconds(it.toLong()) }
                             ?: codexTokenExpiresAt(body.accessToken)
                     )
-                    val currentCredential = prefsManager.loadCredential(AiService.CODEX)
-                        as? Credential.CodexCredential
-                    if (currentCredential?.matchesRefreshSubject(activeCredential) == true) {
-                        prefsManager.saveCredential(AiService.CODEX, newCredential)
+                    if (sourceMonitor.saveRefreshedCredential(AiService.CODEX, activeCredential, newCredential)) {
                         RefreshOutcome.Success(newCredential)
                     } else {
                         RefreshOutcome.NotNeeded
@@ -196,6 +207,8 @@ class TokenRefreshWorker @AssistedInject constructor(
                         }
                     )
                 }
+            } catch (error: kotlinx.coroutines.CancellationException) {
+                throw error
             } catch (_: Exception) {
                 RefreshOutcome.Failure()
             }

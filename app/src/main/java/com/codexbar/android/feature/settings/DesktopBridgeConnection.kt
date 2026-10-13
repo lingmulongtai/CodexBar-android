@@ -3,9 +3,12 @@ package com.codexbar.android.feature.settings
 import android.content.Context
 import com.codexbar.android.R
 import com.codexbar.android.core.data.DesktopQuotaSource
+import com.codexbar.android.core.data.DesktopSourceCoordinator
 import com.codexbar.android.core.data.QuotaHistoryStore
 import com.codexbar.android.core.data.QuotaResetMonitor
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.domain.model.AcquisitionMode
+import com.codexbar.android.core.domain.model.AcquisitionSettings
 import com.codexbar.android.core.domain.model.DesktopBridgeCredential
 import com.codexbar.android.core.monitoring.MonitoringSessionStore
 import com.codexbar.android.core.network.desktop.DesktopBridgeClient
@@ -29,7 +32,9 @@ import kotlinx.coroutines.launch
 data class DesktopConnectionState(
     val pairingCode: String = "", val connected: Boolean = false, val busy: Boolean = false,
     val result: ValidationResult? = null, val services: Set<AiService> = emptySet(),
-    val availableServices: Set<AiService> = emptySet()
+    val availableServices: Set<AiService> = emptySet(),
+    val mode: AcquisitionMode = AcquisitionMode.PHONE,
+    val phoneExceptions: Set<AiService> = emptySet(), val host: String = ""
 )
 
 /** Owns the pairing lifecycle; native credentials are never replaced here. */
@@ -49,10 +54,19 @@ internal class DesktopBridgeConnection(
     val state = mutableState.asStateFlow()
     @Volatile private var generation = 0L
     private var job: Job? = null
+    private val coordinator = DesktopSourceCoordinator(monitor, health, widgets, sessions, notifications)
+
+    fun syncSaved() {
+        val settings = prefs.acquisitionSettings()
+        mutableState.update { it.copy(connected = prefs.desktopBridgeCredential() != null,
+            services = settings.desktopServices, availableServices = settings.advertisedServices,
+            mode = settings.mode, phoneExceptions = settings.phoneExceptions,
+            host = prefs.desktopBridgeCredential()?.host.orEmpty()) }
+    }
 
     fun initialize() {
-        mutableState.update { it.copy(connected = prefs.desktopBridgeCredential() != null, services = prefs.desktopServices(), availableServices = prefs.desktopServices()) }
-        if (prefs.desktopBridgeCredential() != null) refreshProviders()
+        syncSaved()
+        if (prefs.desktopBridgeCredential() != null && prefs.acquisitionSettings().mode == AcquisitionMode.WINDOWS) refreshProviders()
     }
 
     fun updateCode(code: String) { mutableState.update { it.copy(pairingCode = code, result = null) } }
@@ -62,27 +76,45 @@ internal class DesktopBridgeConnection(
         operation {
             val credential = DesktopBridgePairing.parse(code)
             val snapshot = client.fetchSnapshot(credential)
-            val selected = snapshot.providers.filter { it.status == "ready" }.mapNotNull { DesktopQuotaSource.serviceFor(it.id) }.toSet()
-            if (apply(credential, selected, it)) mutableState.update { current -> current.copy(pairingCode = "", availableServices = snapshot.providers.mapNotNull { provider -> DesktopQuotaSource.serviceFor(provider.id) }.toSet(), result = ValidationResult.Success) }
+            val advertised = snapshot.providers.mapNotNull { DesktopQuotaSource.serviceFor(it.id) }.toSet()
+            if (apply(credential, AcquisitionSettings(AcquisitionMode.WINDOWS, advertised), it))
+                mutableState.update { current -> current.copy(pairingCode = "", result = ValidationResult.Success) }
         }
     }
 
     fun refreshProviders() = operation { expected ->
         val credential = prefs.desktopBridgeCredential() ?: return@operation
         val snapshot = client.fetchSnapshot(credential)
-        if (expected == generation) mutableState.update { it.copy(availableServices = snapshot.providers.mapNotNull { provider -> DesktopQuotaSource.serviceFor(provider.id) }.toSet() + prefs.desktopServices()) }
+        val settings = prefs.acquisitionSettings()
+        apply(credential, settings.copy(advertisedServices = snapshot.providers.mapNotNull { DesktopQuotaSource.serviceFor(it.id) }.toSet()), expected)
     }
 
     fun select(service: AiService, enabled: Boolean) = operation {
         val credential = prefs.desktopBridgeCredential() ?: return@operation
-        val selected = prefs.desktopServices().let { services -> if (enabled) services + service else services - service }
-        apply(credential, selected, it)
+        val settings = prefs.acquisitionSettings()
+        val exceptions = if (enabled) settings.phoneExceptions - service else settings.phoneExceptions + service
+        apply(credential, settings.copy(phoneExceptions = exceptions), it)
+    }
+
+    fun setMode(mode: AcquisitionMode) {
+        cancelPending()
+        operation {
+        val credential = prefs.desktopBridgeCredential()
+        if (mode == AcquisitionMode.WINDOWS && credential == null) return@operation
+        val settings = prefs.acquisitionSettings()
+        apply(credential, settings.copy(mode = mode), it)
+        }
+    }
+
+    fun clearPhoneExceptions() = operation {
+        val credential = prefs.desktopBridgeCredential() ?: return@operation
+        apply(credential, prefs.acquisitionSettings().copy(phoneExceptions = emptySet()), it)
     }
 
     fun disconnect() {
         cancelPending()
         operation {
-            if (apply(null, emptySet(), it)) mutableState.update { current -> current.copy(pairingCode = "", availableServices = emptySet(), result = null) }
+            if (apply(null, AcquisitionSettings(), it)) mutableState.update { current -> current.copy(pairingCode = "", result = null) }
         }
     }
 
@@ -113,13 +145,10 @@ internal class DesktopBridgeConnection(
         }
     }
 
-    private suspend fun apply(credential: DesktopBridgeCredential?, services: Set<AiService>, expected: Long): Boolean {
-        val applied = monitor.updateDesktopSource(credential, services, valid = { expected == generation }) { affected ->
-            affected.forEach { service -> health.clear(service); history.deleteService(service); widgets.deleteServiceCache(service) }
-            notifications.discardServices(affected, sessions.activeSession())
-        }
+    private suspend fun apply(credential: DesktopBridgeCredential?, settings: AcquisitionSettings, expected: Long): Boolean {
+        val applied = coordinator.update(credential, settings, valid = { expected == generation })
         if (!applied || expected != generation) return false
-        mutableState.update { it.copy(connected = credential != null, services = services) }
+        syncSaved()
         WorkManagerInitializer.enqueueManualQuotaRefresh(context, source = "windows_bridge_changed")
         try { WidgetUpdater.updateAll(context) } catch (error: CancellationException) { throw error } catch (_: Exception) { /* Saved pairing and refresh remain valid. */ }
         return true

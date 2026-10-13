@@ -1,6 +1,6 @@
 {
   "name": "@codexbar/windows-control-center",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "private": true,
   "description": "One Windows tray dashboard and private Android bridge for four PC-linked providers",
   "type": "module",

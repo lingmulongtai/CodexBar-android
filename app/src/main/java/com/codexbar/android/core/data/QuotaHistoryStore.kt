@@ -14,6 +14,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.time.Instant
+import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,25 +27,41 @@ class QuotaHistoryStore @Inject constructor(
 
     @Synchronized fun record(quotas: List<QuotaInfo>) {
         val editor = prefs.edit()
+        val written = mutableSetOf<String>()
         for (quota in quotas) {
+            if (!quota.historyEligible || quota.isStale) continue
             val scopeKey = "scope:${quota.service.name}"
             val scope = quota.resetTrackingAccountKey
-            if (prefs.getString(scopeKey, null) != scope) deleteService(quota.service)
-            if (scope == null) editor.remove(scopeKey) else editor.putString(scopeKey, scope)
-            if (!quota.historyEligible || quota.isStale) continue
+            val legacyMatches = prefs.getString(scopeKey, null) == scope
+            // Move a matching pre-v0.9.7 series once; never assign it to another account.
+            val legacyPrefix = "${quota.service.name}:"
+            val scopedPrefix = "${quota.service.name}:scoped:${historyScope(scope)}:"
+            val legacy = prefs.all.keys.filter { it.startsWith(legacyPrefix) && !it.startsWith("${quota.service.name}:scoped:") }
+            if (legacyMatches) {
+                legacy.forEach { key ->
+                    val target = scopedPrefix + key.removePrefix(legacyPrefix)
+                    if (!prefs.contains(target)) editor.putString(target, prefs.getString(key, null))
+                    editor.remove(key)
+                }
+                editor.remove(scopeKey)
+            }
             for (window in quota.windows) {
-                val key = historyKey(quota.service, window.label)
+                val key = historyKey(quota, window.label)
                 val sample = QuotaHistorySample(
                     fetchedAt = quota.fetchedAt,
                     utilization = window.utilization.coerceIn(0.0, 1.0),
                     resetsAt = window.resetsAt
                 )
                 val samples = QuotaHistorySeries.compact(
-                    samples = loadSamples(key) + sample,
+                    samples = (if (prefs.getString(key, null) == null && legacyMatches)
+                        loadSamples(legacyPrefix + URLEncoder.encode(window.label, StandardCharsets.UTF_8.name()))
+                        else loadSamples(key)) + sample,
                     now = sample.fetchedAt
                 )
                 editor.putString(key, samples.joinToString("\n") { it.serialize() })
+                written += key
             }
+            pruneScopes(quota, editor, written)
         }
         editor.apply()
     }
@@ -57,7 +74,7 @@ class QuotaHistoryStore @Inject constructor(
                     put(
                         QuotaPresentationMapper.metricKey(quota.service, window.label),
                         calculator.calculate(
-                            samples = loadSamples(historyKey(quota.service, window.label)),
+                            samples = loadSamples(historyKey(quota, window.label)),
                             currentWindow = window,
                             now = now
                         )
@@ -75,7 +92,7 @@ class QuotaHistoryStore @Inject constructor(
                     put(
                         QuotaPresentationMapper.metricKey(quota.service, window.label),
                         QuotaHistorySeries.forChart(
-                            loadSamples(historyKey(quota.service, window.label))
+                            loadSamples(historyKey(quota, window.label))
                         )
                     )
                 }
@@ -87,19 +104,43 @@ class QuotaHistoryStore @Inject constructor(
         val prefix = "${service.name}:"
         val editor = prefs.edit()
         editor.remove("scope:${service.name}")
+        editor.remove("scopes:${service.name}")
         prefs.all.keys.filter { it.startsWith(prefix) }.forEach { editor.remove(it) }
         editor.apply()
     }
 
     private fun loadSamples(key: String): List<QuotaHistorySample> {
         val raw = prefs.getString(key, null) ?: return emptyList()
-        return raw.lineSequence()
+        return QuotaHistorySeries.compact(raw.lineSequence()
             .mapNotNull { line -> line.deserializeSampleOrNull() }
-            .toList()
+            .toList(), Instant.now())
     }
 
-    private fun historyKey(service: AiService, label: String): String {
-        return "${service.name}:${URLEncoder.encode(label, StandardCharsets.UTF_8.name())}"
+    private fun pruneScopes(quota: QuotaInfo, editor: SharedPreferences.Editor, written: Set<String>) {
+        val now = System.currentTimeMillis()
+        val indexKey = "scopes:${quota.service.name}"
+        val times = prefs.getString(indexKey, null).orEmpty().lineSequence().mapNotNull { line ->
+            val fields = line.split(':')
+            fields.getOrNull(1)?.toLongOrNull()?.let { fields[0] to it }
+        }.toMap() + (historyScope(quota.resetTrackingAccountKey) to now)
+        val retained = times.entries.filter { it.value >= now - QuotaResetTracker.RETENTION_MILLIS }
+            .sortedByDescending { it.value }.take(8).associate { it.key to it.value }
+        editor.putString(indexKey, retained.entries.joinToString("\n") { "${it.key}:${it.value}" })
+        val prefix = "${quota.service.name}:scoped:"
+        prefs.all.keys.filter { it.startsWith(prefix) }.forEach { key ->
+            if (key in written) return@forEach
+            if (key.removePrefix(prefix).substringBefore(':') !in retained) editor.remove(key)
+            else {
+                val recent = loadSamples(key)
+                if (recent.isEmpty()) editor.remove(key)
+                else if (!key.startsWith(prefix + historyScope(quota.resetTrackingAccountKey) + ":"))
+                    editor.putString(key, recent.joinToString("\n") { it.serialize() })
+            }
+        }
+    }
+
+    private fun historyKey(quota: QuotaInfo, label: String): String {
+        return "${quota.service.name}:scoped:${historyScope(quota.resetTrackingAccountKey)}:${URLEncoder.encode(label, StandardCharsets.UTF_8.name())}"
     }
 
     private fun QuotaHistorySample.serialize(): String {
@@ -129,3 +170,8 @@ class QuotaHistoryStore @Inject constructor(
         const val BACKUP_PATH = "$PREFS_NAME.xml"
     }
 }
+
+/** Hash account keys in preference names; null is the legacy on-phone source. */
+internal fun historyScope(accountKey: String?): String = MessageDigest.getInstance("SHA-256")
+    .digest((accountKey ?: "phone").toByteArray(StandardCharsets.UTF_8))
+    .joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }

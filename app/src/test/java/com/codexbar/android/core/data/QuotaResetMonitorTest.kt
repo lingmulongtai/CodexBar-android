@@ -22,8 +22,21 @@ import org.mockito.MockedStatic
 import org.mockito.Mockito.*
 
 class QuotaResetMonitorTest {
+    @Test fun `completed token rotation survives mode changes but cannot resurrect deleted credentials`() = runTest {
+        val prefs = mock(EncryptedPrefsManager::class.java)
+        val original = Credential.CodexCredential("access", "old-refresh", accountId = "account")
+        val refreshed = original.copy(accessToken = "rotated", refreshToken = "new-refresh")
+        `when`(prefs.loadCredential(AiService.CODEX)).thenReturn(original)
+        `when`(prefs.usesDesktopBridge(AiService.CODEX)).thenReturn(true)
+        val monitor = QuotaResetMonitor(mock(QuotaResetHistoryStore::class.java), prefs, mock(QuotaNotificationService::class.java))
+        assertTrue(monitor.saveRefreshedCredential(AiService.CODEX, original, refreshed))
+        `when`(prefs.loadCredential(AiService.CODEX)).thenReturn(null)
+        assertFalse(monitor.saveRefreshedCredential(AiService.CODEX, original, refreshed))
+        verify(prefs, times(1)).saveCredential(AiService.CODEX, refreshed)
+    }
     @Test fun `source switch discards old publication and preserves native credentials`() = runTest {
         val prefs = mock(EncryptedPrefsManager::class.java)
+        `when`(prefs.acquisitionSettings()).thenReturn(com.codexbar.android.core.domain.model.AcquisitionSettings())
         val store = mock(QuotaResetHistoryStore::class.java)
         val notices = mock(QuotaNotificationService::class.java)
         val monitor = QuotaResetMonitor(store, prefs, notices)
@@ -33,9 +46,11 @@ class QuotaResetMonitorTest {
         var published = false
         assertFalse(monitor.consumeIfCurrent(old) { published = true })
         assertFalse(published)
-        verify(prefs).saveDesktopBridge(desktop, setOf(AiService.CODEX))
+        verify(prefs).saveDesktopSource(desktop, com.codexbar.android.core.domain.model.AcquisitionSettings(
+            com.codexbar.android.core.domain.model.AcquisitionMode.WINDOWS, setOf(AiService.CODEX), AiService.entries.toSet() - AiService.CODEX))
         AiService.entries.forEach { verify(prefs, never()).deleteCredential(it) }
-        verify(store).deleteService(AiService.CODEX)
+        verify(store).deactivate(AiService.CODEX)
+        verify(store, never()).deleteService(AiService.CODEX)
     }
 
     @Test fun `obsolete pairing is rejected after waiting for publication lock`() = runTest {

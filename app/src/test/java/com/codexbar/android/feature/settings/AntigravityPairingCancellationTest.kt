@@ -44,6 +44,7 @@ class AntigravityPairingCancellationTest {
                 }
             }
             val prefs = mock(EncryptedPrefsManager::class.java)
+            `when`(prefs.acquisitionSettings()).thenReturn(com.codexbar.android.core.domain.model.AcquisitionSettings())
             `when`(prefs.appThemeStyle).thenReturn(MutableStateFlow(AppThemeStyle.MATERIAL_3))
             `when`(prefs.getPrivacySettings()).thenReturn(PrivacySettings())
             val health = mock(ConnectionHealthStore::class.java)

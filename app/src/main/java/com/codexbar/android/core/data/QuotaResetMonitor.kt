@@ -5,6 +5,8 @@ import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.domain.model.QuotaInfo
 import com.codexbar.android.core.domain.model.DesktopBridgeCredential
+import com.codexbar.android.core.domain.model.AcquisitionSettings
+import com.codexbar.android.core.domain.model.AcquisitionMode
 import com.codexbar.android.core.notification.QuotaNotificationService
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import kotlinx.coroutines.Dispatchers
@@ -44,17 +46,32 @@ class QuotaResetMonitor @Inject constructor(
         services: Set<AiService>,
         valid: () -> Boolean = { true },
         cleanup: suspend (Set<AiService>) -> Unit
+    ): Boolean = updateDesktopSettings(credential, AcquisitionSettings(
+        if (services.isEmpty()) AcquisitionMode.PHONE else AcquisitionMode.WINDOWS,
+        services, AiService.entries.toSet() - services
+    ), valid, cleanup)
+
+    suspend fun updateDesktopSettings(
+        credential: DesktopBridgeCredential?,
+        settings: AcquisitionSettings,
+        valid: () -> Boolean = { true },
+        cleanup: suspend (Set<AiService>) -> Unit
     ): Boolean = withContext(Dispatchers.IO) {
         mutex.withLock {
             currentCoroutineContext().ensureActive()
             if (!valid()) return@withLock false
             withContext(NonCancellable) {
-                val previous = prefsManager.desktopServices()
-                val affected = if (credential == prefsManager.desktopBridgeCredential()) (previous - services) + (services - previous) else previous + services
-                prefsManager.saveDesktopBridge(credential, services)
+                val previous = prefsManager.acquisitionSettings()
+                val pairingChanged = credential != prefsManager.desktopBridgeCredential()
+                val affected = AiService.entries.filter { service ->
+                    previous.routesToDesktop(service) != settings.routesToDesktop(service) ||
+                        (service in previous.desktopServices) != (service in settings.desktopServices) ||
+                        (pairingChanged && (previous.routesToDesktop(service) || settings.routesToDesktop(service)))
+                }.toSet()
+                prefsManager.saveDesktopSource(credential, settings)
                 revision.incrementAndGet()
                 affected.forEach { service ->
-                    store.deleteService(service)
+                    store.deactivate(service)
                     notificationService.cancelResetNotifications(service)
                 }
                 cleanup(affected)
@@ -112,6 +129,20 @@ class QuotaResetMonitor @Inject constructor(
         }
     }
 
+    suspend fun deleteNativeSource(service: AiService, cleanup: suspend () -> Unit) =
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                withContext(NonCancellable) {
+                    prefsManager.deleteCredential(service)
+                    store.deleteService(service)
+                    notificationService.cancelResetNotifications(service)
+                    revision.incrementAndGet()
+                    cleanup()
+                    _sourceChanges.value = revision.get()
+                }
+            }
+        }
+
     suspend fun saveCredential(service: AiService, credential: Credential) = withContext(Dispatchers.IO) {
         mutex.withLock {
             val previous = prefsManager.loadCredential(service)
@@ -127,4 +158,14 @@ class QuotaResetMonitor @Inject constructor(
             }
         }
     }
+
+    /** Keep completed token rotation across mode changes, without restoring deleted/replaced accounts. */
+    suspend fun saveRefreshedCredential(service: AiService, expected: Credential, refreshed: Credential): Boolean =
+        withContext(Dispatchers.IO + NonCancellable) {
+            mutex.withLock {
+                if (prefsManager.loadCredential(service) != expected) return@withLock false
+                prefsManager.saveCredential(service, refreshed)
+                true
+            }
+        }
 }

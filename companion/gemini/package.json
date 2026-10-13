@@ -1,6 +1,6 @@
 {
   "name": "@codexbar/gemini-companion",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "private": true,
   "description": "Private local quota bridge between the official Gemini CLI and CodexBar for Android",
   "type": "module",

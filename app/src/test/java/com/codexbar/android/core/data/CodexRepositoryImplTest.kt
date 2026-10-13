@@ -49,6 +49,9 @@ class CodexRepositoryImplTest {
     private lateinit var prefsManager: EncryptedPrefsManager
     private lateinit var codexTelemetryClient: CodexTelemetryClient
     private lateinit var repository: CodexRepositoryImpl
+    private lateinit var color: org.mockito.MockedStatic<android.graphics.Color>
+    private fun sourceMonitor() = QuotaResetMonitor(mock(QuotaResetHistoryStore::class.java), prefsManager,
+        mock(com.codexbar.android.core.notification.QuotaNotificationService::class.java))
     private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true; isLenient = true }
 
     private val testCredential = Credential.CodexCredential(
@@ -59,6 +62,7 @@ class CodexRepositoryImplTest {
 
     @Before
     fun setup() {
+        color = org.mockito.Mockito.mockStatic(android.graphics.Color::class.java)
         mockWebServer = MockWebServer()
         mockWebServer.start()
 
@@ -90,13 +94,62 @@ class CodexRepositoryImplTest {
             tokenRefreshService,
             prefsManager,
             TokenRefreshCoordinator(),
-            codexTelemetryClient
+            codexTelemetryClient, sourceMonitor()
         )
     }
 
     @After
     fun tearDown() {
         mockWebServer.shutdown()
+        color.close()
+    }
+
+    @Test fun `Windows routing prevents queued native quota and token requests`() = runTest {
+        `when`(prefsManager.usesDesktopBridge(AiService.CODEX)).thenReturn(true)
+        assertTrue(repository.fetchQuota() is Result.Failure)
+        assertEquals(0, mockWebServer.requestCount)
+    }
+
+    @Test fun `Windows switch during quota request stops optional phone collectors`() = runTest {
+        var requests = 0
+        val switchingApi = object : CodexApiService {
+            override suspend fun getUsage(authorization: String, accountId: String?, userAgent: String): retrofit2.Response<CodexDto.UsageResponse> {
+                `when`(prefsManager.usesDesktopBridge(AiService.CODEX)).thenReturn(true)
+                return retrofit2.Response.success(CodexDto.UsageResponse())
+            }
+            override suspend fun getRateLimitResetCredits(authorization: String, accountId: String?, userAgent: String): retrofit2.Response<CodexDto.ResetCreditsResponse> {
+                requests++
+                return retrofit2.Response.success(CodexDto.ResetCreditsResponse(credits = emptyList(), availableCount = 0))
+            }
+        }
+        val changing = CodexRepositoryImpl(switchingApi, tokenRefreshService, prefsManager,
+            TokenRefreshCoordinator(), codexTelemetryClient, sourceMonitor())
+        changing.fetchQuota()
+        assertEquals(0, requests)
+        verify(prefsManager, never()).loadCodexTelemetryCredential()
+    }
+
+    @Test fun `Windows switch while loading refresh credential prevents OAuth request`() = runTest {
+        val expired = testCredential.copy(expiresAt = Instant.now().minusSeconds(60))
+        var loads = 0
+        `when`(prefsManager.loadCredential(AiService.CODEX)).thenAnswer {
+            if (++loads == 2) `when`(prefsManager.usesDesktopBridge(AiService.CODEX)).thenReturn(true)
+            expired
+        }
+        assertTrue(repository.fetchQuota() is Result.Failure)
+        assertEquals(2, loads)
+        assertEquals(0, mockWebServer.requestCount)
+    }
+
+    @Test fun `Windows switch while loading telemetry credential prevents telemetry request`() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("{}"))
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("{}"))
+        `when`(prefsManager.loadCodexTelemetryCredential()).thenAnswer {
+            `when`(prefsManager.usesDesktopBridge(AiService.CODEX)).thenReturn(true)
+            CodexTelemetryCredential("127.0.0.1", 43822, "test-companion", "test-key")
+        }
+        assertTrue(repository.fetchQuota() is Result.Success)
+        assertTrue(mockingDetails(codexTelemetryClient).invocations.isEmpty())
     }
 
     @Test
@@ -116,7 +169,7 @@ class CodexRepositoryImplTest {
                 retrofit2.Response.success(CodexDto.ResetCreditsResponse(availableCount = 1))
         }
         val serialRepository = CodexRepositoryImpl(gatedApi, tokenRefreshService, prefsManager,
-            TokenRefreshCoordinator(), codexTelemetryClient)
+            TokenRefreshCoordinator(), codexTelemetryClient, sourceMonitor())
         val first = async { serialRepository.fetchQuota() }
         runCurrent()
         val second = async { serialRepository.fetchQuota() }
@@ -495,7 +548,7 @@ class CodexRepositoryImplTest {
             tokenRefreshService,
             prefsManager,
             TokenRefreshCoordinator(),
-            telemetryClient
+            telemetryClient, sourceMonitor()
         )
         mockWebServer.enqueue(
             MockResponse().setResponseCode(200).setBody(
@@ -530,7 +583,7 @@ class CodexRepositoryImplTest {
             tokenRefreshService,
             prefsManager,
             TokenRefreshCoordinator(),
-            failingClient
+            failingClient, sourceMonitor()
         )
         mockWebServer.enqueue(
             MockResponse().setResponseCode(200).setBody(

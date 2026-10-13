@@ -13,7 +13,9 @@ data class QuotaInfo(
     val codexTelemetry: CodexTelemetry? = null,
     val resetTrackingAccountKey: String? = null,
     val isStale: Boolean = false,
-    val historyEligible: Boolean = true
+    val historyEligible: Boolean = true,
+    val isDesktopSource: Boolean = false,
+    val desktopLocalUsage: DesktopLocalUsage? = null
 )
 
 data class CodexResetCredits(

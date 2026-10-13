@@ -26,8 +26,17 @@ class QuotaResetHistoryStore @Inject constructor(@ApplicationContext context: Co
         val editor = prefs.edit()
         val activities = buildMap {
             for (quota in quotas) {
-                val transition = QuotaResetTracker.observe(loadState(quota.service), quota)
+                if (!quota.historyEligible || quota.isStale) continue
+                val legacy = archiveLegacy(quota.service, editor)
+                val key = scopedKey(quota.service, quota.resetTrackingAccountKey)
+                val previous = loadState(key).takeIf { prefs.getString(key, null) != null }
+                    ?: loadState(quota.service).takeIf { it.accountKey == quota.resetTrackingAccountKey }
+                    ?: QuotaResetState()
+                val transition = QuotaResetTracker.observe(previous, quota)
+                editor.putString(key, json.encodeToString(transition.state))
+                editor.putString("active:${quota.service.name}", key)
                 editor.putString(quota.service.name, json.encodeToString(transition.state))
+                pruneScopes(quota.service, key, transition.state, editor, legacy)
                 if (transition.activities.isNotEmpty()) put(quota.service, transition.activities)
             }
         }
@@ -39,18 +48,50 @@ class QuotaResetHistoryStore @Inject constructor(@ApplicationContext context: Co
     @Synchronized
     fun clearHistory(service: AiService) {
         // Keep the baseline and expiry deduplication when clearing the visible log.
-        prefs.edit().putString(service.name, json.encodeToString(loadState(service).copy(history = emptyList()))).commit()
+        val state = loadState(service).copy(history = emptyList())
+        val key = prefs.getString("active:${service.name}", null) ?: scopedKey(service, state.accountKey)
+        prefs.edit().putString(service.name, json.encodeToString(state))
+            .putString(key, json.encodeToString(state)).commit()
         _history.value = loadHistory()
     }
 
     @Synchronized
     fun deleteService(service: AiService) {
-        prefs.edit().remove(service.name).commit()
+        val editor = prefs.edit().remove(service.name).remove("active:${service.name}")
+        prefs.all.orEmpty().keys.filter { it.startsWith("scoped:${service.name}:") }.forEach(editor::remove)
+        editor.commit()
         _history.value = loadHistory()
     }
 
-    private fun loadState(service: AiService): QuotaResetState = runCatching {
-        json.decodeFromString<QuotaResetState>(prefs.getString(service.name, null) ?: return QuotaResetState())
+    /** Hide the old source's log until its next observation, retaining scoped baselines. */
+    @Synchronized
+    fun deactivate(service: AiService) {
+        val editor = prefs.edit()
+        archiveLegacy(service, editor)
+        editor.remove(service.name).remove("active:${service.name}").commit()
+        _history.value = loadHistory()
+    }
+
+    private fun scopedKey(service: AiService, accountKey: String?) = "scoped:${service.name}:${historyScope(accountKey)}"
+    private fun archiveLegacy(service: AiService, editor: android.content.SharedPreferences.Editor): Map<String, QuotaResetState> {
+        if (prefs.getString(service.name, null) == null) return emptyMap()
+        val state = loadState(service)
+        val key = scopedKey(service, state.accountKey)
+        if (prefs.getString(key, null) != null) return emptyMap()
+        editor.putString(key, json.encodeToString(state))
+        return mapOf(key to state)
+    }
+    private fun pruneScopes(service: AiService, currentKey: String, current: QuotaResetState, editor: android.content.SharedPreferences.Editor, legacy: Map<String, QuotaResetState>) {
+        val prefix = "scoped:${service.name}:"
+        val states = prefs.all.orEmpty().keys.filter { it.startsWith(prefix) }.associateWith(::loadState) + legacy + (currentKey to current)
+        val cutoff = System.currentTimeMillis() - QuotaResetTracker.RETENTION_MILLIS
+        val keep = states.entries.filter { it.value.fetchedAtEpochMillis >= cutoff }
+            .sortedByDescending { it.value.fetchedAtEpochMillis }.take(8).map { it.key }.toSet()
+        states.keys.filter { it !in keep }.forEach(editor::remove)
+    }
+    private fun loadState(service: AiService): QuotaResetState = loadState(service.name)
+    private fun loadState(key: String): QuotaResetState = runCatching {
+        json.decodeFromString<QuotaResetState>(prefs.getString(key, null) ?: return QuotaResetState())
     }.getOrDefault(QuotaResetState())
 
     private fun loadHistory(): Map<AiService, List<QuotaResetActivity>> = AiService.entries.associateWith {

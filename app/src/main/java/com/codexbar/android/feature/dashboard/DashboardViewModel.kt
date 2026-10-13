@@ -99,8 +99,8 @@ class DashboardViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val sourceRevision = quotaResetMonitor.sourceRevision()
                 prefsManager.warmCache()
+                val sourceRevision = repositoryRegistry.prepareRefresh()
                 val repos = repositoryRegistry.entries().mapNotNull { (service, repository) ->
                     if (!prefsManager.hasQuotaSource(service)) return@mapNotNull null
                     service to repository
@@ -156,7 +156,8 @@ class DashboardViewModel @Inject constructor(
                         generatedAt = now,
                         privacy = privacy,
                         paceByMetricKey = paceByMetricKey,
-                        historyByMetricKey = historyByMetricKey
+                        historyByMetricKey = historyByMetricKey,
+                        desktopServices = prefsManager.desktopServices()
                     )
                     publishSnapshot(snapshot)
                 }
@@ -172,7 +173,7 @@ class DashboardViewModel @Inject constructor(
             it.copy(resetHistory = if (baseSnapshot.privacy.redactSensitiveValues) emptyList() else
                 quotaResetHistoryStore.history.value[it.service].orEmpty())
         })
-        _uiState.value = DashboardUiState.Content(snapshot)
+        _uiState.value = DashboardUiState.Content(snapshot, prefsManager.acquisitionSettings().mode)
         notificationService.publishSnapshot(
             snapshot = snapshot,
             monitoringSession = monitoringSessionStore.activeSession()

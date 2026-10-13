@@ -79,6 +79,9 @@ class SettingsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            quotaResetMonitor.sourceChanges.collect { if (it > 0) desktopConnection.syncSaved() }
+        }
+        viewModelScope.launch {
             desktopConnection.state.collect { desktop ->
                 _uiState.update { state -> state.copy(desktop = desktop, serviceStates = state.serviceStates.mapValues { (service, value) ->
                     value.copy(isDesktopSource = service in desktop.services, isConnected = prefsManager.hasQuotaSource(service))
@@ -166,6 +169,8 @@ class SettingsViewModel @Inject constructor(
     fun connectDesktopBridge() = desktopConnection.connect()
     fun refreshDesktopProviders() = desktopConnection.refreshProviders()
     fun setDesktopService(service: AiService, enabled: Boolean) = desktopConnection.select(service, enabled)
+    fun setAcquisitionMode(mode: com.codexbar.android.core.domain.model.AcquisitionMode) = desktopConnection.setMode(mode)
+    fun clearPhoneExceptions() = desktopConnection.clearPhoneExceptions()
     fun disconnectDesktopBridge() = desktopConnection.disconnect()
     fun updateField(service: AiService, field: String, value: String) {
         _uiState.update { state ->
@@ -502,11 +507,14 @@ class SettingsViewModel @Inject constructor(
         }
         viewModelScope.launch {
             // The optional Codex telemetry pairing is independent from the OAuth account.
-            antigravityPairingMutex.withLock { prefsManager.deleteCredential(service) }
-            connectionHealthStore.clear(service)
-            quotaHistoryStore.deleteService(service)
-            quotaResetMonitor.forgetService(service)
-            widgetPrefsManager.deleteServiceCache(service)
+            antigravityPairingMutex.withLock {
+                quotaResetMonitor.deleteNativeSource(service) {
+                    connectionHealthStore.clear(service)
+                    quotaHistoryStore.deleteService(service)
+                    widgetPrefsManager.deleteServiceCache(service)
+                    notificationService.discardServices(setOf(service), monitoringSessionStore.activeSession())
+                }
+            }
         }
     }
 
