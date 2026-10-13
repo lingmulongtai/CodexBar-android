@@ -54,7 +54,7 @@ class QuotaResetMonitor @Inject constructor(
                 prefsManager.saveDesktopBridge(credential, services)
                 revision.incrementAndGet()
                 affected.forEach { service ->
-                    store.deleteService(service)
+                    store.deactivate(service)
                     notificationService.cancelResetNotifications(service)
                 }
                 cleanup(affected)

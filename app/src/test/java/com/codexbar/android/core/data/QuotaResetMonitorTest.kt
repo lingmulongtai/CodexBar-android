@@ -35,7 +35,8 @@ class QuotaResetMonitorTest {
         assertFalse(published)
         verify(prefs).saveDesktopBridge(desktop, setOf(AiService.CODEX))
         AiService.entries.forEach { verify(prefs, never()).deleteCredential(it) }
-        verify(store).deleteService(AiService.CODEX)
+        verify(store).deactivate(AiService.CODEX)
+        verify(store, never()).deleteService(AiService.CODEX)
     }
 
     @Test fun `obsolete pairing is rejected after waiting for publication lock`() = runTest {

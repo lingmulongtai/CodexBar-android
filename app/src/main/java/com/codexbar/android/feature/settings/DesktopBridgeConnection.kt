@@ -115,7 +115,7 @@ internal class DesktopBridgeConnection(
 
     private suspend fun apply(credential: DesktopBridgeCredential?, services: Set<AiService>, expected: Long): Boolean {
         val applied = monitor.updateDesktopSource(credential, services, valid = { expected == generation }) { affected ->
-            affected.forEach { service -> health.clear(service); history.deleteService(service); widgets.deleteServiceCache(service) }
+            affected.forEach { service -> health.clear(service); widgets.deleteServiceCache(service) }
             notifications.discardServices(affected, sessions.activeSession())
         }
         if (!applied || expected != generation) return false

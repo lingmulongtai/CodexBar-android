@@ -11,7 +11,7 @@ import org.junit.Test
 import org.mockito.Mockito.*
 
 class QuotaHistoryScopeTest {
-    @Test fun `Windows account change drops previous samples and stale data does not extend them`() {
+    @Test fun `account sources retain isolated samples across round trips without extending stale data`() {
         val values = mutableMapOf<String, String?>()
         val prefs = mock(SharedPreferences::class.java)
         val editor = mock(SharedPreferences.Editor::class.java)
@@ -32,9 +32,15 @@ class QuotaHistoryScopeTest {
         val second = first.copy(fetchedAt = now.plusSeconds(120), resetTrackingAccountKey = "desktop:pair:account-B")
         store.record(listOf(second))
         assertEquals(1, store.historyFor(listOf(second)).values.single().size)
+        store.record(listOf(first.copy(fetchedAt = now.plusSeconds(200))))
+        assertEquals(3, store.historyFor(listOf(first)).values.single().size)
+        assertEquals(1, store.historyFor(listOf(second)).values.single().size)
         val stale = second.copy(fetchedAt = now.plusSeconds(180), isStale = true)
         store.record(listOf(stale))
         assertTrue(store.historyFor(listOf(stale)).isEmpty())
         assertEquals(1, store.historyFor(listOf(second)).values.single().size)
+        store.deleteService(AiService.CODEX)
+        assertTrue(store.historyFor(listOf(first)).values.single().isEmpty())
+        assertTrue(store.historyFor(listOf(second)).values.single().isEmpty())
     }
 }
