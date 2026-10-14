@@ -23,6 +23,8 @@
     <string name="provider_empty_description">Try another search or connection filter.</string>
     <string name="provider_auth_sign_in">Secure sign-in</string>
     <string name="provider_auth_companion">Local companion</string>
+    <string name="provider_auth_windows">Windows connection</string>
+    <string name="gemini_apps_windows_setup">On Windows, connect Gemini Apps in Win-CodexBar + Mobile Connect. Here, open Acquisition settings, pair with Windows and select the Windows mode. Current and weekly usage and reset times appear on your phone and tablet. Google login information stays on Windows. Phone-only acquisition is unavailable for Gemini Apps.</string>
     <string name="provider_auth_api_key">API key</string>
     <string name="provider_auth_session_cookie">Session cookie</string>
     <string name="provider_auth_access_token">Access token</string>
@@ -367,7 +369,7 @@
     <string name="notifications_reset_description">Notify when quota windows reset, Codex reset balances increase, or a reset expires within 24 hours. Independent of the persistent notification. Updates follow the refresh interval and may be delayed by Android.</string>
     <string name="detail_usage_source">Usage source</string>
     <string name="gemini_cli_usage_source">Gemini CLI (separate from Gemini Apps)</string>
-    <string name="credential_gemini_apps_usage">This connection shows Gemini CLI quotas. Google Gemini for Windows and the web has separate usage limits, which CodexBar cannot retrieve automatically yet. Open Gemini Apps and select Settings → Usage Limits to check them.</string>
+    <string name="credential_gemini_apps_usage">This connection shows Gemini CLI quotas. To see the separate Google Gemini Apps limits, connect Gemini Apps on Windows and select Windows acquisition in this app.</string>
     <string name="action_open_gemini_apps_usage">Open Gemini Apps to check usage</string>
     <string name="reset_history_title">Reset history</string>
     <string name="reset_history_description">Changes observed on this device, up to 100 entries for 90 days. Balance decreases can mean use or expiry. Changes between refreshes may be missed.</string>

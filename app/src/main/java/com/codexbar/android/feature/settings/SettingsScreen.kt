@@ -942,6 +942,7 @@ private fun ProviderCategoryFilter.labelRes(): Int = when (this) {
 private fun ProviderAuthMode.labelRes(): Int = when (this) {
     ProviderAuthMode.DEVICE_SIGN_IN -> R.string.provider_auth_sign_in
     ProviderAuthMode.LOCAL_COMPANION -> R.string.provider_auth_companion
+    ProviderAuthMode.WINDOWS_BRIDGE -> R.string.provider_auth_windows
     ProviderAuthMode.API_KEY -> R.string.provider_auth_api_key
     ProviderAuthMode.SESSION_COOKIE -> R.string.provider_auth_session_cookie
     ProviderAuthMode.ACCESS_TOKEN -> R.string.provider_auth_access_token
@@ -1084,6 +1085,13 @@ private fun ServiceCredentialSection(
             }
 
             if (expanded) {
+                if (service == AiService.GEMINI_APPS) {
+                    Text(stringResource(R.string.gemini_apps_windows_setup))
+                    TextButton(onClick = onOpenSetupGuide) {
+                        Text(stringResource(R.string.action_view_setup_guide))
+                    }
+                    return@Column
+                }
                 if (state.isDesktopSource) {
                     Text(stringResource(R.string.desktop_provider_managed))
                     OutlinedButton(onClick = onDisconnect) { Text(stringResource(R.string.desktop_use_phone_source)) }
@@ -1911,6 +1919,7 @@ private fun AccountLinkControls(
             text = when (service) {
                 AiService.CODEX -> stringResource(R.string.account_link_codex_description)
                 AiService.GEMINI -> stringResource(R.string.credential_gemini_companion_body)
+                AiService.GEMINI_APPS -> stringResource(R.string.gemini_apps_windows_setup)
                 AiService.COPILOT -> stringResource(R.string.account_link_copilot_description)
                 AiService.ANTIGRAVITY -> stringResource(R.string.credential_antigravity_companion_body)
                 AiService.CLAUDE -> stringResource(R.string.credential_claude_instructions)

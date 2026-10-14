@@ -191,6 +191,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     private fun buildCredential(service: AiService, state: ServiceCredentialState): Credential? {
+        if (service == AiService.GEMINI_APPS) return null
         if (service == AiService.CLAUDE || service == AiService.GEMINI || service == AiService.ANTIGRAVITY) return null
         if (state.accessToken.isBlank()) return null
 

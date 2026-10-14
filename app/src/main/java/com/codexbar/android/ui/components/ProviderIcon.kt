@@ -21,6 +21,7 @@ fun AiService.providerIcon(): Int = when (this) {
     AiService.CLAUDE -> R.drawable.provider_claude
     AiService.CODEX -> R.drawable.provider_codex
     AiService.GEMINI -> R.drawable.provider_gemini
+    AiService.GEMINI_APPS -> R.drawable.provider_gemini
     AiService.COPILOT -> R.drawable.provider_copilot
     AiService.CURSOR -> R.drawable.provider_cursor
     AiService.ZAI -> R.drawable.provider_zai

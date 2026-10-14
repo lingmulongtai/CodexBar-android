@@ -23,6 +23,8 @@
     <string name="provider_empty_description">検索語または接続フィルターを変更してください。</string>
     <string name="provider_auth_sign_in">安全なログイン</string>
     <string name="provider_auth_companion">ローカル連携</string>
+    <string name="provider_auth_windows">Windows連携</string>
+    <string name="gemini_apps_windows_setup">WindowsのWin-CodexBar + Mobile ConnectでGemini Appsを接続してください。このアプリの「取得方法」でWindowsをペアリングし、Windowsモードを選ぶと、現在・週間の使用率とリセット日時をスマホやタブレットに表示できます。Googleのログイン情報はWindows内に保存されます。Gemini Appsはスマホ単体での取得には対応していません。</string>
     <string name="provider_auth_api_key">APIキー</string>
     <string name="provider_auth_session_cookie">セッションCookie</string>
     <string name="provider_auth_access_token">アクセストークン</string>
@@ -367,7 +369,7 @@
     <string name="notifications_reset_description">使用枠の定期リセット、Codexリセット残数の増加、24時間以内の期限切れを通知します。常駐通知とは独立した設定です。更新間隔やAndroidの省電力制御により通知が遅れる場合があります。</string>
     <string name="detail_usage_source">使用量の取得元</string>
     <string name="gemini_cli_usage_source">Gemini CLI（Gemini Appsとは別の使用枠）</string>
-    <string name="credential_gemini_apps_usage">この接続で表示するのはGemini CLIの使用枠です。GoogleのGemini Windows・Webアプリの使用枠は別で、現時点ではCodexBarの自動取得に対応していません。Gemini Appsを開き、設定内の使用量画面から確認できます。</string>
+    <string name="credential_gemini_apps_usage">この接続はGemini CLIの使用枠です。別枠のGoogle Gemini Appsを表示するには、Windows側でGemini Appsを接続し、このアプリの取得方法をWindowsにしてください。</string>
     <string name="action_open_gemini_apps_usage">Gemini Appsを開いて使用量を確認</string>
     <string name="reset_history_title">リセット履歴</string>
     <string name="reset_history_description">この端末で検出した変化を最大100件・90日間記録します。残数の減少には利用と期限切れが含まれます。更新の間に起きた変化は記録できない場合があります。</string>
