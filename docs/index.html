@@ -6,7 +6,7 @@
     <title>CodexBar for Android — AIの残量、その先まで。</title>
     <meta
       name="description"
-      content="Codex、Claude、Gemini、GitHub Copilotなど20のAIサービスの残量、リセット、利用ペース、履歴をひとつに。Android向けオープンソースAI使用量モニター。"
+      content="Codex、Claude、Gemini CLI、Gemini Appsなど21のAIサービスの使用量をひとつに。Windows・Tailscale連携に対応するAndroid向けAI使用量モニター。"
     />
     <meta name="theme-color" content="#090b15" />
     <meta name="color-scheme" content="dark" />
@@ -20,7 +20,7 @@
     <meta property="og:title" content="AIの残量、その先まで。｜CodexBar for Android" />
     <meta
       property="og:description"
-      content="残量だけでなく、ペース・リセット計画・履歴まで。20のAIサービスをAndroidで一望。"
+      content="Gemini Appsの使用量もWindowsから。21のAIサービスをAndroidで一望。"
     />
     <meta property="og:url" content="https://lingmulongtai.github.io/CodexBar-android/" />
     <meta
@@ -32,7 +32,7 @@
     <meta property="og:image:alt" content="CodexBar for Androidのダッシュボード" />
     <meta name="twitter:card" content="summary_large_image" />
 
-    <link rel="stylesheet" href="./assets/site.css" />
+    <link rel="stylesheet" href="./assets/site.css?v=0.9.8" />
     <script src="./assets/site.js" defer></script>
 
     <script type="application/ld+json">
@@ -44,7 +44,7 @@
         "applicationCategory": "UtilitiesApplication",
         "description": "An open-source Android app for monitoring AI service quotas, reset times, pace, and usage history.",
         "downloadUrl": "https://github.com/lingmulongtai/CodexBar-android/releases/latest/download/app-release.apk",
-        "softwareVersion": "0.9.7",
+        "softwareVersion": "0.9.8",
         "license": "https://opensource.org/license/mit",
         "offers": {
           "@type": "Offer",
@@ -100,7 +100,7 @@
           <div class="hero-copy">
             <div class="eyebrow reveal">
               <span class="status-dot" aria-hidden="true"></span>
-              v0.9.7 · Android 8.0+
+              v0.9.8 · Android 8.0+
             </div>
 
             <h1 id="hero-title" class="reveal">
@@ -109,8 +109,8 @@
             </h1>
 
             <p class="hero-lede reveal">
-              「あと何％？」から「このペースで大丈夫？」へ。Codex、Claude、Gemini、GitHub
-              Copilot、Antigravityなど20サービスの残量・リセット・履歴・使い方のペースを、ひとつの画面で。
+              「あと何％？」から「このペースで大丈夫？」へ。Codex、Claude、Gemini CLI、Gemini Apps、
+              GitHub Copilot、Antigravityなど21サービスの使用量を、ひとつの画面で。取得できる情報はサービスごとに異なります。
             </p>
 
             <div class="hero-actions reveal">
@@ -172,7 +172,7 @@
         </div>
 
         <div class="shell metric-strip reveal" aria-label="製品概要">
-          <div><strong>20</strong><span>AI providers</span></div>
+          <div><strong>21</strong><span>AI providers</span></div>
           <div><strong>4</strong><span>visual themes</span></div>
           <div><strong>24/7</strong><span>at-a-glance status</span></div>
           <div><strong>0</strong><span>hosted backends</span></div>
@@ -185,7 +185,7 @@
             <span class="kicker">MOBILE CONNECT</span>
             <h2 id="windows-title">取得はスマホでも、Windowsでも。</h2>
             <p>Win-CodexBar + Mobile Connectと接続すれば、PCの使用枠・トークン数・推定費用をスマホで確認できます。スマホで取得するモードと切り替えられ、接続情報と履歴は保持します。</p>
-            <p>Tailscaleは同じネットワークに接続するだけ。スマホのexit nodeは不要です。PCは起動したままにしてください。GeminiはGemini CLIの使用量です。</p>
+            <p>Tailscaleは同じネットワークに接続するだけ。スマホのexit nodeは不要です。PCは起動したままにしてください。v0.9.8ではGemini Appsの現在・週間の使用率も表示でき、Gemini CLIとは別の項目です。スマホとタブレットは同じ接続コードで利用できます。</p>
             <a class="button button-secondary" href="https://github.com/lingmulongtai/Win-CodexBar-Mobile-Connect/releases/latest/download/Win-CodexBar-Mobile-Connect.exe">Windows用EXEをダウンロード ↓</a>
             <a class="button button-secondary" href="https://github.com/lingmulongtai/Win-CodexBar-Mobile-Connect/blob/main/README.ja-JP.md">設定と変更点を見る ↗</a>
           </div>
@@ -197,6 +197,12 @@
             <article class="insight-card reveal">
               <h3>PCのローカル集計まで</h3>
               <img src="./images/releases/v0.9.7/android-pc-local-usage.png" width="540" height="1200" loading="lazy" alt="このPCのトークン数と推定費用を表示するAndroid画面" style="width:100%;height:auto" />
+            </article>
+            <article class="insight-card reveal" id="gemini-apps">
+              <h3>Gemini Appsの使用枠も</h3>
+              <p>Windows版v0.70.4でGemini Appsを接続すると、現在・週間の使用率とリセット日時が届きます。ログイン情報はPCに保存します。</p>
+              <img src="./images/releases/v0.9.8/gemini-apps-material3.png" width="540" height="1200" loading="lazy" alt="Gemini AppsとGemini CLIを分けて表示するv0.9.8の画面（デモデータ）" style="width:100%;height:auto" />
+              <a href="https://github.com/lingmulongtai/Win-CodexBar-Mobile-Connect/blob/main/docs/gemini-apps.md">接続手順と対応範囲 ↗</a>
             </article>
           </div>
           <p>画面はエミュレーターの検証用データです。USD費用は推定値で、請求額とは異なります。Windows版は署名なし、Android APKは署名付きです。</p>
@@ -495,7 +501,8 @@
           <div class="provider-row provider-row-one">
             <span class="provider-chip chip-codex"><i>C</i>Codex</span>
             <span class="provider-chip chip-claude"><i>Cl</i>Claude</span>
-            <span class="provider-chip chip-gemini"><i>G</i>Gemini</span>
+            <span class="provider-chip chip-gemini"><i>G</i>Gemini CLI</span>
+            <span class="provider-chip chip-gemini"><i>G</i>Gemini Apps · Windows</span>
             <span class="provider-chip chip-github"><i>GH</i>GitHub Copilot</span>
             <span class="provider-chip chip-cursor"><i>Cu</i>Cursor</span>
             <span class="provider-chip chip-zai"><i>Z</i>z.ai</span>
@@ -503,7 +510,8 @@
             <span class="provider-chip chip-kimi"><i>K</i>Kimi Code</span>
             <span class="provider-chip chip-codex" aria-hidden="true"><i>C</i>Codex</span>
             <span class="provider-chip chip-claude" aria-hidden="true"><i>Cl</i>Claude</span>
-            <span class="provider-chip chip-gemini" aria-hidden="true"><i>G</i>Gemini</span>
+            <span class="provider-chip chip-gemini" aria-hidden="true"><i>G</i>Gemini CLI</span>
+            <span class="provider-chip chip-gemini" aria-hidden="true"><i>G</i>Gemini Apps · Windows</span>
             <span class="provider-chip chip-github" aria-hidden="true"><i>GH</i>GitHub Copilot</span>
           </div>
           <div class="provider-row provider-row-two">
