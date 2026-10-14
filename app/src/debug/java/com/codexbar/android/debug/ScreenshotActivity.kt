@@ -253,12 +253,33 @@ private fun ScreenshotActivity.createScreenshotSnapshot(now: Instant): QuotaPres
         if (intent.getBooleanExtra("personal", false)) data.filter {
             it.service in listOf(AiService.CODEX, AiService.COPILOT, AiService.CLAUDE, AiService.ANTIGRAVITY)
         } else data
+    }.let { data ->
+        if (intent.getBooleanExtra("gemini_apps", false)) listOf(
+            QuotaInfo(
+                service = AiService.GEMINI_APPS,
+                windows = listOf(
+                    UsageWindow("Current", 0.0, now.plusSeconds(18000), 18000),
+                    UsageWindow("Weekly", 0.01084324, now.plusSeconds(432000), 604800)
+                ),
+                extraUsage = null,
+                fetchedAt = now.minusSeconds(20),
+                historyEligible = false,
+                isDesktopSource = true
+            ),
+            QuotaInfo(
+                service = AiService.GEMINI,
+                windows = listOf(UsageWindow("Daily", 0.43, now.plusSeconds(36000), 86400)),
+                extraUsage = null,
+                fetchedAt = now.minusSeconds(20),
+                isDesktopSource = true
+            )
+        ) else data
     }
 
     val text = AndroidQuotaPresentationText(this)
     val paceCalculator = QuotaPaceCalculator(text)
     val history = buildMap<String, List<QuotaHistorySample>> {
-        quotas.forEach { quota ->
+        quotas.filter { it.service != AiService.GEMINI_APPS }.forEach { quota ->
             quota.windows.forEach { window ->
                 put(
                     QuotaPresentationMapper.metricKey(quota.service, window.label),
@@ -268,7 +289,7 @@ private fun ScreenshotActivity.createScreenshotSnapshot(now: Instant): QuotaPres
         }
     }
     val pace = buildMap<String, PacePresentation> {
-        quotas.forEach { quota ->
+        quotas.filter { it.service != AiService.GEMINI_APPS }.forEach { quota ->
             quota.windows.forEach { window ->
                 val key = QuotaPresentationMapper.metricKey(quota.service, window.label)
                 put(key, paceCalculator.calculate(history[key].orEmpty(), window, now))
