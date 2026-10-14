@@ -10,6 +10,7 @@ import com.codexbar.android.core.data.CursorRepositoryImpl
 import com.codexbar.android.core.data.DeepSeekRepositoryImpl
 import com.codexbar.android.core.data.ElevenLabsRepositoryImpl
 import com.codexbar.android.core.data.GeminiRepositoryImpl
+import com.codexbar.android.core.data.GeminiAppsRepositoryImpl
 import com.codexbar.android.core.data.FireworksRepositoryImpl
 import com.codexbar.android.core.data.DevinRepositoryImpl
 import com.codexbar.android.core.data.KimiRepositoryImpl
@@ -61,6 +62,12 @@ annotation class AiServiceKey(val value: AiService)
 @Module
 @InstallIn(SingletonComponent::class)
 object RepositoryModule {
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @AiServiceKey(AiService.GEMINI_APPS)
+    fun provideGeminiAppsRepository(): QuotaRepository = GeminiAppsRepositoryImpl()
 
     @Provides
     @Singleton

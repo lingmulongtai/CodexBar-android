@@ -10,6 +10,7 @@ enum class ProviderCategory {
 enum class ProviderAuthMode {
     DEVICE_SIGN_IN,
     LOCAL_COMPANION,
+    WINDOWS_BRIDGE,
     API_KEY,
     SESSION_COOKIE,
     ACCESS_TOKEN
@@ -59,6 +60,13 @@ object ProviderCatalog {
             authMode = ProviderAuthMode.LOCAL_COMPANION,
             aliases = setOf("google", "gemini cli"),
             guideAnchor = "gemini-google",
+            recommended = true
+        ),
+        AiService.GEMINI_APPS to ProviderMetadata(
+            category = ProviderCategory.CODING,
+            authMode = ProviderAuthMode.WINDOWS_BRIDGE,
+            aliases = setOf("google gemini app", "gemini desktop", "gemini web"),
+            guideAnchor = "gemini-apps",
             recommended = true
         ),
         AiService.COPILOT to ProviderMetadata(

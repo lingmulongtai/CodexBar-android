@@ -6,6 +6,15 @@ import org.junit.Test
 
 class ProviderCatalogTest {
     @Test
+    fun `Gemini Apps uses Windows while CLI keeps its existing connection`() {
+        assertEquals(ProviderAuthMode.WINDOWS_BRIDGE, AiService.GEMINI_APPS.providerMetadata.authMode)
+        assertEquals(ProviderAuthMode.LOCAL_COMPANION, AiService.GEMINI.providerMetadata.authMode)
+        assertNull(AiService.GEMINI_APPS.providerMetadata.secretKind)
+        assertEquals("Gemini CLI", AiService.GEMINI.displayName)
+        assertEquals(3, AiService.COPILOT.ordinal)
+        assertEquals(19, AiService.ANTIGRAVITY.ordinal)
+    }
+    @Test
     fun `catalog covers every service with a stable guide anchor`() {
         val metadata = AiService.entries.map { ProviderCatalog.metadataFor(it) }
 

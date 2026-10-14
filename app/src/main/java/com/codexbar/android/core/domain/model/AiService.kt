@@ -19,7 +19,7 @@ enum class AiService(
         requiresManualCredentials = false
     ),
     GEMINI(
-        displayName = "Gemini",
+        displayName = "Gemini CLI",
         brandColor = 0xFF4285F4,
         baseUrl = "codexbar://gemini-companion/",
         requiresManualCredentials = false
@@ -124,6 +124,12 @@ enum class AiService(
         displayName = "Antigravity",
         brandColor = 0xFF4285F4,
         baseUrl = "codexbar://antigravity-companion/",
+        requiresManualCredentials = false
+    ),
+    GEMINI_APPS(
+        displayName = "Gemini Apps",
+        brandColor = 0xFF4285F4,
+        baseUrl = "https://gemini.google.com/app",
         requiresManualCredentials = false
     )
 }

@@ -11,6 +11,21 @@ import org.junit.Test
 import org.mockito.Mockito.*
 
 class DesktopQuotaSourceTest {
+    @Test fun `Gemini Apps has its own id and preserves both quota windows`() {
+        assertEquals(AiService.GEMINI_APPS, DesktopQuotaSource.serviceFor("geminiapps"))
+        assertEquals(AiService.GEMINI, DesktopQuotaSource.serviceFor("gemini"))
+        val now = Instant.ofEpochSecond(1800000000)
+        val provider = DesktopProvider("geminiapps", now.epochSecond, "ready", windows = listOf(
+            DesktopWindow("Current", 0.0, 1800018000, 18000),
+            DesktopWindow("Weekly", 0.01084324, 1800604800, 604800)
+        ))
+        val quota = with(DesktopQuotaSource) { provider.toQuota(AiService.GEMINI_APPS, "pairing", now) }
+        assertEquals(0.0, quota.windows[0].utilization, 0.0)
+        assertEquals(0.01084324, quota.windows[1].utilization, 0.000000001)
+        assertEquals(Instant.ofEpochSecond(1800018000), quota.windows[0].resetsAt)
+        assertFalse(quota.historyEligible)
+        assertNull(quota.resetTrackingAccountKey)
+    }
     @Test fun `bulk refresh discovers unavailable providers while preserving phone exceptions`() = runTest {
         val prefs = mock(EncryptedPrefsManager::class.java)
         val credential = DesktopBridgeCredential("100.64.1.2", 43825, "id", "key")

@@ -92,6 +92,7 @@ class DesktopQuotaSource @Inject constructor(
 
     companion object {
         fun serviceFor(id: String): AiService? = when (id) {
+            "geminiapps" -> AiService.GEMINI_APPS
             "cline" -> AiService.CLINEPASS
             "kimik2" -> AiService.MOONSHOT
             "ibmbob" -> AiService.IBM_BOB

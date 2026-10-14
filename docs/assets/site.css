@@ -770,6 +770,14 @@ button {
   transform: translateY(-6px);
 }
 
+#windows .insight-card {
+  color: #1c1d25;
+}
+
+#windows .insight-card h3 {
+  color: #1c1d25;
+}
+
 .card-topline {
   display: flex;
   align-items: center;
