@@ -224,7 +224,7 @@ The source checkout also includes a [Windows Control Center](companion/windows-c
 
 ### Gemini Apps
 
-Use **Win-CodexBar + Mobile Connect v0.70.5 or later** for the separate usage limits shown in the Google Gemini Windows/web app. This version fixes Gemini's connection transport error.
+Use **Win-CodexBar + Mobile Connect v0.70.6 or later** for the separate usage limits shown in the Google Gemini Windows/web app. This version fixes Gemini's connection transport error and retains encrypted session renewals. If an older connection already expired, reconnect once after updating Windows.
 
 1. Sign in to the official Google Gemini Windows app with your primary Google account, then close it once.
 2. In Win-CodexBar, open **Settings → Providers → Gemini Apps**, enable it and connect using the desktop app.
