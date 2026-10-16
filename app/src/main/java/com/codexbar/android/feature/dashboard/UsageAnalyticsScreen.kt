@@ -94,7 +94,7 @@ private fun ProviderHistory(service: ServiceQuotaPresentation) {
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         service.metrics.forEach { entry -> FilterChip(selected = entry.id == metric.id, onClick = { selected = entry.id }, label = { Text(entry.label) }) }
     }
-    QuotaGaugeBar(metric, showExtendedDetails = true, goodColor = providerVisualStyle(service.service).accent)
+    QuotaGaugeBar(metric, showGuideLegend = true, goodColor = providerVisualStyle(service.service).accent)
     QuotaHistoryChart(metric.history, providerVisualStyle(service.service).accent)
     Text(stringResource(if (service.historyFromDesktop) R.string.analytics_pc_history else R.string.analytics_device_history),
         style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

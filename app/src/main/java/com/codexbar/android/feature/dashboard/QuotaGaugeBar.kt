@@ -46,6 +46,7 @@ import kotlin.math.abs
 fun QuotaGaugeBar(
     metric: QuotaMetricPresentation,
     showExtendedDetails: Boolean = false,
+    showGuideLegend: Boolean = showExtendedDetails,
     goodColor: Color? = null,
     modifier: Modifier = Modifier
 ) {
@@ -110,14 +111,19 @@ fun QuotaGaugeBar(
         val guideNow = stringResource(R.string.quota_guide_now)
         val guideHour = stringResource(R.string.quota_guide_hour)
         val guideToday = stringResource(R.string.quota_guide_today)
-        val detailLabels = buildList {
-            if (showExtendedDetails) metric.pace.guide?.let { guide ->
-                add(listOfNotNull(
+        if (showGuideLegend) metric.pace.guide?.let { guide ->
+            Text(
+                text = listOfNotNull(
                     "$guideNow ${(guide.nowRemaining * 100).toInt()}%",
                     guide.oneHourRemaining?.let { "$guideHour ${(it * 100).toInt()}%" },
                     guide.todayRemaining?.let { "$guideToday ${(it * 100).toInt()}%" }
-                ).joinToString(" · "))
-            }
+                ).joinToString(" · "),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        val detailLabels = buildList {
             metric.resetLabel?.let(::add)
             metric.pace.label.takeIf { it.isNotBlank() }?.let(::add)
             if (showExtendedDetails) {
