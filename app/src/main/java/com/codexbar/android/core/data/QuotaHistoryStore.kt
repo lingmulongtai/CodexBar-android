@@ -31,6 +31,11 @@ class QuotaHistoryStore @Inject constructor(
         for (quota in quotas) {
             if ((!quota.historyEligible && quota.desktopHistoryScopeKey == null) || quota.isStale) continue
             if (quota.isDesktopSource && quota.desktopHistoryScopeKey != null) {
+                val observedKey = "${quota.service.name}:scoped:${historyScope(quota.desktopHistoryScopeKey)}:observed"
+                val previous = prefs.getString(observedKey, null)?.toLongOrNull() ?: 0L
+                if (quota.fetchedAt.toEpochMilli() <= previous) continue
+                editor.putString(observedKey, quota.fetchedAt.toEpochMilli().toString())
+                written += observedKey
                 // Replace from the PC's canonical series; never append a phone's polling times.
                 for (window in quota.windows) {
                     val samples = quota.desktopQuotaHistory.firstOrNull { it.label == window.label }?.samples.orEmpty()
@@ -143,6 +148,7 @@ class QuotaHistoryStore @Inject constructor(
             if (key in written) return@forEach
             if (key.removePrefix(prefix).substringBefore(':') !in retained) editor.remove(key)
             else {
+                if (key.endsWith(":observed")) return@forEach
                 val recent = loadSamples(key)
                 if (recent.isEmpty()) editor.remove(key)
                 else if (!key.startsWith(prefix + historyScope(quota.desktopHistoryScopeKey ?: quota.resetTrackingAccountKey) + ":"))

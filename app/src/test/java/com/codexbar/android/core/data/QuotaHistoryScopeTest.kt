@@ -27,6 +27,8 @@ class QuotaHistoryScopeTest {
         tablet.record(listOf(quota.copy(fetchedAt = now.plusSeconds(60))))
         assertEquals(2, phone.historyFor(listOf(quota)).values.single().size)
         assertEquals(phone.historyFor(listOf(quota)), tablet.historyFor(listOf(quota)))
+        phone.record(listOf(quota.copy(fetchedAt = now.minusSeconds(10), desktopQuotaHistory = emptyList())))
+        assertEquals(2, phone.historyFor(listOf(quota)).values.single().size)
         val anotherConnection = quota.copy(desktopHistoryScopeKey = "desktop:pc:history:connection-b", desktopQuotaHistory = emptyList())
         tablet.record(listOf(anotherConnection))
         assertTrue(tablet.historyFor(listOf(anotherConnection)).values.single().isEmpty())
