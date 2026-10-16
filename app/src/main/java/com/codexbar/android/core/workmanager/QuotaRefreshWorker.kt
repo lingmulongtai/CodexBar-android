@@ -130,7 +130,8 @@ class QuotaRefreshWorker @AssistedInject constructor(
                         inputData.getString(WorkManagerInitializer.KEY_REFRESH_SOURCE) ?: "periodic"
                     ),
                     paceByMetricKey = paceByMetricKey,
-                    desktopServices = prefsManager.desktopServices()
+                    desktopServices = prefsManager.desktopServices(),
+                    desktopSpendByService = repositoryRegistry.desktopSpend()
                 )
 
                 // Publish both successful data and actionable provider errors to widgets.

@@ -11,6 +11,27 @@ import org.junit.Test
 import org.mockito.Mockito.*
 
 class DesktopQuotaSourceTest {
+    @Test fun `expired quota login does not discard independent PC spend and a source change hides it`() = runTest {
+        val prefs = mock(EncryptedPrefsManager::class.java)
+        val credential = DesktopBridgeCredential("127.0.0.1", 43825, "id", "key")
+        `when`(prefs.desktopBridgeCredential()).thenReturn(credential)
+        `when`(prefs.acquisitionSettings()).thenReturn(AcquisitionSettings(AcquisitionMode.WINDOWS, setOf(AiService.CODEX)))
+        val monitor = mock(QuotaResetMonitor::class.java)
+        val client = object : DesktopBridgeClient(Json) {
+            override suspend fun fetchSnapshot(credential: DesktopBridgeCredential, now: Instant) = DesktopBridgeSnapshot(1, "win-codexbar", now.epochSecond,
+                listOf(DesktopProvider("codex", now.epochSecond, "needsAuthentication", windows = emptyList())),
+                DesktopSpendDto(now.epochSecond, "rolling:30", "UTC", true, listOf(DesktopSpendRowDto("codex", "USD", false, thirtyDay = 4.2))))
+        }
+        val source = DesktopQuotaSource(client, prefs, monitor, mock(DesktopSourceCoordinator::class.java))
+        assertTrue(source.fetchQuota(AiService.CODEX) is Result.Failure)
+        val spend = source.currentSpend()
+        assertEquals(4.2, spend[AiService.CODEX]!!.thirtyDay!!, 0.0)
+        val presentation = com.codexbar.android.core.presentation.QuotaPresentationMapper().map(emptyList(),
+            errors = mapOf(AiService.CODEX to AppError.AuthError(AiService.CODEX, true)), desktopSpendByService = spend)
+        assertEquals(4.2, presentation.services.single().desktopSpend!!.thirtyDay!!, 0.0)
+        `when`(prefs.desktopBridgeCredential()).thenReturn(credential.copy(companionId = "another-pc"))
+        assertTrue(source.currentSpend().isEmpty())
+    }
     @Test fun `Gemini Apps has its own id and preserves both quota windows`() {
         assertEquals(AiService.GEMINI_APPS, DesktopQuotaSource.serviceFor("geminiapps"))
         assertEquals(AiService.GEMINI, DesktopQuotaSource.serviceFor("gemini"))

@@ -29,7 +29,8 @@ class QuotaPresentationMapper(
         source: RefreshSourcePresentation = RefreshSourcePresentation.Unknown,
         paceByMetricKey: Map<String, PacePresentation> = emptyMap(),
         historyByMetricKey: Map<String, List<QuotaHistorySample>> = emptyMap(),
-        desktopServices: Set<AiService> = emptySet()
+        desktopServices: Set<AiService> = emptySet(),
+        desktopSpendByService: Map<AiService, com.codexbar.android.core.domain.model.DesktopSpend> = emptyMap()
     ): QuotaPresentationSnapshot {
         val successfulServices = quotas.map { quota ->
             val metrics = quota.windows.mapIndexed { index, window ->
@@ -86,7 +87,7 @@ class QuotaPresentationMapper(
                     ?.let { mapCodexTelemetry(it, locale) },
                 isDesktopSource = quota.isDesktopSource,
                 desktopLocalUsage = quota.desktopLocalUsage?.takeUnless { privacy.redactSensitiveValues },
-                desktopSpend = quota.desktopSpend?.takeUnless { privacy.redactSensitiveValues },
+                desktopSpend = (desktopSpendByService[quota.service] ?: quota.desktopSpend)?.takeUnless { privacy.redactSensitiveValues },
                 historyFromDesktop = quota.isDesktopSource && quota.desktopHistoryScopeKey != null
             )
         }
@@ -94,7 +95,8 @@ class QuotaPresentationMapper(
         val failedServices = errors
             .filterKeys { service -> successfulServices.none { it.service == service } }
             .map { (service, error) ->
-                mapError(service, error, generatedAt).copy(isDesktopSource = service in desktopServices)
+                mapError(service, error, generatedAt).copy(isDesktopSource = service in desktopServices,
+                    desktopSpend = desktopSpendByService[service]?.takeUnless { privacy.redactSensitiveValues })
             }
 
         val services = (successfulServices + failedServices)

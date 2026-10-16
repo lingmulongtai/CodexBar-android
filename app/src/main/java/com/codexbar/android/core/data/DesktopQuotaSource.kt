@@ -96,6 +96,19 @@ class DesktopQuotaSource @Inject constructor(
         }
     }
 
+    /** PC log totals remain useful even when that provider's quota login has expired. */
+    suspend fun currentSpend(): Map<AiService, DesktopSpend> = mutex.withLock {
+        val settings = prefs.acquisitionSettings()
+        if (cachedCredential != prefs.desktopBridgeCredential() || cachedRevision != sourceMonitor.sourceRevision()) return@withLock emptyMap()
+        val summary = cached?.spend?.takeIf { it.costTrackingEnabled } ?: return@withLock emptyMap()
+        summary.rows.mapNotNull { row ->
+            val service = serviceFor(row.providerId)?.takeIf(settings::routesToDesktop) ?: return@mapNotNull null
+            service to DesktopSpend(summary.updatedAtEpochSeconds, summary.reportingPeriod, summary.timeZone, row.currency, row.refreshing,
+                row.sevenDay, row.thirtyDay, row.periodCost, row.sevenDayTokens, row.thirtyDayTokens, row.periodTokens,
+                row.tokensLowerBound, row.daily.map { DesktopSpendDay(it.day, it.tokens, it.costUsd, it.isScanned) })
+        }.toMap()
+    }
+
     companion object {
         fun serviceFor(id: String): AiService? = when (id) {
             "geminiapps" -> AiService.GEMINI_APPS
