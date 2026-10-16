@@ -12,9 +12,15 @@ Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT
 
 <p align="center"><sub>Demo quota data is shown in screenshots. No account credentials are included.</sub></p>
 
+## Mobile dashboard update
+
+The development branch adds long-press drag ordering, shared PC history, PC spend/token charts, tablet layouts, thicker quota bars with budget guides, clearer reset notification setup and opt-in remote PC settings. **These changes are committed for the next release; current published downloads are unchanged.** [Changes and screenshots](docs/releases/mobile-dashboard.md) · [Verification and commits](docs/mobile-dashboard-validation.md)
+
+![Tablet PC spend dashboard with synthetic data](docs/images/mobile-dashboard/tablet-spend.png)
+
 ## Windows usage sharing
 
-Download **[Win-CodexBar + Mobile Connect EXE](https://github.com/lingmulongtai/Win-CodexBar-Mobile-Connect/releases/latest/download/Win-CodexBar-Mobile-Connect.exe)** directly. Enable **Advanced → Android sharing**, select LAN or Tailscale, and paste its private code into Android **Connections → Usage source & Windows connection**. Windows must remain running. The Windows EXE is unsigned; the Android APK retains its production signature. [Setup guide](https://github.com/lingmulongtai/Win-CodexBar-Mobile-Connect/blob/main/docs/android-sharing.md)
+Download **[Win-CodexBar + Mobile Connect EXE](https://github.com/lingmulongtai/Win-CodexBar-Mobile-Connect/releases/latest/download/Win-CodexBar-Mobile-Connect.exe)** directly. Enable **Settings → Mobile Connect** in the updated app (published v0.70.6 and older: **Advanced → Android sharing**), select LAN or Tailscale, and paste its private code into Android **Connections → Usage source & Windows connection**. Windows must remain running. The Windows EXE is unsigned; the Android APK retains its production signature. [Setup guide](https://github.com/lingmulongtai/Win-CodexBar-Mobile-Connect/blob/main/docs/android-sharing.md)
 
 Choose **Collect on this phone** to use saved phone connections, or **Collect on Windows** to receive PC-collected data. Advanced phone exceptions allow individual services to stay on the phone. Pairing, credentials, exceptions and source/account-specific histories survive mode round trips. Legacy selections migrate to exceptions; **Use Windows for all services** clears them explicitly. Offline Windows never silently switches to a different phone account, and newly enabled known PC providers sync at refresh.
 
@@ -101,17 +107,17 @@ Signed APKs are available on this fork's [Releases](https://github.com/lingmulon
 
 ### Install the release APK
 
-1. Download [**app-release.apk**](https://github.com/lingmulongtai/CodexBar-android/releases/latest/download/app-release.apk) from the latest GitHub Release. Do not install a source archive or a debug APK from an untrusted location.
+1. Download the signed **`CodexBar-Android-v<version>.apk`** from [**the latest release assets**](https://github.com/lingmulongtai/CodexBar-android/releases/latest) (older releases use `app-release.apk`). Do not install a source archive or a debug APK from an untrusted location.
 2. For an integrity check, download `SHA256SUMS` from the same Release and compare the APK hash on your computer:
 
    ```powershell
    # Windows PowerShell
-   (Get-FileHash .\app-release.apk -Algorithm SHA256).Hash
+   (Get-FileHash ".\CodexBar-Android-v<version>.apk" -Algorithm SHA256).Hash
    ```
 
    ```bash
    # macOS or Linux
-   sha256sum app-release.apk
+   sha256sum "CodexBar-Android-v<version>.apk"
    ```
 
 3. Transfer the APK to the Android device if it was downloaded elsewhere, then open it from the browser or file manager.
