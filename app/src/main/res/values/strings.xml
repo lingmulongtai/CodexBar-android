@@ -542,7 +542,7 @@
     <string name="validation_antigravity_clipboard_empty">No CBANTIGRAVITY1 pairing code was found. Copy the code from the Antigravity companion.</string>
     <string name="validation_antigravity_scanner_failed">Couldn’t open the secure scanner. Check Google Play services or paste the CBANTIGRAVITY1 pairing code.</string>
     <string name="desktop_title">Usage source &amp; Windows connection</string>
-    <string name="desktop_description">In Win-CodexBar + Mobile Connect, open Advanced → Android sharing. Select LAN or Tailscale, enable sharing and paste the pairing code here. Pairing selects Windows mode.</string>
+    <string name="desktop_description">In Win-CodexBar + Mobile Connect, open Settings → Mobile Connect. Select LAN or Tailscale, enable sharing and paste the pairing code here. Older Windows releases use Advanced → Android sharing. Pairing selects Windows mode.</string>
     <string name="desktop_pairing_code">Windows pairing code</string>
     <string name="desktop_paste">Paste</string>
     <string name="desktop_connect">Connect</string>
