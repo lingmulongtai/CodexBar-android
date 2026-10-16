@@ -92,21 +92,7 @@ fun QuotaGaugeBar(
             )
             Spacer(modifier = Modifier.width(8.dp))
 
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(progress.value)
-                        .clip(RoundedCornerShape(50))
-                        .background(animatedColor)
-                )
-            }
+            QuotaMeter(progress.value, animatedColor, metric.pace.guide, Modifier.weight(1f))
 
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -121,7 +107,17 @@ fun QuotaGaugeBar(
             )
         }
 
+        val guideNow = stringResource(R.string.quota_guide_now)
+        val guideHour = stringResource(R.string.quota_guide_hour)
+        val guideToday = stringResource(R.string.quota_guide_today)
         val detailLabels = buildList {
+            if (showExtendedDetails) metric.pace.guide?.let { guide ->
+                add(listOfNotNull(
+                    "$guideNow ${(guide.nowRemaining * 100).toInt()}%",
+                    guide.oneHourRemaining?.let { "$guideHour ${(it * 100).toInt()}%" },
+                    guide.todayRemaining?.let { "$guideToday ${(it * 100).toInt()}%" }
+                ).joinToString(" · "))
+            }
             metric.resetLabel?.let(::add)
             metric.pace.label.takeIf { it.isNotBlank() }?.let(::add)
             if (showExtendedDetails) {

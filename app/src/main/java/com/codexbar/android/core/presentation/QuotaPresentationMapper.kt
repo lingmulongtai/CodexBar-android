@@ -170,7 +170,7 @@ class QuotaPresentationMapper(
             resetLabel = if (privacy.redactSensitiveValues) null else window.resetsAt?.let {
                 formatResetLabel(it, generatedAt)
             },
-            pace = pace,
+            pace = pace.copy(guide = if (privacy.redactSensitiveValues) null else quotaPaceGuide(window, generatedAt)),
             resetPlan = resetPlan,
             history = history
         )

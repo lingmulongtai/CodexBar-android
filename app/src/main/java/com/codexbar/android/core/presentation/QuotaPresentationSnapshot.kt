@@ -149,7 +149,8 @@ data class PacePresentation(
     val usageRateLabel: String? = null,
     val paceMultiplierLabel: String? = null,
     val reserveLabel: String? = null,
-    val forecastLabel: String? = null
+    val forecastLabel: String? = null,
+    val guide: QuotaPaceGuide? = null
 )
 
 data class PrivacyPresentation(

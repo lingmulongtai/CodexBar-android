@@ -83,13 +83,7 @@ fun ServiceCard(
                                     color = CodexBarStateColors.severityColor(metric.severity, visualStyle.accent),
                                     maxLines = 1)
                             }
-                            androidx.compose.material3.LinearProgressIndicator(
-                                progress = { metric.barProgress.coerceIn(0f, 1f) },
-                                modifier = Modifier.fillMaxWidth().height(3.dp),
-                                color = visualStyle.accent,
-                                trackColor = visualStyle.accent.copy(alpha = 0.13f),
-                                drawStopIndicator = {}
-                            )
+                            QuotaMeter(metric.barProgress, visualStyle.accent, metric.pace.guide)
                             metric.resetLabel?.let { reset ->
                                 Text(reset, style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
