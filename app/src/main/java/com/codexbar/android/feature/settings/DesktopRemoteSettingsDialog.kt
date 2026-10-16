@@ -1,6 +1,5 @@
 package com.codexbar.android.feature.settings
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -14,6 +13,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.codexbar.android.R
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun DesktopRemoteSettingsDialog(state: DesktopConnectionState, onLoad: () -> Unit, onSave: (Long?, String?) -> Unit, onDismiss: () -> Unit) {
     val settings = state.remoteSettings
@@ -38,13 +38,12 @@ internal fun DesktopRemoteSettingsDialog(state: DesktopConnectionState, onLoad: 
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), isError = !validInterval,
                     enabled = settings.allowed && !state.busy, modifier = Modifier.fillMaxWidth())
                 Text(stringResource(R.string.desktop_remote_period), style = MaterialTheme.typography.labelMedium)
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf("rolling:7" to R.string.analytics_7_days, "rolling:30" to R.string.analytics_30_days,
                         "month-to-date" to R.string.local_usage_month_to_date, "all" to R.string.local_usage_all).forEach { (id, label) ->
                         FilterChip(selected = period == id, enabled = settings.allowed && !state.busy, onClick = { period = id }, label = { Text(stringResource(label)) })
                     }
                 }
-                Text(period, style = MaterialTheme.typography.labelSmall)
             }
         }
     }, confirmButton = {
