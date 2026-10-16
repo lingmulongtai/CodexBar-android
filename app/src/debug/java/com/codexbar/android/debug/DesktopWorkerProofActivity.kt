@@ -26,9 +26,11 @@ class DesktopWorkerProofActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         check(intent.getBooleanExtra("seed_demo", false))
+        val port = intent.getIntExtra("port", 43829)
+        check(port in 43828..43829) { "Only isolated synthetic proof listeners are supported" }
         lifecycleScope.launch {
             prefs.warmCache()
-            val credential = DesktopBridgePairing.parse("CBWIN1|10.0.2.2|43829|11111111-1111-4111-8111-111111111111|AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+            val credential = DesktopBridgePairing.parse("CBWIN1|10.0.2.2|$port|11111111-1111-4111-8111-111111111111|AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
             prefs.saveDesktopSource(credential, AcquisitionSettings(AcquisitionMode.WINDOWS, setOf(AiService.CODEX, AiService.CLAUDE, AiService.COPILOT)))
             prefs.setResetNotificationEnabled(true)
             prefs.setPersistentNotificationEnabled(false)
