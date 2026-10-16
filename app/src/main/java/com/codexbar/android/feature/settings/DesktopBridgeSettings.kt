@@ -23,6 +23,9 @@ internal fun DesktopBridgeSettings(state: SettingsUiState, viewModel: SettingsVi
     val context = LocalContext.current
     var showPairing by remember { mutableStateOf(false) }
     var showExceptions by remember { mutableStateOf(false) }
+    var showRemote by remember { mutableStateOf(false) }
+    if (showRemote && state.desktop.connected) DesktopRemoteSettingsDialog(state.desktop,
+        viewModel::loadDesktopRemoteSettings, viewModel::updateDesktopRemoteSettings, { showRemote = false })
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.desktop_title), style = MaterialTheme.typography.titleMedium)
@@ -69,6 +72,9 @@ internal fun DesktopBridgeSettings(state: SettingsUiState, viewModel: SettingsVi
                 Text(stringResource(R.string.desktop_endpoint, state.desktop.host), style = MaterialTheme.typography.bodySmall)
                 Text(stringResource(R.string.desktop_network_hint), style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(enabled = !state.desktop.busy, onClick = viewModel::refreshDesktopProviders) { Text(stringResource(R.string.desktop_refresh)) }
+                OutlinedButton(enabled = !state.desktop.busy, onClick = { showRemote = true; viewModel.loadDesktopRemoteSettings() }) {
+                    Text(stringResource(R.string.desktop_remote_title))
+                }
                 if (state.desktop.mode == AcquisitionMode.WINDOWS) {
                     Text(stringResource(R.string.desktop_selected_services, state.desktop.services.joinToString { it.displayName }
                     .ifBlank { stringResource(R.string.desktop_no_services) }), style = MaterialTheme.typography.bodySmall)

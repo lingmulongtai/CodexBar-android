@@ -586,4 +586,16 @@
     <string name="desktop_provider_managed">Win-CodexBarから使用量を受信しています。アカウントはWindowsで管理してください。</string>
     <string name="desktop_use_phone_source">スマホの保存済み接続を使う</string>
     <string name="desktop_refresh">Windowsのサービス一覧を更新</string>
+    <string name="desktop_remote_title">PCの設定</string>
+    <string name="desktop_remote_help">変更はWindowsと接続中の全端末に反映されます。最初にPCの「Mobile Connect」で「Androidからの設定変更を許可」を有効にしてください。更新版のWindowsアプリが必要です。</string>
+    <string name="desktop_remote_disabled">このPCでは遠隔変更が無効です。Windowsの「Mobile Connect」で許可してください。</string>
+    <string name="desktop_remote_conflict">別の端末が設定を変更しました。現在の値を読み込んだので、内容を確認してからもう一度保存してください。</string>
+    <string name="desktop_remote_failed">PCに保存できませんでした。再読み込みしてからお試しください。</string>
+    <string name="desktop_remote_saved">Windowsに保存しました。</string>
+    <string name="desktop_remote_adaptive">PCの更新：自動調整</string>
+    <string name="desktop_remote_fixed">PCの更新：固定間隔</string>
+    <string name="desktop_remote_interval">PCの更新間隔（秒）</string>
+    <string name="desktop_remote_interval_help">0＝手動、または60〜86400秒。値を変更するとWindowsの自動調整はオフになります。</string>
+    <string name="desktop_remote_period">Windowsの使用費用画面の集計期間</string>
+    <string name="desktop_remote_close">閉じる</string>
 </resources>

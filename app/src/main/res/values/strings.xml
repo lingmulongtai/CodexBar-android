@@ -588,4 +588,16 @@
     <string name="desktop_provider_managed">Usage comes from Win-CodexBar. Manage this account on Windows.</string>
     <string name="desktop_use_phone_source">Use saved phone connection</string>
     <string name="desktop_refresh">Refresh Windows providers</string>
+    <string name="desktop_remote_title">PC settings</string>
+    <string name="desktop_remote_help">These changes apply to Windows and all paired devices. Enable “Allow settings changes from Android” on the PC’s Mobile Connect page first. Requires the updated Windows app.</string>
+    <string name="desktop_remote_disabled">Remote changes are disabled on this PC. Enable them in Windows → Mobile Connect.</string>
+    <string name="desktop_remote_conflict">Another device changed these settings. The current values have been loaded. Review them before saving again.</string>
+    <string name="desktop_remote_failed">The PC could not save these settings. Refresh and try again.</string>
+    <string name="desktop_remote_saved">Saved on Windows.</string>
+    <string name="desktop_remote_adaptive">PC refresh: Adaptive</string>
+    <string name="desktop_remote_fixed">PC refresh: fixed interval</string>
+    <string name="desktop_remote_interval">PC refresh interval (seconds)</string>
+    <string name="desktop_remote_interval_help">0 = manual, or 60–86400 seconds. Changing this value turns Adaptive off on Windows.</string>
+    <string name="desktop_remote_period">Usage &amp; Spend reporting period on Windows</string>
+    <string name="desktop_remote_close">Close</string>
 </resources>

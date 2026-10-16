@@ -30,6 +30,33 @@ open class DesktopBridgeClient @Inject constructor(
 ) {
     private val secureRandom = SecureRandom()
 
+    open suspend fun remoteSettings(credential: DesktopBridgeCredential): DesktopRemoteSettingsResult =
+        control(credential, "settings.get", "{}")
+
+    open suspend fun updateRemoteSettings(credential: DesktopBridgeCredential, update: DesktopRemoteSettingsUpdate): DesktopRemoteSettingsResult =
+        control(credential, "settings.update", json.encodeToString(update))
+
+    private suspend fun control(credential: DesktopBridgeCredential, resource: String, payload: String): DesktopRemoteSettingsResult = withContext(Dispatchers.IO) {
+        DesktopBridgePairing.validate(credential)
+        val master = decodeUrlBase64(credential.sharedKeyBase64Url)
+        val now = Instant.now()
+        val nonce = ByteArray(REQUEST_NONCE_BYTES).also(secureRandom::nextBytes).toUrlBase64()
+        val bytes = payload.toByteArray(StandardCharsets.UTF_8)
+        val hash = java.security.MessageDigest.getInstance("SHA-256").digest(bytes).toUrlBase64()
+        val canonical = "2\n${credential.companionId}\n${now.epochSecond}\n$nonce\n$resource\n$hash"
+        val signature = hmacSha256(deriveKey(master, "codexbar-windows-auth-v2"), canonical.toByteArray(StandardCharsets.UTF_8)).toUrlBase64()
+        val request = DesktopControlRequest(protocolVersion = 2, companionId = credential.companionId, requestedAtEpochSeconds = now.epochSecond,
+            nonce = nonce, resource = resource, payload = bytes.toUrlBase64(), signature = signature)
+        val response = exchange(json.encodeToString(request), credential)
+        val envelope = runCatching { json.decodeFromString<DesktopBridgeEnvelope>(response) }
+            .getOrElse { throw DesktopBridgeProtocolException("Invalid Windows settings envelope", it) }
+        validateEnvelope(envelope, credential, nonce, now, 2)
+        val aad = "2\n${credential.companionId}\n$nonce\n${envelope.sentAtEpochSeconds}\n$resource\n$hash"
+        val plaintext = decryptEnvelope(envelope, deriveKey(master, "codexbar-windows-encryption-v2"), aad)
+        runCatching { json.decodeFromString<DesktopRemoteSettingsResult>(plaintext) }
+            .getOrElse { throw DesktopBridgeProtocolException("Invalid Windows settings payload", it) }.validate()
+    }
+
     open suspend fun fetchSnapshot(
         credential: DesktopBridgeCredential,
         now: Instant = Instant.now()
@@ -56,7 +83,7 @@ open class DesktopBridgeClient @Inject constructor(
             signature = signature
         )
 
-        val responseLine = exchange(request, credential)
+        val responseLine = exchange(json.encodeToString(request), credential)
 
         val envelope = runCatching {
             json.decodeFromString<DesktopBridgeEnvelope>(responseLine)
@@ -71,7 +98,7 @@ open class DesktopBridgeClient @Inject constructor(
     }
 
     private suspend fun exchange(
-        request: DesktopBridgeRequest,
+        request: String,
         credential: DesktopBridgeCredential
     ): String = suspendCancellableCoroutine { continuation ->
         val socket = Socket()
@@ -84,7 +111,7 @@ open class DesktopBridgeClient @Inject constructor(
                     CONNECT_TIMEOUT_MILLIS
                 )
                 socket.getOutputStream().bufferedWriter(StandardCharsets.UTF_8).use { writer ->
-                    writer.write(json.encodeToString(request))
+                    writer.write(request)
                     writer.newLine()
                     writer.flush()
                     readLimitedLine(socket)
@@ -118,10 +145,11 @@ open class DesktopBridgeClient @Inject constructor(
         envelope: DesktopBridgeEnvelope,
         credential: DesktopBridgeCredential,
         requestNonce: String,
-        now: Instant
+        now: Instant,
+        version: Int = PROTOCOL_VERSION
     ) {
         if (
-            envelope.protocolVersion != PROTOCOL_VERSION ||
+            envelope.protocolVersion != version ||
             envelope.companionId != credential.companionId ||
             envelope.requestNonce != requestNonce ||
             envelope.sentAtEpochSeconds !in (now.epochSecond - MAX_CLOCK_SKEW_SECONDS)..(now.epochSecond + MAX_CLOCK_SKEW_SECONDS)
@@ -134,7 +162,8 @@ open class DesktopBridgeClient @Inject constructor(
 
     private fun decryptEnvelope(
         envelope: DesktopBridgeEnvelope,
-        encryptionKey: ByteArray
+        encryptionKey: ByteArray,
+        aad: String = responseCanonical(envelope)
     ): String {
         return try {
             val iv = decodeUrlBase64(envelope.iv)
@@ -147,7 +176,7 @@ open class DesktopBridgeClient @Inject constructor(
                 SecretKeySpec(encryptionKey, AES_ALGORITHM),
                 GCMParameterSpec(GCM_TAG_BITS, iv)
             )
-            cipher.updateAAD(responseCanonical(envelope).toByteArray(StandardCharsets.UTF_8))
+            cipher.updateAAD(aad.toByteArray(StandardCharsets.UTF_8))
             String(
                 cipher.doFinal(decodeUrlBase64(envelope.ciphertext)),
                 StandardCharsets.UTF_8

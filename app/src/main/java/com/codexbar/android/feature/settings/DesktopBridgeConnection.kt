@@ -15,6 +15,8 @@ import com.codexbar.android.core.network.desktop.DesktopBridgeClient
 import com.codexbar.android.core.network.desktop.DesktopBridgeAuthenticationException
 import com.codexbar.android.core.network.desktop.DesktopBridgeProtocolException
 import com.codexbar.android.core.network.desktop.DesktopBridgePairing
+import com.codexbar.android.core.network.desktop.DesktopRemoteSettings
+import com.codexbar.android.core.network.desktop.DesktopRemoteSettingsUpdate
 import com.codexbar.android.core.notification.QuotaNotificationService
 import com.codexbar.android.core.security.ConnectionHealthStore
 import com.codexbar.android.core.security.EncryptedPrefsManager
@@ -34,7 +36,8 @@ data class DesktopConnectionState(
     val result: ValidationResult? = null, val services: Set<AiService> = emptySet(),
     val availableServices: Set<AiService> = emptySet(),
     val mode: AcquisitionMode = AcquisitionMode.PHONE,
-    val phoneExceptions: Set<AiService> = emptySet(), val host: String = ""
+    val phoneExceptions: Set<AiService> = emptySet(), val host: String = "",
+    val remoteSettings: DesktopRemoteSettings? = null, val remoteMessage: String? = null, val remoteOwner: Long = 0
 )
 
 /** Owns the pairing lifecycle; native credentials are never replaced here. */
@@ -54,9 +57,18 @@ internal class DesktopBridgeConnection(
     val state = mutableState.asStateFlow()
     @Volatile private var generation = 0L
     private var job: Job? = null
+    private var remoteCredential: DesktopBridgeCredential? = null
+    private var remoteSettingsOwner: DesktopBridgeCredential? = null
+    private var remoteInFlight: DesktopBridgeCredential? = null
     private val coordinator = DesktopSourceCoordinator(monitor, health, widgets, sessions, notifications)
 
     fun syncSaved() {
+        if (remoteCredential != prefs.desktopBridgeCredential()) {
+            remoteCredential = prefs.desktopBridgeCredential()
+            remoteSettingsOwner = null
+            if (remoteInFlight != null && remoteInFlight != remoteCredential) cancelPending()
+            mutableState.update { it.copy(remoteSettings = null, remoteMessage = null, result = null, remoteOwner = it.remoteOwner + 1) }
+        }
         val settings = prefs.acquisitionSettings()
         mutableState.update { it.copy(connected = prefs.desktopBridgeCredential() != null,
             services = settings.desktopServices, availableServices = settings.advertisedServices,
@@ -70,6 +82,31 @@ internal class DesktopBridgeConnection(
     }
 
     fun updateCode(code: String) { mutableState.update { it.copy(pairingCode = code, result = null) } }
+
+    fun loadRemoteSettings() = remoteOperation(null)
+    fun updateRemoteSettings(interval: Long?, period: String?) {
+        val current = state.value.remoteSettings?.takeIf { it.allowed } ?: return
+        val owner = remoteSettingsOwner ?: return
+        if (owner != prefs.desktopBridgeCredential()) { syncSaved(); return }
+        remoteOperation(DesktopRemoteSettingsUpdate(current.revision, interval, period), owner)
+    }
+    private fun remoteOperation(update: DesktopRemoteSettingsUpdate?, owner: DesktopBridgeCredential? = null) = operation { expected ->
+        val credential = prefs.desktopBridgeCredential() ?: return@operation
+        if (owner != null && owner != credential) { syncSaved(); return@operation }
+        remoteInFlight = credential
+        mutableState.update { it.copy(remoteMessage = null) }
+        val result = try { if (update == null) client.remoteSettings(credential) else client.updateRemoteSettings(credential, update) }
+            finally { remoteInFlight = null }
+        if (expected != generation || credential != prefs.desktopBridgeCredential()) return@operation
+        remoteSettingsOwner = credential
+        val message = when (result.status) {
+            "conflict" -> R.string.desktop_remote_conflict
+            "disabled" -> R.string.desktop_remote_disabled
+            "invalid", "unavailable" -> R.string.desktop_remote_failed
+            else -> if (update != null) R.string.desktop_remote_saved else null
+        }
+        mutableState.update { it.copy(remoteSettings = result.settings, remoteMessage = message?.let(context::getString)) }
+    }
 
     fun connect() {
         val code = state.value.pairingCode
@@ -121,12 +158,14 @@ internal class DesktopBridgeConnection(
     fun cancelPending() {
         generation++
         job?.cancel()
+        remoteInFlight = null
         mutableState.update { it.copy(busy = false) }
     }
 
     private fun operation(action: suspend (Long) -> Unit) {
         if (state.value.busy) return
         val expected = ++generation
+        val operationCredential = prefs.desktopBridgeCredential()
         mutableState.update { it.copy(busy = true, result = null) }
         job = scope.launch {
             try { action(expected)
@@ -138,7 +177,7 @@ internal class DesktopBridgeConnection(
                     is DesktopBridgeProtocolException -> R.string.desktop_response_invalid
                     else -> R.string.desktop_connection_failed
                 }
-                if (expected == generation) mutableState.update { it.copy(result = ValidationResult.Failure(context.getString(message))) }
+                if (expected == generation && operationCredential == prefs.desktopBridgeCredential()) mutableState.update { it.copy(result = ValidationResult.Failure(context.getString(message))) }
             } finally {
                 if (expected == generation) mutableState.update { it.copy(busy = false) }
             }
