@@ -1,6 +1,6 @@
-# Mobile dashboard update — development branch
+# Mobile dashboard implementation record
 
-These changes are implemented on `codex/mobile-dashboard-history`; they have not been published as a new release yet. Both Android and Windows need this update for shared history, spend and remote settings. Existing released versions remain compatible with basic quota sharing.
+This implementation is included in [Android v0.10.0](v0.10.0.md) and Windows v0.71.0. Both apps need the update for shared history, spend and remote settings. Older versions remain compatible with basic quota sharing.
 
 - Long-press a home card or an item in **Reorder**, then drag it to its new position. Edge scrolling handles long lists. TalkBack offers move actions. Filtered-out providers keep their slots; widget order editing uses the same interaction.
 - **History** receives the PC's canonical quota observations rather than generating different samples on each phone. Windows keeps encrypted account/connection archives for up to 90 days and shares a bounded 30-day series. This history starts when the updated PC observes usage; older device histories are not guessed into a PC account. Gemini Apps has a connection-bound history scope without pretending to have a verified Google account ID.

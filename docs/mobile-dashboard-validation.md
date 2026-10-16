@@ -1,6 +1,6 @@
 # モバイルダッシュボード更新・検証記録
 
-2026-10-17。Android / Windows とも `codex/mobile-dashboard-history` で実装・コミットしています。**この更新のpush・正式リリース・署名付きAPKの公開はまだ行っていません。** 公開中のAndroid v0.9.8 / Windows v0.70.6はそのままです。
+2026-10-17。Android / Windows とも `codex/mobile-dashboard-history` で実装・コミットしています。この記録は公開前の実装検証です。正式配布はAndroid v0.10.0 / Windows v0.71.0として進め、署名と公開成果物の確認は[リリース記録](releases/v0.10.0.md)へ追記します。
 
 ## 実装範囲
 
