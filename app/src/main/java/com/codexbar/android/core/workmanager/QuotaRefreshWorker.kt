@@ -92,6 +92,7 @@ class QuotaRefreshWorker @AssistedInject constructor(
                 }.awaitAll()
             }
 
+            val desktopSpend = repositoryRegistry.desktopSpend()
             var successful = false
             val accepted = quotaResetMonitor.consumeIfCurrent(sourceRevision) {
                 val successfulQuotas = mutableListOf<QuotaInfo>()
@@ -131,7 +132,7 @@ class QuotaRefreshWorker @AssistedInject constructor(
                     ),
                     paceByMetricKey = paceByMetricKey,
                     desktopServices = prefsManager.desktopServices(),
-                    desktopSpendByService = repositoryRegistry.desktopSpend()
+                    desktopSpendByService = desktopSpend
                 )
 
                 // Publish both successful data and actionable provider errors to widgets.
