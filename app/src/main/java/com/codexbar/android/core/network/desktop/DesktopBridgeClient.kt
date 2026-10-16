@@ -243,6 +243,7 @@ open class DesktopBridgeClient @Inject constructor(
             val validPeriod = spend.reportingPeriod in setOf("all", "month-to-date") ||
                 spend.reportingPeriod.removePrefix("rolling:").toIntOrNull()?.let { spend.reportingPeriod == "rolling:$it" && it in 1..365 } == true
             if (!validPeriod || spend.timeZone.isBlank() || spend.timeZone.length > 80 || spend.timeZone.hasControlCharacter() ||
+                runCatching { java.time.ZoneId.of(spend.timeZone) }.isFailure ||
                 spend.updatedAtEpochSeconds !in 0..now.epochSecond + MAX_CLOCK_SKEW_SECONDS || spend.rows.size > 32 ||
                 spend.rows.map { it.providerId }.distinct().size != spend.rows.size || (!spend.costTrackingEnabled && spend.rows.isNotEmpty())) invalid()
             spend.rows.forEach { row ->

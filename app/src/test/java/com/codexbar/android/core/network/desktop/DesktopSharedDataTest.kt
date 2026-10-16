@@ -29,6 +29,9 @@ class DesktopSharedDataTest {
             daily = listOf(DesktopSpendDayDto("2026-10-16", null, null, true), DesktopSpendDayDto("2026-10-17", 0, 0.0, true)))
         val spend = DesktopSpendDto(now.epochSecond, "rolling:30", "Asia/Tokyo", true, listOf(row))
         client.validateSnapshot(snapshot(spend = spend), now)
+        assertThrows(DesktopBridgeProtocolException::class.java) {
+            client.validateSnapshot(snapshot(spend = spend.copy(timeZone = "not-a-zone")), now)
+        }
         assertNull(spend.rows.single().thirtyDay)
         assertEquals(0.0, spend.rows.single().sevenDay!!, 0.0)
         listOf(row.copy(sevenDay = Double.POSITIVE_INFINITY), row.copy(sevenDayTokens = -1),

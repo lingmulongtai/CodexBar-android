@@ -19,5 +19,6 @@ class DesktopSpendCalendarTest {
         assertNull(days.first().costUsd)
         assertEquals(0.0, days.last().costUsd!!, 0.0)
         assertEquals(0L, days.last().tokens)
+        assertEquals("2026-10-01", spend.copy(timeZone = "not-a-zone").calendarDays(7).last().day)
     }
 }
