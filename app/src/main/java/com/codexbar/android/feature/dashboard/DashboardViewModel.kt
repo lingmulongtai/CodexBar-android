@@ -120,6 +120,9 @@ class DashboardViewModel @Inject constructor(
                 }
 
                 val results = deferreds.map { it.await() }
+                // Desktop discovery acquires desktop -> source. Capture before the
+                // source publication lock; consumeIfCurrent validates the batch revision.
+                val desktopSpend = repositoryRegistry.desktopSpend()
 
                 quotaResetMonitor.consumeIfCurrent(sourceRevision) {
 
@@ -157,7 +160,8 @@ class DashboardViewModel @Inject constructor(
                         privacy = privacy,
                         paceByMetricKey = paceByMetricKey,
                         historyByMetricKey = historyByMetricKey,
-                        desktopServices = prefsManager.desktopServices()
+                        desktopServices = prefsManager.desktopServices(),
+                        desktopSpendByService = desktopSpend
                     )
                     publishSnapshot(snapshot)
                 }

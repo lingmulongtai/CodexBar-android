@@ -30,6 +30,33 @@ open class DesktopBridgeClient @Inject constructor(
 ) {
     private val secureRandom = SecureRandom()
 
+    open suspend fun remoteSettings(credential: DesktopBridgeCredential): DesktopRemoteSettingsResult =
+        control(credential, "settings.get", "{}")
+
+    open suspend fun updateRemoteSettings(credential: DesktopBridgeCredential, update: DesktopRemoteSettingsUpdate): DesktopRemoteSettingsResult =
+        control(credential, "settings.update", json.encodeToString(update))
+
+    private suspend fun control(credential: DesktopBridgeCredential, resource: String, payload: String): DesktopRemoteSettingsResult = withContext(Dispatchers.IO) {
+        DesktopBridgePairing.validate(credential)
+        val master = decodeUrlBase64(credential.sharedKeyBase64Url)
+        val now = Instant.now()
+        val nonce = ByteArray(REQUEST_NONCE_BYTES).also(secureRandom::nextBytes).toUrlBase64()
+        val bytes = payload.toByteArray(StandardCharsets.UTF_8)
+        val hash = java.security.MessageDigest.getInstance("SHA-256").digest(bytes).toUrlBase64()
+        val canonical = "2\n${credential.companionId}\n${now.epochSecond}\n$nonce\n$resource\n$hash"
+        val signature = hmacSha256(deriveKey(master, "codexbar-windows-auth-v2"), canonical.toByteArray(StandardCharsets.UTF_8)).toUrlBase64()
+        val request = DesktopControlRequest(protocolVersion = 2, companionId = credential.companionId, requestedAtEpochSeconds = now.epochSecond,
+            nonce = nonce, resource = resource, payload = bytes.toUrlBase64(), signature = signature)
+        val response = exchange(json.encodeToString(request), credential)
+        val envelope = runCatching { json.decodeFromString<DesktopBridgeEnvelope>(response) }
+            .getOrElse { throw DesktopBridgeProtocolException("Invalid Windows settings envelope", it) }
+        validateEnvelope(envelope, credential, nonce, now, 2)
+        val aad = "2\n${credential.companionId}\n$nonce\n${envelope.sentAtEpochSeconds}\n$resource\n$hash"
+        val plaintext = decryptEnvelope(envelope, deriveKey(master, "codexbar-windows-encryption-v2"), aad)
+        runCatching { json.decodeFromString<DesktopRemoteSettingsResult>(plaintext) }
+            .getOrElse { throw DesktopBridgeProtocolException("Invalid Windows settings payload", it) }.validate()
+    }
+
     open suspend fun fetchSnapshot(
         credential: DesktopBridgeCredential,
         now: Instant = Instant.now()
@@ -56,7 +83,7 @@ open class DesktopBridgeClient @Inject constructor(
             signature = signature
         )
 
-        val responseLine = exchange(request, credential)
+        val responseLine = exchange(json.encodeToString(request), credential)
 
         val envelope = runCatching {
             json.decodeFromString<DesktopBridgeEnvelope>(responseLine)
@@ -71,7 +98,7 @@ open class DesktopBridgeClient @Inject constructor(
     }
 
     private suspend fun exchange(
-        request: DesktopBridgeRequest,
+        request: String,
         credential: DesktopBridgeCredential
     ): String = suspendCancellableCoroutine { continuation ->
         val socket = Socket()
@@ -84,7 +111,7 @@ open class DesktopBridgeClient @Inject constructor(
                     CONNECT_TIMEOUT_MILLIS
                 )
                 socket.getOutputStream().bufferedWriter(StandardCharsets.UTF_8).use { writer ->
-                    writer.write(json.encodeToString(request))
+                    writer.write(request)
                     writer.newLine()
                     writer.flush()
                     readLimitedLine(socket)
@@ -118,10 +145,11 @@ open class DesktopBridgeClient @Inject constructor(
         envelope: DesktopBridgeEnvelope,
         credential: DesktopBridgeCredential,
         requestNonce: String,
-        now: Instant
+        now: Instant,
+        version: Int = PROTOCOL_VERSION
     ) {
         if (
-            envelope.protocolVersion != PROTOCOL_VERSION ||
+            envelope.protocolVersion != version ||
             envelope.companionId != credential.companionId ||
             envelope.requestNonce != requestNonce ||
             envelope.sentAtEpochSeconds !in (now.epochSecond - MAX_CLOCK_SKEW_SECONDS)..(now.epochSecond + MAX_CLOCK_SKEW_SECONDS)
@@ -134,7 +162,8 @@ open class DesktopBridgeClient @Inject constructor(
 
     private fun decryptEnvelope(
         envelope: DesktopBridgeEnvelope,
-        encryptionKey: ByteArray
+        encryptionKey: ByteArray,
+        aad: String = responseCanonical(envelope)
     ): String {
         return try {
             val iv = decodeUrlBase64(envelope.iv)
@@ -147,7 +176,7 @@ open class DesktopBridgeClient @Inject constructor(
                 SecretKeySpec(encryptionKey, AES_ALGORITHM),
                 GCMParameterSpec(GCM_TAG_BITS, iv)
             )
-            cipher.updateAAD(responseCanonical(envelope).toByteArray(StandardCharsets.UTF_8))
+            cipher.updateAAD(aad.toByteArray(StandardCharsets.UTF_8))
             String(
                 cipher.doFinal(decodeUrlBase64(envelope.ciphertext)),
                 StandardCharsets.UTF_8
@@ -168,6 +197,7 @@ open class DesktopBridgeClient @Inject constructor(
     }
 
     internal fun validateSnapshot(snapshot: DesktopBridgeSnapshot, now: Instant) {
+        validateSharedData(snapshot, now)
         if (snapshot.schemaVersion != 1 || snapshot.source != SNAPSHOT_SOURCE ||
             snapshot.providers.size > 32 || snapshot.providers.map { it.id }.toSet().size != snapshot.providers.size ||
             snapshot.generatedAtEpochSeconds < now.epochSecond - MAX_CLOCK_SKEW_SECONDS ||
@@ -220,6 +250,40 @@ open class DesktopBridgeClient @Inject constructor(
                     usage.topModel?.matches(Regex("[A-Za-z0-9_.:-]{1,64}")) == false ||
                     usage.incompleteRequestCount?.let { it < 0 } == true) {
                     throw DesktopBridgeProtocolException("Invalid Windows local totals")
+                }
+            }
+        }
+    }
+    private fun validateSharedData(snapshot: DesktopBridgeSnapshot, now: Instant) {
+        fun invalid(): Nothing = throw DesktopBridgeProtocolException("Invalid Windows shared history or spend")
+        snapshot.providers.forEach { provider ->
+            if (provider.historyScopeId?.matches(Regex("[A-Za-z0-9_-]{43}")) == false ||
+                provider.history.size > 8 || (provider.history.isNotEmpty() && provider.historyScopeId == null) ||
+                provider.history.map { it.label }.distinct().size != provider.history.size) invalid()
+            provider.history.forEach { series ->
+                if (series.label.isBlank() || series.label.length > 64 || series.label.hasControlCharacter() ||
+                    provider.windows.none { it.label == series.label } || series.samples.size > 64 ||
+                    series.samples.zipWithNext().any { (a, b) -> a.t >= b.t }) invalid()
+                if (series.samples.any { it.t !in (now.epochSecond - 90L * 86400)..(provider.updatedAtEpochSeconds + MAX_CLOCK_SKEW_SECONDS) ||
+                    !it.u.isFinite() || it.u !in 0.0..1.0 || it.r?.let { reset -> reset !in 0..now.epochSecond + 366L * 86400 } == true }) invalid()
+            }
+        }
+        snapshot.spend?.let { spend ->
+            val validPeriod = spend.reportingPeriod in setOf("all", "month-to-date") ||
+                spend.reportingPeriod.removePrefix("rolling:").toIntOrNull()?.let { spend.reportingPeriod == "rolling:$it" && it in 1..365 } == true
+            if (!validPeriod || spend.timeZone.isBlank() || spend.timeZone.length > 80 || spend.timeZone.hasControlCharacter() ||
+                runCatching { java.time.ZoneId.of(spend.timeZone) }.isFailure ||
+                spend.updatedAtEpochSeconds !in 0..now.epochSecond + MAX_CLOCK_SKEW_SECONDS || spend.rows.size > 32 ||
+                spend.rows.map { it.providerId }.distinct().size != spend.rows.size || (!spend.costTrackingEnabled && spend.rows.isNotEmpty())) invalid()
+            spend.rows.forEach { row ->
+                if (snapshot.providers.none { it.id == row.providerId } || !row.currency.matches(Regex("[A-Za-z]{1,8}")) ||
+                    listOfNotNull(row.sevenDay, row.thirtyDay, row.periodCost).any { !it.isFinite() || it !in 0.0..1e12 } ||
+                    listOfNotNull(row.sevenDayTokens, row.thirtyDayTokens, row.periodTokens).any { it < 0 } ||
+                    row.daily.size > 30 || row.daily.zipWithNext().any { (a, b) -> a.day >= b.day }) invalid()
+                row.daily.forEach { day ->
+                    if (day.day.length != 10 || runCatching { java.time.LocalDate.parse(day.day) }.isFailure ||
+                        day.tokens?.let { it < 0 } == true || (!day.isScanned && day.tokens != null) ||
+                        day.costUsd?.let { !it.isFinite() || it !in 0.0..1e12 } == true) invalid()
                 }
             }
         }

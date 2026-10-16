@@ -30,4 +30,11 @@ class DashboardProviderOrderTest {
         val automatic = listOf(CLAUDE, COPILOT, CODEX)
         assertEquals(automatic, DashboardProviderOrder.apply(automatic, emptyList()) { it })
     }
+
+    @Test fun `dragging filtered providers keeps hidden provider slots`() {
+        val all = listOf(CODEX, CLAUDE, COPILOT, GEMINI)
+        assertEquals(listOf(COPILOT, CLAUDE, CODEX, GEMINI),
+            DashboardProviderOrder.merge(all, listOf(COPILOT, CODEX)))
+        assertEquals(all, DashboardProviderOrder.merge(all, listOf(CODEX, COPILOT)))
+    }
 }

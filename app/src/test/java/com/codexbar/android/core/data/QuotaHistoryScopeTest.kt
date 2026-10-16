@@ -11,6 +11,43 @@ import org.junit.Test
 import org.mockito.Mockito.*
 
 class QuotaHistoryScopeTest {
+    @Test fun `same observation completes per-window history without rollback or wiping omitted series`() {
+        val now = Instant.now()
+        fun series(label: String, complete: Boolean) = com.codexbar.android.core.domain.model.DesktopQuotaSeries(label,
+            listOf(com.codexbar.android.core.domain.model.DesktopQuotaSample(now.minusSeconds(300), 0.1, null)) +
+                if (complete) listOf(com.codexbar.android.core.domain.model.DesktopQuotaSample(now, 0.2, null)) else emptyList())
+        val quota = QuotaInfo(AiService.CODEX, listOf(UsageWindow("Session", 0.2, null), UsageWindow("Week", 0.2, null)), null,
+            fetchedAt = now, isDesktopSource = true, desktopHistoryScopeKey = "desktop:pc:history:a",
+            desktopQuotaHistory = listOf(series("Session", false), series("Week", false)))
+        val store = QuotaHistoryStore(contextFor(mutableMapOf()))
+        store.record(listOf(quota))
+        store.record(listOf(quota.copy(desktopQuotaHistory = listOf(series("Session", true)))))
+        store.record(listOf(quota.copy(desktopQuotaHistory = listOf(series("Week", true)))))
+        store.record(listOf(quota)) // same timestamp, but response captured before the PC completed its write
+        assertTrue(store.historyFor(listOf(quota)).values.all { it.size == 2 })
+    }
+    @Test fun `Windows series replace local observations identically across polling times`() {
+        val now = Instant.now()
+        val samples = listOf(
+            com.codexbar.android.core.domain.model.DesktopQuotaSample(now.minusSeconds(600), 0.1, null),
+            com.codexbar.android.core.domain.model.DesktopQuotaSample(now.minusSeconds(300), 0.2, null))
+        val quota = QuotaInfo(AiService.GEMINI_APPS, listOf(UsageWindow("Current", 0.2, null)), null,
+            fetchedAt = now, historyEligible = false, isDesktopSource = true,
+            desktopHistoryScopeKey = "desktop:pc:history:connection-a",
+            desktopQuotaHistory = listOf(com.codexbar.android.core.domain.model.DesktopQuotaSeries("Current", samples)))
+        val phone = QuotaHistoryStore(contextFor(mutableMapOf()))
+        val tablet = QuotaHistoryStore(contextFor(mutableMapOf()))
+        phone.record(listOf(quota))
+        phone.record(listOf(quota.copy(fetchedAt = now.plusSeconds(30))))
+        tablet.record(listOf(quota.copy(fetchedAt = now.plusSeconds(60))))
+        assertEquals(2, phone.historyFor(listOf(quota)).values.single().size)
+        assertEquals(phone.historyFor(listOf(quota)), tablet.historyFor(listOf(quota)))
+        phone.record(listOf(quota.copy(fetchedAt = now.minusSeconds(10), desktopQuotaHistory = emptyList())))
+        assertEquals(2, phone.historyFor(listOf(quota)).values.single().size)
+        val anotherConnection = quota.copy(desktopHistoryScopeKey = "desktop:pc:history:connection-b", desktopQuotaHistory = emptyList())
+        tablet.record(listOf(anotherConnection))
+        assertTrue(tablet.historyFor(listOf(anotherConnection)).values.single().isEmpty())
+    }
     @Test fun `legacy owner survives a different account and expired keys retain fresh writes`() {
         val now = Instant.now()
         val values = mutableMapOf<String, String?>(

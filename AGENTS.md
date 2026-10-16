@@ -2,6 +2,9 @@
 
 ## Development style
 
+- At the start of every development task, fetch the read-only `upstream` remote and compare its default branch with this fork. Inspect new commits and integrate compatible released/mainline improvements before extending the same area. Record the checked upstream SHA, incorporated changes, validation and any specifically deferred incompatible changes; do not silently skip this step.
+- Preserve this fork's Android/Windows acquisition modes, saved connections, widget settings, production signer, owned update URLs and release workflow when incorporating upstream changes. Never publish to upstream or automatically rewrite this fork's history. Use ordinary merge commits or narrowly justified ports, then run the relevant regression checks.
+
 - Preserve the existing architecture, naming, formatting, dependencies, and release workflow.
 - Prefer the smallest change that completely solves the requested behavior.
 - Keep unrelated user changes out of the current task and its commits.

@@ -39,4 +39,5 @@ class QuotaRepositoryRegistry @Inject constructor(
     }
 
     suspend fun prepareRefresh(): Long = desktop.prepareRefresh()
+    suspend fun desktopSpend() = desktop.currentSpend()
 }

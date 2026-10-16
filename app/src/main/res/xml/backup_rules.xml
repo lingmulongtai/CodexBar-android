@@ -7,5 +7,6 @@
     <exclude domain="sharedpref" path="codexbar_widget_prefs.xml" />
     <exclude domain="sharedpref" path="codexbar_quota_history.xml" />
     <exclude domain="sharedpref" path="codexbar_reset_history.xml" />
+    <exclude domain="sharedpref" path="notification_permission_setup.xml" />
     <exclude domain="file" path="datastore/codexbar_secure_prefs.preferences_pb" />
 </full-backup-content>

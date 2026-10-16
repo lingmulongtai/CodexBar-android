@@ -29,7 +29,8 @@ class QuotaPresentationMapper(
         source: RefreshSourcePresentation = RefreshSourcePresentation.Unknown,
         paceByMetricKey: Map<String, PacePresentation> = emptyMap(),
         historyByMetricKey: Map<String, List<QuotaHistorySample>> = emptyMap(),
-        desktopServices: Set<AiService> = emptySet()
+        desktopServices: Set<AiService> = emptySet(),
+        desktopSpendByService: Map<AiService, com.codexbar.android.core.domain.model.DesktopSpend> = emptyMap()
     ): QuotaPresentationSnapshot {
         val successfulServices = quotas.map { quota ->
             val metrics = quota.windows.mapIndexed { index, window ->
@@ -85,14 +86,17 @@ class QuotaPresentationMapper(
                     ?.takeUnless { privacy.redactSensitiveValues }
                     ?.let { mapCodexTelemetry(it, locale) },
                 isDesktopSource = quota.isDesktopSource,
-                desktopLocalUsage = quota.desktopLocalUsage?.takeUnless { privacy.redactSensitiveValues }
+                desktopLocalUsage = quota.desktopLocalUsage?.takeUnless { privacy.redactSensitiveValues },
+                desktopSpend = (desktopSpendByService[quota.service] ?: quota.desktopSpend)?.takeUnless { privacy.redactSensitiveValues },
+                historyFromDesktop = quota.isDesktopSource && quota.desktopHistoryScopeKey != null
             )
         }
 
         val failedServices = errors
             .filterKeys { service -> successfulServices.none { it.service == service } }
             .map { (service, error) ->
-                mapError(service, error, generatedAt).copy(isDesktopSource = service in desktopServices)
+                mapError(service, error, generatedAt).copy(isDesktopSource = service in desktopServices,
+                    desktopSpend = desktopSpendByService[service]?.takeUnless { privacy.redactSensitiveValues })
             }
 
         val services = (successfulServices + failedServices)
@@ -170,7 +174,7 @@ class QuotaPresentationMapper(
             resetLabel = if (privacy.redactSensitiveValues) null else window.resetsAt?.let {
                 formatResetLabel(it, generatedAt)
             },
-            pace = pace,
+            pace = pace.copy(guide = if (privacy.redactSensitiveValues) null else quotaPaceGuide(window, generatedAt)),
             resetPlan = resetPlan,
             history = history
         )

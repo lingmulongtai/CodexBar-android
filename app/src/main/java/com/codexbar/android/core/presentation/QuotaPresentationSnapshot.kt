@@ -26,7 +26,9 @@ data class ServiceQuotaPresentation(
     val codexTelemetry: CodexTelemetryPresentation? = null,
     val resetHistory: List<QuotaResetActivity> = emptyList(),
     val isDesktopSource: Boolean = false,
-    val desktopLocalUsage: com.codexbar.android.core.domain.model.DesktopLocalUsage? = null
+    val desktopLocalUsage: com.codexbar.android.core.domain.model.DesktopLocalUsage? = null,
+    val desktopSpend: com.codexbar.android.core.domain.model.DesktopSpend? = null,
+    val historyFromDesktop: Boolean = false
 )
 
 data class CodexResetCreditsPresentation(
@@ -149,7 +151,8 @@ data class PacePresentation(
     val usageRateLabel: String? = null,
     val paceMultiplierLabel: String? = null,
     val reserveLabel: String? = null,
-    val forecastLabel: String? = null
+    val forecastLabel: String? = null,
+    val guide: QuotaPaceGuide? = null
 )
 
 data class PrivacyPresentation(

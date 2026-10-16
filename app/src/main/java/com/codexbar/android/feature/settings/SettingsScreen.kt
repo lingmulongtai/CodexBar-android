@@ -139,6 +139,7 @@ fun SettingsScreen(
     val themeProfile = LocalCodexBarThemeProfile.current
     val context = LocalContext.current
     var notificationsAllowed by remember { mutableStateOf(context.canPostNotifications()) }
+    var resetNotificationsAllowed by remember { mutableStateOf(context.canPostResetNotifications()) }
     var promotedUpdatesAllowed by remember { mutableStateOf(context.canPostPromotedNotifications()) }
     var enablePersistentAfterSettings by remember { mutableStateOf(false) }
     var enablePersistentAfterPermission by remember { mutableStateOf(false) }
@@ -148,6 +149,7 @@ fun SettingsScreen(
     ) { granted ->
         val allowed = granted && context.canPostNotifications()
         notificationsAllowed = allowed
+        resetNotificationsAllowed = context.canPostResetNotifications()
         if (allowed && enablePersistentAfterPermission) {
             viewModel.setPersistentNotificationEnabled(true)
         }
@@ -157,6 +159,7 @@ fun SettingsScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         val allowed = context.canPostNotifications()
         notificationsAllowed = allowed
+        resetNotificationsAllowed = context.canPostResetNotifications()
         promotedUpdatesAllowed = context.canPostPromotedNotifications()
         if (enablePersistentAfterSettings) {
             enablePersistentAfterSettings = false
@@ -226,6 +229,14 @@ fun SettingsScreen(
                         }
                     },
                     notificationsAllowed = notificationsAllowed,
+                    resetNotificationsAllowed = resetNotificationsAllowed,
+                    onEnableResetNotifications = {
+                        if (Build.VERSION.SDK_INT >= 33 && !context.hasNotificationPermission())
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        else context.startActivity(Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            .putExtra(Settings.EXTRA_CHANNEL_ID, QuotaNotificationService.RESET_CHANNEL_ID))
+                    },
                     isMonitoring = uiState.isMonitoring,
                     durationMinutes = uiState.monitoringDurationMinutes,
                     remainingMinutes = uiState.monitoringRemainingMinutes,
@@ -261,6 +272,11 @@ fun SettingsScreen(
                     currentMinutes = uiState.refreshIntervalMinutes,
                     onIntervalChange = { viewModel.setRefreshInterval(it) }
                 )
+                if (uiState.resetNotificationEnabled && uiState.refreshIntervalMinutes == 0L) {
+                    Text(stringResource(R.string.reset_background_refresh_disabled), color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = { viewModel.setRefreshInterval(15L) }) { Text(stringResource(R.string.reset_enable_background_refresh)) }
+                }
 
                 SettingsSectionHeader(
                     title = stringResource(R.string.settings_preferences_title),
@@ -2166,6 +2182,10 @@ private fun Context.canPostNotifications(): Boolean {
         NotificationManagerCompat.from(this).areNotificationsEnabled()
 }
 
+private fun Context.canPostResetNotifications(): Boolean = canPostNotifications() &&
+    getSystemService(NotificationManager::class.java)?.getNotificationChannel(QuotaNotificationService.RESET_CHANNEL_ID)
+        ?.importance != NotificationManager.IMPORTANCE_NONE
+
 private fun Context.canPostPromotedNotifications(): Boolean {
     if (Build.VERSION.SDK_INT < 36) return false
     val manager = getSystemService(NotificationManager::class.java) ?: return false
@@ -2328,6 +2348,8 @@ private fun NotificationsSection(
     resetEnabled: Boolean,
     onResetToggle: (Boolean) -> Unit,
     notificationsAllowed: Boolean,
+    resetNotificationsAllowed: Boolean,
+    onEnableResetNotifications: () -> Unit,
     isMonitoring: Boolean,
     durationMinutes: Long,
     remainingMinutes: Long?,
@@ -2407,6 +2429,11 @@ private fun NotificationsSection(
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Switch(checked = resetEnabled, onCheckedChange = onResetToggle)
+            }
+            if (resetEnabled && !resetNotificationsAllowed) {
+                Text(stringResource(R.string.reset_notification_permission_needed), color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium)
+                TextButton(onClick = onEnableResetNotifications) { Text(stringResource(R.string.reset_enable_notifications)) }
             }
 
             Text(

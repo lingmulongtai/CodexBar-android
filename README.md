@@ -12,9 +12,15 @@ Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT
 
 <p align="center"><sub>Demo quota data is shown in screenshots. No account credentials are included.</sub></p>
 
+## Mobile dashboard update
+
+v0.10.0 adds long-press drag ordering, shared PC history, PC spend/token charts, tablet layouts, thicker quota bars with budget guides, clearer reset notification setup and opt-in remote PC settings. **Shared PC history, spend and remote settings require Windows v0.71.0 or later.** [Changes and screenshots](docs/releases/v0.10.0.md) · [Verification and commits](docs/mobile-dashboard-validation.md)
+
+![Tablet PC spend dashboard with synthetic data](docs/images/mobile-dashboard/tablet-spend.png)
+
 ## Windows usage sharing
 
-Download **[Win-CodexBar + Mobile Connect EXE](https://github.com/lingmulongtai/Win-CodexBar-Mobile-Connect/releases/latest/download/Win-CodexBar-Mobile-Connect.exe)** directly. Enable **Advanced → Android sharing**, select LAN or Tailscale, and paste its private code into Android **Connections → Usage source & Windows connection**. Windows must remain running. The Windows EXE is unsigned; the Android APK retains its production signature. [Setup guide](https://github.com/lingmulongtai/Win-CodexBar-Mobile-Connect/blob/main/docs/android-sharing.md)
+Download **[Win-CodexBar + Mobile Connect EXE](https://github.com/lingmulongtai/Win-CodexBar-Mobile-Connect/releases/latest/download/Win-CodexBar-Mobile-Connect.exe)** directly. Enable **Settings → Mobile Connect** in the updated app (published v0.70.6 and older: **Advanced → Android sharing**), select LAN or Tailscale, and paste its private code into Android **Connections → Usage source & Windows connection**. Windows must remain running. The Windows EXE is unsigned; the Android APK retains its production signature. [Setup guide](https://github.com/lingmulongtai/Win-CodexBar-Mobile-Connect/blob/main/docs/android-sharing.md)
 
 Choose **Collect on this phone** to use saved phone connections, or **Collect on Windows** to receive PC-collected data. Advanced phone exceptions allow individual services to stay on the phone. Pairing, credentials, exceptions and source/account-specific histories survive mode round trips. Legacy selections migrate to exceptions; **Use Windows for all services** clears them explicitly. Offline Windows never silently switches to a different phone account, and newly enabled known PC providers sync at refresh.
 
@@ -30,7 +36,7 @@ Provider details also show **Local usage on this PC**: today/30-day/selected-per
 
 ## Features
 
-v0.9.8 adds Google Gemini Apps usage through Windows, with a separate Gemini CLI entry. Phone/Windows modes, Tailscale without an exit node, and PC token/cost details are retained. See the [release notes](docs/releases/v0.9.8.md).
+v0.10.0 adds drag ordering, PC-backed History / Spend, tablet layouts, reset notification setup and opt-in PC controls. Gemini Apps and Gemini CLI remain separate; phone/Windows modes and Tailscale without an exit node are retained. See the [release notes](docs/releases/v0.10.0.md).
 
 <p>
   <img src="docs/images/releases/v0.9.8/gemini-apps-material3.png" width="280" alt="Gemini Apps and Gemini CLI shown separately in Android v0.9.8 (demo data)" />
@@ -101,17 +107,17 @@ Signed APKs are available on this fork's [Releases](https://github.com/lingmulon
 
 ### Install the release APK
 
-1. Download [**app-release.apk**](https://github.com/lingmulongtai/CodexBar-android/releases/latest/download/app-release.apk) from the latest GitHub Release. Do not install a source archive or a debug APK from an untrusted location.
+1. Download the signed **`CodexBar-Android-v<version>.apk`** from [**the latest release assets**](https://github.com/lingmulongtai/CodexBar-android/releases/latest) (older releases use `app-release.apk`). Do not install a source archive or a debug APK from an untrusted location.
 2. For an integrity check, download `SHA256SUMS` from the same Release and compare the APK hash on your computer:
 
    ```powershell
    # Windows PowerShell
-   (Get-FileHash .\app-release.apk -Algorithm SHA256).Hash
+   (Get-FileHash ".\CodexBar-Android-v<version>.apk" -Algorithm SHA256).Hash
    ```
 
    ```bash
    # macOS or Linux
-   sha256sum app-release.apk
+   sha256sum "CodexBar-Android-v<version>.apk"
    ```
 
 3. Transfer the APK to the Android device if it was downloaded elsewhere, then open it from the browser or file manager.
@@ -179,7 +185,7 @@ Claude does not expose a supported third-party Android device-code flow for this
 
 1. Install Claude Code using [Anthropic's current setup instructions](https://code.claude.com/docs/en/setup), complete browser sign-in, then finish the first-run and folder-trust prompts from `~/.codexbar/claude-workspace` as described in the [companion setup guide](companion/claude/README.md).
 2. Enter `/usage` and confirm that **Current session** appears.
-3. Download `CodexBar-Claude-Companion-v0.9.8.zip` from the same Release as the APK and extract it.
+3. Download `CodexBar-Claude-Companion-v0.10.0.zip` from the same Release as the APK and extract it.
 4. On Windows, run `start-windows.cmd`. On macOS or Linux, run `chmod +x start-macos-linux.sh` once and then `./start-macos-linux.sh`.
 5. Keep the phone and computer on the same trusted Wi-Fi, or use the [Tailscale setup](companion/claude/README.md#connect-across-networks-with-tailscale) for different networks. If the computer firewall prompts, permit Node.js on private networks only. In Claude under **Connections**, tap **Scan QR securely in CodexBar** and scan the displayed QR inside the app. Do not use the system camera. If Google Play services cannot open the scanner, paste the `CBCLAUDE1...` pairing code, then tap **Pair & verify Claude companion**.
 
@@ -205,7 +211,7 @@ Do not extract bearer tokens from browser DevTools unless you are debugging loca
 
 #### Optional private Codex telemetry companion
 
-OpenAI's subscription quota response does not contain local Codex CLI context-window or token-count history. To add those insights without uploading session content, install `CodexBar-Codex-Telemetry-Companion-v0.9.8.zip` from the same GitHub Release as the app:
+OpenAI's subscription quota response does not contain local Codex CLI context-window or token-count history. To add those insights without uploading session content, install `CodexBar-Codex-Telemetry-Companion-v0.10.0.zip` from the same GitHub Release as the app:
 
 1. Install Node.js 20 or newer on the computer where Codex CLI or Codex desktop stores `~/.codex/sessions`.
 2. Extract the companion archive. On Windows, run `start-windows.cmd`; on macOS or Linux, run `./start-macos-linux.sh`.
@@ -216,7 +222,7 @@ The scanner is bounded to recent session files and reads only `token_count` plus
 
 ### Antigravity
 
-Download `CodexBar-Antigravity-Companion-v0.9.8.zip` from the same Release as the APK. The Windows [Antigravity companion](companion/antigravity/README.md) reads model quotas and reset times from the running, signed-in Antigravity IDE. In **Connections → Antigravity**, scan its private QR with the in-app scanner. This account usage is separate from Gemini CLI and Claude subscriptions.
+Download `CodexBar-Antigravity-Companion-v0.10.0.zip` from the same Release as the APK. The Windows [Antigravity companion](companion/antigravity/README.md) reads model quotas and reset times from the running, signed-in Antigravity IDE. In **Connections → Antigravity**, scan its private QR with the in-app scanner. This account usage is separate from Gemini CLI and Claude subscriptions.
 
 Keep Antigravity open and the PC awake. The optional tray resident starts at sign-in and recovers after a crash. For different networks, connect the phone and PC to Tailscale and pair using the PC's `100.x` address on port `43824`. Google credentials, conversations and files stay on the PC. Only explicitly reported model quotas are shown; weekly limits and credit balances are not inferred. These internal IDE endpoints may change after an Antigravity update.
 
@@ -241,7 +247,7 @@ Gemini Apps has no phone-only collector. Multiple Google-account selection, toke
 
 Gemini Apps usage is now available through the Windows app described above. The Gemini CLI companion remains a separate collector and never substitutes its quota for Gemini Apps.
 
-Direct Gemini OAuth inside the Android app remains disabled. CodexBar does not copy Gemini CLI credentials, embed a Google client secret, or call the internal `cloudcode-pa` service. Instead, the v0.9.8 companion drives the official Gemini CLI's `/model` view and sends only a sanitized quota snapshot over your trusted local network. Gemini CLI 0.61.0 or newer is required.
+Direct Gemini OAuth inside the Android app remains disabled. CodexBar does not copy Gemini CLI credentials, embed a Google client secret, or call the internal `cloudcode-pa` service. Instead, the v0.10.0 companion drives the official Gemini CLI's `/model` view and sends only a sanitized quota snapshot over your trusted local network. Gemini CLI 0.61.0 or newer is required.
 
 #### Install and pair the private companion
 
@@ -253,7 +259,7 @@ gemini
 ```
 
 2. Launch the official CLI from `~/.codexbar/gemini-workspace`, complete Google's sign-in and folder-trust prompts, verify `/model` shows usage limits, then exit it. Create that workspace first if needed.
-3. Download `CodexBar-Gemini-Companion-v0.9.8.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
+3. Download `CodexBar-Gemini-Companion-v0.10.0.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
 4. On Windows, double-click `start-windows.cmd`. On macOS or Linux, run `./start-macos-linux.sh`. The first launch installs only the versions pinned in `package-lock.json`.
 5. Keep the phone and computer on the same trusted Wi-Fi. If the computer firewall prompts, permit private networks only.
 6. Scan the displayed QR code with the phone and choose CodexBar, or paste the complete `codexbar://gemini-pair?...` value into the Gemini card.

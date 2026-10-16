@@ -73,6 +73,19 @@ class GitHubReleaseUpdateCheckerTest {
     }
 
     @Test
+    fun `versioned CodexBar asset is selected and must match release tag`() = runTest {
+        val name = "CodexBar-Android-v0.10.0.apk"
+        val url = "https://github.com/lingmulongtai/CodexBar-android/releases/download/v0.10.0/$name"
+        server.enqueue(releaseResponse(tag = "v0.10.0", assetUrl = url, assetName = name))
+        server.enqueue(releaseResponse(tag = "v0.10.0", assetUrl = url.replace("download/v0.10.0", "download/v0.9.8"), assetName = name))
+        server.enqueue(releaseResponse(tag = "v0.10.0", assetUrl = "$url?source=unverified", assetName = name))
+        server.enqueue(releaseResponse(tag = "v0.10.0", assetUrl = url, assetName = "CodexBar-Android-v0.9.8.apk"))
+
+        assertEquals(url, checker().checkForUpdate("0.9.8")?.downloadUrl)
+        repeat(3) { assertEquals(TRUSTED_RELEASE_URL, checker().checkForUpdate("0.9.8")?.downloadUrl) }
+    }
+
+    @Test
     fun `same version and prerelease tags do not prompt`() = runTest {
         server.enqueue(releaseResponse(tag = "v0.2.1", assetUrl = TRUSTED_APK_URL))
         server.enqueue(releaseResponse(tag = "v0.3.0-beta", assetUrl = TRUSTED_APK_URL))

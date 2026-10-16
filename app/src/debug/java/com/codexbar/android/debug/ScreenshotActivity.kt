@@ -108,7 +108,7 @@ class ScreenshotActivity : AppCompatActivity() {
                 style = style
             ) {
                 CodexBarApp(
-                    initialDestination = "dashboard",
+                    initialDestination = intent.getStringExtra("destination") ?: "dashboard",
                     dashboardPreviewSnapshot = snapshot,
                     onScreenPrivacyChanged = {}
                 )
@@ -276,6 +276,22 @@ private fun ScreenshotActivity.createScreenshotSnapshot(now: Instant): QuotaPres
         ) else data
     }
 
+    val displayQuotas = if (intent.getBooleanExtra("analytics", false)) quotas.map { quota ->
+        val spend = if (quota.service in setOf(AiService.CODEX, AiService.CLAUDE)) {
+            val scale = if (quota.service == AiService.CODEX) 1.0 else 0.62
+            val days = (29 downTo 0).map { ago ->
+                val day = LocalDate.now().minusDays(ago.toLong()).toString()
+                val amount = (1.0 + ((ago * 7) % 17) / 3.0) * scale
+                com.codexbar.android.core.domain.model.DesktopSpendDay(day,
+                    if (ago == 8) null else (amount * 41000).toLong(),
+                    if (ago == 8) null else if (ago == 2) 0.0 else amount, ago != 8)
+            }
+            com.codexbar.android.core.domain.model.DesktopSpend(now.epochSecond, "rolling:30", ZoneId.systemDefault().id,
+                "USD", false, 22.84 * scale, 104.62 * scale, 104.62 * scale,
+                (1_250_000 * scale).toLong(), (5_720_000 * scale).toLong(), (5_720_000 * scale).toLong(), false, days)
+        } else null
+        quota.copy(isDesktopSource = true, desktopHistoryScopeKey = "demo:pc:${quota.service.name}", desktopSpend = spend)
+    } else quotas
     val text = AndroidQuotaPresentationText(this)
     val paceCalculator = QuotaPaceCalculator(text)
     val history = buildMap<String, List<QuotaHistorySample>> {
@@ -297,7 +313,7 @@ private fun ScreenshotActivity.createScreenshotSnapshot(now: Instant): QuotaPres
         }
     }
     val snapshot = QuotaPresentationMapper(text = text).map(
-        quotas = quotas,
+        quotas = displayQuotas,
         generatedAt = now,
         paceByMetricKey = pace,
         historyByMetricKey = history

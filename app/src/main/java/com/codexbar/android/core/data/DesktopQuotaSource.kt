@@ -79,7 +79,13 @@ class DesktopQuotaSource @Inject constructor(
             if (provider.status != "ready" || provider.updatedAtEpochSeconds < Instant.now().epochSecond - 7200) {
                 return Result.Failure(AppError.ServiceUnavailable)
             }
-            Result.Success(provider.toQuota(service, credential.companionId))
+            val spend = snapshot.spend?.takeIf { it.costTrackingEnabled }?.let { summary ->
+                summary.rows.find { it.providerId == provider.id }?.let { row -> DesktopSpend(
+                    summary.updatedAtEpochSeconds, summary.reportingPeriod, summary.timeZone, row.currency, row.refreshing,
+                    row.sevenDay, row.thirtyDay, row.periodCost, row.sevenDayTokens, row.thirtyDayTokens, row.periodTokens,
+                    row.tokensLowerBound, row.daily.map { DesktopSpendDay(it.day, it.tokens, it.costUsd, it.isScanned) }) }
+            }
+            Result.Success(provider.toQuota(service, credential.companionId).copy(desktopSpend = spend))
         } catch (error: CancellationException) { throw error
         } catch (error: DesktopBridgeAuthenticationException) {
             Result.Failure(AppError.AuthError(service, true, "Pair with Win-CodexBar again"))
@@ -88,6 +94,19 @@ class DesktopQuotaSource @Inject constructor(
         } catch (error: IOException) {
             Result.Failure(AppError.NetworkError("Cannot reach Win-CodexBar", error))
         }
+    }
+
+    /** PC log totals remain useful even when that provider's quota login has expired. */
+    suspend fun currentSpend(): Map<AiService, DesktopSpend> = mutex.withLock {
+        val settings = prefs.acquisitionSettings()
+        if (cachedCredential != prefs.desktopBridgeCredential() || cachedRevision != sourceMonitor.sourceRevision()) return@withLock emptyMap()
+        val summary = cached?.spend?.takeIf { it.costTrackingEnabled } ?: return@withLock emptyMap()
+        summary.rows.mapNotNull { row ->
+            val service = serviceFor(row.providerId)?.takeIf(settings::routesToDesktop) ?: return@mapNotNull null
+            service to DesktopSpend(summary.updatedAtEpochSeconds, summary.reportingPeriod, summary.timeZone, row.currency, row.refreshing,
+                row.sevenDay, row.thirtyDay, row.periodCost, row.sevenDayTokens, row.thirtyDayTokens, row.periodTokens,
+                row.tokensLowerBound, row.daily.map { DesktopSpendDay(it.day, it.tokens, it.costUsd, it.isScanned) })
+        }.toMap()
     }
 
     companion object {
@@ -110,6 +129,10 @@ class DesktopQuotaSource @Inject constructor(
             isStale = now.epochSecond - updatedAtEpochSeconds > FRESH_OBSERVATION_SECONDS,
             historyEligible = subjectId != null && now.epochSecond - updatedAtEpochSeconds <= FRESH_OBSERVATION_SECONDS,
             isDesktopSource = true,
+            desktopHistoryScopeKey = historyScopeId?.let { "desktop:$companionId:history:$it" },
+            desktopQuotaHistory = if (historyScopeId == null) emptyList() else history.map { series ->
+                DesktopQuotaSeries(series.label, series.samples.map { DesktopQuotaSample(Instant.ofEpochSecond(it.t), it.u, it.r?.let(Instant::ofEpochSecond)) })
+            },
             desktopLocalUsage = localUsage?.let { DesktopLocalUsage(it.updatedAtEpochSeconds, it.todayDate,
                 it.todayTokens, it.thirtyDayTokens, it.periodTokens, it.todayCostUsd, it.thirtyDayCostUsd,
                 it.periodCostUsd, it.reportingPeriod, it.topModel, it.incompleteRequestCount) }

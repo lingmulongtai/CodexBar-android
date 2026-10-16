@@ -97,6 +97,7 @@ class SettingsViewModel @Inject constructor(
             val monitoringSession = monitoringSessionStore.activeSession()
             _uiState.update {
                 it.copy(
+                    preferencesLoaded = true,
                     refreshIntervalMinutes = RefreshIntervalPolicy.normalize(
                         prefsManager.getRefreshInterval()
                     ),
@@ -168,6 +169,8 @@ class SettingsViewModel @Inject constructor(
     fun updateDesktopPairingCode(code: String) = desktopConnection.updateCode(code)
     fun connectDesktopBridge() = desktopConnection.connect()
     fun refreshDesktopProviders() = desktopConnection.refreshProviders()
+    fun loadDesktopRemoteSettings() = desktopConnection.loadRemoteSettings()
+    fun updateDesktopRemoteSettings(interval: Long?, period: String?) = desktopConnection.updateRemoteSettings(interval, period)
     fun setDesktopService(service: AiService, enabled: Boolean) = desktopConnection.select(service, enabled)
     fun setAcquisitionMode(mode: com.codexbar.android.core.domain.model.AcquisitionMode) = desktopConnection.setMode(mode)
     fun clearPhoneExceptions() = desktopConnection.clearPhoneExceptions()
