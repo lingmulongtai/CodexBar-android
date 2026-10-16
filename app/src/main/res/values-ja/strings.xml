@@ -497,6 +497,10 @@
     <string name="quota_guide_now">残量の目安：現在</string>
     <string name="quota_guide_hour">1時間後</string>
     <string name="quota_guide_today">今日の終わり</string>
+    <string name="reset_notification_permission_needed">リセット通知の設定はオンですが、Android側で通知が許可されていません。</string>
+    <string name="reset_enable_notifications">リセット通知を許可する</string>
+    <string name="reset_background_refresh_disabled">自動更新がオフです。バックグラウンドのリセット通知には、新しい使用量の取得が必要です。</string>
+    <string name="reset_enable_background_refresh">15分ごとに自動取得する</string>
     <string name="dashboard_order_automatic">自動の並び順に戻す</string>
     <string name="widget_provider_order_hint">↑ ↓ で並び替え。行は上から下、列は左から右の順に表示されます。下のプレビューで確認できます。</string>
     <string name="widget_template_dual_segments">横2枠セグメント</string>

@@ -499,6 +499,10 @@
     <string name="quota_guide_now">Remaining guide: now</string>
     <string name="quota_guide_hour">In 1h</string>
     <string name="quota_guide_today">End of today</string>
+    <string name="reset_notification_permission_needed">Reset alerts are selected, but Android is blocking notification delivery.</string>
+    <string name="reset_enable_notifications">Allow reset alerts</string>
+    <string name="reset_background_refresh_disabled">Automatic refresh is off. Reset alerts require fresh observations while the app is in the background.</string>
+    <string name="reset_enable_background_refresh">Refresh every 15 minutes</string>
     <string name="dashboard_order_automatic">Use automatic order</string>
     <string name="widget_provider_order_hint">Use ↑ ↓ to rearrange. Rows run top to bottom; columns run left to right. The preview updates below.</string>
     <string name="widget_template_dual_segments">Dual Segments</string>

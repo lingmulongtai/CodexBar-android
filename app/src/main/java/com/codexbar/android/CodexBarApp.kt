@@ -36,6 +36,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.codexbar.android.ui.components.ResetNotificationPermissionSetup
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -94,6 +96,9 @@ fun CodexBarApp(
     val themeProfile = LocalCodexBarThemeProfile.current
     val navController = rememberNavController()
     val settingsViewModel: SettingsViewModel = hiltViewModel()
+    val configuration by settingsViewModel.uiState.collectAsStateWithLifecycle()
+    ResetNotificationPermissionSetup(enabled = dashboardPreviewSnapshot == null && configuration.preferencesLoaded &&
+        configuration.resetNotificationEnabled && (configuration.desktop.services.isNotEmpty() || configuration.serviceStates.values.any { it.isConnected }))
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentEntry?.destination?.route ?: initialDestination
     var initialDestinationHandled by rememberSaveable { mutableStateOf(false) }

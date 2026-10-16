@@ -6,6 +6,7 @@ import com.codexbar.android.core.security.PrivacySettings
 import com.codexbar.android.core.security.ConnectionHealth
 
 data class SettingsUiState(
+    val preferencesLoaded: Boolean = false,
     val serviceStates: Map<AiService, ServiceCredentialState> = AiService.entries.associateWith {
         ServiceCredentialState()
     },

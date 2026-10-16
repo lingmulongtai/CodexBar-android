@@ -97,6 +97,7 @@ class SettingsViewModel @Inject constructor(
             val monitoringSession = monitoringSessionStore.activeSession()
             _uiState.update {
                 it.copy(
+                    preferencesLoaded = true,
                     refreshIntervalMinutes = RefreshIntervalPolicy.normalize(
                         prefsManager.getRefreshInterval()
                     ),
