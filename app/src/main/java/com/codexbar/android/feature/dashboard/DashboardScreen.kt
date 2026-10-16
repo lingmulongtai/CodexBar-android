@@ -14,8 +14,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.filled.Cloud
@@ -27,6 +30,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import com.codexbar.android.ui.components.ProviderOrderEditor
+import com.codexbar.android.ui.components.providerDragReorder
+import com.codexbar.android.ui.components.rememberProviderDragReorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -124,7 +129,7 @@ private fun DashboardContent(
     onClearResetHistory: (AiService) -> Unit = {}
 ) {
     val themeProfile = LocalCodexBarThemeProfile.current
-    var selectedServiceName by remember { mutableStateOf<String?>(null) }
+    var selectedServiceName by rememberSaveable { mutableStateOf<String?>(null) }
     var showOnlyAttention by rememberSaveable { mutableStateOf(false) }
     var showOrder by rememberSaveable { mutableStateOf(false) }
     val services = (uiState as? DashboardUiState.Content)?.snapshot?.services.orEmpty()
@@ -246,12 +251,13 @@ private fun DashboardContent(
                                             selectedServiceName = it.service.name
                                         },
                                         onSummaryProviderClick = { selectedServiceName = it.name },
-                                        modifier = Modifier.weight(0.46f)
+                                        onReorder = { onProviderOrderChange(DashboardProviderOrder.merge(orderedServices.map { it.service }, it)) },
+                                        modifier = Modifier.weight(0.55f)
                                     )
                                     VerticalDivider(modifier = Modifier.fillMaxHeight())
                                     Box(
                                         modifier = Modifier
-                                            .weight(0.54f)
+                                            .weight(0.45f)
                                             .fillMaxHeight()
                                             .padding(CodexBarSpacing.large)
                                     ) {
@@ -275,7 +281,8 @@ private fun DashboardContent(
                                     onServiceClick = {
                                         selectedServiceName = it.service.name
                                     },
-                                    onSummaryProviderClick = { selectedServiceName = it.name }
+                                    onSummaryProviderClick = { selectedServiceName = it.name },
+                                    onReorder = { onProviderOrderChange(DashboardProviderOrder.merge(orderedServices.map { it.service }, it)) }
                                 )
                             }
                         }
@@ -312,14 +319,21 @@ private fun CardList(
     selectedServiceName: String?,
     onServiceClick: (ServiceQuotaPresentation) -> Unit,
     onSummaryProviderClick: (AiService) -> Unit,
+    onReorder: (List<AiService>) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(
+    val grid = rememberLazyGridState()
+    val order = services.map { it.service }
+    val drag = rememberProviderDragReorder(grid, order, onReorder)
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(280.dp),
+        state = grid,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item(key = "summary") {
+        item(key = "summary", span = { GridItemSpan(maxLineSpan) }) {
             DashboardSummaryCard(
                 summary = summary,
                 onProviderClick = onSummaryProviderClick
@@ -327,7 +341,7 @@ private fun CardList(
         }
 
         if (attentionCount > 0) {
-            item(key = "filters") {
+            item(key = "filters", span = { GridItemSpan(maxLineSpan) }) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
                         selected = !showOnlyAttention,
@@ -351,7 +365,7 @@ private fun CardList(
         }
 
         if (errorBanner != null) {
-            item {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -382,7 +396,8 @@ private fun CardList(
             ServiceCard(
                 service = service,
                 onClick = { onServiceClick(service) },
-                selected = service.service.name == selectedServiceName
+                selected = service.service.name == selectedServiceName,
+                modifier = Modifier.providerDragReorder(drag, service.service, order)
             )
         }
     }
