@@ -85,7 +85,9 @@ class QuotaPresentationMapper(
                     ?.takeUnless { privacy.redactSensitiveValues }
                     ?.let { mapCodexTelemetry(it, locale) },
                 isDesktopSource = quota.isDesktopSource,
-                desktopLocalUsage = quota.desktopLocalUsage?.takeUnless { privacy.redactSensitiveValues }
+                desktopLocalUsage = quota.desktopLocalUsage?.takeUnless { privacy.redactSensitiveValues },
+                desktopSpend = quota.desktopSpend?.takeUnless { privacy.redactSensitiveValues },
+                historyFromDesktop = quota.isDesktopSource && quota.desktopHistoryScopeKey != null
             )
         }
 

@@ -11,6 +11,26 @@ import org.junit.Test
 import org.mockito.Mockito.*
 
 class QuotaHistoryScopeTest {
+    @Test fun `Windows series replace local observations identically across polling times`() {
+        val now = Instant.now()
+        val samples = listOf(
+            com.codexbar.android.core.domain.model.DesktopQuotaSample(now.minusSeconds(600), 0.1, null),
+            com.codexbar.android.core.domain.model.DesktopQuotaSample(now.minusSeconds(300), 0.2, null))
+        val quota = QuotaInfo(AiService.GEMINI_APPS, listOf(UsageWindow("Current", 0.2, null)), null,
+            fetchedAt = now, historyEligible = false, isDesktopSource = true,
+            desktopHistoryScopeKey = "desktop:pc:history:connection-a",
+            desktopQuotaHistory = listOf(com.codexbar.android.core.domain.model.DesktopQuotaSeries("Current", samples)))
+        val phone = QuotaHistoryStore(contextFor(mutableMapOf()))
+        val tablet = QuotaHistoryStore(contextFor(mutableMapOf()))
+        phone.record(listOf(quota))
+        phone.record(listOf(quota.copy(fetchedAt = now.plusSeconds(30))))
+        tablet.record(listOf(quota.copy(fetchedAt = now.plusSeconds(60))))
+        assertEquals(2, phone.historyFor(listOf(quota)).values.single().size)
+        assertEquals(phone.historyFor(listOf(quota)), tablet.historyFor(listOf(quota)))
+        val anotherConnection = quota.copy(desktopHistoryScopeKey = "desktop:pc:history:connection-b", desktopQuotaHistory = emptyList())
+        tablet.record(listOf(anotherConnection))
+        assertTrue(tablet.historyFor(listOf(anotherConnection)).values.single().isEmpty())
+    }
     @Test fun `legacy owner survives a different account and expired keys retain fresh writes`() {
         val now = Instant.now()
         val values = mutableMapOf<String, String?>(

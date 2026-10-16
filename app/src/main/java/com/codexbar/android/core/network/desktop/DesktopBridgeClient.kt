@@ -168,6 +168,7 @@ open class DesktopBridgeClient @Inject constructor(
     }
 
     internal fun validateSnapshot(snapshot: DesktopBridgeSnapshot, now: Instant) {
+        validateSharedData(snapshot, now)
         if (snapshot.schemaVersion != 1 || snapshot.source != SNAPSHOT_SOURCE ||
             snapshot.providers.size > 32 || snapshot.providers.map { it.id }.toSet().size != snapshot.providers.size ||
             snapshot.generatedAtEpochSeconds < now.epochSecond - MAX_CLOCK_SKEW_SECONDS ||
@@ -220,6 +221,39 @@ open class DesktopBridgeClient @Inject constructor(
                     usage.topModel?.matches(Regex("[A-Za-z0-9_.:-]{1,64}")) == false ||
                     usage.incompleteRequestCount?.let { it < 0 } == true) {
                     throw DesktopBridgeProtocolException("Invalid Windows local totals")
+                }
+            }
+        }
+    }
+    private fun validateSharedData(snapshot: DesktopBridgeSnapshot, now: Instant) {
+        fun invalid(): Nothing = throw DesktopBridgeProtocolException("Invalid Windows shared history or spend")
+        snapshot.providers.forEach { provider ->
+            if (provider.historyScopeId?.matches(Regex("[A-Za-z0-9_-]{43}")) == false ||
+                provider.history.size > 8 || (provider.history.isNotEmpty() && provider.historyScopeId == null) ||
+                provider.history.map { it.label }.distinct().size != provider.history.size) invalid()
+            provider.history.forEach { series ->
+                if (series.label.isBlank() || series.label.length > 64 || series.label.hasControlCharacter() ||
+                    provider.windows.none { it.label == series.label } || series.samples.size > 64 ||
+                    series.samples.zipWithNext().any { (a, b) -> a.t >= b.t }) invalid()
+                if (series.samples.any { it.t !in (now.epochSecond - 90L * 86400)..(provider.updatedAtEpochSeconds + MAX_CLOCK_SKEW_SECONDS) ||
+                    !it.u.isFinite() || it.u !in 0.0..1.0 || it.r?.let { reset -> reset !in 0..now.epochSecond + 366L * 86400 } == true }) invalid()
+            }
+        }
+        snapshot.spend?.let { spend ->
+            val validPeriod = spend.reportingPeriod in setOf("all", "month-to-date") ||
+                spend.reportingPeriod.removePrefix("rolling:").toIntOrNull()?.let { spend.reportingPeriod == "rolling:$it" && it in 1..365 } == true
+            if (!validPeriod || spend.timeZone.isBlank() || spend.timeZone.length > 80 || spend.timeZone.hasControlCharacter() ||
+                spend.updatedAtEpochSeconds !in 0..now.epochSecond + MAX_CLOCK_SKEW_SECONDS || spend.rows.size > 32 ||
+                spend.rows.map { it.providerId }.distinct().size != spend.rows.size || (!spend.costTrackingEnabled && spend.rows.isNotEmpty())) invalid()
+            spend.rows.forEach { row ->
+                if (snapshot.providers.none { it.id == row.providerId } || !row.currency.matches(Regex("[A-Za-z]{1,8}")) ||
+                    listOfNotNull(row.sevenDay, row.thirtyDay, row.periodCost).any { !it.isFinite() || it !in 0.0..1e12 } ||
+                    listOfNotNull(row.sevenDayTokens, row.thirtyDayTokens, row.periodTokens).any { it < 0 } ||
+                    row.daily.size > 30 || row.daily.zipWithNext().any { (a, b) -> a.day >= b.day }) invalid()
+                row.daily.forEach { day ->
+                    if (day.day.length != 10 || runCatching { java.time.LocalDate.parse(day.day) }.isFailure ||
+                        day.tokens?.let { it < 0 } == true || (!day.isScanned && day.tokens != null) ||
+                        day.costUsd?.let { !it.isFinite() || it !in 0.0..1e12 } == true) invalid()
                 }
             }
         }

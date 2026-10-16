@@ -29,7 +29,19 @@ class QuotaHistoryStore @Inject constructor(
         val editor = prefs.edit()
         val written = mutableSetOf<String>()
         for (quota in quotas) {
-            if (!quota.historyEligible || quota.isStale) continue
+            if ((!quota.historyEligible && quota.desktopHistoryScopeKey == null) || quota.isStale) continue
+            if (quota.isDesktopSource && quota.desktopHistoryScopeKey != null) {
+                // Replace from the PC's canonical series; never append a phone's polling times.
+                for (window in quota.windows) {
+                    val samples = quota.desktopQuotaHistory.firstOrNull { it.label == window.label }?.samples.orEmpty()
+                        .map { QuotaHistorySample(it.at, it.utilization, it.resetsAt) }
+                    val key = historyKey(quota, window.label)
+                    editor.putString(key, samples.joinToString("\n") { it.serialize() })
+                    written += key
+                }
+                pruneScopes(quota, editor, written)
+                continue
+            }
             val scopeKey = "scope:${quota.service.name}"
             val scope = quota.resetTrackingAccountKey
             val legacyMatches = prefs.getString(scopeKey, null) == scope
@@ -69,7 +81,7 @@ class QuotaHistoryStore @Inject constructor(
     fun paceFor(quotas: List<QuotaInfo>, now: Instant): Map<String, PacePresentation> {
         return buildMap {
             for (quota in quotas) {
-                if (!quota.historyEligible || quota.isStale) continue
+                if ((!quota.historyEligible && quota.desktopHistoryScopeKey == null) || quota.isStale) continue
                 for (window in quota.windows) {
                     put(
                         QuotaPresentationMapper.metricKey(quota.service, window.label),
@@ -87,7 +99,7 @@ class QuotaHistoryStore @Inject constructor(
     fun historyFor(quotas: List<QuotaInfo>): Map<String, List<QuotaHistorySample>> {
         return buildMap {
             for (quota in quotas) {
-                if (!quota.historyEligible || quota.isStale) continue
+                if ((!quota.historyEligible && quota.desktopHistoryScopeKey == null) || quota.isStale) continue
                 for (window in quota.windows) {
                     put(
                         QuotaPresentationMapper.metricKey(quota.service, window.label),
@@ -122,7 +134,7 @@ class QuotaHistoryStore @Inject constructor(
         val times = prefs.getString(indexKey, null).orEmpty().lineSequence().mapNotNull { line ->
             val fields = line.split(':')
             fields.getOrNull(1)?.toLongOrNull()?.let { fields[0] to it }
-        }.toMap() + (historyScope(quota.resetTrackingAccountKey) to now)
+        }.toMap() + (historyScope(quota.desktopHistoryScopeKey ?: quota.resetTrackingAccountKey) to now)
         val retained = times.entries.filter { it.value >= now - QuotaResetTracker.RETENTION_MILLIS }
             .sortedByDescending { it.value }.take(8).associate { it.key to it.value }
         editor.putString(indexKey, retained.entries.joinToString("\n") { "${it.key}:${it.value}" })
@@ -133,14 +145,14 @@ class QuotaHistoryStore @Inject constructor(
             else {
                 val recent = loadSamples(key)
                 if (recent.isEmpty()) editor.remove(key)
-                else if (!key.startsWith(prefix + historyScope(quota.resetTrackingAccountKey) + ":"))
+                else if (!key.startsWith(prefix + historyScope(quota.desktopHistoryScopeKey ?: quota.resetTrackingAccountKey) + ":"))
                     editor.putString(key, recent.joinToString("\n") { it.serialize() })
             }
         }
     }
 
     private fun historyKey(quota: QuotaInfo, label: String): String {
-        return "${quota.service.name}:scoped:${historyScope(quota.resetTrackingAccountKey)}:${URLEncoder.encode(label, StandardCharsets.UTF_8.name())}"
+        return "${quota.service.name}:scoped:${historyScope(quota.desktopHistoryScopeKey ?: quota.resetTrackingAccountKey)}:${URLEncoder.encode(label, StandardCharsets.UTF_8.name())}"
     }
 
     private fun QuotaHistorySample.serialize(): String {

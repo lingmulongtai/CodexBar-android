@@ -15,7 +15,10 @@ data class QuotaInfo(
     val isStale: Boolean = false,
     val historyEligible: Boolean = true,
     val isDesktopSource: Boolean = false,
-    val desktopLocalUsage: DesktopLocalUsage? = null
+    val desktopLocalUsage: DesktopLocalUsage? = null,
+    val desktopHistoryScopeKey: String? = null,
+    val desktopQuotaHistory: List<DesktopQuotaSeries> = emptyList(),
+    val desktopSpend: DesktopSpend? = null
 )
 
 data class CodexResetCredits(
