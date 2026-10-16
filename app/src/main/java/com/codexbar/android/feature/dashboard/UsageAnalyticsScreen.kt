@@ -55,7 +55,9 @@ private fun AnalyticsContent(page: UsageAnalyticsPage, snapshot: QuotaPresentati
     }) { padding ->
         val services = snapshot?.services.orEmpty()
         val rows = services.filter { if (page == UsageAnalyticsPage.Spend) it.desktopSpend != null else it.metrics.isNotEmpty() }
-        LazyVerticalGrid(columns = GridCells.Adaptive(340.dp), modifier = Modifier.fillMaxSize().padding(padding),
+        BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
+        val columns = minOf(rows.size.coerceAtLeast(1), (maxWidth / 340.dp).toInt().coerceAtLeast(1))
+        LazyVerticalGrid(columns = GridCells.Fixed(columns), modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -80,6 +82,7 @@ private fun AnalyticsContent(page: UsageAnalyticsPage, snapshot: QuotaPresentati
                     }
                 }
             }
+        }
         }
     }
 }
