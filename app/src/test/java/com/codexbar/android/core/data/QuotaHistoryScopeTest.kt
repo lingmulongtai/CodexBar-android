@@ -11,6 +11,21 @@ import org.junit.Test
 import org.mockito.Mockito.*
 
 class QuotaHistoryScopeTest {
+    @Test fun `same observation completes per-window history without rollback or wiping omitted series`() {
+        val now = Instant.now()
+        fun series(label: String, complete: Boolean) = com.codexbar.android.core.domain.model.DesktopQuotaSeries(label,
+            listOf(com.codexbar.android.core.domain.model.DesktopQuotaSample(now.minusSeconds(300), 0.1, null)) +
+                if (complete) listOf(com.codexbar.android.core.domain.model.DesktopQuotaSample(now, 0.2, null)) else emptyList())
+        val quota = QuotaInfo(AiService.CODEX, listOf(UsageWindow("Session", 0.2, null), UsageWindow("Week", 0.2, null)), null,
+            fetchedAt = now, isDesktopSource = true, desktopHistoryScopeKey = "desktop:pc:history:a",
+            desktopQuotaHistory = listOf(series("Session", false), series("Week", false)))
+        val store = QuotaHistoryStore(contextFor(mutableMapOf()))
+        store.record(listOf(quota))
+        store.record(listOf(quota.copy(desktopQuotaHistory = listOf(series("Session", true)))))
+        store.record(listOf(quota.copy(desktopQuotaHistory = listOf(series("Week", true)))))
+        store.record(listOf(quota)) // same timestamp, but response captured before the PC completed its write
+        assertTrue(store.historyFor(listOf(quota)).values.all { it.size == 2 })
+    }
     @Test fun `Windows series replace local observations identically across polling times`() {
         val now = Instant.now()
         val samples = listOf(

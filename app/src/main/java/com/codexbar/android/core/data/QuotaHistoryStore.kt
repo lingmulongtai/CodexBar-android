@@ -33,14 +33,18 @@ class QuotaHistoryStore @Inject constructor(
             if (quota.isDesktopSource && quota.desktopHistoryScopeKey != null) {
                 val observedKey = "${quota.service.name}:scoped:${historyScope(quota.desktopHistoryScopeKey)}:observed"
                 val previous = prefs.getString(observedKey, null)?.toLongOrNull() ?: 0L
-                if (quota.fetchedAt.toEpochMilli() <= previous) continue
+                if (quota.fetchedAt.toEpochMilli() < previous) continue
                 editor.putString(observedKey, quota.fetchedAt.toEpochMilli().toString())
                 written += observedKey
                 // Replace from the PC's canonical series; never append a phone's polling times.
                 for (window in quota.windows) {
-                    val samples = quota.desktopQuotaHistory.firstOrNull { it.label == window.label }?.samples.orEmpty()
-                        .map { QuotaHistorySample(it.at, it.utilization, it.resetsAt) }
                     val key = historyKey(quota, window.label)
+                    val samples = quota.desktopQuotaHistory.firstOrNull { it.label == window.label }?.samples
+                        ?.takeIf { it.isNotEmpty() }?.map { QuotaHistorySample(it.at, it.utilization, it.resetsAt) } ?: continue
+                    // A provider can publish before the PC's asynchronous history write.
+                    // Accept a later completion for the same observation, never a late rollback.
+                    val through = loadSamples(key).lastOrNull()?.fetchedAt
+                    if (through != null && samples.last().fetchedAt < through) continue
                     editor.putString(key, samples.joinToString("\n") { it.serialize() })
                     written += key
                 }
