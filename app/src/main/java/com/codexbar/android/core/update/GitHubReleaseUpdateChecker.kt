@@ -53,12 +53,16 @@ class GitHubReleaseUpdateChecker internal constructor(
 
                     val releasePageUrl = trustedReleaseUrl(release.htmlUrl)
                         ?: LATEST_RELEASE_PAGE_URL
-                    val downloadUrl = release.assets
-                        .firstNotNullOfOrNull { asset ->
-                            asset.browserDownloadUrl
-                                .takeIf { asset.name == RELEASE_APK_NAME }
-                                ?.let(::trustedReleaseUrl)
+                    val downloadUrl = listOf(
+                        "CodexBar-Android-v${release.tagName.removePrefix("v")}.apk",
+                        "app-release.apk" // Older stable releases remain installable.
+                    ).firstNotNullOfOrNull { name ->
+                        release.assets.firstNotNullOfOrNull { asset ->
+                            asset.browserDownloadUrl.takeIf {
+                                asset.name == name && trustedApkUrl(it, release.tagName, name)
+                            }
                         }
+                    }
                         ?: releasePageUrl
 
                     AvailableUpdate(
@@ -78,7 +82,6 @@ class GitHubReleaseUpdateChecker internal constructor(
             "https://github.com/lingmulongtai/CodexBar-android/releases/latest"
         private const val TRUSTED_RELEASE_PATH_PREFIX =
             "/lingmulongtai/CodexBar-android/releases/"
-        private const val RELEASE_APK_NAME = "app-release.apk"
 
         private fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
@@ -93,6 +96,14 @@ class GitHubReleaseUpdateChecker internal constructor(
                     url.host == "github.com" &&
                     url.encodedPath.startsWith(TRUSTED_RELEASE_PATH_PREFIX)
             }
+        }
+
+        private fun trustedApkUrl(rawUrl: String, tag: String, name: String): Boolean {
+            val url = rawUrl.toHttpUrlOrNull() ?: return false
+            return trustedReleaseUrl(rawUrl) != null && url.port == 443 &&
+                url.username.isEmpty() && url.password.isEmpty() &&
+                url.encodedQuery == null && url.fragment == null &&
+                url.encodedPath == "${TRUSTED_RELEASE_PATH_PREFIX}download/$tag/$name"
         }
     }
 }
