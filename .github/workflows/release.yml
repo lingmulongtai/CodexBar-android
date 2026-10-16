@@ -74,6 +74,9 @@ jobs:
           npm test
           npm audit --omit=dev
 
+      - name: Verify release tag matches APK version
+        run: bash scripts/verify-release-version.sh
+
       - name: Build signed release artifacts
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
