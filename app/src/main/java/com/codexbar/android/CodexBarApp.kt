@@ -14,6 +14,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.rounded.DonutLarge
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Payments
+import com.codexbar.android.feature.dashboard.UsageAnalyticsPage
+import com.codexbar.android.feature.dashboard.UsageAnalyticsScreen
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -55,6 +59,8 @@ import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 
 private const val DashboardRoute = "dashboard"
 private const val ConnectionsRoute = "connections"
+private const val HistoryRoute = "history"
+private const val SpendRoute = "spend"
 private const val SettingsRoute = "settings"
 private const val ExpandedNavigationMinWidthDp = 600f
 
@@ -73,6 +79,8 @@ private enum class AppDestination(
         labelRes = R.string.connections_title,
         icon = Icons.AutoMirrored.Rounded.Login
     ),
+    History(route = HistoryRoute, labelRes = R.string.navigation_history, icon = Icons.Rounded.History),
+    Spend(route = SpendRoute, labelRes = R.string.navigation_spend, icon = Icons.Rounded.Payments),
     Settings(
         route = SettingsRoute,
         labelRes = R.string.settings_title,
@@ -106,7 +114,7 @@ fun CodexBarApp(
     LaunchedEffect(initialDestination, initialDestinationHandled) {
         if (!initialDestinationHandled) {
             initialDestinationHandled = true
-            if (initialDestination == ConnectionsRoute || initialDestination == SettingsRoute) {
+            if (initialDestination in setOf(ConnectionsRoute, SettingsRoute, HistoryRoute, SpendRoute)) {
                 navController.navigate(initialDestination) {
                     launchSingleTop = true
                 }
@@ -289,6 +297,8 @@ private fun AppNavHost(
                 viewModel = settingsViewModel
             )
         }
+        composable(HistoryRoute) { UsageAnalyticsScreen(UsageAnalyticsPage.History, { navController.navigateTopLevel(ConnectionsRoute) }, dashboardPreviewSnapshot) }
+        composable(SpendRoute) { UsageAnalyticsScreen(UsageAnalyticsPage.Spend, { navController.navigateTopLevel(ConnectionsRoute) }, dashboardPreviewSnapshot) }
         composable(SettingsRoute) {
             SettingsScreen(
                 onNavigateBack = {
