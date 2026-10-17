@@ -45,12 +45,13 @@ internal fun QuotaMeter(progress: Float, color: Color, guide: QuotaPaceGuide?, m
         val corner = CornerRadius(size.height / 2)
         if (style == AppThemeStyle.MATERIAL_3) {
             val gap = 3.dp.toPx()
-            val fillEnd = size.width * remaining
+            // A sliver of quota still shows as a round dot, and the track starts after it.
+            val fillWidth = if (remaining > 0f) (size.width * remaining - gap / 2).coerceAtLeast(size.height) else 0f
             if (remaining > 0f) {
-                drawRoundRect(color, size = Size((fillEnd - gap / 2).coerceAtLeast(size.height), size.height), cornerRadius = corner)
+                drawRoundRect(color, size = Size(fillWidth, size.height), cornerRadius = corner)
             }
-            if (remaining < 1f) {
-                val trackStart = if (remaining > 0f) fillEnd + gap / 2 else 0f
+            val trackStart = if (remaining > 0f) fillWidth + gap else 0f
+            if (trackStart < size.width - size.height / 2) {
                 drawRoundRect(
                     track,
                     topLeft = Offset(trackStart, 0f),
