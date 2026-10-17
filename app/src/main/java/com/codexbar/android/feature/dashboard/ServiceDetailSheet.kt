@@ -42,7 +42,6 @@ import com.codexbar.android.core.presentation.ExtraUsagePresentation
 import com.codexbar.android.core.presentation.QuotaMetricPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaStatus
-import com.codexbar.android.ui.components.ProviderIcon
 import com.codexbar.android.ui.theme.CodexBarSpacing
 import com.codexbar.android.ui.theme.CodexBarStateColors
 import com.codexbar.android.ui.theme.providerVisualStyle
@@ -65,7 +64,8 @@ fun ServiceDetailSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        modifier = modifier
+        modifier = modifier,
+        containerColor = LocalCodexBarThemeProfile.current.cardColor
     ) {
         ServiceDetailContent(
             service = service,
@@ -189,7 +189,7 @@ private fun ServiceDetailHeader(service: ServiceQuotaPresentation, accent: Color
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(CodexBarSpacing.medium)
     ) {
-        ProviderIcon(service.service, modifier = Modifier.size(40.dp))
+        ProviderBadge(service.service, 48.dp)
         Column(modifier = Modifier.weight(1f)) {
             val subtitle = listOfNotNull(service.tier, service.accountLabel)
                 .joinToString(" - ")

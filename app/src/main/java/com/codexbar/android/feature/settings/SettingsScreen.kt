@@ -79,8 +79,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -119,7 +117,9 @@ import com.codexbar.android.core.security.ConnectionHealth
 import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
 import com.codexbar.android.ui.components.ProviderIcon
 import com.codexbar.android.ui.theme.providerVisualStyle
-import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
+import com.codexbar.android.ui.components.BrandGlyph
+import com.codexbar.android.ui.components.LocalBottomChromeInset
+import com.codexbar.android.ui.components.ThemedTopBar
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
@@ -136,7 +136,6 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val themeProfile = LocalCodexBarThemeProfile.current
     val context = LocalContext.current
     var notificationsAllowed by remember { mutableStateOf(context.canPostNotifications()) }
     var resetNotificationsAllowed by remember { mutableStateOf(context.canPostResetNotifications()) }
@@ -181,11 +180,8 @@ fun SettingsScreen(
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = themeProfile.topBarContainerColor
-                ),
+            ThemedTopBar(
+                title = stringResource(R.string.settings_title),
                 navigationIcon = {
                     if (showBackButton) {
                         IconButton(onClick = onNavigateBack) {
@@ -305,7 +301,7 @@ fun SettingsScreen(
                     }
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(32.dp + LocalBottomChromeInset.current))
             }
         }
     }
@@ -323,7 +319,6 @@ fun ConnectionsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val themeProfile = LocalCodexBarThemeProfile.current
     val context = LocalContext.current
     var providerSearchQuery by rememberSaveable { mutableStateOf("") }
     var providerFilterName by rememberSaveable {
@@ -368,11 +363,8 @@ fun ConnectionsScreen(
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.connections_title)) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = themeProfile.topBarContainerColor
-                ),
+            ThemedTopBar(
+                title = stringResource(R.string.connections_title),
                 navigationIcon = {
                     if (showBackButton) {
                         IconButton(onClick = onNavigateBack) {
@@ -504,7 +496,7 @@ fun ConnectionsScreen(
                     onDeleteAll = { viewModel.showDeleteConfirmDialog() }
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(32.dp + LocalBottomChromeInset.current))
             }
         }
     }
@@ -618,11 +610,6 @@ private fun ThemeStyleOption(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    val previewColors = when (style) {
-        AppThemeStyle.MATERIAL_3 -> listOf(Color(0xFF4355B9), Color(0xFFDEE0FF), Color(0xFFFFC56B))
-        AppThemeStyle.LIQUID_GLASS -> listOf(Color(0xFF2F6BFF), Color(0xFFF2F2F7), Color(0xFF7B5CF6))
-        AppThemeStyle.INSTRUMENT -> listOf(Color(0xFF0B0C0F), Color(0xFF5EE3A1), Color(0xFFFFB547))
-    }
     Card(
         onClick = onClick,
         modifier = Modifier.width(184.dp),
@@ -652,13 +639,7 @@ private fun ThemeStyleOption(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                previewColors.forEach { color ->
-                    Box(
-                        modifier = Modifier
-                            .size(18.dp)
-                            .background(color, CircleShape)
-                    )
-                }
+                BrandGlyph(style, Modifier.size(32.dp))
                 Spacer(modifier = Modifier.weight(1f))
                 if (selected) {
                     Icon(

@@ -2,6 +2,7 @@ package com.codexbar.android.feature.dashboard
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -155,15 +156,7 @@ private fun ExpressiveServiceCard(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CookieShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Surface(modifier = Modifier.size(40.dp), color = accent.copy(alpha = 0.16f)) {}
-                    ProviderIcon(service.service, modifier = Modifier.size(22.dp))
-                }
+                ProviderBadge(service.service, 40.dp)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text(
                         service.service.displayName,
@@ -218,16 +211,7 @@ private fun GlassServiceRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Surface(
-                    modifier = Modifier.size(36.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    color = Color.White,
-                    border = BorderStroke(1.dp, Color(0xFFE5E5EA))
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        ProviderIcon(service.service, modifier = Modifier.size(22.dp))
-                    }
-                }
+                ProviderBadge(service.service, 36.dp)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
@@ -431,6 +415,33 @@ private fun InstrumentDetail(
                 )
             }
         }
+    }
+}
+
+/** The provider's mark set in the design's container: a cookie, a glass tile or a bare plate. */
+@Composable
+internal fun ProviderBadge(service: AiService, size: Dp) {
+    when (LocalCodexBarThemeProfile.current.style) {
+        AppThemeStyle.MATERIAL_3 -> Box(
+            modifier = Modifier
+                .size(size)
+                .clip(CookieShape)
+                .background(providerVisualStyle(service).accent.copy(alpha = 0.16f)),
+            contentAlignment = Alignment.Center
+        ) {
+            ProviderIcon(service, modifier = Modifier.size(size * 0.55f))
+        }
+        AppThemeStyle.LIQUID_GLASS -> Surface(
+            modifier = Modifier.size(size),
+            shape = RoundedCornerShape(size * 0.28f),
+            color = Color.White,
+            border = BorderStroke(1.dp, Color(0xFFE5E5EA))
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                ProviderIcon(service, modifier = Modifier.size(size * 0.6f))
+            }
+        }
+        AppThemeStyle.INSTRUMENT -> ProviderIcon(service, modifier = Modifier.size(size * 0.8f))
     }
 }
 
