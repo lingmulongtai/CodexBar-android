@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -47,9 +48,11 @@ fun CodexBarTheme(
         MaterialTheme(
             colorScheme = colorScheme,
             shapes = shapesFor(style),
-            typography = typographyFor(style),
-            content = content
-        )
+            typography = typographyFor(style)
+        ) {
+            // Screens draw directly on the design's background, outside any Surface.
+            CompositionLocalProvider(LocalContentColor provides colorScheme.onBackground, content = content)
+        }
     }
 }
 
