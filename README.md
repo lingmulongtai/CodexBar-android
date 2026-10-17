@@ -18,6 +18,22 @@ v0.10.0 adds long-press drag ordering, shared PC history, PC spend/token charts,
 
 ![Tablet PC spend dashboard with synthetic data](docs/images/mobile-dashboard/tablet-spend.png)
 
+## Three designs
+
+Choose **Material 3 Expressive**, **Liquid Glass** or **Instrument** in **Settings → Visual design**. Each design brings its own header, hero reading, provider list, navigation and launcher icon; the home screen icon follows the design after you leave the app. Refreshing never blocks the screen: readings stay visible, each provider shows its own progress and the header reports "Updating 2/4". History and Spend now share a **Trends** tab, and tablets get a rail or a centered glass bar with a two-pane dashboard. [Design and verification notes](docs/design-refresh.md)
+
+<p align="center">
+  <img src="docs/images/design-refresh/expressive-phone.png" width="250" alt="Material 3 Expressive dashboard" />
+  <img src="docs/images/design-refresh/liquid-glass-phone.png" width="250" alt="Liquid Glass dashboard with floating glass navigation" />
+  <img src="docs/images/design-refresh/instrument-phone.png" width="250" alt="Instrument dashboard" />
+</p>
+
+<p align="center">
+  <img src="docs/images/design-refresh/expressive-tablet.png" width="760" alt="Material 3 Expressive two-pane dashboard on a large tablet" />
+</p>
+
+<p align="center"><sub>Rendered from the real Compose screens with layoutlib and demo data; not captured on a device.</sub></p>
+
 ## Windows usage sharing
 
 Download **[Win-CodexBar + Mobile Connect EXE](https://github.com/lingmulongtai/Win-CodexBar-Mobile-Connect/releases/latest/download/Win-CodexBar-Mobile-Connect.exe)** directly. Enable **Settings → Mobile Connect** in the updated app (published v0.70.6 and older: **Advanced → Android sharing**), select LAN or Tailscale, and paste its private code into Android **Connections → Usage source & Windows connection**. Windows must remain running. The Windows EXE is unsigned; the Android APK retains its production signature. [Setup guide](https://github.com/lingmulongtai/Win-CodexBar-Mobile-Connect/blob/main/docs/android-sharing.md)
@@ -44,7 +60,7 @@ v0.10.0 adds drag ordering, PC-backed History / Spend, tablet layouts, reset not
 </p>
 
 - Unified quota monitoring for 21 providers: Claude, Codex, GitHub Copilot, Gemini CLI, Gemini Apps (Windows), Cursor, z.ai, ZenMux, Kimi Code, ElevenLabs, OpenRouter, Synthetic, Chutes, DeepSeek, Venice, Moonshot API, Cline, IBM Bob, Fireworks AI, Devin, and Antigravity
-- Four complete selectable design systems: the existing Material 3 UI, Liquid Glass, WinUI 3, and Aurora, each with light/dark support
+- Three complete selectable designs — Material 3 Expressive, Liquid Glass (light/dark) and the always-dark Instrument — each with its own navigation and launcher icon
 - A compact Usage overview with official provider icons, a saved custom provider order, two quota windows per provider, symmetric cards, and details on tap
 - Provider cards with animated rings, bars, exact values, reset countdowns, pace forecasts, and retained history charts
 - Codex reset-credit inventory, provider-reported model quota windows, and exact expiry details
@@ -73,14 +89,7 @@ Open a provider's detail to see its reset history, retained for up to 90 days an
 
 Existing widgets keep disconnected providers available in their editor so they can be deselected without reconnecting. An existing widget can also be saved with no providers; reopening it preserves that empty selection.
 
-## Selectable design systems and Codex insights
-
-<p align="center">
-  <img src="docs/images/releases/v0.9.0/dashboard-material3.png" width="210" alt="Material 3 dashboard" />
-  <img src="docs/images/releases/v0.9.0/dashboard-liquid-glass.png" width="210" alt="Liquid Glass dashboard" />
-  <img src="docs/images/releases/v0.9.0/dashboard-winui3.png" width="210" alt="WinUI 3 dashboard" />
-  <img src="docs/images/releases/v0.9.0/dashboard-aurora-dark.png" width="210" alt="Aurora dashboard in dark mode" />
-</p>
+## Codex insights
 
 <p align="center">
   <img src="docs/images/releases/v0.9.0/codex-insights-liquid-glass.png" width="320" alt="Codex reset-credit and context detail" />
