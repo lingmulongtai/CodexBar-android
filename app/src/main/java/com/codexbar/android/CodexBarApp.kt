@@ -1,34 +1,28 @@
 package com.codexbar.android
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Login
-import androidx.compose.material.icons.rounded.DonutLarge
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.Payments
+import androidx.compose.material.icons.automirrored.rounded.ShowChart
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Tune
 import com.codexbar.android.feature.dashboard.UsageAnalyticsPage
 import com.codexbar.android.feature.dashboard.UsageAnalyticsScreen
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,7 +32,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.ui.components.ResetNotificationPermissionSetup
@@ -54,6 +47,10 @@ import com.codexbar.android.feature.dashboard.DashboardViewModel
 import com.codexbar.android.feature.settings.ConnectionsScreen
 import com.codexbar.android.feature.settings.SettingsScreen
 import com.codexbar.android.feature.settings.SettingsViewModel
+import com.codexbar.android.core.domain.model.AppThemeStyle
+import com.codexbar.android.ui.components.LocalBottomChromeInset
+import com.codexbar.android.ui.components.glassBackdropSource
+import com.codexbar.android.ui.components.rememberGlassBackdrop
 import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
@@ -68,24 +65,30 @@ private const val ExpandedNavigationMinWidthDp = 600f
 private enum class AppDestination(
     val route: String,
     @param:StringRes val labelRes: Int,
-    val icon: ImageVector
+    val icon: ImageVector,
+    val routes: Set<String> = setOf(route)
 ) {
     Dashboard(
         route = DashboardRoute,
         labelRes = R.string.navigation_dashboard,
-        icon = Icons.Rounded.DonutLarge
+        icon = Icons.Rounded.Speed
+    ),
+    // History and Spend share one tab and switch with the tabs at the top of the screen.
+    Trends(
+        route = HistoryRoute,
+        labelRes = R.string.navigation_trends,
+        icon = Icons.AutoMirrored.Rounded.ShowChart,
+        routes = setOf(HistoryRoute, SpendRoute)
     ),
     Connections(
         route = ConnectionsRoute,
         labelRes = R.string.connections_title,
-        icon = Icons.AutoMirrored.Rounded.Login
+        icon = Icons.Rounded.Link
     ),
-    History(route = HistoryRoute, labelRes = R.string.navigation_history, icon = Icons.Rounded.History),
-    Spend(route = SpendRoute, labelRes = R.string.navigation_spend, icon = Icons.Rounded.Payments),
     Settings(
         route = SettingsRoute,
         labelRes = R.string.settings_title,
-        icon = Icons.Rounded.Settings
+        icon = Icons.Rounded.Tune
     )
 }
 
@@ -114,6 +117,11 @@ fun CodexBarApp(
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentEntry?.destination?.route ?: initialDestination
     var initialDestinationHandled by rememberSaveable { mutableStateOf(false) }
+    var lastTrendsRoute by rememberSaveable { mutableStateOf(HistoryRoute) }
+
+    LaunchedEffect(currentRoute) {
+        if (currentRoute in AppDestination.Trends.routes) lastTrendsRoute = currentRoute
+    }
 
     LaunchedEffect(initialDestination, initialDestinationHandled) {
         if (!initialDestinationHandled) {
@@ -148,107 +156,75 @@ fun CodexBarApp(
         }
     }
 
+    val entries = AppDestination.entries.map { destination ->
+        NavigationEntry(
+            label = stringResource(destination.labelRes),
+            icon = destination.icon,
+            selected = currentRoute in destination.routes,
+            onClick = {
+                val route = if (destination == AppDestination.Trends) lastTrendsRoute else destination.route
+                navController.navigateTopLevel(route)
+            }
+        )
+    }
+    val navHost: @Composable (Modifier) -> Unit = { hostModifier ->
+        AppNavHost(
+            navController = navController,
+            initialGeminiPairingUri = initialGeminiPairingUri,
+            onGeminiPairingConsumed = onGeminiPairingConsumed,
+            initialCodexTelemetryPairingUri = initialCodexTelemetryPairingUri,
+            onCodexTelemetryPairingConsumed = onCodexTelemetryPairingConsumed,
+            initialDashboardService = initialDashboardService,
+            onDashboardServiceConsumed = onDashboardServiceConsumed,
+            onScreenPrivacyChanged = onScreenPrivacyChanged,
+            settingsViewModel = settingsViewModel,
+            dashboardViewModel = dashboardViewModel,
+            dashboardPreviewSnapshot = dashboardPreviewSnapshot,
+            modifier = hostModifier
+        )
+    }
+
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .background(themeProfile.backgroundBrush)
     ) {
-        if (useExpandedNavigation(maxWidth.value)) {
-            Row(modifier = Modifier.fillMaxSize()) {
-                NavigationRail(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(88.dp),
-                    containerColor = themeProfile.navigationContainerColor,
-                    header = {
-                        Surface(
-                            modifier = Modifier.padding(vertical = 12.dp),
-                            shape = MaterialTheme.shapes.medium,
-                            color = MaterialTheme.colorScheme.primaryContainer
-                        ) {
-                            Box(
-                                modifier = Modifier.padding(12.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.DonutLarge,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                        }
-                    }
-                ) {
-                    AppDestination.entries.forEach { destination ->
-                        NavigationRailItem(
-                            selected = currentRoute == destination.route,
-                            onClick = {
-                                navController.navigateTopLevel(destination.route)
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = destination.icon,
-                                    contentDescription = stringResource(destination.labelRes)
-                                )
-                            },
-                            label = { Text(stringResource(destination.labelRes)) }
-                        )
-                    }
+        when {
+            themeProfile.floatingNavigation -> {
+                val refresh = dashboardViewModel?.refreshState?.collectAsStateWithLifecycle()?.value
+                val backdrop = rememberGlassBackdrop()
+                val bottomInset = GlassBarHeight + GlassBarMargin * 2 +
+                    WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                CompositionLocalProvider(LocalBottomChromeInset provides bottomInset) {
+                    navHost(
+                        Modifier
+                            .fillMaxSize()
+                            .glassBackdropSource(backdrop)
+                            .background(themeProfile.backgroundBrush)
+                    )
                 }
-                VerticalDivider()
-                AppNavHost(
-                    navController = navController,
-                    initialGeminiPairingUri = initialGeminiPairingUri,
-                    onGeminiPairingConsumed = onGeminiPairingConsumed,
-                    initialCodexTelemetryPairingUri = initialCodexTelemetryPairingUri,
-                    onCodexTelemetryPairingConsumed = onCodexTelemetryPairingConsumed,
-                    initialDashboardService = initialDashboardService,
-                    onDashboardServiceConsumed = onDashboardServiceConsumed,
-                    onScreenPrivacyChanged = onScreenPrivacyChanged,
-                    settingsViewModel = settingsViewModel,
-                    dashboardViewModel = dashboardViewModel,
-                    dashboardPreviewSnapshot = dashboardPreviewSnapshot,
-                    modifier = Modifier.weight(1f)
+                GlassNavigationBar(
+                    entries = entries,
+                    backdrop = backdrop,
+                    refresh = refresh,
+                    onRefresh = dashboardViewModel?.let { model -> { model.refresh() } },
+                    modifier = Modifier.align(Alignment.BottomCenter)
                 )
             }
-        } else {
-            Scaffold(
-                contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                bottomBar = {
-                    NavigationBar(containerColor = themeProfile.navigationContainerColor) {
-                        AppDestination.entries.forEach { destination ->
-                            NavigationBarItem(
-                                selected = currentRoute == destination.route,
-                                onClick = {
-                                    navController.navigateTopLevel(destination.route)
-                                },
-                                icon = {
-                                    Icon(
-                                        imageVector = destination.icon,
-                                        contentDescription = stringResource(destination.labelRes)
-                                    )
-                                },
-                                label = { Text(stringResource(destination.labelRes)) }
-                            )
-                        }
+            useExpandedNavigation(maxWidth.value) -> Row(modifier = Modifier.fillMaxSize()) {
+                AppNavigationRail(entries)
+                VerticalDivider(
+                    color = if (themeProfile.style == AppThemeStyle.INSTRUMENT) {
+                        MaterialTheme.colorScheme.outlineVariant
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerHigh
                     }
-                }
-            ) { paddingValues ->
-                AppNavHost(
-                    navController = navController,
-                    initialGeminiPairingUri = initialGeminiPairingUri,
-                    onGeminiPairingConsumed = onGeminiPairingConsumed,
-                    initialCodexTelemetryPairingUri = initialCodexTelemetryPairingUri,
-                    onCodexTelemetryPairingConsumed = onCodexTelemetryPairingConsumed,
-                    initialDashboardService = initialDashboardService,
-                    onDashboardServiceConsumed = onDashboardServiceConsumed,
-                    onScreenPrivacyChanged = onScreenPrivacyChanged,
-                    settingsViewModel = settingsViewModel,
-                    dashboardViewModel = dashboardViewModel,
-                    dashboardPreviewSnapshot = dashboardPreviewSnapshot,
-                    modifier = Modifier.padding(paddingValues)
                 )
+                navHost(Modifier.weight(1f).fillMaxHeight())
+            }
+            else -> Column(modifier = Modifier.fillMaxSize()) {
+                navHost(Modifier.weight(1f).fillMaxWidth())
+                AppBottomBar(entries)
             }
         }
     }
@@ -305,8 +281,27 @@ private fun AppNavHost(
                 viewModel = settingsViewModel
             )
         }
-        composable(HistoryRoute) { UsageAnalyticsScreen(UsageAnalyticsPage.History, { navController.navigateTopLevel(ConnectionsRoute) }, dashboardPreviewSnapshot, dashboardViewModel) }
-        composable(SpendRoute) { UsageAnalyticsScreen(UsageAnalyticsPage.Spend, { navController.navigateTopLevel(ConnectionsRoute) }, dashboardPreviewSnapshot, dashboardViewModel) }
+        val showTrendsPage = { page: UsageAnalyticsPage ->
+            navController.navigateTopLevel(if (page == UsageAnalyticsPage.History) HistoryRoute else SpendRoute)
+        }
+        composable(HistoryRoute) {
+            UsageAnalyticsScreen(
+                page = UsageAnalyticsPage.History,
+                onConnections = { navController.navigateTopLevel(ConnectionsRoute) },
+                preview = dashboardPreviewSnapshot,
+                model = dashboardViewModel,
+                onPageChange = showTrendsPage
+            )
+        }
+        composable(SpendRoute) {
+            UsageAnalyticsScreen(
+                page = UsageAnalyticsPage.Spend,
+                onConnections = { navController.navigateTopLevel(ConnectionsRoute) },
+                preview = dashboardPreviewSnapshot,
+                model = dashboardViewModel,
+                onPageChange = showTrendsPage
+            )
+        }
         composable(SettingsRoute) {
             SettingsScreen(
                 onNavigateBack = {

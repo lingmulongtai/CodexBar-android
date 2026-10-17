@@ -41,7 +41,8 @@ fun UsageAnalyticsScreen(
     page: UsageAnalyticsPage,
     onConnections: () -> Unit,
     preview: QuotaPresentationSnapshot? = null,
-    model: DashboardViewModel? = null
+    model: DashboardViewModel? = null,
+    onPageChange: (UsageAnalyticsPage) -> Unit = {}
 ) {
     if (preview != null || model == null) { AnalyticsContent(page, preview, false, {}, onConnections); return }
     val state by model.uiState.collectAsStateWithLifecycle()

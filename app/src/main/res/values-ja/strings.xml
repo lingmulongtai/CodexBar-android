@@ -501,6 +501,7 @@
     <string name="reset_enable_background_refresh">15分ごとに自動取得する</string>
     <string name="navigation_history">履歴</string>
     <string name="navigation_spend">費用</string>
+    <string name="navigation_trends">推移</string>
     <string name="analytics_history_help">Windowsモードでは、対応PCに保存された同じ使用量履歴を各端末で表示します。旧PC版では、この端末の観測履歴を使います。</string>
     <string name="analytics_spend_help">PCのトークンログなどから得られる参考費用です。サブスクの請求額ではありません。日付の区切りはPCのタイムゾーンに従います。</string>
     <string name="analytics_spend_empty">PCの費用データはまだありません。Windowsに接続し、PC側で費用の追跡を有効にして更新してください。スマホ単独では費用を推測しません。</string>
