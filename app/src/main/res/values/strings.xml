@@ -112,7 +112,6 @@
     <string name="detail_limit">Limit</string>
     <string name="detail_remaining">Remaining</string>
     <string name="status_fresh">Fresh</string>
-    <string name="status_up_to_date">Up to date</string>
     <string name="status_stale">Stale data</string>
     <string name="status_loading">Loading</string>
     <string name="status_reauthentication_required">Re-authentication required</string>
@@ -122,7 +121,6 @@
     <string name="status_not_connected">Not connected</string>
     <string name="status_verification_pending">Saved · verification pending</string>
     <string name="status_quota_hidden">Quota hidden</string>
-    <string name="status_hidden">Hidden</string>
     <string name="extra_usage_summary">%1$s: %2$s / %3$s (%4$s)</string>
     <string name="quota_metric_description">%1$s: %2$s</string>
     <string name="quota_percent_value">%1$d%%</string>

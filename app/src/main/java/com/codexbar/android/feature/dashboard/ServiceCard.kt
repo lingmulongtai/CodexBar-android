@@ -57,13 +57,13 @@ enum class CardGrouping { Alone, First, Middle, Last }
 fun ServiceCard(
     service: ServiceQuotaPresentation,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     selected: Boolean = false,
     refreshing: Boolean = false,
     grouping: CardGrouping = CardGrouping.Alone,
     expanded: Boolean = false,
     onOpenDetails: () -> Unit = onClick,
-    onManageConnection: () -> Unit = {},
-    modifier: Modifier = Modifier
+    onManageConnection: () -> Unit = {}
 ) {
     val selectedModifier = modifier.fillMaxWidth().semantics { this.selected = selected }
     when (LocalCodexBarThemeProfile.current.style) {

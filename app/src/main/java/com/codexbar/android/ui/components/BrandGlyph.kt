@@ -31,9 +31,9 @@ import kotlin.math.sin
  * launcher icon: a gauge "C", three glass quota bars, or a prompt whose cursor is a meter.
  */
 @Composable
-fun BrandGlyph(style: AppThemeStyle, modifier: Modifier = Modifier.size(40.dp)) {
+fun BrandGlyph(style: AppThemeStyle, modifier: Modifier = Modifier) {
     val primary = MaterialTheme.colorScheme.primary
-    Canvas(modifier) {
+    Canvas(modifier.size(40.dp)) {
         scale(size.minDimension / 72f, pivot = Offset.Zero) {
             when (style) {
                 AppThemeStyle.MATERIAL_3 -> drawGaugeGlyph(primary)

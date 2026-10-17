@@ -55,6 +55,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -191,7 +193,7 @@ private fun DashboardContent(
                     refresh = refresh,
                     updatedAt = updatedAt,
                     onRefresh = onRefresh,
-                    showMark = LocalConfiguration.current.screenWidthDp < 600
+                    showMark = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() } < 600.dp
                 )
             }
             // The pull gesture starts a refresh; progress is shown in place, never over the content.
@@ -570,7 +572,7 @@ private fun SectionHeader(count: Int, canReorder: Boolean, onShowOrder: () -> Un
 }
 
 @Composable
-private fun EmptyState(onOpenConnections: () -> Unit, windowsMode: Boolean = false, modifier: Modifier = Modifier) {
+private fun EmptyState(onOpenConnections: () -> Unit, modifier: Modifier = Modifier, windowsMode: Boolean = false) {
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center

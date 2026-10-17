@@ -112,7 +112,6 @@
     <string name="detail_limit">上限</string>
     <string name="detail_remaining">残り</string>
     <string name="status_fresh">最新</string>
-    <string name="status_up_to_date">最新</string>
     <string name="status_stale">古いデータ</string>
     <string name="status_loading">読み込み中</string>
     <string name="status_reauthentication_required">再認証が必要</string>
@@ -122,7 +121,6 @@
     <string name="status_not_connected">未接続</string>
     <string name="status_verification_pending">保存済み・確認待ち</string>
     <string name="status_quota_hidden">使用枠を非表示</string>
-    <string name="status_hidden">非表示</string>
     <string name="extra_usage_summary">%1$s: %2$s / %3$s（%4$s）</string>
     <string name="quota_metric_description">%1$s: %2$s</string>
     <string name="quota_percent_value">%1$d%%</string>
