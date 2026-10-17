@@ -1,5 +1,8 @@
 package com.codexbar.android.ui.theme
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -9,8 +12,11 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import com.codexbar.android.core.domain.model.AppThemeStyle
 
 @Composable
@@ -20,157 +26,163 @@ fun CodexBarTheme(
     style: AppThemeStyle = AppThemeStyle.MATERIAL_3,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        style == AppThemeStyle.MATERIAL_3 &&
+    // Instrument is an always-dark design; the others follow the system appearance.
+    val useDarkTheme = style == AppThemeStyle.INSTRUMENT || darkTheme
+    val colorScheme = when (style) {
+        AppThemeStyle.MATERIAL_3 -> when {
             dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+                val context = LocalContext.current
+                if (useDarkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            }
+            useDarkTheme -> CodexBarDarkColors
+            else -> CodexBarLightColors
         }
-        style == AppThemeStyle.MATERIAL_3 && darkTheme -> CodexBarDarkColors
-        style == AppThemeStyle.MATERIAL_3 -> CodexBarLightColors
-        style == AppThemeStyle.LIQUID_GLASS && darkTheme -> LiquidGlassDarkColors
-        style == AppThemeStyle.LIQUID_GLASS -> LiquidGlassLightColors
-        style == AppThemeStyle.WINUI_3 && darkTheme -> WinUiDarkColors
-        style == AppThemeStyle.WINUI_3 -> WinUiLightColors
-        style == AppThemeStyle.AURORA && darkTheme -> AuroraDarkColors
-        else -> AuroraLightColors
+        AppThemeStyle.LIQUID_GLASS -> if (useDarkTheme) LiquidGlassDarkColors else LiquidGlassLightColors
+        AppThemeStyle.INSTRUMENT -> InstrumentColors
     }
-    val profile = themeProfile(style, colorScheme, darkTheme)
+    val profile = themeProfile(style, colorScheme, useDarkTheme)
+    SystemBarAppearance(darkTheme = useDarkTheme)
 
     CompositionLocalProvider(LocalCodexBarThemeProfile provides profile) {
         MaterialTheme(
             colorScheme = colorScheme,
             shapes = shapesFor(style),
-            typography = CodexBarTypography,
+            typography = typographyFor(style),
             content = content
         )
     }
 }
 
+/** Keeps status and navigation bar icons legible when a design is darker than the system. */
+@Composable
+private fun SystemBarAppearance(darkTheme: Boolean) {
+    val view = LocalView.current
+    if (view.isInEditMode) return
+    SideEffect {
+        val window = view.context.findActivity()?.window ?: return@SideEffect
+        WindowCompat.getInsetsController(window, view).apply {
+            isAppearanceLightStatusBars = !darkTheme
+            isAppearanceLightNavigationBars = !darkTheme
+        }
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
 private val LiquidGlassLightColors = lightColorScheme(
-    primary = Color(0xFF006493),
+    primary = Color(0xFF2F6BFF),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFCBE6FF),
-    onPrimaryContainer = Color(0xFF001E30),
-    secondary = Color(0xFF66558D),
-    secondaryContainer = Color(0xFFEBDDFF),
-    tertiary = Color(0xFF006A65),
-    background = Color(0xFFF4FAFF),
-    onBackground = Color(0xFF14202A),
-    surface = Color(0xFFF8FCFF),
-    onSurface = Color(0xFF14202A),
-    surfaceVariant = Color(0xFFDCE8F2),
-    onSurfaceVariant = Color(0xFF40505D),
-    surfaceContainer = Color(0xFFE9F3FA),
-    surfaceContainerLow = Color(0xFFF0F8FD),
-    surfaceContainerHigh = Color(0xFFDFEBF3),
-    outline = Color(0xFF6F7F8C),
-    outlineVariant = Color(0xFFBECCD7)
+    primaryContainer = Color(0xFFDCE6FF),
+    onPrimaryContainer = Color(0xFF0A2A6B),
+    inversePrimary = Color(0xFF8AB0FF),
+    secondary = Color(0xFF5E5E66),
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFE9E9EE),
+    onSecondaryContainer = Color(0xFF1C1C1E),
+    tertiary = Color(0xFF7A4FD6),
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFEFE5FF),
+    onTertiaryContainer = Color(0xFF2A0F5C),
+    error = Color(0xFFD93025),
+    onError = Color.White,
+    errorContainer = Color(0xFFFDE3E1),
+    onErrorContainer = Color(0xFF5C0B05),
+    background = Color(0xFFF2F2F7),
+    onBackground = Color(0xFF111114),
+    surface = Color(0xFFF2F2F7),
+    onSurface = Color(0xFF111114),
+    surfaceVariant = Color(0xFFE9E9EE),
+    onSurfaceVariant = Color(0xFF6C6C70),
+    surfaceTint = Color.White,
+    inverseSurface = Color(0xFF1C1C1E),
+    inverseOnSurface = Color(0xFFF2F2F7),
+    outline = Color(0xFF8E8E93),
+    outlineVariant = Color(0xFFD1D1D6),
+    surfaceBright = Color.White,
+    surfaceDim = Color(0xFFE3E3E8),
+    surfaceContainerLowest = Color.White,
+    surfaceContainerLow = Color.White,
+    surfaceContainer = Color(0xFFF7F7FA),
+    surfaceContainerHigh = Color(0xFFE9E9EE),
+    surfaceContainerHighest = Color(0xFFE3E3E8)
 )
 
 private val LiquidGlassDarkColors = darkColorScheme(
-    primary = Color(0xFF8DCDFF),
-    onPrimary = Color(0xFF00344F),
-    primaryContainer = Color(0xFF004B70),
-    onPrimaryContainer = Color(0xFFCBE6FF),
-    secondary = Color(0xFFD1BCFF),
-    secondaryContainer = Color(0xFF4E3E73),
-    tertiary = Color(0xFF75DBD2),
-    background = Color(0xFF071521),
-    onBackground = Color(0xFFDDEAF4),
-    surface = Color(0xFF0D1C29),
-    onSurface = Color(0xFFDDEAF4),
-    surfaceVariant = Color(0xFF354653),
-    onSurfaceVariant = Color(0xFFB9C9D5),
-    surfaceContainer = Color(0xFF172735),
-    surfaceContainerLow = Color(0xFF10202D),
-    surfaceContainerHigh = Color(0xFF21313F),
-    outline = Color(0xFF83939F),
-    outlineVariant = Color(0xFF3A4A57)
+    primary = Color(0xFF6E9BFF),
+    onPrimary = Color(0xFF00215E),
+    primaryContainer = Color(0xFF1D3A7A),
+    onPrimaryContainer = Color(0xFFDCE6FF),
+    inversePrimary = Color(0xFF2F6BFF),
+    secondary = Color(0xFFA1A1AA),
+    onSecondary = Color(0xFF1C1C1E),
+    secondaryContainer = Color(0xFF2C2C2E),
+    onSecondaryContainer = Color(0xFFF2F2F7),
+    tertiary = Color(0xFFC3A6FF),
+    onTertiary = Color(0xFF2A0F5C),
+    tertiaryContainer = Color(0xFF3B2470),
+    onTertiaryContainer = Color(0xFFEFE5FF),
+    error = Color(0xFFFF6961),
+    onError = Color(0xFF450704),
+    errorContainer = Color(0xFF4A1210),
+    onErrorContainer = Color(0xFFFFDAD6),
+    background = Color.Black,
+    onBackground = Color(0xFFF5F5F7),
+    surface = Color.Black,
+    onSurface = Color(0xFFF5F5F7),
+    surfaceVariant = Color(0xFF2C2C2E),
+    onSurfaceVariant = Color(0xFF98989F),
+    surfaceTint = Color.White,
+    inverseSurface = Color(0xFFF2F2F7),
+    inverseOnSurface = Color(0xFF1C1C1E),
+    outline = Color(0xFF8E8E93),
+    outlineVariant = Color(0xFF38383A),
+    surfaceBright = Color(0xFF2C2C2E),
+    surfaceDim = Color.Black,
+    surfaceContainerLowest = Color.Black,
+    surfaceContainerLow = Color(0xFF1C1C1E),
+    surfaceContainer = Color(0xFF232326),
+    surfaceContainerHigh = Color(0xFF2C2C2E),
+    surfaceContainerHighest = Color(0xFF3A3A3C)
 )
 
-private val WinUiLightColors = lightColorScheme(
-    primary = Color(0xFF0067C0),
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFD7E9F8),
-    onPrimaryContainer = Color(0xFF002E50),
-    secondary = Color(0xFF4F6070),
-    secondaryContainer = Color(0xFFDDE5EC),
-    tertiary = Color(0xFF006B5E),
-    background = Color(0xFFF3F3F3),
-    onBackground = Color(0xFF1A1A1A),
-    surface = Color(0xFFFCFCFC),
-    onSurface = Color(0xFF1A1A1A),
-    surfaceVariant = Color(0xFFE5E5E5),
-    onSurfaceVariant = Color(0xFF4A4A4A),
-    surfaceContainer = Color(0xFFEFEFEF),
-    surfaceContainerLow = Color(0xFFF7F7F7),
-    surfaceContainerHigh = Color(0xFFE9E9E9),
-    outline = Color(0xFF777777),
-    outlineVariant = Color(0xFFD1D1D1)
-)
-
-private val WinUiDarkColors = darkColorScheme(
-    primary = Color(0xFF60CDFF),
-    onPrimary = Color(0xFF003548),
-    primaryContainer = Color(0xFF004D67),
-    onPrimaryContainer = Color(0xFFBCE9FF),
-    secondary = Color(0xFFB8C8D6),
-    secondaryContainer = Color(0xFF354553),
-    tertiary = Color(0xFF63DAC7),
-    background = Color(0xFF202020),
-    onBackground = Color(0xFFF3F3F3),
-    surface = Color(0xFF272727),
-    onSurface = Color(0xFFF3F3F3),
-    surfaceVariant = Color(0xFF3A3A3A),
-    onSurfaceVariant = Color(0xFFD0D0D0),
-    surfaceContainer = Color(0xFF2C2C2C),
-    surfaceContainerLow = Color(0xFF252525),
-    surfaceContainerHigh = Color(0xFF333333),
-    outline = Color(0xFF999999),
-    outlineVariant = Color(0xFF454545)
-)
-
-private val AuroraLightColors = lightColorScheme(
-    primary = Color(0xFF5934E8),
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFE6DEFF),
-    onPrimaryContainer = Color(0xFF19005F),
-    secondary = Color(0xFF006B60),
-    secondaryContainer = Color(0xFF75F8E2),
-    tertiary = Color(0xFFA5005A),
-    tertiaryContainer = Color(0xFFFFD8E7),
-    background = Color(0xFFF8F6FF),
-    onBackground = Color(0xFF1B1830),
-    surface = Color(0xFFFFFBFF),
-    onSurface = Color(0xFF1B1830),
-    surfaceVariant = Color(0xFFE8E0F0),
-    onSurfaceVariant = Color(0xFF4B4553),
-    surfaceContainer = Color(0xFFF1ECF7),
-    surfaceContainerLow = Color(0xFFF8F3FD),
-    surfaceContainerHigh = Color(0xFFEBE5F1),
-    outline = Color(0xFF7C7485),
-    outlineVariant = Color(0xFFCEC5D5)
-)
-
-private val AuroraDarkColors = darkColorScheme(
-    primary = Color(0xFFBDAAFF),
-    onPrimary = Color(0xFF2B008B),
-    primaryContainer = Color(0xFF431AC4),
-    onPrimaryContainer = Color(0xFFE6DEFF),
-    secondary = Color(0xFF58DBC5),
-    secondaryContainer = Color(0xFF005048),
-    tertiary = Color(0xFFFFB0D0),
-    tertiaryContainer = Color(0xFF7F0043),
-    background = Color(0xFF070612),
-    onBackground = Color(0xFFE8E0F0),
-    surface = Color(0xFF100E1C),
-    onSurface = Color(0xFFE8E0F0),
-    surfaceVariant = Color(0xFF494453),
-    onSurfaceVariant = Color(0xFFCBC3D2),
-    surfaceContainer = Color(0xFF1A1728),
-    surfaceContainerLow = Color(0xFF12101F),
-    surfaceContainerHigh = Color(0xFF252133),
-    outline = Color(0xFF958D9D),
-    outlineVariant = Color(0xFF494453)
+private val InstrumentColors = darkColorScheme(
+    primary = InstrumentMint,
+    onPrimary = Color(0xFF032816),
+    primaryContainer = Color(0xFF123A29),
+    onPrimaryContainer = Color(0xFFA5F4CB),
+    inversePrimary = Color(0xFF0F7A4D),
+    secondary = Color(0xFFA0A6B2),
+    onSecondary = Color(0xFF15181D),
+    secondaryContainer = Color(0xFF23262E),
+    onSecondaryContainer = Color(0xFFECEEF2),
+    tertiary = InstrumentAmber,
+    onTertiary = Color(0xFF2E1B00),
+    tertiaryContainer = Color(0xFF3B2A0E),
+    onTertiaryContainer = Color(0xFFFFDDAA),
+    error = InstrumentCoral,
+    onError = Color(0xFF3A0600),
+    errorContainer = Color(0xFF3A1512),
+    onErrorContainer = Color(0xFFFFB4AB),
+    background = Color(0xFF0B0C0F),
+    onBackground = Color(0xFFECEEF2),
+    surface = Color(0xFF0B0C0F),
+    onSurface = Color(0xFFECEEF2),
+    surfaceVariant = Color(0xFF1C1F26),
+    onSurfaceVariant = Color(0xFFA0A6B2),
+    surfaceTint = Color.White,
+    inverseSurface = Color(0xFFECEEF2),
+    inverseOnSurface = Color(0xFF14161B),
+    outline = Color(0xFF4A4F5A),
+    outlineVariant = Color(0xFF262A33),
+    surfaceBright = Color(0xFF262A33),
+    surfaceDim = Color(0xFF0B0C0F),
+    surfaceContainerLowest = Color(0xFF08090B),
+    surfaceContainerLow = Color(0xFF14161B),
+    surfaceContainer = Color(0xFF181A20),
+    surfaceContainerHigh = Color(0xFF1F2229),
+    surfaceContainerHighest = Color(0xFF262A33)
 )

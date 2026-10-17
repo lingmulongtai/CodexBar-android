@@ -619,10 +619,9 @@ private fun ThemeStyleOption(
     onClick: () -> Unit
 ) {
     val previewColors = when (style) {
-        AppThemeStyle.MATERIAL_3 -> listOf(Color(0xFF4355B9), Color(0xFFF3DAFF), Color(0xFF52D7F0))
-        AppThemeStyle.LIQUID_GLASS -> listOf(Color(0xFF65BFFF), Color(0xFFE0F4FF), Color(0xFFB391FF))
-        AppThemeStyle.WINUI_3 -> listOf(Color(0xFF0067C0), Color(0xFF60CDFF), Color(0xFFF3F3F3))
-        AppThemeStyle.AURORA -> listOf(Color(0xFF00E5B8), Color(0xFF7957FF), Color(0xFFFF4FA3))
+        AppThemeStyle.MATERIAL_3 -> listOf(Color(0xFF4355B9), Color(0xFFDEE0FF), Color(0xFFFFC56B))
+        AppThemeStyle.LIQUID_GLASS -> listOf(Color(0xFF2F6BFF), Color(0xFFF2F2F7), Color(0xFF7B5CF6))
+        AppThemeStyle.INSTRUMENT -> listOf(Color(0xFF0B0C0F), Color(0xFF5EE3A1), Color(0xFFFFB547))
     }
     Card(
         onClick = onClick,
@@ -688,16 +687,14 @@ private fun ThemeStyleOption(
 private fun AppThemeStyle.titleResource(): Int = when (this) {
     AppThemeStyle.MATERIAL_3 -> R.string.theme_style_material_3
     AppThemeStyle.LIQUID_GLASS -> R.string.theme_style_liquid_glass
-    AppThemeStyle.WINUI_3 -> R.string.theme_style_winui_3
-    AppThemeStyle.AURORA -> R.string.theme_style_aurora
+    AppThemeStyle.INSTRUMENT -> R.string.theme_style_instrument
 }
 
 @StringRes
 private fun AppThemeStyle.descriptionResource(): Int = when (this) {
     AppThemeStyle.MATERIAL_3 -> R.string.theme_style_material_3_description
     AppThemeStyle.LIQUID_GLASS -> R.string.theme_style_liquid_glass_description
-    AppThemeStyle.WINUI_3 -> R.string.theme_style_winui_3_description
-    AppThemeStyle.AURORA -> R.string.theme_style_aurora_description
+    AppThemeStyle.INSTRUMENT -> R.string.theme_style_instrument_description
 }
 
 @Composable

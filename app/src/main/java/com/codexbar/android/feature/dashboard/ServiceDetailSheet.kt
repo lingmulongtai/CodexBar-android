@@ -90,23 +90,12 @@ fun ServiceDetailPane(
     onClearResetHistory: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val visualStyle = providerVisualStyle(service.service)
     val themeProfile = LocalCodexBarThemeProfile.current
     Surface(
         modifier = modifier.fillMaxSize(),
-        shape = if (themeProfile.usesProviderCardShapes) {
-            visualStyle.shape
-        } else {
-            MaterialTheme.shapes.large
-        },
-        color = if (themeProfile.usesProviderCardShapes) {
-            visualStyle.container
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerLow.copy(
-                alpha = themeProfile.serviceCardContainerAlpha
-            )
-        },
-        border = BorderStroke(1.dp, visualStyle.accent.copy(alpha = 0.3f))
+        shape = MaterialTheme.shapes.large,
+        color = themeProfile.cardColor,
+        border = BorderStroke(1.dp, themeProfile.cardBorderColor)
     ) {
         ServiceDetailContent(
             service = service,

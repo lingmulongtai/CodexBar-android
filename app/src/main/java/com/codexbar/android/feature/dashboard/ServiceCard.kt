@@ -53,8 +53,7 @@ fun ServiceCard(
         border = BorderStroke(if (selected) 2.dp else 1.dp,
             visualStyle.accent.copy(alpha = if (selected) 0.8f else 0.22f)),
         colors = CardDefaults.cardColors(
-            containerColor = if (themeProfile.usesProviderCardShapes) visualStyle.container
-                else MaterialTheme.colorScheme.surfaceContainerLow,
+            containerColor = themeProfile.cardColor,
             contentColor = MaterialTheme.colorScheme.onSurface
         )
     ) {

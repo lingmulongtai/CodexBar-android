@@ -1,39 +1,47 @@
 package com.codexbar.android.ui.theme
 
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.ui.text.font.FontFamily
 import com.codexbar.android.core.domain.model.AppThemeStyle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CodexBarThemeProfileTest {
     @Test
-    fun `current Material profile preserves provider card design`() {
-        val profile = themeProfile(
-            style = AppThemeStyle.MATERIAL_3,
-            colors = lightColorScheme(),
-            darkTheme = false
-        )
+    fun `Material profile keeps provider accents and docked navigation`() {
+        val profile = themeProfile(AppThemeStyle.MATERIAL_3, lightColorScheme(), darkTheme = false)
 
-        assertTrue(profile.usesProviderCardShapes)
-        assertEquals(1f, profile.serviceCardContainerAlpha)
+        assertNull(profile.goodColor)
+        assertFalse(profile.floatingNavigation)
+        assertEquals(FontFamily.Default, profile.numeralFamily)
     }
 
     @Test
-    fun `alternate profiles use distinct layered card treatments`() {
-        val profiles = AppThemeStyle.entries
-            .filterNot { it == AppThemeStyle.MATERIAL_3 }
-            .map { style ->
-                themeProfile(style, lightColorScheme(), darkTheme = false)
-            }
-
-        profiles.forEach { profile ->
-            assertFalse(profile.usesProviderCardShapes)
-            assertTrue(profile.serviceCardContainerAlpha < 1f)
+    fun `only Liquid Glass floats its navigation over content`() {
+        AppThemeStyle.entries.forEach { style ->
+            val profile = themeProfile(style, lightColorScheme(), darkTheme = false)
+            assertEquals(style == AppThemeStyle.LIQUID_GLASS, profile.floatingNavigation)
         }
-        assertEquals(profiles.size, profiles.map { it.serviceCardContainerAlpha }.distinct().size)
-        assertNotEquals(shapesFor(AppThemeStyle.LIQUID_GLASS), shapesFor(AppThemeStyle.WINUI_3))
+    }
+
+    @Test
+    fun `Instrument is always dark with monospaced readings and fixed state colors`() {
+        val profile = themeProfile(AppThemeStyle.INSTRUMENT, darkColorScheme(), darkTheme = false)
+
+        assertTrue(profile.isDark)
+        assertEquals(PlexMonoFamily, profile.numeralFamily)
+        assertEquals(InstrumentMint, profile.goodColor)
+        assertNotEquals(profile.warningColor, profile.criticalColor)
+    }
+
+    @Test
+    fun `every design has its own shape scale`() {
+        val shapes = AppThemeStyle.entries.map(::shapesFor)
+        assertEquals(shapes.size, shapes.distinct().size)
     }
 }
