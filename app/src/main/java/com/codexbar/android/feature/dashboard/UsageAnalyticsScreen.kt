@@ -1,31 +1,43 @@
 package com.codexbar.android.feature.dashboard
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
+import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
+import com.codexbar.android.ui.components.LocalBottomChromeInset
 import com.codexbar.android.ui.components.ProviderIcon
+import com.codexbar.android.ui.components.ThemedTopBar
+import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
+import com.codexbar.android.ui.theme.PlexMonoFamily
 import com.codexbar.android.ui.theme.providerVisualStyle
 import java.text.NumberFormat
 import java.time.Instant
@@ -37,33 +49,48 @@ import java.util.Currency
 enum class UsageAnalyticsPage { History, Spend }
 
 @Composable
-fun UsageAnalyticsScreen(page: UsageAnalyticsPage, onConnections: () -> Unit, preview: QuotaPresentationSnapshot? = null) {
-    if (preview != null) { AnalyticsContent(page, preview, false, {}, onConnections); return }
-    val model: DashboardViewModel = hiltViewModel()
+fun UsageAnalyticsScreen(
+    page: UsageAnalyticsPage,
+    onConnections: () -> Unit,
+    preview: QuotaPresentationSnapshot? = null,
+    model: DashboardViewModel? = null,
+    onPageChange: (UsageAnalyticsPage) -> Unit = {}
+) {
+    if (preview != null || model == null) { AnalyticsContent(page, preview, DashboardRefreshState(), {}, onConnections, onPageChange); return }
     val state by model.uiState.collectAsStateWithLifecycle()
-    val refreshing by model.isRefreshing.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { model.refresh() }
-    AnalyticsContent(page, (state as? DashboardUiState.Content)?.snapshot, refreshing, model::refresh, onConnections)
+    val refresh by model.refreshState.collectAsStateWithLifecycle()
+    val localeTag = LocalConfiguration.current.locales[0].toLanguageTag()
+    LaunchedEffect(Unit) { model.refreshIfStale(localeTag) }
+    AnalyticsContent(page, (state as? DashboardUiState.Content)?.snapshot, refresh, model::refresh, onConnections, onPageChange)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AnalyticsContent(page: UsageAnalyticsPage, snapshot: QuotaPresentationSnapshot?, refreshing: Boolean, onRefresh: () -> Unit, onConnections: () -> Unit) {
-    val title = stringResource(if (page == UsageAnalyticsPage.History) R.string.navigation_history else R.string.navigation_spend)
-    Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, topBar = {
-        TopAppBar(title = { Text(title) }, actions = { IconButton(onClick = onRefresh, enabled = !refreshing) { Icon(Icons.Rounded.Refresh, stringResource(R.string.action_refresh)) } })
-    }) { padding ->
+private fun AnalyticsContent(
+    page: UsageAnalyticsPage,
+    snapshot: QuotaPresentationSnapshot?,
+    refresh: DashboardRefreshState,
+    onRefresh: () -> Unit,
+    onConnections: () -> Unit,
+    onPageChange: (UsageAnalyticsPage) -> Unit
+) {
+    val profile = LocalCodexBarThemeProfile.current
+    Column(Modifier.fillMaxSize()) {
+        // Liquid Glass refreshes from its floating button; the docked designs refresh here.
+        ThemedTopBar(title = stringResource(R.string.navigation_trends), actions = {
+            if (!profile.floatingNavigation) RefreshStatusButton(refresh, snapshot?.generatedAt, onRefresh, Modifier.padding(end = 8.dp))
+        })
+        TrendsTabs(page, onPageChange, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         val services = snapshot?.services.orEmpty()
         val rows = services.filter { if (page == UsageAnalyticsPage.Spend) it.desktopSpend != null else it.metrics.isNotEmpty() }
-        BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
+        BoxWithConstraints(Modifier.fillMaxSize()) {
         val columns = minOf(rows.size.coerceAtLeast(1), (maxWidth / 340.dp).toInt().coerceAtLeast(1))
         LazyVerticalGrid(columns = GridCells.Fixed(columns), modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp + LocalBottomChromeInset.current),
+            verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(if (page == UsageAnalyticsPage.History) R.string.analytics_history_help else R.string.analytics_spend_help),
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (refreshing) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     if (page == UsageAnalyticsPage.Spend) SpendOverview(rows)
                     if (rows.isEmpty()) {
                         Text(stringResource(if (page == UsageAnalyticsPage.Spend) R.string.analytics_spend_empty else R.string.analytics_history_empty))
@@ -72,7 +99,7 @@ private fun AnalyticsContent(page: UsageAnalyticsPage, snapshot: QuotaPresentati
                 }
             }
             items(rows, key = { it.service.name }) { service ->
-                Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                Surface(shape = MaterialTheme.shapes.large, color = profile.cardColor, border = BorderStroke(1.dp, profile.cardBorderColor)) {
                     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             ProviderIcon(service.service, Modifier.size(28.dp))
@@ -83,6 +110,43 @@ private fun AnalyticsContent(page: UsageAnalyticsPage, snapshot: QuotaPresentati
                 }
             }
         }
+        }
+    }
+}
+
+/** History and Spend share the Trends tab; this switches between them in the design's style. */
+@Composable
+private fun TrendsTabs(page: UsageAnalyticsPage, onPageChange: (UsageAnalyticsPage) -> Unit, modifier: Modifier = Modifier) {
+    val profile = LocalCodexBarThemeProfile.current
+    val colors = MaterialTheme.colorScheme
+    val pages = listOf(UsageAnalyticsPage.History to R.string.navigation_history, UsageAnalyticsPage.Spend to R.string.navigation_spend)
+    when (profile.style) {
+        AppThemeStyle.MATERIAL_3 -> SingleChoiceSegmentedButtonRow(modifier.fillMaxWidth()) {
+            pages.forEachIndexed { index, (entry, label) ->
+                SegmentedButton(selected = page == entry, onClick = { onPageChange(entry) },
+                    shape = SegmentedButtonDefaults.itemShape(index, pages.size)) { Text(stringResource(label)) }
+            }
+        }
+        AppThemeStyle.LIQUID_GLASS -> Row(modifier.fillMaxWidth().clip(CircleShape).background(colors.onSurface.copy(alpha = 0.07f))
+            .padding(3.dp).selectableGroup()) {
+            pages.forEach { (entry, label) ->
+                val selected = page == entry
+                Box(Modifier.weight(1f).height(36.dp).clip(CircleShape).background(if (selected) profile.cardColor else Color.Transparent)
+                    .selectable(selected = selected, onClick = { onPageChange(entry) }, role = Role.Tab), contentAlignment = Alignment.Center) {
+                    Text(stringResource(label), style = MaterialTheme.typography.labelLarge, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium)
+                }
+            }
+        }
+        AppThemeStyle.INSTRUMENT -> Row(modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            pages.forEach { (entry, label) ->
+                val selected = page == entry
+                Column(Modifier.selectable(selected = selected, onClick = { onPageChange(entry) }, role = Role.Tab).padding(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(stringResource(label), fontFamily = PlexMonoFamily, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (selected) colors.onSurface else colors.onSurfaceVariant)
+                    Box(Modifier.width(24.dp).height(2.dp).background(if (selected) colors.primary else Color.Transparent))
+                }
+            }
         }
     }
 }

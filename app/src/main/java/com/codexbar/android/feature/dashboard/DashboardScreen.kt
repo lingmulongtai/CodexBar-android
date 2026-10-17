@@ -1,5 +1,9 @@
 package com.codexbar.android.feature.dashboard
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -7,47 +11,42 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
-import com.codexbar.android.ui.components.ProviderOrderEditor
-import com.codexbar.android.ui.components.providerDragReorder
-import com.codexbar.android.ui.components.rememberProviderDragReorder
+import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,18 +54,31 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
+import com.codexbar.android.core.domain.model.AcquisitionMode
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
-import com.codexbar.android.core.presentation.ServiceQuotaStatus
+import com.codexbar.android.ui.components.LocalBottomChromeInset
+import com.codexbar.android.ui.components.ProviderOrderEditor
+import com.codexbar.android.ui.components.glassBackdropSource
+import com.codexbar.android.ui.components.providerDragReorder
+import com.codexbar.android.ui.components.rememberGlassBackdrop
+import com.codexbar.android.ui.components.rememberProviderDragReorder
 import com.codexbar.android.ui.theme.CodexBarSpacing
 import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
+import java.time.Instant
 
 private const val TwoPaneMinWidthDp = 720f
 
@@ -79,16 +91,17 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val refresh by viewModel.refreshState.collectAsStateWithLifecycle()
     val providerOrder by viewModel.providerOrder.collectAsStateWithLifecycle()
 
+    val localeTag = LocalConfiguration.current.locales[0].toLanguageTag()
     LaunchedEffect(Unit) {
-        viewModel.refresh()
+        viewModel.refreshIfStale(localeTag)
     }
 
     DashboardContent(
         uiState = uiState,
-        isRefreshing = isRefreshing,
+        refresh = refresh,
         onRefresh = viewModel::refresh,
         onNavigateToConnections = onNavigateToConnections,
         initialSelectedService = initialSelectedService,
@@ -109,7 +122,7 @@ fun DashboardPreviewScreen(
         providerOrder = order,
         onProviderOrderChange = { order = it },
         uiState = DashboardUiState.Content(snapshot),
-        isRefreshing = false,
+        refresh = DashboardRefreshState(),
         onRefresh = {},
         onNavigateToConnections = onNavigateToConnections
     )
@@ -119,7 +132,7 @@ fun DashboardPreviewScreen(
 @Composable
 private fun DashboardContent(
     uiState: DashboardUiState,
-    isRefreshing: Boolean,
+    refresh: DashboardRefreshState,
     onRefresh: () -> Unit,
     onNavigateToConnections: () -> Unit,
     initialSelectedService: AiService? = null,
@@ -130,9 +143,11 @@ private fun DashboardContent(
 ) {
     val themeProfile = LocalCodexBarThemeProfile.current
     var selectedServiceName by rememberSaveable { mutableStateOf<String?>(null) }
+    var expandedServiceName by rememberSaveable { mutableStateOf<String?>(null) }
     var showOnlyAttention by rememberSaveable { mutableStateOf(false) }
     var showOrder by rememberSaveable { mutableStateOf(false) }
-    val services = (uiState as? DashboardUiState.Content)?.snapshot?.services.orEmpty()
+    val snapshot = (uiState as? DashboardUiState.Content)?.snapshot
+    val services = snapshot?.services.orEmpty()
     val orderedServices = remember(services, providerOrder) {
         DashboardProviderOrder.apply(services, providerOrder) { it.service }
     }
@@ -162,59 +177,51 @@ private fun DashboardContent(
         }
     }
 
-    val explicitlySelectedService = (uiState as? DashboardUiState.Content)
-        ?.snapshot
-        ?.services
-        ?.firstOrNull { it.service.name == selectedServiceName }
+    val explicitlySelectedService = services.firstOrNull { it.service.name == selectedServiceName }
+    val glass = themeProfile.style == AppThemeStyle.LIQUID_GLASS
+    val title = stringResource(R.string.navigation_dashboard)
+    val grid = rememberLazyGridState()
+    val backdrop = rememberGlassBackdrop()
+    val updatedAt = snapshot?.generatedAt
 
-    Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge) },
-                actions = {
-                    if (services.size > 1) {
-                        TextButton(onClick = { showOrder = true }) { Text(stringResource(R.string.provider_order_action)) }
-                    }
-                    IconButton(onClick = onRefresh, enabled = !isRefreshing) {
-                        Icon(
-                            imageVector = Icons.Rounded.Refresh,
-                            contentDescription = stringResource(R.string.action_refresh)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = themeProfile.topBarContainerColor,
-                    scrolledContainerColor = themeProfile.topBarContainerColor
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val useTwoPane = useTwoPaneDashboard(maxWidth.value)
+        Column(Modifier.fillMaxSize()) {
+            if (!glass) {
+                // On wide screens the navigation rail already carries the design's mark.
+                DashboardHeader(
+                    refresh = refresh,
+                    updatedAt = updatedAt,
+                    onRefresh = onRefresh,
+                    showMark = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() } < 600.dp
                 )
-            )
-        }
-    ) { paddingValues ->
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            val useTwoPane = useTwoPaneDashboard(maxWidth.value)
+            }
+            // The pull gesture starts a refresh; progress is shown in place, never over the content.
             PullToRefreshBox(
-                isRefreshing = isRefreshing,
+                isRefreshing = false,
                 onRefresh = onRefresh,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.weight(1f).fillMaxWidth()
             ) {
                 when (val state = uiState) {
                     is DashboardUiState.Loading -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
+                        Column(Modifier.fillMaxSize()) {
+                            if (glass) GlassLargeTitle(title, refresh, updatedAt, Modifier.padding(horizontal = 16.dp))
+                            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                SmallSpinner(32.dp)
+                            }
                         }
                     }
 
                     is DashboardUiState.Content -> {
                         if (state.snapshot.services.isEmpty()) {
-                            EmptyState(onOpenConnections = onNavigateToConnections,
-                                windowsMode = state.acquisitionMode == com.codexbar.android.core.domain.model.AcquisitionMode.WINDOWS)
+                            Column(Modifier.fillMaxSize()) {
+                                if (glass) GlassLargeTitle(title, refresh, updatedAt, Modifier.padding(horizontal = 16.dp))
+                                EmptyState(
+                                    onOpenConnections = onNavigateToConnections,
+                                    windowsMode = state.acquisitionMode == AcquisitionMode.WINDOWS,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         } else {
                             val failedServices = state.snapshot.services
                                 .filter { it.needsAttention() }
@@ -236,30 +243,48 @@ private fun DashboardContent(
                             } else {
                                 orderedServices
                             }
+                            val reorder = { order: List<AiService> ->
+                                onProviderOrderChange(DashboardProviderOrder.merge(orderedServices.map { it.service }, order))
+                            }
 
                             if (useTwoPane) {
                                 Row(modifier = Modifier.fillMaxSize()) {
                                     CardList(
+                                        grid = grid,
                                         services = visibleServices,
+                                        allServices = state.snapshot.services,
                                         summary = summary,
                                         errorBanner = errorBanner,
                                         attentionCount = summary.attentionCount,
                                         showOnlyAttention = filterAttention,
                                         onAttentionFilterChange = { showOnlyAttention = it },
                                         selectedServiceName = paneService.service.name,
+                                        expandedServiceName = null,
+                                        refresh = refresh,
+                                        updatedAt = updatedAt,
                                         onServiceClick = {
                                             selectedServiceName = it.service.name
                                         },
+                                        onOpenDetails = { selectedServiceName = it.service.name },
+                                        onManageConnection = onNavigateToConnections,
                                         onSummaryProviderClick = { selectedServiceName = it.name },
-                                        onReorder = { onProviderOrderChange(DashboardProviderOrder.merge(orderedServices.map { it.service }, it)) },
-                                        modifier = Modifier.weight(0.55f)
+                                        onShowOrder = { showOrder = true },
+                                        onReorder = reorder,
+                                        modifier = Modifier
+                                            .weight(0.55f)
+                                            .then(if (glass) Modifier.glassBackdropSource(backdrop) else Modifier)
                                     )
-                                    VerticalDivider(modifier = Modifier.fillMaxHeight())
                                     Box(
                                         modifier = Modifier
                                             .weight(0.45f)
                                             .fillMaxHeight()
-                                            .padding(CodexBarSpacing.large)
+                                            .then(if (glass) Modifier.statusBarsPadding() else Modifier)
+                                            .padding(
+                                                start = CodexBarSpacing.small,
+                                                end = CodexBarSpacing.large,
+                                                top = CodexBarSpacing.small,
+                                                bottom = CodexBarSpacing.large + LocalBottomChromeInset.current
+                                            )
                                     ) {
                                         ServiceDetailPane(
                                             service = paneService,
@@ -271,38 +296,72 @@ private fun DashboardContent(
                                 }
                             } else {
                                 CardList(
+                                    grid = grid,
                                     services = visibleServices,
+                                    allServices = state.snapshot.services,
                                     summary = summary,
                                     errorBanner = errorBanner,
                                     attentionCount = summary.attentionCount,
                                     showOnlyAttention = filterAttention,
                                     onAttentionFilterChange = { showOnlyAttention = it },
                                     selectedServiceName = null,
+                                    expandedServiceName = expandedServiceName,
+                                    refresh = refresh,
+                                    updatedAt = updatedAt,
                                     onServiceClick = {
-                                        selectedServiceName = it.service.name
+                                        if (themeProfile.style == AppThemeStyle.INSTRUMENT) {
+                                            // Instrument opens readings in place; Details opens the sheet.
+                                            expandedServiceName = it.service.name.takeIf { name -> name != expandedServiceName }
+                                        } else {
+                                            selectedServiceName = it.service.name
+                                        }
                                     },
+                                    onOpenDetails = { selectedServiceName = it.service.name },
+                                    onManageConnection = onNavigateToConnections,
                                     onSummaryProviderClick = { selectedServiceName = it.name },
-                                    onReorder = { onProviderOrderChange(DashboardProviderOrder.merge(orderedServices.map { it.service }, it)) }
+                                    onShowOrder = { showOrder = true },
+                                    onReorder = reorder,
+                                    modifier = if (glass) Modifier.glassBackdropSource(backdrop) else Modifier
                                 )
                             }
                         }
                     }
                 }
             }
+        }
 
-            if (!useTwoPane) {
-                explicitlySelectedService?.let { service ->
-                    ServiceDetailSheet(
-                        service = service,
-                        onClearResetHistory = { onClearResetHistory(service.service) },
-                        onDismiss = { selectedServiceName = null },
-                        onRefresh = onRefresh,
-                        onManageConnection = {
-                            selectedServiceName = null
-                            onNavigateToConnections()
-                        }
-                    )
-                }
+        if (glass && uiState is DashboardUiState.Content && services.isNotEmpty()) {
+            val collapsed by remember(grid) {
+                derivedStateOf { grid.firstVisibleItemIndex > 0 || grid.firstVisibleItemScrollOffset > 120 }
+            }
+            AnimatedVisibility(
+                visible = collapsed,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.TopStart)
+            ) {
+                GlassCollapsedHeader(
+                    title = title,
+                    refresh = refresh,
+                    updatedAt = updatedAt,
+                    backdrop = backdrop,
+                    modifier = if (useTwoPane) Modifier.fillMaxWidth(0.55f) else Modifier
+                )
+            }
+        }
+
+        if (!useTwoPane) {
+            explicitlySelectedService?.let { service ->
+                ServiceDetailSheet(
+                    service = service,
+                    onClearResetHistory = { onClearResetHistory(service.service) },
+                    onDismiss = { selectedServiceName = null },
+                    onRefresh = onRefresh,
+                    onManageConnection = {
+                        selectedServiceName = null
+                        onNavigateToConnections()
+                    }
+                )
             }
         }
     }
@@ -310,103 +369,212 @@ private fun DashboardContent(
 
 @Composable
 private fun CardList(
+    grid: LazyGridState,
     services: List<ServiceQuotaPresentation>,
+    allServices: List<ServiceQuotaPresentation>,
     summary: DashboardSummary,
     errorBanner: String?,
     attentionCount: Int,
     showOnlyAttention: Boolean,
     onAttentionFilterChange: (Boolean) -> Unit,
     selectedServiceName: String?,
+    expandedServiceName: String?,
+    refresh: DashboardRefreshState,
+    updatedAt: Instant?,
     onServiceClick: (ServiceQuotaPresentation) -> Unit,
+    onOpenDetails: (ServiceQuotaPresentation) -> Unit,
+    onManageConnection: () -> Unit,
     onSummaryProviderClick: (AiService) -> Unit,
+    onShowOrder: () -> Unit,
     onReorder: (List<AiService>) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val grid = rememberLazyGridState()
+    val themeProfile = LocalCodexBarThemeProfile.current
     val order = services.map { it.service }
     val drag = rememberProviderDragReorder(grid, order, onReorder)
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(280.dp),
-        state = grid,
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item(key = "summary", span = { GridItemSpan(maxLineSpan) }) {
-            DashboardSummaryCard(
-                summary = summary,
-                onProviderClick = onSummaryProviderClick
-            )
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        // Instrument's table rows need room for two reading cells beside the name.
+        val cardMinWidth = when (themeProfile.style) {
+            AppThemeStyle.MATERIAL_3 -> 300.dp
+            AppThemeStyle.LIQUID_GLASS -> 340.dp
+            AppThemeStyle.INSTRUMENT -> 420.dp
         }
-
-        if (attentionCount > 0) {
-            item(key = "filters", span = { GridItemSpan(maxLineSpan) }) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = !showOnlyAttention,
-                        onClick = { onAttentionFilterChange(false) },
-                        label = { Text(stringResource(R.string.dashboard_filter_all)) }
-                    )
-                    FilterChip(
-                        selected = showOnlyAttention,
-                        onClick = { onAttentionFilterChange(true) },
-                        label = {
-                            Text(
-                                stringResource(
-                                    R.string.dashboard_filter_attention,
-                                    attentionCount
-                                )
-                            )
-                        }
+        val columns = ((maxWidth - 32.dp) / cardMinWidth).toInt().coerceIn(1, 3)
+        // A single column groups the providers into one list; wider grids use separate cards.
+        val grouped = columns == 1
+        val cardSpacing: Dp = when {
+            !grouped -> 12.dp
+            themeProfile.style == AppThemeStyle.MATERIAL_3 -> 3.dp
+            else -> 0.dp
+        }
+        val sectionGap = Modifier.padding(bottom = 16.dp - cardSpacing)
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(columns),
+            state = grid,
+            modifier = Modifier
+                .fillMaxSize()
+                .background(themeProfile.backgroundBrush),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 8.dp,
+                bottom = 16.dp + LocalBottomChromeInset.current
+            ),
+            verticalArrangement = Arrangement.spacedBy(cardSpacing),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (themeProfile.style == AppThemeStyle.LIQUID_GLASS) {
+                item(key = "title", span = { GridItemSpan(maxLineSpan) }) {
+                    GlassLargeTitle(
+                        title = stringResource(R.string.navigation_dashboard),
+                        refresh = refresh,
+                        updatedAt = updatedAt,
+                        modifier = sectionGap
                     )
                 }
             }
-        }
 
-        if (errorBanner != null) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 4.dp),
-                    shape = MaterialTheme.shapes.small,
-                    color = MaterialTheme.colorScheme.errorContainer
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onErrorContainer
+            item(key = "summary", span = { GridItemSpan(maxLineSpan) }) {
+                DashboardHero(
+                    summary = summary,
+                    services = allServices,
+                    onProviderClick = onSummaryProviderClick,
+                    modifier = sectionGap
+                )
+            }
+
+            if (attentionCount > 0) {
+                item(key = "filters", span = { GridItemSpan(maxLineSpan) }) {
+                    Row(sectionGap, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = !showOnlyAttention,
+                            onClick = { onAttentionFilterChange(false) },
+                            label = { Text(stringResource(R.string.dashboard_filter_all)) }
                         )
-                        Text(
-                            text = errorBanner,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer
+                        FilterChip(
+                            selected = showOnlyAttention,
+                            onClick = { onAttentionFilterChange(true) },
+                            label = {
+                                Text(
+                                    stringResource(
+                                        R.string.dashboard_filter_attention,
+                                        attentionCount
+                                    )
+                                )
+                            }
                         )
                     }
                 }
             }
-        }
-        items(services, key = { it.service.name }) { service ->
-            ServiceCard(
-                service = service,
-                onClick = { onServiceClick(service) },
-                selected = service.service.name == selectedServiceName,
-                modifier = Modifier.providerDragReorder(drag, service.service, order)
-            )
+
+            if (errorBanner != null) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(sectionGap),
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.errorContainer
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Text(
+                                text = errorBanner,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+                }
+            }
+
+            item(key = "section", span = { GridItemSpan(maxLineSpan) }) {
+                SectionHeader(
+                    count = services.size,
+                    canReorder = allServices.size > 1,
+                    onShowOrder = onShowOrder,
+                    modifier = Modifier.padding(bottom = 8.dp - cardSpacing.coerceAtMost(8.dp))
+                )
+            }
+
+            itemsIndexed(services, key = { _, service -> service.service.name }) { index, service ->
+                val grouping = when {
+                    !grouped || services.size == 1 -> CardGrouping.Alone
+                    index == 0 -> CardGrouping.First
+                    index == services.lastIndex -> CardGrouping.Last
+                    else -> CardGrouping.Middle
+                }
+                ServiceCard(
+                    service = service,
+                    onClick = { onServiceClick(service) },
+                    selected = service.service.name == selectedServiceName,
+                    refreshing = service.service in refresh.pending,
+                    grouping = grouping,
+                    expanded = service.service.name == expandedServiceName,
+                    onOpenDetails = { onOpenDetails(service) },
+                    onManageConnection = onManageConnection,
+                    modifier = Modifier.providerDragReorder(drag, service.service, order)
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun EmptyState(onOpenConnections: () -> Unit, windowsMode: Boolean = false) {
+private fun SectionHeader(count: Int, canReorder: Boolean, onShowOrder: () -> Unit, modifier: Modifier = Modifier) {
+    val style = LocalCodexBarThemeProfile.current.style
+    val colors = MaterialTheme.colorScheme
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = if (style == AppThemeStyle.LIQUID_GLASS) 16.dp else 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            stringResource(R.string.dashboard_section_services),
+            style = if (style == AppThemeStyle.LIQUID_GLASS) MaterialTheme.typography.labelLarge else MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = colors.onSurfaceVariant
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            count.toString(),
+            style = MaterialTheme.typography.labelLarge,
+            color = colors.outline
+        )
+        Spacer(Modifier.weight(1f))
+        if (canReorder) {
+            if (style == AppThemeStyle.LIQUID_GLASS) {
+                TextButton(onClick = onShowOrder) {
+                    Text(stringResource(R.string.provider_order_action), fontWeight = FontWeight.SemiBold)
+                }
+            } else {
+                IconButton(onClick = onShowOrder) {
+                    Icon(
+                        Icons.Rounded.SwapVert,
+                        contentDescription = stringResource(R.string.provider_order_action),
+                        tint = colors.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            Spacer(Modifier.height(48.dp))
+        }
+    }
+}
+
+@Composable
+private fun EmptyState(onOpenConnections: () -> Unit, modifier: Modifier = Modifier, windowsMode: Boolean = false) {
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Column(

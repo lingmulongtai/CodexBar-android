@@ -19,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.core.icon.AppIconSwitcher
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.update.AvailableUpdate
 import com.codexbar.android.core.update.GitHubReleaseUpdateChecker
@@ -33,6 +34,7 @@ class MainActivity : AppCompatActivity() {
     private var pendingGeminiPairingUri by mutableStateOf<String?>(null)
     private var pendingCodexTelemetryPairingUri by mutableStateOf<String?>(null)
     private var pendingDashboardService by mutableStateOf<AiService?>(null)
+    private var preferencesLoaded = false
 
     @Inject
     lateinit var prefsManager: EncryptedPrefsManager
@@ -53,6 +55,7 @@ class MainActivity : AppCompatActivity() {
         applyScreenPrivacy(prefsManager.getPrivacySettings().screenPrivacyEnabled)
         lifecycleScope.launch {
             prefsManager.warmCache()
+            preferencesLoaded = true
             applyScreenPrivacy(prefsManager.getPrivacySettings().screenPrivacyEnabled)
         }
         enableEdgeToEdge()
@@ -109,6 +112,14 @@ class MainActivity : AppCompatActivity() {
                     onScreenPrivacyChanged = ::applyScreenPrivacy
                 )
             }
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // The launcher icon follows the design once the app is in the background.
+        if (preferencesLoaded && !isChangingConfigurations) {
+            AppIconSwitcher.apply(this, prefsManager.appThemeStyle.value)
         }
     }
 

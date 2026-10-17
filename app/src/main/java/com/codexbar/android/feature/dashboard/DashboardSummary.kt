@@ -27,7 +27,10 @@ data class TightestQuota(
     val usedFraction: Double,
     val severity: QuotaSeverity,
     val resetLabel: String?,
-    val paceLabel: String?
+    val paceLabel: String?,
+    val remainingFraction: Double? = null,
+    val resetsAt: java.time.Instant? = null,
+    val guideNowRemaining: Float? = null
 )
 
 data class ProviderPulse(
@@ -62,7 +65,10 @@ fun QuotaPresentationSnapshot.toDashboardSummary(): DashboardSummary {
                 severity = metric.severity,
                 resetLabel = metric.resetLabel,
                 paceLabel = metric.resetPlan?.compactActionLabel
-                    ?: metric.pace.label.takeIf { it.isNotBlank() }
+                    ?: metric.pace.label.takeIf { it.isNotBlank() },
+                remainingFraction = metric.remainingFraction,
+                resetsAt = metric.resetsAt,
+                guideNowRemaining = metric.pace.guide?.nowRemaining
             )
         },
         pulses = services.map { service ->

@@ -1,6 +1,7 @@
 package com.codexbar.android.feature.dashboard
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -58,6 +60,12 @@ class DashboardViewModel @Inject constructor(
     private var refreshPending = false
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    private val _refreshState = MutableStateFlow(DashboardRefreshState())
+    val refreshState: StateFlow<DashboardRefreshState> = _refreshState.asStateFlow()
+
+    private var lastRefreshStartedAt = 0L
+    private var lastLocaleTag = Locale.getDefault().toLanguageTag()
+
     private val _providerOrder = MutableStateFlow(orderPrefs.load())
     val providerOrder: StateFlow<List<AiService>> = _providerOrder.asStateFlow()
 
@@ -69,7 +77,7 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             quotaResetMonitor.sourceChanges.collect { revision ->
                 if (revision > 0) {
-                    _uiState.value = DashboardUiState.Loading
+                    // Keep the last readings on screen; every card shows its refresh progress.
                     refreshPending = true
                     refresh()
                 }
@@ -92,9 +100,23 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { quotaResetHistoryStore.clearHistory(service) }
     }
 
+    /**
+     * Returning to a screen refreshes only when the readings are old or the app language changed,
+     * so switching tabs does not restart network requests.
+     */
+    fun refreshIfStale(localeTag: String) {
+        val elapsed = SystemClock.elapsedRealtime() - lastRefreshStartedAt
+        if (localeTag != lastLocaleTag || elapsed >= STALE_AFTER_MILLIS) {
+            lastLocaleTag = localeTag
+            refresh()
+        }
+    }
+
     fun refresh() {
         if (_isRefreshing.value) return
         _isRefreshing.value = true
+        _refreshState.value = DashboardRefreshState(active = true)
+        lastRefreshStartedAt = SystemClock.elapsedRealtime()
         refreshPending = false
 
         viewModelScope.launch {
@@ -115,8 +137,17 @@ class DashboardViewModel @Inject constructor(
                     return@launch
                 }
 
+                _refreshState.value = DashboardRefreshState(
+                    active = true,
+                    total = repos.size,
+                    pending = repos.map { it.first }.toSet()
+                )
                 val deferreds = repos.map { (service, repo) ->
-                    async { service to repo.fetchQuota() }
+                    async {
+                        val result = repo.fetchQuota()
+                        _refreshState.update { it.copy(pending = it.pending - service) }
+                        service to result
+                    }
                 }
 
                 val results = deferreds.map { it.await() }
@@ -167,6 +198,7 @@ class DashboardViewModel @Inject constructor(
                 }
             } finally {
                 _isRefreshing.value = false
+                _refreshState.value = DashboardRefreshState()
                 if (refreshPending) refresh()
             }
         }
@@ -196,5 +228,6 @@ class DashboardViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "CodexBarDashboard"
+        private const val STALE_AFTER_MILLIS = 60_000L
     }
 }

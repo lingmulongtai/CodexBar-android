@@ -7,31 +7,48 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.codexbar.android.core.domain.model.AppThemeStyle
 
+/**
+ * What each design changes beyond the color scheme: its surfaces, the type used for readings, its
+ * state colors and whether navigation floats over the content.
+ */
 data class CodexBarThemeProfile(
     val style: AppThemeStyle,
+    val isDark: Boolean,
     val backgroundBrush: Brush,
     val navigationContainerColor: Color,
     val topBarContainerColor: Color,
-    val serviceCardContainerAlpha: Float,
-    val serviceCardBorderAlpha: Float,
-    val serviceCardElevation: Dp,
-    val usesProviderCardShapes: Boolean
+    val cardColor: Color,
+    val cardBorderColor: Color,
+    val heroContainerColor: Color,
+    val onHeroContainerColor: Color,
+    val numeralFamily: FontFamily,
+    /** A fixed color for healthy quota; null keeps each provider's own accent. */
+    val goodColor: Color?,
+    val warningColor: Color,
+    val criticalColor: Color,
+    val floatingNavigation: Boolean
 )
 
 val LocalCodexBarThemeProfile = staticCompositionLocalOf {
     CodexBarThemeProfile(
         style = AppThemeStyle.MATERIAL_3,
+        isDark = false,
         backgroundBrush = SolidColor(Color.Transparent),
         navigationContainerColor = Color.Transparent,
         topBarContainerColor = Color.Transparent,
-        serviceCardContainerAlpha = 1f,
-        serviceCardBorderAlpha = 0.22f,
-        serviceCardElevation = 1.dp,
-        usesProviderCardShapes = true
+        cardColor = Color.White,
+        cardBorderColor = Color.Transparent,
+        heroContainerColor = Color.White,
+        onHeroContainerColor = Color.Black,
+        numeralFamily = FontFamily.Default,
+        goodColor = null,
+        warningColor = Color(0xFF8A4D00),
+        criticalColor = Color(0xFFBA1A1A),
+        floatingNavigation = false
     )
 }
 
@@ -41,84 +58,78 @@ internal fun themeProfile(
     darkTheme: Boolean
 ): CodexBarThemeProfile {
     return when (style) {
-        AppThemeStyle.MATERIAL_3 -> CodexBarThemeProfile(
-            style = style,
-            backgroundBrush = SolidColor(colors.background),
-            navigationContainerColor = colors.surfaceContainer,
-            topBarContainerColor = colors.surface,
-            serviceCardContainerAlpha = 1f,
-            serviceCardBorderAlpha = 0.22f,
-            serviceCardElevation = 1.dp,
-            usesProviderCardShapes = true
-        )
+        AppThemeStyle.MATERIAL_3 -> {
+            val page = if (darkTheme) colors.surface else colors.surfaceContainerLow
+            CodexBarThemeProfile(
+                style = style,
+                isDark = darkTheme,
+                backgroundBrush = SolidColor(page),
+                navigationContainerColor = colors.surfaceContainer,
+                topBarContainerColor = page,
+                cardColor = if (darkTheme) colors.surfaceContainer else colors.surfaceContainerLowest,
+                cardBorderColor = Color.Transparent,
+                heroContainerColor = colors.primaryContainer,
+                onHeroContainerColor = colors.onPrimaryContainer,
+                numeralFamily = FontFamily.Default,
+                goodColor = null,
+                warningColor = if (darkTheme) Color(0xFFFFB95C) else Color(0xFF8A4D00),
+                criticalColor = colors.error,
+                floatingNavigation = false
+            )
+        }
         AppThemeStyle.LIQUID_GLASS -> CodexBarThemeProfile(
             style = style,
-            backgroundBrush = Brush.linearGradient(
-                if (darkTheme) {
-                    listOf(Color(0xFF071521), Color(0xFF15263A), Color(0xFF241C3D))
-                } else {
-                    listOf(Color(0xFFE8F7FF), Color(0xFFF7F9FF), Color(0xFFF5ECFF))
-                }
-            ),
-            navigationContainerColor = colors.surfaceContainer.copy(alpha = 0.78f),
-            topBarContainerColor = colors.surface.copy(alpha = 0.70f),
-            serviceCardContainerAlpha = 0.74f,
-            serviceCardBorderAlpha = 0.36f,
-            serviceCardElevation = 5.dp,
-            usesProviderCardShapes = false
+            isDark = darkTheme,
+            backgroundBrush = SolidColor(colors.background),
+            navigationContainerColor = colors.surfaceContainerLow,
+            topBarContainerColor = colors.background,
+            cardColor = colors.surfaceContainerLow,
+            cardBorderColor = Color.Transparent,
+            heroContainerColor = colors.surfaceContainerLow,
+            onHeroContainerColor = colors.onSurface,
+            numeralFamily = FigtreeFamily,
+            goodColor = null,
+            warningColor = if (darkTheme) Color(0xFFFFB340) else Color(0xFFB45309),
+            criticalColor = colors.error,
+            floatingNavigation = true
         )
-        AppThemeStyle.WINUI_3 -> CodexBarThemeProfile(
+        AppThemeStyle.INSTRUMENT -> CodexBarThemeProfile(
             style = style,
-            backgroundBrush = Brush.verticalGradient(
-                listOf(colors.background, colors.surfaceContainerLow)
-            ),
-            navigationContainerColor = colors.surfaceContainer.copy(alpha = 0.94f),
-            topBarContainerColor = colors.surface.copy(alpha = 0.92f),
-            serviceCardContainerAlpha = 0.94f,
-            serviceCardBorderAlpha = 0.24f,
-            serviceCardElevation = 2.dp,
-            usesProviderCardShapes = false
-        )
-        AppThemeStyle.AURORA -> CodexBarThemeProfile(
-            style = style,
-            backgroundBrush = Brush.linearGradient(
-                if (darkTheme) {
-                    listOf(Color(0xFF070612), Color(0xFF10152A), Color(0xFF241039))
-                } else {
-                    listOf(Color(0xFFF1F7FF), Color(0xFFF6F1FF), Color(0xFFFFF0FA))
-                }
-            ),
-            navigationContainerColor = colors.surfaceContainer.copy(alpha = 0.86f),
-            topBarContainerColor = colors.surface.copy(alpha = 0.76f),
-            serviceCardContainerAlpha = 0.86f,
-            serviceCardBorderAlpha = 0.42f,
-            serviceCardElevation = 4.dp,
-            usesProviderCardShapes = false
+            isDark = true,
+            backgroundBrush = SolidColor(colors.background),
+            navigationContainerColor = colors.background,
+            topBarContainerColor = colors.background,
+            cardColor = colors.surfaceContainerLow,
+            cardBorderColor = colors.outlineVariant,
+            heroContainerColor = colors.surfaceContainerLow,
+            onHeroContainerColor = colors.onSurface,
+            numeralFamily = PlexMonoFamily,
+            goodColor = InstrumentMint,
+            warningColor = InstrumentAmber,
+            criticalColor = InstrumentCoral,
+            floatingNavigation = false
         )
     }
 }
 
+internal val InstrumentMint = Color(0xFF5EE3A1)
+internal val InstrumentAmber = Color(0xFFFFB547)
+internal val InstrumentCoral = Color(0xFFFF6B5A)
+
 internal fun shapesFor(style: AppThemeStyle): Shapes = when (style) {
     AppThemeStyle.MATERIAL_3 -> CodexBarShapes
     AppThemeStyle.LIQUID_GLASS -> Shapes(
-        extraSmall = RoundedCornerShape(12.dp),
-        small = RoundedCornerShape(18.dp),
-        medium = RoundedCornerShape(26.dp),
-        large = RoundedCornerShape(34.dp),
-        extraLarge = RoundedCornerShape(44.dp)
-    )
-    AppThemeStyle.WINUI_3 -> Shapes(
-        extraSmall = RoundedCornerShape(4.dp),
-        small = RoundedCornerShape(6.dp),
-        medium = RoundedCornerShape(8.dp),
-        large = RoundedCornerShape(12.dp),
-        extraLarge = RoundedCornerShape(16.dp)
-    )
-    AppThemeStyle.AURORA -> Shapes(
-        extraSmall = RoundedCornerShape(8.dp),
+        extraSmall = RoundedCornerShape(10.dp),
         small = RoundedCornerShape(14.dp),
-        medium = RoundedCornerShape(20.dp),
-        large = RoundedCornerShape(28.dp),
-        extraLarge = RoundedCornerShape(36.dp)
+        medium = RoundedCornerShape(22.dp),
+        large = RoundedCornerShape(26.dp),
+        extraLarge = RoundedCornerShape(34.dp)
+    )
+    AppThemeStyle.INSTRUMENT -> Shapes(
+        extraSmall = RoundedCornerShape(6.dp),
+        small = RoundedCornerShape(10.dp),
+        medium = RoundedCornerShape(14.dp),
+        large = RoundedCornerShape(20.dp),
+        extraLarge = RoundedCornerShape(24.dp)
     )
 }
