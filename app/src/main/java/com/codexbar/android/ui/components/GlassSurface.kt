@@ -5,7 +5,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -36,6 +40,9 @@ import androidx.compose.ui.unit.dp
 @Stable
 class GlassBackdrop internal constructor(internal val layer: GraphicsLayer) {
     internal var originInRoot: Offset = Offset.Zero
+
+    /** Bumped after each recording so glass panels redraw with what is now behind them. */
+    internal var generation by mutableIntStateOf(0)
 }
 
 @Composable
@@ -49,6 +56,8 @@ fun Modifier.glassBackdropSource(backdrop: GlassBackdrop): Modifier = this
     .drawWithContent {
         backdrop.layer.record { this@drawWithContent.drawContent() }
         drawLayer(backdrop.layer)
+        // Written without observing it, so the source never invalidates its own drawing.
+        Snapshot.withoutReadObservation { backdrop.generation++ }
     }
 
 private class PositionHolder {
@@ -81,6 +90,7 @@ fun GlassSurface(
                 val outline = shape.createOutline(size, layoutDirection, this)
                 val path = Path().apply { addOutline(outline) }
                 if (backdrop != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    backdrop.generation
                     val offset = position.value - backdrop.originInRoot
                     val radius = blurRadius.toPx()
                     blurLayer.renderEffect = BlurEffect(radius, radius, TileMode.Clamp)
