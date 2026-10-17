@@ -42,7 +42,7 @@
     <string name="settings_preferences_title">App preferences</string>
     <string name="settings_preferences_description">Choose the visual design, language, and privacy behavior for every surface.</string>
     <string name="theme_style_title">Visual design</string>
-    <string name="theme_style_description">Switch the complete app style instantly. The design takes effect across every screen.</string>
+    <string name="theme_style_description">Switch the complete app style instantly. The home screen icon changes to match after you leave the app.</string>
     <string name="theme_style_selected">Selected design</string>
     <string name="theme_style_material_3">Material 3 Expressive</string>
     <string name="theme_style_material_3_description">Native Android with dynamic color, bold readings and expressive shapes.</string>

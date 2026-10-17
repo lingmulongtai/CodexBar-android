@@ -42,7 +42,7 @@
     <string name="settings_preferences_title">アプリ設定</string>
     <string name="settings_preferences_description">すべての表示面で使用するデザイン、言語、プライバシー動作を選択します。</string>
     <string name="theme_style_title">ビジュアルデザイン</string>
-    <string name="theme_style_description">アプリ全体のデザインをすぐに切り替えます。</string>
+    <string name="theme_style_description">アプリ全体のデザインをすぐに切り替えます。アプリを閉じると、ホーム画面のアイコンもデザインに合わせて変わります。</string>
     <string name="theme_style_selected">選択中のデザイン</string>
     <string name="theme_style_material_3">Material 3 Expressive</string>
     <string name="theme_style_material_3_description">ダイナミックカラー、大きな数字、表情のある形を備えたAndroid純正のデザインです。</string>

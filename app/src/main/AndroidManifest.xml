@@ -41,11 +41,6 @@
             android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/Theme.CodexBar">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-
             <!-- Deep links -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -59,6 +54,47 @@
                 <data android:host="codex-telemetry-pair" />
             </intent-filter>
         </activity>
+
+        <!--
+            Launcher entries, one per design. AppIconSwitcher enables only the entry matching the
+            selected design, so the home screen icon follows the design.
+        -->
+        <activity-alias
+            android:name=".LauncherExpressive"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherLiquidGlass"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_glass"
+            android:roundIcon="@mipmap/ic_launcher_glass"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherInstrument"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_instrument"
+            android:roundIcon="@mipmap/ic_launcher_instrument"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <!-- Quick Settings Tile -->
         <service
