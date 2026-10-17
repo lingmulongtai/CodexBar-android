@@ -50,6 +50,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.codexbar.android.feature.dashboard.DashboardScreen
 import com.codexbar.android.feature.dashboard.DashboardPreviewScreen
+import com.codexbar.android.feature.dashboard.DashboardViewModel
 import com.codexbar.android.feature.settings.ConnectionsScreen
 import com.codexbar.android.feature.settings.SettingsScreen
 import com.codexbar.android.feature.settings.SettingsViewModel
@@ -104,6 +105,9 @@ fun CodexBarApp(
     val themeProfile = LocalCodexBarThemeProfile.current
     val navController = rememberNavController()
     val settingsViewModel: SettingsViewModel = hiltViewModel()
+    // One dashboard model for every tab, so refresh progress and readings are shared.
+    val dashboardViewModel: DashboardViewModel? =
+        if (dashboardPreviewSnapshot == null) hiltViewModel() else null
     val configuration by settingsViewModel.uiState.collectAsStateWithLifecycle()
     ResetNotificationPermissionSetup(enabled = dashboardPreviewSnapshot == null && configuration.preferencesLoaded &&
         configuration.resetNotificationEnabled && (configuration.desktop.services.isNotEmpty() || configuration.serviceStates.values.any { it.isConnected }))
@@ -202,6 +206,7 @@ fun CodexBarApp(
                     onDashboardServiceConsumed = onDashboardServiceConsumed,
                     onScreenPrivacyChanged = onScreenPrivacyChanged,
                     settingsViewModel = settingsViewModel,
+                    dashboardViewModel = dashboardViewModel,
                     dashboardPreviewSnapshot = dashboardPreviewSnapshot,
                     modifier = Modifier.weight(1f)
                 )
@@ -240,6 +245,7 @@ fun CodexBarApp(
                     onDashboardServiceConsumed = onDashboardServiceConsumed,
                     onScreenPrivacyChanged = onScreenPrivacyChanged,
                     settingsViewModel = settingsViewModel,
+                    dashboardViewModel = dashboardViewModel,
                     dashboardPreviewSnapshot = dashboardPreviewSnapshot,
                     modifier = Modifier.padding(paddingValues)
                 )
@@ -259,6 +265,7 @@ private fun AppNavHost(
     onDashboardServiceConsumed: () -> Unit,
     onScreenPrivacyChanged: (Boolean) -> Unit,
     settingsViewModel: SettingsViewModel,
+    dashboardViewModel: DashboardViewModel?,
     dashboardPreviewSnapshot: QuotaPresentationSnapshot?,
     modifier: Modifier = Modifier
 ) {
@@ -271,13 +278,14 @@ private fun AppNavHost(
             val navigateToConnections = {
                 navController.navigateTopLevel(ConnectionsRoute)
             }
-            if (dashboardPreviewSnapshot == null) {
+            if (dashboardViewModel != null) {
                 DashboardScreen(
+                    viewModel = dashboardViewModel,
                     onNavigateToConnections = navigateToConnections,
                     initialSelectedService = initialDashboardService,
                     onInitialSelectionConsumed = onDashboardServiceConsumed
                 )
-            } else {
+            } else if (dashboardPreviewSnapshot != null) {
                 DashboardPreviewScreen(
                     snapshot = dashboardPreviewSnapshot,
                     onNavigateToConnections = navigateToConnections
@@ -297,8 +305,8 @@ private fun AppNavHost(
                 viewModel = settingsViewModel
             )
         }
-        composable(HistoryRoute) { UsageAnalyticsScreen(UsageAnalyticsPage.History, { navController.navigateTopLevel(ConnectionsRoute) }, dashboardPreviewSnapshot) }
-        composable(SpendRoute) { UsageAnalyticsScreen(UsageAnalyticsPage.Spend, { navController.navigateTopLevel(ConnectionsRoute) }, dashboardPreviewSnapshot) }
+        composable(HistoryRoute) { UsageAnalyticsScreen(UsageAnalyticsPage.History, { navController.navigateTopLevel(ConnectionsRoute) }, dashboardPreviewSnapshot, dashboardViewModel) }
+        composable(SpendRoute) { UsageAnalyticsScreen(UsageAnalyticsPage.Spend, { navController.navigateTopLevel(ConnectionsRoute) }, dashboardPreviewSnapshot, dashboardViewModel) }
         composable(SettingsRoute) {
             SettingsScreen(
                 onNavigateBack = {

@@ -16,11 +16,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
@@ -37,12 +37,17 @@ import java.util.Currency
 enum class UsageAnalyticsPage { History, Spend }
 
 @Composable
-fun UsageAnalyticsScreen(page: UsageAnalyticsPage, onConnections: () -> Unit, preview: QuotaPresentationSnapshot? = null) {
-    if (preview != null) { AnalyticsContent(page, preview, false, {}, onConnections); return }
-    val model: DashboardViewModel = hiltViewModel()
+fun UsageAnalyticsScreen(
+    page: UsageAnalyticsPage,
+    onConnections: () -> Unit,
+    preview: QuotaPresentationSnapshot? = null,
+    model: DashboardViewModel? = null
+) {
+    if (preview != null || model == null) { AnalyticsContent(page, preview, false, {}, onConnections); return }
     val state by model.uiState.collectAsStateWithLifecycle()
     val refreshing by model.isRefreshing.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { model.refresh() }
+    val localeTag = LocalConfiguration.current.locales[0].toLanguageTag()
+    LaunchedEffect(Unit) { model.refreshIfStale(localeTag) }
     AnalyticsContent(page, (state as? DashboardUiState.Content)?.snapshot, refreshing, model::refresh, onConnections)
 }
 
@@ -51,7 +56,7 @@ fun UsageAnalyticsScreen(page: UsageAnalyticsPage, onConnections: () -> Unit, pr
 private fun AnalyticsContent(page: UsageAnalyticsPage, snapshot: QuotaPresentationSnapshot?, refreshing: Boolean, onRefresh: () -> Unit, onConnections: () -> Unit) {
     val title = stringResource(if (page == UsageAnalyticsPage.History) R.string.navigation_history else R.string.navigation_spend)
     Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, topBar = {
-        TopAppBar(title = { Text(title) }, actions = { IconButton(onClick = onRefresh, enabled = !refreshing) { Icon(Icons.Rounded.Refresh, stringResource(R.string.action_refresh)) } })
+        TopAppBar(title = { Text(title) }, actions = { IconButton(onClick = onRefresh) { Icon(Icons.Rounded.Refresh, stringResource(R.string.action_refresh)) } })
     }) { padding ->
         val services = snapshot?.services.orEmpty()
         val rows = services.filter { if (page == UsageAnalyticsPage.Spend) it.desktopSpend != null else it.metrics.isNotEmpty() }
@@ -63,7 +68,6 @@ private fun AnalyticsContent(page: UsageAnalyticsPage, snapshot: QuotaPresentati
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(if (page == UsageAnalyticsPage.History) R.string.analytics_history_help else R.string.analytics_spend_help),
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (refreshing) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     if (page == UsageAnalyticsPage.Spend) SpendOverview(rows)
                     if (rows.isEmpty()) {
                         Text(stringResource(if (page == UsageAnalyticsPage.Spend) R.string.analytics_spend_empty else R.string.analytics_history_empty))

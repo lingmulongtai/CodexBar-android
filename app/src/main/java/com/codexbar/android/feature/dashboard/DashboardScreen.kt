@@ -55,6 +55,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -82,8 +83,9 @@ fun DashboardScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val providerOrder by viewModel.providerOrder.collectAsStateWithLifecycle()
 
+    val localeTag = LocalConfiguration.current.locales[0].toLanguageTag()
     LaunchedEffect(Unit) {
-        viewModel.refresh()
+        viewModel.refreshIfStale(localeTag)
     }
 
     DashboardContent(
@@ -176,7 +178,7 @@ private fun DashboardContent(
                     if (services.size > 1) {
                         TextButton(onClick = { showOrder = true }) { Text(stringResource(R.string.provider_order_action)) }
                     }
-                    IconButton(onClick = onRefresh, enabled = !isRefreshing) {
+                    IconButton(onClick = onRefresh) {
                         Icon(
                             imageVector = Icons.Rounded.Refresh,
                             contentDescription = stringResource(R.string.action_refresh)
@@ -196,8 +198,9 @@ private fun DashboardContent(
                 .padding(paddingValues)
         ) {
             val useTwoPane = useTwoPaneDashboard(maxWidth.value)
+            // The pull gesture starts a refresh; progress is shown in place, never over the content.
             PullToRefreshBox(
-                isRefreshing = isRefreshing,
+                isRefreshing = false,
                 onRefresh = onRefresh,
                 modifier = Modifier.fillMaxSize()
             ) {
