@@ -70,7 +70,8 @@ internal fun DashboardHeader(
     updatedAt: Instant?,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
-    title: String = stringResource(R.string.app_name)
+    title: String = stringResource(R.string.app_name),
+    showMark: Boolean = true
 ) {
     val profile = LocalCodexBarThemeProfile.current
     if (profile.style == AppThemeStyle.INSTRUMENT) {
@@ -83,7 +84,7 @@ internal fun DashboardHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                BrandGlyph(profile.style, Modifier.size(32.dp))
+                if (showMark) BrandGlyph(profile.style, Modifier.size(32.dp))
                 Text(
                     title,
                     fontFamily = PlexMonoFamily,
@@ -107,7 +108,7 @@ internal fun DashboardHeader(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            BrandGlyph(profile.style, Modifier.size(40.dp))
+            if (showMark) BrandGlyph(profile.style, Modifier.size(40.dp))
             Text(
                 title,
                 style = MaterialTheme.typography.titleLarge,

@@ -79,7 +79,6 @@ import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 import java.time.Instant
 
 private const val TwoPaneMinWidthDp = 720f
-private val CardMinWidth = 320.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -187,7 +186,13 @@ private fun DashboardContent(
         val useTwoPane = useTwoPaneDashboard(maxWidth.value)
         Column(Modifier.fillMaxSize()) {
             if (!glass) {
-                DashboardHeader(refresh = refresh, updatedAt = updatedAt, onRefresh = onRefresh)
+                // On wide screens the navigation rail already carries the design's mark.
+                DashboardHeader(
+                    refresh = refresh,
+                    updatedAt = updatedAt,
+                    onRefresh = onRefresh,
+                    showMark = LocalConfiguration.current.screenWidthDp < 600
+                )
             }
             // The pull gesture starts a refresh; progress is shown in place, never over the content.
             PullToRefreshBox(
@@ -386,7 +391,13 @@ private fun CardList(
     val order = services.map { it.service }
     val drag = rememberProviderDragReorder(grid, order, onReorder)
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val columns = ((maxWidth - 32.dp) / CardMinWidth).toInt().coerceIn(1, 3)
+        // Instrument's table rows need room for two reading cells beside the name.
+        val cardMinWidth = when (themeProfile.style) {
+            AppThemeStyle.MATERIAL_3 -> 300.dp
+            AppThemeStyle.LIQUID_GLASS -> 340.dp
+            AppThemeStyle.INSTRUMENT -> 420.dp
+        }
+        val columns = ((maxWidth - 32.dp) / cardMinWidth).toInt().coerceIn(1, 3)
         // A single column groups the providers into one list; wider grids use separate cards.
         val grouped = columns == 1
         val cardSpacing: Dp = when {

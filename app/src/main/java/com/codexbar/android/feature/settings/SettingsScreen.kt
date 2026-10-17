@@ -180,19 +180,23 @@ fun SettingsScreen(
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            ThemedTopBar(
-                title = stringResource(R.string.settings_title),
-                navigationIcon = {
-                    if (showBackButton) {
-                        IconButton(onClick = onNavigateBack) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.action_back)
-                            )
+            // Align the title with the centered content column on wide screens.
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                ThemedTopBar(
+                    title = stringResource(R.string.settings_title),
+                    modifier = Modifier.widthIn(max = 840.dp),
+                    navigationIcon = {
+                        if (showBackButton) {
+                            IconButton(onClick = onNavigateBack) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = stringResource(R.string.action_back)
+                                )
+                            }
                         }
                     }
-                }
-            )
+                )
+            }
         }
     ) { paddingValues ->
         Box(
@@ -363,19 +367,23 @@ fun ConnectionsScreen(
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            ThemedTopBar(
-                title = stringResource(R.string.connections_title),
-                navigationIcon = {
-                    if (showBackButton) {
-                        IconButton(onClick = onNavigateBack) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.action_back)
-                            )
+            // Align the title with the centered content column on wide screens.
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                ThemedTopBar(
+                    title = stringResource(R.string.connections_title),
+                    modifier = Modifier.widthIn(max = 840.dp),
+                    navigationIcon = {
+                        if (showBackButton) {
+                            IconButton(onClick = onNavigateBack) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = stringResource(R.string.action_back)
+                                )
+                            }
                         }
                     }
-                }
-            )
+                )
+            }
         }
     ) { paddingValues ->
         Box(
