@@ -1100,16 +1100,10 @@ button {
   background: #eef6f5;
 }
 
-.themes-section[data-theme-section="winui"] {
-  --theme-accent: #245f8b;
-  --theme-aura: rgba(97, 164, 218, 0.25);
-  background: #eef2f5;
-}
-
-.themes-section[data-theme-section="aurora"] {
-  --theme-accent: #1c6c59;
-  --theme-aura: rgba(81, 218, 181, 0.26);
-  background: #e8f1ee;
+.themes-section[data-theme-section="instrument"] {
+  --theme-accent: #398571;
+  --theme-aura: rgba(74, 159, 132, 0.22);
+  background: #e8edeb;
 }
 
 .themes-heading > div {
@@ -1217,21 +1211,14 @@ button {
   background: linear-gradient(135deg, #d7f2ef, #e8e2f7);
 }
 
-.swatch-winui {
-  background: linear-gradient(135deg, #edf2f7, #afd3e9);
+.swatch-instrument {
+  background: linear-gradient(135deg, #101412, #213a30);
   border-radius: 5px;
 }
 
-.swatch-winui::after {
+.swatch-instrument::after {
+  background: #62c79e;
   border-radius: 2px;
-}
-
-.swatch-aurora {
-  background: linear-gradient(145deg, #081019, #164f48 55%, #2f1e56);
-}
-
-.swatch-aurora::after {
-  background: rgba(41, 85, 79, 0.8);
 }
 
 .theme-hint {

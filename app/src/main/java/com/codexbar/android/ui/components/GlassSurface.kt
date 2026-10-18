@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.addOutline
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.translate
@@ -53,6 +54,9 @@ fun rememberGlassBackdrop(): GlassBackdrop {
 
 fun Modifier.glassBackdropSource(backdrop: GlassBackdrop): Modifier = this
     .onGloballyPositioned { backdrop.originInRoot = it.positionInRoot() }
+    // Keep the source's display list when only a glass consumer needs redrawing. Without this
+    // boundary, its generation write and the consumer's invalidation keep redrawing each other.
+    .graphicsLayer()
     .drawWithContent {
         backdrop.layer.record { this@drawWithContent.drawContent() }
         drawLayer(backdrop.layer)
@@ -86,6 +90,7 @@ fun GlassSurface(
     Box(
         modifier = modifier
             .onGloballyPositioned { position.value = it.positionInRoot() }
+            .graphicsLayer()
             .drawBehind {
                 val outline = shape.createOutline(size, layoutDirection, this)
                 val path = Path().apply { addOutline(outline) }
