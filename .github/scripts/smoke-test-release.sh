@@ -17,7 +17,10 @@ package_name='com.codexbar.android'
 adb install "$release_apk"
 adb logcat -b crash -c
 adb shell am force-stop "$package_name"
-adb shell am start -W -n "$package_name/.MainActivity"
+adb shell am start -W \
+  -a android.intent.action.MAIN \
+  -c android.intent.category.LAUNCHER \
+  "$package_name"
 sleep 5
 
 app_pid="$(adb shell pidof "$package_name" || true)"
