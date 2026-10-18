@@ -17,10 +17,15 @@ package_name='com.codexbar.android'
 adb install "$release_apk"
 adb logcat -b crash -c
 adb shell am force-stop "$package_name"
-adb shell am start -W \
+launcher_component="$(adb shell cmd package resolve-activity --brief \
   -a android.intent.action.MAIN \
   -c android.intent.category.LAUNCHER \
-  "$package_name"
+  "$package_name" | tr -d '\r' | tail -n 1)"
+case "$launcher_component" in
+  "$package_name/"*) ;;
+  *) printf '::error::No launcher component for %s.\n' "$package_name"; exit 1 ;;
+esac
+adb shell am start -W -n "$launcher_component"
 sleep 5
 
 app_pid="$(adb shell pidof "$package_name" || true)"
