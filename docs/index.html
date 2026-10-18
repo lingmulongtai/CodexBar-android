@@ -32,7 +32,7 @@
     <meta property="og:image:alt" content="CodexBar for Androidのダッシュボード" />
     <meta name="twitter:card" content="summary_large_image" />
 
-    <link rel="stylesheet" href="./assets/site.css?v=0.10.0" />
+    <link rel="stylesheet" href="./assets/site.css?v=0.11.0" />
     <script src="./assets/site.js" defer></script>
 
     <script type="application/ld+json">
@@ -44,7 +44,7 @@
         "applicationCategory": "UtilitiesApplication",
         "description": "An open-source Android app for monitoring AI service quotas, reset times, pace, and usage history.",
         "downloadUrl": "https://github.com/lingmulongtai/CodexBar-android/releases/latest",
-        "softwareVersion": "0.10.0",
+        "softwareVersion": "0.11.0",
         "license": "https://opensource.org/license/mit",
         "offers": {
           "@type": "Offer",
@@ -100,7 +100,7 @@
           <div class="hero-copy">
             <div class="eyebrow reveal">
               <span class="status-dot" aria-hidden="true"></span>
-              v0.10.0 · Android 8.0+
+              v0.11.0 · Android 8.0+
             </div>
 
             <h1 id="hero-title" class="reveal">
@@ -151,8 +151,8 @@
             <div class="phone hero-phone">
               <div class="phone-sensor" aria-hidden="true"></div>
               <img
-                src="./images/releases/v0.9.7/windows-usage.png"
-                alt="Windowsから受信したClaude、Codex、GitHub Copilotの使用量ダッシュボード"
+                src="./images/releases/v0.11.0/expressive-phone.png"
+                alt="Material 3 Expressiveの使用量ダッシュボード（エミュレーター・合成データ）"
                 width="540"
                 height="1200"
                 fetchpriority="high"
@@ -173,7 +173,7 @@
 
         <div class="shell metric-strip reveal" aria-label="製品概要">
           <div><strong>21</strong><span>AI providers</span></div>
-          <div><strong>4</strong><span>visual themes</span></div>
+          <div><strong>3</strong><span>visual designs</span></div>
           <div><strong>24/7</strong><span>at-a-glance status</span></div>
           <div><strong>0</strong><span>hosted backends</span></div>
         </div>
@@ -201,7 +201,7 @@
             <article class="insight-card reveal" id="gemini-apps">
               <h3>Gemini Appsの使用枠も</h3>
               <p>Windows版v0.70.6以降でGemini Appsを接続すると、現在・週間の使用率とリセット日時が届きます。更新された認証情報はPC内で暗号化して引き継ぎます。</p>
-              <img src="./images/releases/v0.9.8/gemini-apps-material3.png" width="540" height="1200" loading="lazy" alt="Gemini AppsとGemini CLIを分けて表示するv0.9.8の画面（デモデータ）" style="width:100%;height:auto" />
+              <img src="./images/releases/v0.11.0/gemini-apps.png" width="540" height="1200" loading="lazy" alt="Gemini AppsとGemini CLIを分けて表示するv0.11.0の画面（エミュレーター・合成データ）" style="width:100%;height:auto" />
               <a href="https://github.com/lingmulongtai/Win-CodexBar-Mobile-Connect/blob/main/docs/gemini-apps.md">接続手順と対応範囲 ↗</a>
             </article>
           </div>
@@ -327,10 +327,10 @@
           <div class="section-heading themes-heading reveal">
             <div>
               <span class="kicker">MAKE IT YOURS</span>
-              <h2 id="themes-title">気分で選べる、4つの顔。</h2>
+              <h2 id="themes-title">気分で選べる、3つのデザイン。</h2>
             </div>
             <p>
-              AndroidらしいMaterial 3から、透明感のあるLiquid Glass、精密なWinUI 3、深い色のAuroraまで。
+              大胆なMaterial 3 Expressive、浮かぶナビゲーションのLiquid Glass、数字に集中するInstrument。アイコンも選んだデザインに切り替わります。
             </p>
           </div>
 
@@ -344,11 +344,11 @@
                   aria-controls="theme-preview-panel"
                   aria-selected="false"
                   data-theme-button="material"
-                  data-image="./images/releases/v0.9.0/dashboard-material3.png"
-                  data-alt="Material 3テーマのダッシュボード"
+                  data-image="./images/releases/v0.11.0/expressive-phone.png"
+                  data-alt="Material 3 Expressiveのダッシュボード（エミュレーター・合成データ）"
                 >
                   <i class="swatch swatch-material" aria-hidden="true"></i>
-                  <span><strong>Material 3</strong><small>Android native</small></span>
+                  <span><strong>Material 3 Expressive</strong><small>Bold &amp; expressive</small></span>
                 </button>
                 <button
                   id="theme-tab-liquid"
@@ -357,37 +357,24 @@
                   aria-controls="theme-preview-panel"
                   aria-selected="true"
                   data-theme-button="liquid"
-                  data-image="./images/releases/v0.9.0/dashboard-liquid-glass.png"
+                  data-image="./images/releases/v0.11.0/liquid-glass-phone.png"
                   data-alt="Liquid Glassテーマのダッシュボード"
                 >
                   <i class="swatch swatch-liquid" aria-hidden="true"></i>
                   <span><strong>Liquid Glass</strong><small>Soft &amp; translucent</small></span>
                 </button>
                 <button
-                  id="theme-tab-winui"
+                  id="theme-tab-instrument"
                   type="button"
                   role="tab"
                   aria-controls="theme-preview-panel"
                   aria-selected="false"
-                  data-theme-button="winui"
-                  data-image="./images/releases/v0.9.0/dashboard-winui3.png"
-                  data-alt="WinUI 3テーマのダッシュボード"
+                  data-theme-button="instrument"
+                  data-image="./images/releases/v0.11.0/instrument-phone.png"
+                  data-alt="Instrumentのダッシュボード（エミュレーター・合成データ）"
                 >
-                  <i class="swatch swatch-winui" aria-hidden="true"></i>
-                  <span><strong>WinUI 3</strong><small>Clean &amp; precise</small></span>
-                </button>
-                <button
-                  id="theme-tab-aurora"
-                  type="button"
-                  role="tab"
-                  aria-controls="theme-preview-panel"
-                  aria-selected="false"
-                  data-theme-button="aurora"
-                  data-image="./images/releases/v0.9.0/dashboard-aurora-dark.png"
-                  data-alt="Auroraテーマのダッシュボード"
-                >
-                  <i class="swatch swatch-aurora" aria-hidden="true"></i>
-                  <span><strong>Aurora</strong><small>Deep &amp; luminous</small></span>
+                  <i class="swatch swatch-instrument" aria-hidden="true"></i>
+                  <span><strong>Instrument</strong><small>Precise &amp; always dark</small></span>
                 </button>
               </div>
 
@@ -405,7 +392,7 @@
               <div class="phone theme-phone">
                 <img
                   data-theme-image
-                  src="./images/releases/v0.9.0/dashboard-liquid-glass.png"
+                  src="./images/releases/v0.11.0/liquid-glass-phone.png"
                   alt="Liquid Glassテーマのダッシュボード"
                   width="1080"
                   height="2400"
@@ -464,11 +451,11 @@
               <div class="surface-copy">
                 <span class="surface-tag">Tablet &amp; foldable</span>
                 <h3>Large-screen dashboard</h3>
-                <p>タブレットや横画面では、一覧と詳細を同時に表示。v0.10.0では長押し並べ替え、PCの履歴・費用グラフ、通知設定とPC設定操作を追加。PCの新機能はWindows v0.71.0以降と組み合わせて使えます。<a href="releases/v0.10.0.md">変更点と検証記録</a></p>
+                <p>タブレットや横画面では、一覧と詳細を同時に表示。v0.11.0では3デザイン、4タブのナビゲーション、更新中も操作できる画面、デザインに連動するアイコンを追加。長押し並べ替え、PCの履歴・費用グラフ、通知設定とPC設定操作も引き続き使えます。PCの新機能はWindows v0.71.0以降と組み合わせて使えます。<a href="releases/v0.11.0.md">変更点と検証記録</a></p>
               </div>
               <div class="tablet-frame">
                 <img
-                  src="./images/mobile-dashboard/tablet-dashboard.png"
+                  src="./images/releases/v0.11.0/expressive-tablet.png"
                   alt="タブレット向けの2ペインダッシュボード"
                   width="2560"
                   height="1600"
