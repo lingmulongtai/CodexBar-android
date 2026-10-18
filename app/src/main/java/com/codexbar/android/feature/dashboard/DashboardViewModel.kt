@@ -77,7 +77,9 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             quotaResetMonitor.sourceChanges.collect { revision ->
                 if (revision > 0) {
-                    // Keep the last readings on screen; every card shows its refresh progress.
+                    // Readings belong to the previous account/source. Ordinary refreshes keep
+                    // their content, but a source change must invalidate every shared tab now.
+                    _uiState.value = DashboardUiState.Loading
                     refreshPending = true
                     refresh()
                 }
