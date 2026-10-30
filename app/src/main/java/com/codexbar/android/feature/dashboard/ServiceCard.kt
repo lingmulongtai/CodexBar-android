@@ -159,7 +159,7 @@ private fun ExpressiveServiceCard(
     val accent = providerVisualStyle(service.service).accent
     val shape = grouping.shape(outer = 28.dp, inner = 8.dp)
     val border = if (selected) BorderStroke(2.dp, colors.primary) else null
-    val cardColors = CardDefaults.cardColors(containerColor = profile.cardColor, contentColor = colors.onSurface)
+    val cardColors = CardDefaults.cardColors(containerColor = profile.cardColor, contentColor = MaterialTheme.colorScheme.onSurface)
     val content: @Composable ColumnScope.() -> Unit = {
         Column(
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 16.dp),
