@@ -16,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import com.codexbar.android.ui.components.CodexBarCard as Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import com.codexbar.android.ui.components.CodexBarOutlinedButton as OutlinedButton
@@ -81,9 +80,6 @@ private fun CardGrouping.shape(outer: Dp, inner: Dp): Shape = when (this) {
     CardGrouping.Last -> RoundedCornerShape(topStart = inner, topEnd = inner, bottomStart = outer, bottomEnd = outer)
 }
 
-private val CardGrouping.hasRowAbove: Boolean
-    get() = this == CardGrouping.Middle || this == CardGrouping.Last
-
 private fun ServiceQuotaPresentation.displayedMetrics(): List<QuotaMetricPresentation> {
     return (listOfNotNull(primaryMetric) + metrics.filterNot { it.id == primaryMetric?.id }).take(2)
 }
@@ -115,7 +111,7 @@ private fun MetricLabelRow(service: ServiceQuotaPresentation, metric: QuotaMetri
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f),
-            maxLines = 1,
+            maxLines = if (small) 2 else 1,
             overflow = TextOverflow.Ellipsis
         )
         Text(
@@ -196,20 +192,17 @@ private fun GlassServiceRow(
     GlassCard(
         onClick = onClick,
         modifier = modifier,
-        shape = grouping.shape(outer = 26.dp, inner = 0.dp),
+        shape = grouping.shape(outer = 26.dp, inner = 10.dp),
         selected = selected,
         border = if (selected) BorderStroke(2.dp, colors.primary) else null
     ) {
         Column {
-            if (grouping.hasRowAbove) {
-                HorizontalDivider(Modifier.padding(start = 66.dp), thickness = 0.5.dp, color = colors.outlineVariant)
-            }
             Row(
                 modifier = Modifier.padding(start = 16.dp, end = 10.dp, top = 14.dp, bottom = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                ProviderBadge(service.service, 36.dp)
+                ProviderBadge(service.service, 40.dp)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(

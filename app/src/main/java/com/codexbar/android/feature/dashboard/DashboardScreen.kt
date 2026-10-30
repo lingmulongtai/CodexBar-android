@@ -399,7 +399,7 @@ private fun CardList(
         val cardSpacing: Dp = when {
             !grouped -> 12.dp
             themeProfile.style == AppThemeStyle.MATERIAL_3 -> 3.dp
-            else -> 0.dp
+            else -> 4.dp
         }
         val sectionGap = Modifier.padding(bottom = 16.dp - cardSpacing)
         LazyVerticalGrid(
