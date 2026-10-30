@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.DragHandle
 import com.codexbar.android.ui.components.CodexBarCard as Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -61,14 +62,15 @@ fun ServiceCard(
     selected: Boolean = false,
     refreshing: Boolean = false,
     grouping: CardGrouping = CardGrouping.Alone,
+    reordering: Boolean = false,
     expanded: Boolean = false,
     onOpenDetails: () -> Unit = onClick,
     onManageConnection: () -> Unit = {}
 ) {
     val selectedModifier = modifier.fillMaxWidth().semantics { this.selected = selected }
     when (LocalCodexBarThemeProfile.current.style) {
-        AppThemeStyle.MATERIAL_3 -> ExpressiveServiceCard(service, onClick, selected, refreshing, grouping, selectedModifier)
-        AppThemeStyle.LIQUID_GLASS -> GlassServiceRow(service, onClick, selected, refreshing, grouping, modifier.fillMaxWidth())
+        AppThemeStyle.MATERIAL_3 -> ExpressiveServiceCard(service, onClick, selected, refreshing, grouping, reordering, selectedModifier)
+        AppThemeStyle.LIQUID_GLASS -> GlassServiceRow(service, onClick, selected, refreshing, grouping, reordering, modifier.fillMaxWidth())
 
     }
 }
@@ -148,6 +150,7 @@ private fun ExpressiveServiceCard(
     selected: Boolean,
     refreshing: Boolean,
     grouping: CardGrouping,
+    reordering: Boolean,
     modifier: Modifier
 ) {
     val profile = LocalCodexBarThemeProfile.current
@@ -185,6 +188,8 @@ private fun ExpressiveServiceCard(
                     )
                 }
                 if (refreshing) SmallSpinner(16.dp)
+                if (reordering) Icon(Icons.Rounded.DragHandle, contentDescription = null,
+                    tint = colors.onSurfaceVariant, modifier = Modifier.size(24.dp))
             }
             MetricColumns(service, spacing = 18.dp) { metric ->
                 MetricLabelRow(service, metric, severityTone(metric.severity, profile, colors.onSurface), small = false)
@@ -201,6 +206,7 @@ private fun GlassServiceRow(
     selected: Boolean,
     refreshing: Boolean,
     grouping: CardGrouping,
+    reordering: Boolean,
     modifier: Modifier
 ) {
     val profile = LocalCodexBarThemeProfile.current
@@ -247,7 +253,7 @@ private fun GlassServiceRow(
                     }
                 }
                 Icon(
-                    Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                    if (reordering) Icons.Rounded.DragHandle else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                     contentDescription = null,
                     tint = colors.outline,
                     modifier = Modifier.size(20.dp)

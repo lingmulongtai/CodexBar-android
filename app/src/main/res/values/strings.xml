@@ -489,6 +489,8 @@
     <string name="provider_order_move_up">Move %1$s up</string>
     <string name="provider_order_move_down">Move %1$s down</string>
     <string name="provider_order_done">Done</string>
+    <string name="dashboard_order_editing">Arrange services</string>
+    <string name="dashboard_order_inline_hint">Touch and hold a card to move it. Your order is saved automatically.</string>
     <string name="dashboard_order_hint">Long-press a card or row, then drag it to a new position. Changes are saved automatically; each widget has its own order. Screen readers offer move actions.</string>
     <string name="quota_guide_now">Remaining guide: now</string>
     <string name="quota_guide_hour">In 1h</string>
