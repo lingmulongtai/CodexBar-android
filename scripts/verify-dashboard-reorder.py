@@ -15,6 +15,7 @@ parser.add_argument("--screenshots", type=Path)
 parser.add_argument("--theme", choices=("LIQUID_GLASS", "MATERIAL_3"), default="LIQUID_GLASS")
 parser.add_argument("--dark", action="store_true")
 parser.add_argument("--locale", choices=("en", "ja"), default="en")
+parser.add_argument("--edge", action="store_true", help="Also hold a dragged card near the bottom to verify scrolling")
 args = parser.parse_args()
 package = "com.codexbar.android"
 
@@ -74,9 +75,17 @@ if args.screenshots:
 
 first = centre(find(root, "Codex"))
 second = centre(find(root, "Cline"))
-destination = (first[0], second[1] + (second[1] - first[1]) // 2)
-adb("shell", "input", "touchscreen", "draganddrop", *first, *destination, 1800)
+destination = (first[0], second[1] + (second[1] - first[1]) * 3 // 5)
+print("Drag", first, "toward", destination, flush=True)
+adb("shell", "input", "touchscreen", "motionevent", "DOWN", *first)
+time.sleep(0.9)
+for step in range(1, 11):
+    point = tuple(round(a + (b - a) * step / 10) for a, b in zip(first, destination))
+    adb("shell", "input", "touchscreen", "motionevent", "MOVE", *point)
+    time.sleep(0.06)
+adb("shell", "input", "touchscreen", "motionevent", "UP", *destination)
 root = tree()
+print("Positions", top(root, "Cline"), top(root, "Codex"), flush=True)
 assert top(root, "Cline") < top(root, "Codex"), "drag did not move Codex below Cline"
 tap(find(root, automatic))
 root = tree()
@@ -89,4 +98,25 @@ tap(find(root, reorder))
 find(tree(), editing)
 adb("shell", "input", "keyevent", "BACK")
 find(tree(), reorder)
+if args.edge:
+    tap(find(tree(), reorder))
+    root = tree()
+    first = centre(find(root, "Codex"))
+    before = top(root, "Cline")
+    size = re.findall(r"(\d+)x(\d+)", adb("shell", "wm", "size"))[-1]
+    destination = (first[0], int(size[1]) - 40)
+    adb("shell", "input", "touchscreen", "motionevent", "DOWN", *first)
+    try:
+        time.sleep(0.9)
+        for step in range(1, 11):
+            point = tuple(round(a + (b - a) * step / 10) for a, b in zip(first, destination))
+            adb("shell", "input", "touchscreen", "motionevent", "MOVE", *point)
+            time.sleep(0.06)
+        time.sleep(1.5)
+    finally:
+        adb("shell", "input", "touchscreen", "motionevent", "UP", *destination)
+    root = tree()
+    cline = [n for n in root.iter("node") if n.get("text") == "Cline"]
+    assert not cline or centre(cline[0])[1] < before - 50, "dragging near the edge did not scroll"
+    print("PASS edge scrolling")
 print("PASS inline reorder, automatic reset, Done, and Back")
