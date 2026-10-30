@@ -37,4 +37,12 @@ class DashboardProviderOrderTest {
             DashboardProviderOrder.merge(all, listOf(COPILOT, CODEX)))
         assertEquals(all, DashboardProviderOrder.merge(all, listOf(CODEX, COPILOT)))
     }
+
+    @Test fun `editing a filtered list keeps disconnected and filtered providers`() {
+        val saved = listOf(CODEX, CLAUDE, COPILOT, GEMINI)
+        val displayed = listOf(CODEX, COPILOT, GEMINI)
+        assertEquals(listOf(GEMINI, CLAUDE, COPILOT, CODEX),
+            DashboardProviderOrder.reorder(saved, displayed, listOf(GEMINI, CODEX)))
+        assertEquals(displayed, DashboardProviderOrder.reorder(emptyList(), displayed, displayed))
+    }
 }
