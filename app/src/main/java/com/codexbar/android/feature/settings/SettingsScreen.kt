@@ -600,15 +600,15 @@ private fun ThemeStyleSection(
             )
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 AppThemeStyle.entries.forEach { style ->
                     ThemeStyleOption(
                         style = style,
                         selected = style == selectedStyle,
-                        onClick = { onStyleSelected(style) }
+                        onClick = { onStyleSelected(style) },
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
@@ -620,11 +620,12 @@ private fun ThemeStyleSection(
 private fun ThemeStyleOption(
     style: AppThemeStyle,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier.width(184.dp),
+        modifier = modifier,
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = if (selected) {
