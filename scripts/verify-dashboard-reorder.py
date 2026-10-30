@@ -54,8 +54,8 @@ def top(root, label):
 
 assert adb("shell", "getprop", "ro.kernel.qemu") == "1", "Use a disposable emulator"
 labels = {
-    "en": ("Reorder", "Arrange services", "Touch and hold a card to move it. Your order is saved automatically.", "Use automatic order", "Done"),
-    "ja": ("並び替え", "並び替え中", "カードを長押しして移動。順番は自動保存されます。", "自動の並び順に戻す", "完了"),
+    "en": ("Reorder", "Arrange services", "Hold a card to move it · Saved automatically", "Use automatic order", "Done"),
+    "ja": ("並び替え", "並び替え中", "長押しで移動・順番は自動保存", "自動の並び順に戻す", "完了"),
 }
 reorder, editing, hint, automatic, done = labels[args.locale]
 adb("shell", "cmd", "locale", "set-app-locales", package, "--locales", args.locale)
