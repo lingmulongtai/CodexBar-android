@@ -1,5 +1,11 @@
 # Glisse-inspired Liquid Glass
 
+## LastWave-inspired refinement
+
+The glass presentation also takes visual cues from [LastWave-Native](https://github.com/Clash-Projects/LastWave-Native) (reference main `b016e52fd93ff2a6aa2ee0212250afb64f6d06a5`): a restrained light across glass, spring feedback on actions, rounded grouped service rows, and provider color on the leading quota. The floating navigation retains its held-drag interaction and exposes every tab name and selection state to accessibility services. These are independently implemented design ideas; LastWave source and artwork are not included.
+
+Read-only upstream `hyunnnchoi/CodexBar-android` main was checked at `1811d1fe032fd4a80240fd6bc5d04cee649a0afb`; it had no upstream-only commits to incorporate or defer.
+
 The original implementation record below is from 2026-10-30. For the expanded v0.12.0 controls and daily-photo design, see the current verification record at the end.
 
 Implementation verification, 2026-10-30. The design is included in [Android v0.11.1](releases/v0.11.1.md); that release record covers the versioned APK and current captures.
