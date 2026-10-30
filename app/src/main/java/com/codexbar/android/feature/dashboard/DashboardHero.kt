@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.codexbar.android.ui.components.GlassCard
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -171,12 +172,10 @@ private fun GlassHero(
     val profile = LocalCodexBarThemeProfile.current
     val colors = MaterialTheme.colorScheme
     val tone = severityTone(tightest.severity, profile, colors.onSurface)
-    Surface(
+    GlassCard(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
-        color = profile.cardColor,
-        contentColor = colors.onSurface
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {

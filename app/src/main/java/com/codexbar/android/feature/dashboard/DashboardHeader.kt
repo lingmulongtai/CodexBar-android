@@ -256,6 +256,9 @@ internal fun GlassCollapsedHeader(
         tint = colors.background.copy(alpha = 0.72f),
         fallback = colors.background.copy(alpha = 0.97f),
         rim = Color.Transparent,
+        blurRadius = 18.dp,
+        refraction = 0f,
+        elevation = 0.dp,
         modifier = modifier.fillMaxWidth()
     ) {
         Column(Modifier.fillMaxWidth()) {

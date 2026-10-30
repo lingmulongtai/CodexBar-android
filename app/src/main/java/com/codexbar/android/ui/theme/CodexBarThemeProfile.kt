@@ -80,7 +80,10 @@ internal fun themeProfile(
         AppThemeStyle.LIQUID_GLASS -> CodexBarThemeProfile(
             style = style,
             isDark = darkTheme,
-            backgroundBrush = SolidColor(colors.background),
+            backgroundBrush = Brush.linearGradient(
+                if (darkTheme) listOf(Color(0xFF111B36), Color(0xFF29234A), Color(0xFF162C47))
+                else listOf(Color(0xFFDCEBFF), Color(0xFFEEE7F8), Color(0xFFF7E9EF), Color(0xFFD8E9FC))
+            ),
             navigationContainerColor = colors.surfaceContainerLow,
             topBarContainerColor = colors.background,
             cardColor = colors.surfaceContainerLow,

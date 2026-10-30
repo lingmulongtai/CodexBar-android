@@ -74,7 +74,6 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -102,6 +101,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
+import com.codexbar.android.ui.components.CodexBarSwitch
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.domain.model.ProviderAuthMode
@@ -2279,7 +2279,7 @@ private fun RefreshIntervalSection(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Switch(
+                CodexBarSwitch(
                     checked = automaticRefresh,
                     onCheckedChange = { enabled ->
                         onIntervalChange(
@@ -2389,7 +2389,7 @@ private fun NotificationsSection(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Switch(
+                CodexBarSwitch(
                     checked = persistentEnabled,
                     onCheckedChange = onPersistentToggle
                 )
@@ -2412,7 +2412,7 @@ private fun NotificationsSection(
                     Text(stringResource(R.string.notifications_reset_description), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Switch(checked = resetEnabled, onCheckedChange = onResetToggle)
+                CodexBarSwitch(checked = resetEnabled, onCheckedChange = onResetToggle)
             }
             if (resetEnabled && !resetNotificationsAllowed) {
                 Text(stringResource(R.string.reset_notification_permission_needed), color = MaterialTheme.colorScheme.error,
@@ -2696,7 +2696,7 @@ private fun PrivacyToggle(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Switch(
+        CodexBarSwitch(
             checked = checked,
             onCheckedChange = onCheckedChange
         )

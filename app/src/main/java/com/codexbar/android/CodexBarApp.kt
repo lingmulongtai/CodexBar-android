@@ -3,6 +3,7 @@ package com.codexbar.android
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -48,6 +49,7 @@ import com.codexbar.android.feature.settings.SettingsScreen
 import com.codexbar.android.feature.settings.SettingsViewModel
 import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.ui.components.LocalBottomChromeInset
+import com.codexbar.android.ui.components.LocalGlassCardBackdrop
 import com.codexbar.android.ui.components.glassBackdropSource
 import com.codexbar.android.ui.components.rememberGlassBackdrop
 import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
@@ -192,9 +194,18 @@ fun CodexBarApp(
             themeProfile.floatingNavigation -> {
                 val refresh = dashboardViewModel?.refreshState?.collectAsStateWithLifecycle()?.value
                 val backdrop = rememberGlassBackdrop()
+                val cardBackdrop = rememberGlassBackdrop()
+                Box(
+                    Modifier.fillMaxSize()
+                        .glassBackdropSource(cardBackdrop)
+                        .background(themeProfile.backgroundBrush)
+                )
                 val bottomInset = GlassBarHeight + GlassBarMargin * 2 +
                     WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                CompositionLocalProvider(LocalBottomChromeInset provides bottomInset) {
+                CompositionLocalProvider(
+                    LocalBottomChromeInset provides bottomInset,
+                    LocalGlassCardBackdrop provides cardBackdrop
+                ) {
                     navHost(
                         Modifier
                             .fillMaxSize()

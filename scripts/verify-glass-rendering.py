@@ -14,6 +14,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--serial", required=True)
 parser.add_argument("--adb", default="adb")
 parser.add_argument("--screenshots", type=Path)
+parser.add_argument("--dark", action="store_true", help="Verify the dark Liquid Glass appearance")
 args = parser.parse_args()
 package = "com.codexbar.android"
 
@@ -52,6 +53,7 @@ for page in ("dashboard", "spend"):
         "shell", "am", "start", "-W", "-n", f"{package}/.debug.ScreenshotActivity",
         "--es", "theme", "LIQUID_GLASS", "--es", "destination", page,
         "--ez", "analytics", "true",
+        "--ez", "dark_theme", str(args.dark).lower(),
     )
     assert "Status: ok" in started and "Error" not in started, started
     time.sleep(2)
