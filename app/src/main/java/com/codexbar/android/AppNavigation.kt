@@ -48,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -301,7 +302,7 @@ private fun GlassTabRow(entries: List<NavigationEntry>, backdrop: GlassBackdrop)
             blurRadius = 2.dp,
             refraction = 0.5f + lift * 0.3f,
             elevation = lift.dp * 4,
-            modifier = Modifier.width(cell).fillMaxHeight()
+            modifier = Modifier.align(AbsoluteAlignment.TopLeft).width(cell).fillMaxHeight()
                 .absoluteOffset { IntOffset((cell.toPx() * visual).roundToInt(), 0) }
                 .graphicsLayer {
                     scaleX = 1f + lift * 0.06f

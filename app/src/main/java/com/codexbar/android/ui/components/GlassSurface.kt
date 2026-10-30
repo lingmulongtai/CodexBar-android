@@ -32,6 +32,8 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.Dp
@@ -44,6 +46,7 @@ import androidx.compose.ui.unit.dp
 @Stable
 class GlassBackdrop internal constructor(internal val layer: GraphicsLayer) {
     internal var originInRoot by mutableStateOf(Offset.Zero)
+    internal var coordinateRoot by mutableStateOf<LayoutCoordinates?>(null)
 
     /** Bumped after each recording so glass panels redraw with what is now behind them. */
     internal var generation by mutableIntStateOf(0)
@@ -56,7 +59,7 @@ fun rememberGlassBackdrop(): GlassBackdrop {
 }
 
 fun Modifier.glassBackdropSource(backdrop: GlassBackdrop): Modifier = this
-    .onGloballyPositioned { backdrop.originInRoot = it.positionInRoot() }
+    .onGloballyPositioned { backdrop.originInRoot = it.positionInRoot(); backdrop.coordinateRoot = it.findRootCoordinates() }
     // Keep the source's display list when only a glass consumer needs redrawing. Without this
     // boundary, its generation write and the consumer's invalidation keep redrawing each other.
     .graphicsLayer()
@@ -70,6 +73,7 @@ fun Modifier.glassBackdropSource(backdrop: GlassBackdrop): Modifier = this
 private class PositionHolder {
     // Moving a panel over a static backdrop must resample it even if the source did not redraw.
     var value by mutableStateOf(Offset.Zero)
+    var coordinateRoot by mutableStateOf<LayoutCoordinates?>(null)
 }
 
 /**
@@ -99,12 +103,12 @@ fun GlassSurface(
     Box(
         modifier = modifier
             .shadow(elevation, shape, clip = false)
-            .onGloballyPositioned { position.value = it.positionInRoot() }
+            .onGloballyPositioned { position.value = it.positionInRoot(); position.coordinateRoot = it.findRootCoordinates() }
             .graphicsLayer()
             .drawBehind {
                 val outline = shape.createOutline(size, layoutDirection, this)
                 val path = Path().apply { addOutline(outline) }
-                if (backdrop != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (backdrop != null && position.coordinateRoot != null && position.coordinateRoot === backdrop.coordinateRoot && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     backdrop.generation
                     val offset = position.value - backdrop.originInRoot
                     val radius = blurRadius.toPx()

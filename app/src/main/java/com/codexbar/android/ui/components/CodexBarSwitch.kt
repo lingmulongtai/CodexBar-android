@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.*
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -90,7 +91,7 @@ fun CodexBarSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifie
                 tint = Color.White.copy(alpha = 0.88f - lift * 0.32f), fallback = Color.White,
                 rim = Color.White.copy(alpha = 0.95f), blurRadius = 1.dp,
                 refraction = 0.45f + lift * 0.35f, elevation = 2.dp,
-                modifier = Modifier.size(26.dp)
+                modifier = Modifier.align(AbsoluteAlignment.TopLeft).size(26.dp)
                     .absoluteOffset { IntOffset((3.dp.toPx() + 28.dp.toPx() * visual).roundToInt(), 3.dp.roundToPx()) }
                     .graphicsLayer { scaleX = 1f + lift * 0.16f; scaleY = 1f + lift * 0.16f }
             ) {}
