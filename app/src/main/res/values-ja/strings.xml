@@ -487,7 +487,8 @@
     <string name="provider_order_move_up">%1$sを上へ移動</string>
     <string name="provider_order_move_down">%1$sを下へ移動</string>
     <string name="provider_order_done">完了</string>
-    <string name="dashboard_order_hint">カードや行を長押しして、そのままドラッグで移動できます。順番は自動保存され、ウィジェットごとにも設定できます。読み上げでは上下移動の操作を使えます。</string>
+    <string name="dashboard_order_editing">並び替え中</string>
+    <string name="dashboard_order_inline_hint">長押しで移動・順番は自動保存</string>
     <string name="quota_guide_now">残量の目安：現在</string>
     <string name="quota_guide_hour">1時間後</string>
     <string name="quota_guide_today">今日の終わり</string>

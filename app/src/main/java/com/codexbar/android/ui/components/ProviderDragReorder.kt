@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
@@ -21,11 +22,22 @@ import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AiService
 import kotlinx.coroutines.delay
 
+/** Edge detection and scrolling use dp so a dense screen behaves like a low-density one. */
+internal fun providerEdgeScrollDelta(pointerY: Float, start: Int, end: Int, density: Float): Float {
+    val edge = 72f * density
+    return when {
+        pointerY < start + edge -> -6f * density
+        pointerY > end - edge -> 6f * density
+        else -> 0f
+    }
+}
+
 /** Uses layout offsets rather than translated bounds, so crossing a row cannot feed back into dragging. */
 internal class ProviderDragReorder(
     val grid: LazyGridState,
     private val services: () -> List<AiService>,
-    private val onChange: (List<AiService>) -> Unit
+    private val onChange: (List<AiService>) -> Unit,
+    private val density: Float
 ) {
     var dragging by mutableStateOf<AiService?>(null)
         private set
@@ -69,12 +81,7 @@ internal class ProviderDragReorder(
 
     suspend fun scrollAtEdge() {
         val info = grid.layoutInfo
-        val edge = 72f
-        val delta = when {
-            pointer.y < info.viewportStartOffset + edge -> -18f
-            pointer.y > info.viewportEndOffset - edge -> 18f
-            else -> 0f
-        }
+        val delta = providerEdgeScrollDelta(pointer.y, info.viewportStartOffset, info.viewportEndOffset, density)
         if (delta != 0f) { grid.scrollBy(delta); moveAtPointer() }
     }
 }
@@ -87,7 +94,8 @@ internal fun rememberProviderDragReorder(
 ): ProviderDragReorder {
     val currentServices = rememberUpdatedState(services)
     val currentChange = rememberUpdatedState(onChange)
-    val state = remember(grid) { ProviderDragReorder(grid, { currentServices.value }, { currentChange.value(it) }) }
+    val density = LocalDensity.current.density
+    val state = remember(grid, density) { ProviderDragReorder(grid, { currentServices.value }, { currentChange.value(it) }, density) }
     LaunchedEffect(services) { if (state.dragging !in services) state.stop() }
     LaunchedEffect(state.dragging) {
         while (state.dragging != null) { state.scrollAtEdge(); delay(16) }

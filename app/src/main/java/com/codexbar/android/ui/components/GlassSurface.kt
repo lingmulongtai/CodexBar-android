@@ -134,12 +134,13 @@ fun GlassSurface(
                 } else {
                     drawPath(path, fallback)
                 }
+                // Keep the highlight in the existing rim draw, without another gradient layer.
                 drawPath(
                     path = path,
                     brush = Brush.linearGradient(
                         0f to rim,
-                        0.36f to rim.copy(alpha = rim.alpha * 0.12f),
-                        0.64f to rim.copy(alpha = rim.alpha * 0.08f),
+                        0.36f to rim.copy(alpha = rim.alpha * 0.22f),
+                        0.64f to rim.copy(alpha = rim.alpha * 0.12f),
                         1f to rim.copy(alpha = rim.alpha * 0.65f),
                         start = Offset.Zero,
                         end = Offset(size.width, size.height)

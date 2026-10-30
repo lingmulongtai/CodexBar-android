@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,9 +15,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.DragHandle
 import com.codexbar.android.ui.components.CodexBarCard as Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import com.codexbar.android.ui.components.CodexBarOutlinedButton as OutlinedButton
@@ -62,14 +63,15 @@ fun ServiceCard(
     selected: Boolean = false,
     refreshing: Boolean = false,
     grouping: CardGrouping = CardGrouping.Alone,
+    reordering: Boolean = false,
     expanded: Boolean = false,
     onOpenDetails: () -> Unit = onClick,
     onManageConnection: () -> Unit = {}
 ) {
     val selectedModifier = modifier.fillMaxWidth().semantics { this.selected = selected }
     when (LocalCodexBarThemeProfile.current.style) {
-        AppThemeStyle.MATERIAL_3 -> ExpressiveServiceCard(service, onClick, selected, refreshing, grouping, selectedModifier)
-        AppThemeStyle.LIQUID_GLASS -> GlassServiceRow(service, onClick, selected, refreshing, grouping, modifier.fillMaxWidth())
+        AppThemeStyle.MATERIAL_3 -> ExpressiveServiceCard(service, onClick, selected, refreshing, grouping, reordering, selectedModifier)
+        AppThemeStyle.LIQUID_GLASS -> GlassServiceRow(service, onClick, selected, refreshing, grouping, reordering, modifier.fillMaxWidth())
 
     }
 }
@@ -80,9 +82,6 @@ private fun CardGrouping.shape(outer: Dp, inner: Dp): Shape = when (this) {
     CardGrouping.Middle -> RoundedCornerShape(inner)
     CardGrouping.Last -> RoundedCornerShape(topStart = inner, topEnd = inner, bottomStart = outer, bottomEnd = outer)
 }
-
-private val CardGrouping.hasRowAbove: Boolean
-    get() = this == CardGrouping.Middle || this == CardGrouping.Last
 
 private fun ServiceQuotaPresentation.displayedMetrics(): List<QuotaMetricPresentation> {
     return (listOfNotNull(primaryMetric) + metrics.filterNot { it.id == primaryMetric?.id }).take(2)
@@ -108,6 +107,23 @@ private fun ServiceQuotaPresentation.statusColor(): Color {
 @Composable
 private fun MetricLabelRow(service: ServiceQuotaPresentation, metric: QuotaMetricPresentation, valueColor: Color, small: Boolean) {
     val reset = compactCountdown(metric.resetsAt) ?: metric.resetLabel
+    if (small) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(service.metricLabel(metric), style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(metric.percentText(), style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold, color = valueColor, maxLines = 1)
+            }
+            if (reset != null) {
+                Text(reset, style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        return
+    }
     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             listOfNotNull(service.metricLabel(metric), reset).joinToString(" · "),
@@ -135,21 +151,16 @@ private fun ExpressiveServiceCard(
     selected: Boolean,
     refreshing: Boolean,
     grouping: CardGrouping,
+    reordering: Boolean,
     modifier: Modifier
 ) {
     val profile = LocalCodexBarThemeProfile.current
     val colors = MaterialTheme.colorScheme
     val accent = providerVisualStyle(service.service).accent
-    Card(
-        onClick = onClick,
-        modifier = modifier,
-        shape = grouping.shape(outer = 28.dp, inner = 8.dp),
-        border = if (selected) BorderStroke(2.dp, colors.primary) else null,
-        colors = CardDefaults.cardColors(
-            containerColor = profile.cardColor,
-            contentColor = MaterialTheme.colorScheme.onSurface
-        )
-    ) {
+    val shape = grouping.shape(outer = 28.dp, inner = 8.dp)
+    val border = if (selected) BorderStroke(2.dp, colors.primary) else null
+    val cardColors = CardDefaults.cardColors(containerColor = profile.cardColor, contentColor = MaterialTheme.colorScheme.onSurface)
+    val content: @Composable ColumnScope.() -> Unit = {
         Column(
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -172,12 +183,19 @@ private fun ExpressiveServiceCard(
                     )
                 }
                 if (refreshing) SmallSpinner(16.dp)
+                if (reordering) Icon(Icons.Rounded.DragHandle, contentDescription = null,
+                    tint = colors.onSurfaceVariant, modifier = Modifier.size(24.dp))
             }
             MetricColumns(service, spacing = 18.dp) { metric ->
                 MetricLabelRow(service, metric, severityTone(metric.severity, profile, colors.onSurface), small = false)
                 QuotaMeter(metric.barProgress, accent, metric.pace.guide)
             }
         }
+    }
+    if (reordering) {
+        Card(modifier = modifier, shape = shape, border = border, colors = cardColors, content = content)
+    } else {
+        Card(onClick = onClick, modifier = modifier, shape = shape, border = border, colors = cardColors, content = content)
     }
 }
 
@@ -188,6 +206,7 @@ private fun GlassServiceRow(
     selected: Boolean,
     refreshing: Boolean,
     grouping: CardGrouping,
+    reordering: Boolean,
     modifier: Modifier
 ) {
     val profile = LocalCodexBarThemeProfile.current
@@ -196,20 +215,18 @@ private fun GlassServiceRow(
     GlassCard(
         onClick = onClick,
         modifier = modifier,
-        shape = grouping.shape(outer = 26.dp, inner = 0.dp),
+        shape = grouping.shape(outer = 26.dp, inner = 10.dp),
         selected = selected,
+        enabled = !reordering,
         border = if (selected) BorderStroke(2.dp, colors.primary) else null
     ) {
         Column {
-            if (grouping.hasRowAbove) {
-                HorizontalDivider(Modifier.padding(start = 66.dp), thickness = 0.5.dp, color = colors.outlineVariant)
-            }
             Row(
                 modifier = Modifier.padding(start = 16.dp, end = 10.dp, top = 14.dp, bottom = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                ProviderBadge(service.service, 36.dp)
+                ProviderBadge(service.service, 40.dp)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
@@ -237,7 +254,7 @@ private fun GlassServiceRow(
                     }
                 }
                 Icon(
-                    Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                    if (reordering) Icons.Rounded.DragHandle else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                     contentDescription = null,
                     tint = colors.outline,
                     modifier = Modifier.size(20.dp)

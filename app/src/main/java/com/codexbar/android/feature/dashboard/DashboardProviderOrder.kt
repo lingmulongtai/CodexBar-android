@@ -20,4 +20,8 @@ internal object DashboardProviderOrder {
         }
         return merged + remaining
     }
+
+    /** Apply an edited subset without dropping filtered or temporarily disconnected services. */
+    fun reorder(saved: List<AiService>, displayed: List<AiService>, edited: List<AiService>): List<AiService> =
+        merge(saved, merge(displayed, edited))
 }
