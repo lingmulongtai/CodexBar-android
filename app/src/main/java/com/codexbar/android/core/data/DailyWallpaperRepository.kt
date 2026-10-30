@@ -75,7 +75,7 @@ class DailyWallpaperRepository @Inject constructor(
             }
             prefs.wallpaperPreferences.collectLatest { preferences ->
                 val changed = _state.value.preferences != preferences
-                _state.update { it.copy(preferences = preferences) }
+                _state.update { it.copy(preferences = preferences, status = if (changed) WallpaperStatus.Ready else it.status) }
                 if (changed) nextAttempt = 0L
                 refresh()
             }
@@ -96,7 +96,10 @@ class DailyWallpaperRepository @Inject constructor(
             if (!_state.value.preferences.enabled) return@withLock
             val today = LocalDate.now()
             val key = prefs.loadWallpaperAccessKey()
-            if (!force && saved?.day == today.toString() && saved?.editorial == (key != null) && _state.value.bitmap != null) return@withLock
+            if (!force && saved?.day == today.toString() && saved?.editorial == (key != null) && _state.value.bitmap != null) {
+                _state.update { it.copy(status = WallpaperStatus.Ready) }
+                return@withLock
+            }
             if (!force && System.currentTimeMillis() < nextAttempt) return@withLock
             nextAttempt = System.currentTimeMillis() + 30 * 60_000L
             _state.update { it.copy(status = WallpaperStatus.Updating) }
