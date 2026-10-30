@@ -433,7 +433,6 @@ private fun CardList(
             item(key = "summary", span = { GridItemSpan(maxLineSpan) }) {
                 DashboardHero(
                     summary = summary,
-                    services = allServices,
                     onProviderClick = onSummaryProviderClick,
                     modifier = sectionGap
                 )

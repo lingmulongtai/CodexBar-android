@@ -66,7 +66,6 @@ import kotlin.math.sin
 @Composable
 fun DashboardHero(
     summary: DashboardSummary,
-    services: List<ServiceQuotaPresentation>,
     onProviderClick: (AiService) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -91,7 +90,7 @@ fun DashboardHero(
     val onClick = { onProviderClick(tightest.service) }
     when (profile.style) {
         AppThemeStyle.MATERIAL_3 -> ExpressiveHero(tightest, onClick, modifier)
-        AppThemeStyle.LIQUID_GLASS -> GlassHero(tightest, ringsFor(services), onClick, modifier)
+        AppThemeStyle.LIQUID_GLASS -> GlassHero(tightest, onClick, modifier)
     }
 }
 
@@ -161,73 +160,32 @@ private fun ExpressiveHero(tightest: TightestQuota, onClick: () -> Unit, modifie
     }
 }
 
+/** A single, legible reading; each provider keeps its own readings in the list below. */
 @Composable
-private fun GlassHero(
-    tightest: TightestQuota,
-    rings: List<QuotaRing>,
-    onClick: () -> Unit,
-    modifier: Modifier
-) {
+private fun GlassHero(tightest: TightestQuota, onClick: () -> Unit, modifier: Modifier) {
     val profile = LocalCodexBarThemeProfile.current
     val colors = MaterialTheme.colorScheme
     val tone = severityTone(tightest.severity, profile, colors.onSurface)
-    GlassCard(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-    ) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                if (rings.isNotEmpty()) QuotaRings(rings, Modifier.size(128.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        stringResource(R.string.dashboard_summary_title),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = colors.onSurfaceVariant
-                    )
-                    Text(
-                        stringResource(R.string.dashboard_summary_window, tightest.service.displayName, tightest.metricLabel),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    BigReading(tightest, color = tone, size = 42.sp)
-                    tightest.resetLabel?.let {
-                        Text(it, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 2)
-                    }
+    GlassCard(onClick = onClick, modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp)) {
+        Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ProviderIcon(tightest.service, modifier = Modifier.size(32.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(stringResource(R.string.dashboard_summary_title), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+                    Text(stringResource(R.string.dashboard_summary_window, tightest.service.displayName, tightest.metricLabel),
+                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
-            if (rings.size > 1) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    rings.chunked(2).forEach { row ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            row.forEach { ring ->
-                                Row(
-                                    modifier = Modifier.weight(1f),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Box(Modifier.size(9.dp).background(ring.color, CircleShape))
-                                    Text(
-                                        ring.service.displayName,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        modifier = Modifier.weight(1f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        stringResource(R.string.dashboard_summary_pulse_value, ring.percent),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                            if (row.size == 1) Spacer(Modifier.weight(1f))
-                        }
-                    }
+            BigReading(tightest, color = tone, size = 60.sp)
+            QuotaMeter((tightest.remainingFraction ?: 0.0).toFloat(), tone, null)
+            tightest.resetLabel?.let { reset ->
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Rounded.Schedule, contentDescription = null, modifier = Modifier.size(16.dp), tint = colors.onSurfaceVariant)
+                    Text(reset, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
                 }
             }
+            tightest.paceLabel?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant) }
         }
     }
 }
@@ -256,7 +214,7 @@ private fun BigReading(tightest: TightestQuota, color: Color, size: TextUnit, mo
             fontFamily = profile.numeralFamily,
             fontSize = size,
             lineHeight = size,
-            fontWeight = FontWeight.ExtraBold,
+            fontWeight = if (profile.style == AppThemeStyle.LIQUID_GLASS) FontWeight.SemiBold else FontWeight.ExtraBold,
             letterSpacing = (-1.5).sp
         )
         run {
@@ -327,54 +285,3 @@ private fun WavyMeter(fraction: Float, color: Color, modifier: Modifier = Modifi
     }
 }
 
-internal data class QuotaRing(val service: AiService, val fraction: Float, val percent: Int, val color: Color)
-
-/** Each provider's tightest window, lowest first, as concentric rings for Liquid Glass. */
-@Composable
-private fun ringsFor(services: List<ServiceQuotaPresentation>): List<QuotaRing> {
-    val candidates = services
-        .filter { it.status == ServiceQuotaStatus.Fresh }
-        .mapNotNull { service ->
-            val metric = service.metrics
-                .filter { it.remainingFraction != null && it.remainingPercent != null }
-                .minByOrNull { it.remainingFraction ?: 1.0 }
-                ?: return@mapNotNull null
-            service to metric
-        }
-        .sortedBy { (_, metric) -> metric.remainingFraction }
-        .take(4)
-    return candidates.map { (service, metric) ->
-        QuotaRing(
-            service = service.service,
-            fraction = (metric.remainingFraction ?: 0.0).toFloat(),
-            percent = metric.remainingPercent ?: 0,
-            color = providerVisualStyle(service.service).accent
-        )
-    }
-}
-
-@Composable
-private fun QuotaRings(rings: List<QuotaRing>, modifier: Modifier = Modifier) {
-    Canvas(modifier) {
-        val stroke = size.minDimension * 0.085f
-        val step = stroke + size.minDimension * 0.024f
-        rings.forEachIndexed { index, ring ->
-            val radius = size.minDimension / 2 - stroke / 2 - index * step
-            if (radius <= stroke / 2) return@forEachIndexed
-            val topLeft = Offset(center.x - radius, center.y - radius)
-            val arcSize = Size(radius * 2, radius * 2)
-            drawArc(ring.color.copy(alpha = 0.16f), 0f, 360f, false, topLeft, arcSize, style = Stroke(stroke))
-            if (ring.fraction > 0f) {
-                drawArc(
-                    ring.color,
-                    -90f,
-                    360f * ring.fraction.coerceIn(0f, 1f),
-                    false,
-                    topLeft,
-                    arcSize,
-                    style = Stroke(stroke, cap = StrokeCap.Round)
-                )
-            }
-        }
-    }
-}
