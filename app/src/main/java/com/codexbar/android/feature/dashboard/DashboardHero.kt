@@ -167,7 +167,7 @@ private fun GlassHero(tightest: TightestQuota, onClick: () -> Unit, modifier: Mo
     val colors = MaterialTheme.colorScheme
     val tone = severityTone(tightest.severity, profile, colors.onSurface)
     GlassCard(onClick = onClick, modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp)) {
-        Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ProviderIcon(tightest.service, modifier = Modifier.size(32.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -177,7 +177,7 @@ private fun GlassHero(tightest: TightestQuota, onClick: () -> Unit, modifier: Mo
                         maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
-            BigReading(tightest, color = tone, size = 60.sp)
+            BigReading(tightest, color = tone, size = 54.sp)
             QuotaMeter((tightest.remainingFraction ?: 0.0).toFloat(), tone, null)
             tightest.resetLabel?.let { reset ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -185,7 +185,6 @@ private fun GlassHero(tightest: TightestQuota, onClick: () -> Unit, modifier: Mo
                     Text(reset, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
                 }
             }
-            tightest.paceLabel?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant) }
         }
     }
 }
@@ -284,4 +283,3 @@ private fun WavyMeter(fraction: Float, color: Color, modifier: Modifier = Modifi
         drawCircle(color, radius = stroke / 2, center = Offset(size.width - stroke / 2, middle))
     }
 }
-

@@ -607,4 +607,20 @@
     <string name="desktop_remote_interval_help">0 = manual, or 60–86400 seconds. Changing this value turns Adaptive off on Windows.</string>
     <string name="desktop_remote_period">Usage &amp; Spend reporting period on Windows</string>
     <string name="desktop_remote_close">Close</string>
+    <string name="wallpaper_title">Daily photo</string>
+    <string name="wallpaper_description">An Unsplash landscape behind the glass. Changes once a day; keeps the last photo offline.</string>
+    <string name="wallpaper_curated">Daily selection from six curated Unsplash photos. No API key needed.</string>
+    <string name="wallpaper_editorial">Daily photo from the Unsplash Editorial Feed.</string>
+    <string name="wallpaper_updating">Updating photo… The current background stays visible.</string>
+    <string name="wallpaper_offline">Could not update. Keeping the saved photo; retry after 30 minutes or refresh here.</string>
+    <string name="wallpaper_api_unavailable">Editorial is unavailable. Check the Access Key or try again later. The saved photo stays visible.</string>
+    <string name="wallpaper_selected_day">Photo selected: %1$s</string>
+    <string name="wallpaper_credit">Photo by %1$s on Unsplash</string>
+    <string name="wallpaper_refresh">Update today’s photo</string>
+    <string name="wallpaper_api_settings">Unsplash API settings (optional)</string>
+    <string name="wallpaper_key_help">Optional: use your own Unsplash Access Key for Editorial photos. Stored encrypted on this device. A Secret Key is never required. Without a key, curated photos work normally.</string>
+    <string name="wallpaper_access_key">Access Key</string>
+    <string name="wallpaper_key_invalid">Check the Access Key and try saving again.</string>
+    <string name="wallpaper_save_key">Save Access Key</string>
+    <string name="wallpaper_remove_key">Remove key and use curated photos</string>
 </resources>

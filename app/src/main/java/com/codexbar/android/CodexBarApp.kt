@@ -1,6 +1,18 @@
 package com.codexbar.android
 
 import androidx.annotation.StringRes
+import com.codexbar.android.ui.components.WallpaperAttribution
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.height
+import com.codexbar.android.ui.components.LiquidGlassWallpaper
+import com.codexbar.android.ui.components.DailyWallpaperViewModel
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Box
@@ -193,33 +205,45 @@ fun CodexBarApp(
         when {
             themeProfile.floatingNavigation -> {
                 val refresh = dashboardViewModel?.refreshState?.collectAsStateWithLifecycle()?.value
+                val wallpaperModel: DailyWallpaperViewModel = hiltViewModel()
+                val wallpaper by wallpaperModel.state.collectAsStateWithLifecycle()
+                val lifecycleOwner = LocalLifecycleOwner.current
+                LaunchedEffect(lifecycleOwner, wallpaperModel) {
+                    lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        while (isActive) {
+                            wallpaperModel.refresh()
+                            val midnight = java.time.LocalDate.now().plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant()
+                            delay(java.time.Duration.between(java.time.Instant.now(), midnight).toMillis().coerceIn(1_000L, 30 * 60_000L))
+                        }
+                    }
+                }
                 val backdrop = rememberGlassBackdrop()
                 val cardBackdrop = rememberGlassBackdrop()
-                Box(
-                    Modifier.fillMaxSize()
-                        .glassBackdropSource(cardBackdrop)
-                        .background(themeProfile.backgroundBrush)
-                )
-                val bottomInset = GlassBarHeight + GlassBarMargin * 2 +
+                Box(Modifier.fillMaxSize().glassBackdropSource(cardBackdrop)) {
+                    LiquidGlassWallpaper(wallpaper)
+                }
+                val attributionHeight = if (wallpaper.preferences.enabled && wallpaper.bitmap != null) with(LocalDensity.current) { 18.sp.toDp() } + 12.dp else 0.dp
+                val bottomInset = attributionHeight + GlassBarHeight + GlassBarMargin * 2 +
                     WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                 CompositionLocalProvider(
                     LocalBottomChromeInset provides bottomInset,
                     LocalGlassCardBackdrop provides cardBackdrop
                 ) {
-                    navHost(
-                        Modifier
-                            .fillMaxSize()
-                            .glassBackdropSource(backdrop)
-                            .background(themeProfile.backgroundBrush)
-                    )
+                    Box(Modifier.fillMaxSize().glassBackdropSource(backdrop)) {
+                        LiquidGlassWallpaper(wallpaper)
+                        navHost(Modifier.fillMaxSize())
+                    }
                 }
+                Column(Modifier.align(Alignment.BottomCenter)) {
+                    WallpaperAttribution(wallpaper, Modifier.height(attributionHeight))
                 GlassNavigationBar(
                     entries = entries,
                     backdrop = backdrop,
                     refresh = refresh,
                     onRefresh = dashboardViewModel?.let { model -> { model.refresh() } },
-                    modifier = Modifier.align(Alignment.BottomCenter)
+                    modifier = Modifier
                 )
+                }
             }
             useExpandedNavigation(maxWidth.value) -> Row(modifier = Modifier.fillMaxSize()) {
                 AppNavigationRail(entries)

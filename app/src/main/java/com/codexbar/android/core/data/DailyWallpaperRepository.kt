@@ -113,6 +113,9 @@ class DailyWallpaperRepository @Inject constructor(
                     fetch(apiRequest(download, key), 64 * 1024)
                 }
                 currentCoroutineContext().ensureActive()
+                // A manual refresh is independent of the preference collector. Tracking suspends,
+                // so re-check settings after it too before publishing that request's result.
+                if (prefs.loadWallpaperAccessKey() != key || !prefs.wallpaperPreferences.first().enabled) return@withLock
                 val filename = "image-${photo.id.replace(Regex("[^a-zA-Z0-9_-]"), "")}.jpg"
                 AtomicFile(File(directory, filename)).writeSafely(bytes)
                 val selected = SavedWallpaper(today.toString(), photo, filename, key != null)

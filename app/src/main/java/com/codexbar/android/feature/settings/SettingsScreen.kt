@@ -290,6 +290,8 @@ fun SettingsScreen(
                     onStyleSelected = viewModel::setAppThemeStyle
                 )
 
+                if (uiState.appThemeStyle == AppThemeStyle.LIQUID_GLASS) WallpaperSettingsSection()
+
                 LanguageSection(
                     selectedLanguage = selectedLanguage,
                     onLanguageSelected = { language ->

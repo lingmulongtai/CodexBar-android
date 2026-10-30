@@ -605,4 +605,20 @@
     <string name="desktop_remote_interval_help">0＝手動、または60〜86400秒。値を変更するとWindowsの自動調整はオフになります。</string>
     <string name="desktop_remote_period">Windowsの使用費用画面の集計期間</string>
     <string name="desktop_remote_close">閉じる</string>
+    <string name="wallpaper_title">日替わりの背景写真</string>
+    <string name="wallpaper_description">Unsplash の風景をガラスの背景に。1日1回切り替わり、オフラインでも前の写真を表示します。</string>
+    <string name="wallpaper_curated">厳選した6枚の Unsplash 写真から日替わりで表示。APIキーは不要です。</string>
+    <string name="wallpaper_editorial">Unsplash の Editorial Feed から日替わりで表示しています。</string>
+    <string name="wallpaper_updating">背景を更新中… 今の写真はそのまま表示します。</string>
+    <string name="wallpaper_offline">更新できませんでした。保存済みの写真を表示し、30分後または手動更新で再試行します。</string>
+    <string name="wallpaper_api_unavailable">Editorial を取得できません。Access Key を確認するか、時間をおいて再試行してください。保存済みの写真は表示を続けます。</string>
+    <string name="wallpaper_selected_day">写真の更新日：%1$s</string>
+    <string name="wallpaper_credit">写真：%1$s / Unsplash</string>
+    <string name="wallpaper_refresh">今日の背景を更新</string>
+    <string name="wallpaper_api_settings">Unsplash API設定（任意）</string>
+    <string name="wallpaper_key_help">自分の Unsplash Access Key がある場合は Editorial を利用できます。キーはこの端末に暗号化して保存します。Secret Key は不要です。未設定でも日替わり写真を利用できます。</string>
+    <string name="wallpaper_access_key">Access Key</string>
+    <string name="wallpaper_key_invalid">Access Key を確認して、もう一度保存してください。</string>
+    <string name="wallpaper_save_key">Access Key を保存</string>
+    <string name="wallpaper_remove_key">キーを削除し、厳選写真に戻す</string>
 </resources>
