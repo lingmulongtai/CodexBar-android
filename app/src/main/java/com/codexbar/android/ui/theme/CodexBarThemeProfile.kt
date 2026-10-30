@@ -90,7 +90,7 @@ internal fun themeProfile(
             cardBorderColor = Color.Transparent,
             heroContainerColor = colors.surfaceContainerLow,
             onHeroContainerColor = colors.onSurface,
-            numeralFamily = FigtreeFamily,
+            numeralFamily = InterFamily,
             goodColor = null,
             warningColor = if (darkTheme) Color(0xFFFFB340) else Color(0xFFB45309),
             criticalColor = colors.error,

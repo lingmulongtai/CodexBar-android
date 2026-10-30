@@ -116,7 +116,7 @@ val CodexBarTypography = Typography(
 )
 
 internal fun typographyFor(style: AppThemeStyle): Typography = when (style) {
-    AppThemeStyle.LIQUID_GLASS -> CodexBarTypography.withFamily(FigtreeFamily)
+    AppThemeStyle.LIQUID_GLASS -> LiquidGlassTypography
     AppThemeStyle.MATERIAL_3 -> CodexBarTypography
 }
 
@@ -137,3 +137,24 @@ private fun Typography.withFamily(family: FontFamily) = Typography(
     labelMedium = labelMedium.copy(fontFamily = family),
     labelSmall = labelSmall.copy(fontFamily = family)
 )
+
+// A neutral screen face with generous leading, rather than Apple's platform-restricted font.
+private val LiquidGlassTypography = CodexBarTypography.withFamily(InterFamily).let { base ->
+    Typography(
+        displayLarge = base.displayLarge.copy(fontWeight = FontWeight.Bold, lineHeight = 64.sp),
+        displayMedium = base.displayMedium.copy(fontWeight = FontWeight.Bold, lineHeight = 54.sp),
+        displaySmall = base.displaySmall.copy(fontWeight = FontWeight.Bold, lineHeight = 44.sp),
+        headlineLarge = base.headlineLarge.copy(lineHeight = 40.sp),
+        headlineMedium = base.headlineMedium.copy(lineHeight = 36.sp),
+        headlineSmall = base.headlineSmall.copy(lineHeight = 32.sp),
+        titleLarge = base.titleLarge.copy(fontWeight = FontWeight.SemiBold, lineHeight = 30.sp),
+        titleMedium = base.titleMedium.copy(fontSize = 17.sp, lineHeight = 26.sp, letterSpacing = 0.sp),
+        titleSmall = base.titleSmall.copy(fontSize = 15.sp, lineHeight = 23.sp, letterSpacing = 0.sp),
+        bodyLarge = base.bodyLarge.copy(fontSize = 17.sp, lineHeight = 27.sp, letterSpacing = 0.sp),
+        bodyMedium = base.bodyMedium.copy(fontSize = 15.sp, lineHeight = 24.sp, letterSpacing = 0.sp),
+        bodySmall = base.bodySmall.copy(fontSize = 13.sp, lineHeight = 21.sp, letterSpacing = 0.sp),
+        labelLarge = base.labelLarge.copy(fontWeight = FontWeight.SemiBold, lineHeight = 22.sp, letterSpacing = 0.sp),
+        labelMedium = base.labelMedium.copy(lineHeight = 20.sp, letterSpacing = 0.sp),
+        labelSmall = base.labelSmall.copy(lineHeight = 18.sp, letterSpacing = 0.sp)
+    )
+}
