@@ -48,8 +48,6 @@
     <string name="theme_style_material_3_description">ダイナミックカラー、大きな数字、表情のある形を備えたAndroid純正のデザインです。</string>
     <string name="theme_style_liquid_glass">Liquid Glass</string>
     <string name="theme_style_liquid_glass_description">見やすいコンテンツの上に、下の内容をぼかすガラスのナビゲーションが浮かびます。</string>
-    <string name="theme_style_instrument">Instrument</string>
-    <string name="theme_style_instrument_description">等幅の数字と状態色のゲージで読む、ダークな開発者コンソール風デザインです。</string>
     <string name="navigation_dashboard">使用状況</string>
     <string name="action_back">戻る</string>
     <string name="language_title">アプリの言語</string>

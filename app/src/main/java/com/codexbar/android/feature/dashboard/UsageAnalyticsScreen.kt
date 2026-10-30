@@ -150,17 +150,7 @@ private fun TrendsTabs(page: UsageAnalyticsPage, onPageChange: (UsageAnalyticsPa
                 }
             }
         }
-        AppThemeStyle.INSTRUMENT -> Row(modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-            pages.forEach { (entry, label) ->
-                val selected = page == entry
-                Column(Modifier.selectable(selected = selected, onClick = { onPageChange(entry) }, role = Role.Tab).padding(vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(stringResource(label), fontFamily = PlexMonoFamily, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (selected) colors.onSurface else colors.onSurfaceVariant)
-                    Box(Modifier.width(24.dp).height(2.dp).background(if (selected) colors.primary else Color.Transparent))
-                }
-            }
-        }
+
     }
 }
 

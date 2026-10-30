@@ -92,7 +92,6 @@ fun DashboardHero(
     when (profile.style) {
         AppThemeStyle.MATERIAL_3 -> ExpressiveHero(tightest, onClick, modifier)
         AppThemeStyle.LIQUID_GLASS -> GlassHero(tightest, ringsFor(services), onClick, modifier)
-        AppThemeStyle.INSTRUMENT -> InstrumentHero(tightest, onClick, modifier)
     }
 }
 
@@ -233,76 +232,6 @@ private fun GlassHero(
     }
 }
 
-@Composable
-private fun InstrumentHero(tightest: TightestQuota, onClick: () -> Unit, modifier: Modifier) {
-    val profile = LocalCodexBarThemeProfile.current
-    val colors = MaterialTheme.colorScheme
-    val tone = severityTone(tightest.severity, profile, colors.onSurface)
-    Surface(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = profile.cardColor,
-        contentColor = colors.onSurface,
-        border = BorderStroke(1.dp, profile.cardBorderColor)
-    ) {
-        Column(
-            modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 16.dp, bottom = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    stringResource(R.string.dashboard_hero_next_out),
-                    fontFamily = PlexMonoFamily,
-                    fontSize = 11.sp,
-                    letterSpacing = 1.2.sp,
-                    color = colors.onSurfaceVariant
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    stringResource(R.string.dashboard_summary_title),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                ProviderChip(tightest = tightest, container = colors.surfaceContainerHigh, mono = true)
-            }
-            Row(verticalAlignment = Alignment.Bottom) {
-                BigReading(tightest, color = tone, size = 72.sp, modifier = Modifier.weight(1f))
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        compactCountdown(tightest.resetsAt) ?: "—",
-                        fontFamily = PlexMonoFamily,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        stringResource(R.string.dashboard_hero_until_reset),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = colors.onSurfaceVariant
-                    )
-                }
-            }
-            SegmentedGauge(
-                fraction = (tightest.remainingFraction ?: 0.0).toFloat(),
-                color = tone,
-                marker = tightest.guideNowRemaining
-            )
-            tightest.paceLabel?.let {
-                Text(
-                    it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (tightest.severity == QuotaSeverity.Good) colors.onSurfaceVariant else tone,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
-}
-
 /** "29%" in the design's numeral face, with "left" beside it; falls back to the full label. */
 @Composable
 private fun BigReading(tightest: TightestQuota, color: Color, size: TextUnit, modifier: Modifier = Modifier) {
@@ -327,10 +256,10 @@ private fun BigReading(tightest: TightestQuota, color: Color, size: TextUnit, mo
             fontFamily = profile.numeralFamily,
             fontSize = size,
             lineHeight = size,
-            fontWeight = if (profile.style == AppThemeStyle.INSTRUMENT) FontWeight.Medium else FontWeight.ExtraBold,
-            letterSpacing = if (profile.style == AppThemeStyle.INSTRUMENT) (-2).sp else (-1.5).sp
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = (-1.5).sp
         )
-        if (profile.style != AppThemeStyle.INSTRUMENT) {
+        run {
             Text(
                 stringResource(R.string.dashboard_hero_left),
                 style = MaterialTheme.typography.titleMedium,
@@ -395,39 +324,6 @@ private fun WavyMeter(fraction: Float, color: Color, modifier: Modifier = Modifi
             drawLine(color.copy(alpha = 0.22f), Offset(trackStart, middle), Offset(trackEnd, middle), stroke, StrokeCap.Round)
         }
         drawCircle(color, radius = stroke / 2, center = Offset(size.width - stroke / 2, middle))
-    }
-}
-
-/** Instrument's fuel gauge: discrete segments for what remains and a tick for the pace guide. */
-@Composable
-private fun SegmentedGauge(fraction: Float, color: Color, marker: Float?, modifier: Modifier = Modifier) {
-    val remaining = fraction.coerceIn(0f, 1f)
-    val track = MaterialTheme.colorScheme.surfaceContainerHighest
-    val markerColor = MaterialTheme.colorScheme.onSurface
-    Canvas(
-        modifier
-            .fillMaxWidth()
-            .height(26.dp)
-            .semantics { progressBarRangeInfo = ProgressBarRangeInfo(remaining, 0f..1f) }
-    ) {
-        val segments = 36
-        val gap = 3.dp.toPx()
-        val barTop = 4.dp.toPx()
-        val barHeight = size.height - barTop * 2
-        val width = (size.width - gap * (segments - 1)) / segments
-        val filled = (segments * remaining).roundToInt()
-        for (index in 0 until segments) {
-            drawRoundRect(
-                color = if (index < filled) color else track,
-                topLeft = Offset(index * (width + gap), barTop),
-                size = Size(width, barHeight),
-                cornerRadius = CornerRadius(2.dp.toPx())
-            )
-        }
-        marker?.takeIf { it in 0.01f..0.99f }?.let { guide ->
-            val x = size.width * guide
-            drawLine(markerColor, Offset(x, 0f), Offset(x, size.height), 2.dp.toPx(), StrokeCap.Round)
-        }
     }
 }
 

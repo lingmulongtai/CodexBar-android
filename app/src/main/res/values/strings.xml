@@ -48,8 +48,6 @@
     <string name="theme_style_material_3_description">Native Android with dynamic color, bold readings and expressive shapes.</string>
     <string name="theme_style_liquid_glass">Liquid Glass</string>
     <string name="theme_style_liquid_glass_description">Clear content under floating glass navigation that blurs what it covers.</string>
-    <string name="theme_style_instrument">Instrument</string>
-    <string name="theme_style_instrument_description">A dark developer console with monospaced readings and state-colored gauges.</string>
     <string name="navigation_dashboard">Usage</string>
     <string name="action_back">Back</string>
     <string name="language_title">App language</string>

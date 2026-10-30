@@ -224,11 +224,7 @@ fun CodexBarApp(
             useExpandedNavigation(maxWidth.value) -> Row(modifier = Modifier.fillMaxSize()) {
                 AppNavigationRail(entries)
                 VerticalDivider(
-                    color = if (themeProfile.style == AppThemeStyle.INSTRUMENT) {
-                        MaterialTheme.colorScheme.outlineVariant
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerHigh
-                    }
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh
                 )
                 navHost(Modifier.weight(1f).fillMaxHeight())
             }

@@ -96,10 +96,6 @@ internal val GlassBarMargin = 12.dp
 @Composable
 internal fun AppBottomBar(entries: List<NavigationEntry>, modifier: Modifier = Modifier) {
     val profile = LocalCodexBarThemeProfile.current
-    if (profile.style == AppThemeStyle.INSTRUMENT) {
-        InstrumentBottomBar(entries, modifier)
-        return
-    }
     NavigationBar(modifier = modifier, containerColor = profile.navigationContainerColor) {
         entries.forEach { entry ->
             NavigationBarItem(
@@ -117,56 +113,6 @@ internal fun AppBottomBar(entries: List<NavigationEntry>, modifier: Modifier = M
                     indicatorColor = MaterialTheme.colorScheme.secondaryContainer
                 )
             )
-        }
-    }
-}
-
-@Composable
-private fun InstrumentBottomBar(entries: List<NavigationEntry>, modifier: Modifier) {
-    val colors = MaterialTheme.colorScheme
-    Surface(modifier = modifier.fillMaxWidth(), color = LocalCodexBarThemeProfile.current.navigationContainerColor) {
-        Column {
-            HorizontalDivider(color = colors.outlineVariant)
-            Row(
-                modifier = Modifier
-                    .navigationBarsPadding()
-                    .height(64.dp)
-                    .selectableGroup()
-            ) {
-                entries.forEach { entry ->
-                    val tint = if (entry.selected) colors.primary else colors.onSurfaceVariant
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .selectable(selected = entry.selected, onClick = entry.onClick, role = Role.Tab),
-                        contentAlignment = Alignment.TopCenter
-                    ) {
-                        if (entry.selected) {
-                            Box(
-                                Modifier
-                                    .width(22.dp)
-                                    .height(2.dp)
-                                    .background(colors.primary, RoundedCornerShape(1.dp))
-                            )
-                        }
-                        Column(
-                            modifier = Modifier.padding(top = 12.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(entry.icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
-                            Text(
-                                entry.label,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = if (entry.selected) FontWeight.SemiBold else FontWeight.Medium,
-                                color = tint,
-                                maxLines = 1
-                            )
-                        }
-                    }
-                }
-            }
         }
     }
 }
@@ -191,16 +137,8 @@ internal fun AppNavigationRail(entries: List<NavigationEntry>, modifier: Modifie
                     icon = { Icon(entry.icon, contentDescription = null) },
                     label = { Text(entry.label, maxLines = 1) },
                     colors = NavigationRailItemDefaults.colors(
-                        indicatorColor = if (profile.style == AppThemeStyle.INSTRUMENT) {
-                            colors.primaryContainer
-                        } else {
-                            colors.secondaryContainer
-                        },
-                        selectedIconColor = if (profile.style == AppThemeStyle.INSTRUMENT) {
-                            colors.primary
-                        } else {
-                            colors.onSecondaryContainer
-                        }
+                        indicatorColor = colors.secondaryContainer,
+                        selectedIconColor = colors.onSecondaryContainer
                     )
                 )
             }

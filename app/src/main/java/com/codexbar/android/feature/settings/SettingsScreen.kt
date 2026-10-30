@@ -674,14 +674,12 @@ private fun ThemeStyleOption(
 private fun AppThemeStyle.titleResource(): Int = when (this) {
     AppThemeStyle.MATERIAL_3 -> R.string.theme_style_material_3
     AppThemeStyle.LIQUID_GLASS -> R.string.theme_style_liquid_glass
-    AppThemeStyle.INSTRUMENT -> R.string.theme_style_instrument
 }
 
 @StringRes
 private fun AppThemeStyle.descriptionResource(): Int = when (this) {
     AppThemeStyle.MATERIAL_3 -> R.string.theme_style_material_3_description
     AppThemeStyle.LIQUID_GLASS -> R.string.theme_style_liquid_glass_description
-    AppThemeStyle.INSTRUMENT -> R.string.theme_style_instrument_description
 }
 
 @Composable

@@ -15,7 +15,6 @@ object AppIconSwitcher {
     internal fun aliasFor(style: AppThemeStyle): String = when (style) {
         AppThemeStyle.MATERIAL_3 -> "LauncherExpressive"
         AppThemeStyle.LIQUID_GLASS -> "LauncherLiquidGlass"
-        AppThemeStyle.INSTRUMENT -> "LauncherInstrument"
     }
 
     fun apply(context: Context, style: AppThemeStyle) {
@@ -29,9 +28,9 @@ object AppIconSwitcher {
                 PackageManager.DONT_KILL_APP
             )
         }
-        AppThemeStyle.entries.filter { it != style }.forEach { other ->
-            val alias = component(context, aliasFor(other))
-            if (isEnabled(packageManager, alias, defaultEnabled = other == AppThemeStyle.MATERIAL_3)) {
+        (AppThemeStyle.entries.map(::aliasFor) + "LauncherInstrument").filter { it != aliasFor(style) }.forEach { name ->
+            val alias = component(context, name)
+            if (isEnabled(packageManager, alias, defaultEnabled = name == "LauncherExpressive")) {
                 packageManager.setComponentEnabledSetting(
                     alias,
                     PackageManager.COMPONENT_ENABLED_STATE_DISABLED,

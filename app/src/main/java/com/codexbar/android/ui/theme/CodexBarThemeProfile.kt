@@ -96,28 +96,9 @@ internal fun themeProfile(
             criticalColor = colors.error,
             floatingNavigation = true
         )
-        AppThemeStyle.INSTRUMENT -> CodexBarThemeProfile(
-            style = style,
-            isDark = true,
-            backgroundBrush = SolidColor(colors.background),
-            navigationContainerColor = colors.background,
-            topBarContainerColor = colors.background,
-            cardColor = colors.surfaceContainerLow,
-            cardBorderColor = colors.outlineVariant,
-            heroContainerColor = colors.surfaceContainerLow,
-            onHeroContainerColor = colors.onSurface,
-            numeralFamily = PlexMonoFamily,
-            goodColor = InstrumentMint,
-            warningColor = InstrumentAmber,
-            criticalColor = InstrumentCoral,
-            floatingNavigation = false
-        )
+
     }
 }
-
-internal val InstrumentMint = Color(0xFF5EE3A1)
-internal val InstrumentAmber = Color(0xFFFFB547)
-internal val InstrumentCoral = Color(0xFFFF6B5A)
 
 internal fun shapesFor(style: AppThemeStyle): Shapes = when (style) {
     AppThemeStyle.MATERIAL_3 -> CodexBarShapes
@@ -127,12 +108,5 @@ internal fun shapesFor(style: AppThemeStyle): Shapes = when (style) {
         medium = RoundedCornerShape(22.dp),
         large = RoundedCornerShape(26.dp),
         extraLarge = RoundedCornerShape(34.dp)
-    )
-    AppThemeStyle.INSTRUMENT -> Shapes(
-        extraSmall = RoundedCornerShape(6.dp),
-        small = RoundedCornerShape(10.dp),
-        medium = RoundedCornerShape(14.dp),
-        large = RoundedCornerShape(20.dp),
-        extraLarge = RoundedCornerShape(24.dp)
     )
 }

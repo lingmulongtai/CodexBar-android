@@ -24,8 +24,7 @@ import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 import com.codexbar.android.ui.theme.PlexMonoFamily
 
 /**
- * A screen title in the design's voice: Expressive's top app bar, Liquid Glass's large title and
- * Instrument's monospaced heading.
+ * A screen title in the design's voice: Expressive's top app bar, Liquid Glass's large title.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,26 +76,6 @@ fun ThemedTopBar(
             )
             actions()
         }
-        AppThemeStyle.INSTRUMENT -> Row(
-            modifier = modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .heightIn(min = 60.dp)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            navigationIcon()
-            Text(
-                title,
-                fontFamily = PlexMonoFamily,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 18.sp,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            actions()
-        }
+
     }
 }

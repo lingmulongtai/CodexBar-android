@@ -309,12 +309,7 @@ private fun DashboardContent(
                                     refresh = refresh,
                                     updatedAt = updatedAt,
                                     onServiceClick = {
-                                        if (themeProfile.style == AppThemeStyle.INSTRUMENT) {
-                                            // Instrument opens readings in place; Details opens the sheet.
-                                            expandedServiceName = it.service.name.takeIf { name -> name != expandedServiceName }
-                                        } else {
-                                            selectedServiceName = it.service.name
-                                        }
+                                        selectedServiceName = it.service.name
                                     },
                                     onOpenDetails = { selectedServiceName = it.service.name },
                                     onManageConnection = onNavigateToConnections,
@@ -393,11 +388,9 @@ private fun CardList(
     val order = services.map { it.service }
     val drag = rememberProviderDragReorder(grid, order, onReorder)
     BoxWithConstraints(modifier.fillMaxSize()) {
-        // Instrument's table rows need room for two reading cells beside the name.
         val cardMinWidth = when (themeProfile.style) {
             AppThemeStyle.MATERIAL_3 -> 300.dp
             AppThemeStyle.LIQUID_GLASS -> 340.dp
-            AppThemeStyle.INSTRUMENT -> 420.dp
         }
         val columns = ((maxWidth - 32.dp) / cardMinWidth).toInt().coerceIn(1, 3)
         // A single column groups the providers into one list; wider grids use separate cards.

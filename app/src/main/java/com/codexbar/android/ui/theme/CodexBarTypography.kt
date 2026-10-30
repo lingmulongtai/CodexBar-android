@@ -117,8 +117,7 @@ val CodexBarTypography = Typography(
 
 internal fun typographyFor(style: AppThemeStyle): Typography = when (style) {
     AppThemeStyle.LIQUID_GLASS -> CodexBarTypography.withFamily(FigtreeFamily)
-    AppThemeStyle.MATERIAL_3,
-    AppThemeStyle.INSTRUMENT -> CodexBarTypography
+    AppThemeStyle.MATERIAL_3 -> CodexBarTypography
 }
 
 private fun Typography.withFamily(family: FontFamily) = Typography(

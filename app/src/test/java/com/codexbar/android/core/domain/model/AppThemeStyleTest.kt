@@ -19,7 +19,9 @@ class AppThemeStyleTest {
 
     @Test
     fun `retired designs move to the closest remaining design`() {
+        assertEquals(2, AppThemeStyle.entries.size)
+        assertEquals(AppThemeStyle.MATERIAL_3, AppThemeStyle.fromStoredValue("INSTRUMENT"))
         assertEquals(AppThemeStyle.MATERIAL_3, AppThemeStyle.fromStoredValue("WINUI_3"))
-        assertEquals(AppThemeStyle.INSTRUMENT, AppThemeStyle.fromStoredValue("AURORA"))
+        assertEquals(AppThemeStyle.MATERIAL_3, AppThemeStyle.fromStoredValue("AURORA"))
     }
 }

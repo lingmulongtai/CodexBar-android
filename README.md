@@ -18,14 +18,13 @@ v0.11.1 refreshes **Liquid Glass** with Glisse-inspired native refraction, specu
 
 ![Tablet PC spend dashboard with synthetic data](docs/images/mobile-dashboard/tablet-spend.png)
 
-## Three designs
+## Two designs
 
-Choose **Material 3 Expressive**, **Liquid Glass** or **Instrument** in **Settings → Visual design**. Each design brings its own header, hero reading, provider list, navigation and launcher icon; the home screen icon follows the design after you leave the app. Ordinary refreshing keeps readings visible, each provider shows its own progress and the header reports "Updating 2/4". Changing accounts or acquisition sources clears the previous readings immediately. History and Spend now share a **Trends** tab, and tablets get a rail or a centered glass bar with a two-pane dashboard. [Design and verification notes](docs/design-refresh.md)
+Choose **Material 3 Expressive** or **Liquid Glass** in **Settings → Visual design**. Each design brings its own header, hero reading, provider list, navigation and launcher icon; the home screen icon follows the design after you leave the app. Ordinary refreshing keeps readings visible, each provider shows its own progress and the header reports "Updating 2/4". Changing accounts or acquisition sources clears the previous readings immediately. History and Spend now share a **Trends** tab, and tablets get a rail or a centered glass bar with a two-pane dashboard. [Design and verification notes](docs/design-refresh.md)
 
 <p align="center">
   <img src="docs/images/releases/v0.11.0/expressive-phone.png" width="250" alt="Material 3 Expressive dashboard" />
   <img src="docs/images/releases/v0.11.1/liquid-glass-phone.png" width="250" alt="Liquid Glass dashboard with floating glass navigation" />
-  <img src="docs/images/releases/v0.11.0/instrument-phone.png" width="250" alt="Instrument dashboard" />
 </p>
 
 <p align="center">
@@ -59,7 +58,7 @@ v0.10.0 adds drag ordering, PC-backed History / Spend, tablet layouts, reset not
 </p>
 
 - Unified quota monitoring for 21 providers: Claude, Codex, GitHub Copilot, Gemini CLI, Gemini Apps (Windows), Cursor, z.ai, ZenMux, Kimi Code, ElevenLabs, OpenRouter, Synthetic, Chutes, DeepSeek, Venice, Moonshot API, Cline, IBM Bob, Fireworks AI, Devin, and Antigravity
-- Three complete selectable designs — Material 3 Expressive, Liquid Glass (light/dark) and the always-dark Instrument — each with its own navigation and launcher icon
+- Two complete selectable designs — Material 3 Expressive and Liquid Glass (light/dark) — each with its own navigation and launcher icon
 - A compact Usage overview with official provider icons, a saved custom provider order, two quota windows per provider, symmetric cards, and details on tap
 - Provider cards with animated rings, bars, exact values, reset countdowns, pace forecasts, and retained history charts
 - Codex reset-credit inventory, provider-reported model quota windows, and exact expiry details

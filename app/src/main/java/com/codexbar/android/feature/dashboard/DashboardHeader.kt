@@ -74,51 +74,25 @@ internal fun DashboardHeader(
     showMark: Boolean = true
 ) {
     val profile = LocalCodexBarThemeProfile.current
-    if (profile.style == AppThemeStyle.INSTRUMENT) {
-        Column(modifier.fillMaxWidth().statusBarsPadding()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                if (showMark) BrandGlyph(profile.style, Modifier.size(32.dp))
-                Text(
-                    title,
-                    fontFamily = PlexMonoFamily,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                RefreshStatusButton(refresh, updatedAt, onRefresh)
-            }
-            RefreshLine(refresh, Modifier.padding(horizontal = 16.dp))
-        }
-    } else {
-        Row(
-            modifier = modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .heightIn(min = 64.dp)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            if (showMark) BrandGlyph(profile.style, Modifier.size(40.dp))
-            Text(
-                title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            RefreshStatusButton(refresh, updatedAt, onRefresh)
-        }
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .heightIn(min = 64.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        if (showMark) BrandGlyph(profile.style, Modifier.size(40.dp))
+        Text(
+            title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        RefreshStatusButton(refresh, updatedAt, onRefresh)
     }
 }
 
@@ -133,37 +107,14 @@ internal fun RefreshStatusButton(
     val colors = MaterialTheme.colorScheme
     val status = refreshStatusText(refresh, updatedAt)
     val refreshLabel = stringResource(R.string.action_refresh)
-    val instrument = profile.style == AppThemeStyle.INSTRUMENT
-    Surface(
-        onClick = onRefresh,
-        modifier = modifier
-            .height(40.dp)
-            .semantics { contentDescription = "$refreshLabel, $status" },
-        shape = if (instrument) RoundedCornerShape(10.dp) else CircleShape,
-        color = if (instrument) colors.surfaceContainerLow else colors.surfaceContainerHigh,
-        border = if (instrument) BorderStroke(1.dp, colors.outlineVariant) else null
-    ) {
-        Row(
-            modifier = Modifier.padding(start = if (instrument) 12.dp else 10.dp, end = if (instrument) 12.dp else 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(if (instrument) 8.dp else 6.dp)
-        ) {
-            when {
-                refresh.active -> SmallSpinner(if (instrument) 14.dp else 16.dp)
-                instrument -> Box(Modifier.size(7.dp).background(colors.primary, CircleShape))
-                else -> Icon(Icons.Rounded.Refresh, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
-            }
-            Text(
-                status,
-                style = MaterialTheme.typography.labelLarge,
-                fontFamily = if (instrument) PlexMonoFamily else MaterialTheme.typography.labelLarge.fontFamily,
-                fontWeight = if (instrument) FontWeight.Medium else FontWeight.SemiBold,
-                fontSize = if (instrument) 12.sp else MaterialTheme.typography.labelLarge.fontSize,
-                maxLines = 1
-            )
-            if (instrument && !refresh.active) {
-                Icon(Icons.Rounded.Refresh, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(15.dp))
-            }
+    Surface(onClick = onRefresh, modifier = modifier.height(40.dp)
+        .semantics { contentDescription = "$refreshLabel, $status" },
+        shape = CircleShape, color = colors.surfaceContainerHigh) {
+        Row(Modifier.padding(start = 10.dp, end = 14.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (refresh.active) SmallSpinner(16.dp)
+            else Icon(Icons.Rounded.Refresh, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
+            Text(status, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
         }
     }
 }
@@ -176,29 +127,6 @@ internal fun SmallSpinner(size: Dp, color: Color = MaterialTheme.colorScheme.pri
         trackColor = color.copy(alpha = 0.2f),
         strokeWidth = (size.value / 7f).coerceAtLeast(1.5f).dp
     )
-}
-
-/** Instrument's 2 dp progress line; the space is always reserved so nothing moves. */
-@Composable
-private fun RefreshLine(refresh: DashboardRefreshState, modifier: Modifier = Modifier) {
-    val colors = MaterialTheme.colorScheme
-    val target = when {
-        !refresh.active -> 0f
-        refresh.total > 0 -> (refresh.completed.toFloat() / refresh.total).coerceAtLeast(0.04f)
-        else -> 0.04f
-    }
-    val progress by animateFloatAsState(target, label = "refresh_line")
-    Box(
-        modifier
-            .fillMaxWidth()
-            .height(2.dp)
-            .clip(RoundedCornerShape(1.dp))
-            .background(if (refresh.active) colors.outlineVariant else Color.Transparent)
-    ) {
-        if (refresh.active) {
-            Box(Modifier.fillMaxHeight().fillMaxWidth(progress).background(colors.primary))
-        }
-    }
 }
 
 /** Liquid Glass's large title, which scrolls away under the collapsed glass bar. */
