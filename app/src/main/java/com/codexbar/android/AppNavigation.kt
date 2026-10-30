@@ -1,6 +1,12 @@
 package com.codexbar.android
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,12 +40,15 @@ import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -199,7 +208,7 @@ internal fun GlassNavigationBar(
 ) {
     val profile = LocalCodexBarThemeProfile.current
     val colors = MaterialTheme.colorScheme
-    val glassTint = if (profile.isDark) Color(0xFF1C1C1E).copy(alpha = 0.58f) else Color.White.copy(alpha = 0.58f)
+    val glassTint = if (profile.isDark) Color(0xFF202430).copy(alpha = 0.62f) else Color.White.copy(alpha = 0.60f)
     val glassFallback = if (profile.isDark) Color(0xFF1C1C1E).copy(alpha = 0.97f) else Color.White.copy(alpha = 0.97f)
     val rim = if (profile.isDark) Color.White.copy(alpha = 0.24f) else Color.White.copy(alpha = 0.95f)
     Row(
@@ -229,17 +238,46 @@ internal fun GlassNavigationBar(
             ) {
                 entries.forEach { entry ->
                     val tint = if (entry.selected) colors.primary else colors.onSurface
+                    val interaction = remember { MutableInteractionSource() }
+                    val pressed by interaction.collectIsPressedAsState()
+                    val focused by interaction.collectIsFocusedAsState()
+                    val lift by animateFloatAsState(
+                        if (pressed) 1f else 0f,
+                        animationSpec = spring(dampingRatio = 0.65f, stiffness = 500f),
+                        label = "glass_tab_lift"
+                    )
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .clip(CircleShape)
-                            .background(
-                                if (entry.selected) colors.onSurface.copy(alpha = 0.08f) else Color.Transparent
-                            )
-                            .selectable(selected = entry.selected, onClick = entry.onClick, role = Role.Tab),
+                            .graphicsLayer {
+                                scaleX = 1f + lift * 0.06f
+                                scaleY = 1f + lift * 0.10f
+                                translationY = -2.dp.toPx() * lift
+                            }
+                            .then(if (focused) Modifier.border(2.dp, colors.primary, CircleShape) else Modifier)
+                            .selectable(
+                                selected = entry.selected,
+                                onClick = entry.onClick,
+                                role = Role.Tab,
+                                interactionSource = interaction,
+                                indication = null
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
+                        if (entry.selected || lift > 0.001f) {
+                            GlassSurface(
+                                backdrop = backdrop,
+                                shape = CircleShape,
+                                tint = if (profile.isDark) Color.White.copy(alpha = 0.14f) else colors.primary.copy(alpha = 0.09f),
+                                fallback = colors.surfaceContainerHigh,
+                                rim = Color.White.copy(alpha = if (profile.isDark) 0.30f else 0.65f),
+                                blurRadius = 2.dp,
+                                refraction = 0.5f + lift * 0.2f,
+                                elevation = 0.dp,
+                                modifier = Modifier.fillMaxSize()
+                            ) {}
+                        }
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -261,6 +299,14 @@ internal fun GlassNavigationBar(
         if (onRefresh != null) {
             val refreshLabel = stringResource(R.string.action_refresh)
             val active = refresh?.active == true
+            val interaction = remember { MutableInteractionSource() }
+            val pressed by interaction.collectIsPressedAsState()
+            val focused by interaction.collectIsFocusedAsState()
+            val scale by animateFloatAsState(
+                if (pressed) 1.10f else 1f,
+                animationSpec = spring(dampingRatio = 0.65f, stiffness = 500f),
+                label = "glass_refresh_lift"
+            )
             GlassSurface(
                 backdrop = backdrop,
                 shape = CircleShape,
@@ -269,8 +315,10 @@ internal fun GlassNavigationBar(
                 rim = rim,
                 modifier = Modifier
                     .size(GlassBarHeight)
+                    .graphicsLayer { scaleX = scale; scaleY = scale }
+                    .then(if (focused) Modifier.border(2.dp, colors.primary, CircleShape) else Modifier)
                     .clip(CircleShape)
-                    .clickable(onClick = onRefresh)
+                    .clickable(interactionSource = interaction, indication = null, onClick = onRefresh)
                     .semantics {
                         role = Role.Button
                         contentDescription = refreshLabel

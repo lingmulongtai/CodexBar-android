@@ -34,6 +34,8 @@ import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.ui.components.LocalBottomChromeInset
+import com.codexbar.android.ui.components.GlassSurface
+import com.codexbar.android.ui.components.LocalGlassCardBackdrop
 import com.codexbar.android.ui.components.ProviderIcon
 import com.codexbar.android.ui.components.ThemedTopBar
 import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
@@ -127,13 +129,24 @@ private fun TrendsTabs(page: UsageAnalyticsPage, onPageChange: (UsageAnalyticsPa
                     shape = SegmentedButtonDefaults.itemShape(index, pages.size)) { Text(stringResource(label)) }
             }
         }
-        AppThemeStyle.LIQUID_GLASS -> Row(modifier.fillMaxWidth().clip(CircleShape).background(colors.onSurface.copy(alpha = 0.07f))
-            .padding(3.dp).selectableGroup()) {
-            pages.forEach { (entry, label) ->
-                val selected = page == entry
-                Box(Modifier.weight(1f).height(36.dp).clip(CircleShape).background(if (selected) profile.cardColor else Color.Transparent)
-                    .selectable(selected = selected, onClick = { onPageChange(entry) }, role = Role.Tab), contentAlignment = Alignment.Center) {
-                    Text(stringResource(label), style = MaterialTheme.typography.labelLarge, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium)
+        AppThemeStyle.LIQUID_GLASS -> GlassSurface(
+            backdrop = LocalGlassCardBackdrop.current,
+            shape = CircleShape,
+            tint = colors.onSurface.copy(alpha = 0.06f),
+            fallback = colors.surfaceContainerHigh,
+            rim = Color.White.copy(alpha = if (profile.isDark) 0.16f else 0.50f),
+            modifier = modifier.fillMaxWidth(),
+            blurRadius = 4.dp,
+            elevation = 0.dp
+        ) {
+            Row(Modifier.fillMaxWidth().padding(3.dp).selectableGroup()) {
+                pages.forEach { (entry, label) ->
+                    val selected = page == entry
+                    Box(Modifier.weight(1f).height(36.dp).clip(CircleShape)
+                        .background(if (selected) profile.cardColor.copy(alpha = 0.90f) else Color.Transparent)
+                        .selectable(selected = selected, onClick = { onPageChange(entry) }, role = Role.Tab), contentAlignment = Alignment.Center) {
+                        Text(stringResource(label), style = MaterialTheme.typography.labelLarge, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium)
+                    }
                 }
             }
         }
