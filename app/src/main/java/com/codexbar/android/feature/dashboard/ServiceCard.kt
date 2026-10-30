@@ -104,6 +104,23 @@ private fun ServiceQuotaPresentation.statusColor(): Color {
 @Composable
 private fun MetricLabelRow(service: ServiceQuotaPresentation, metric: QuotaMetricPresentation, valueColor: Color, small: Boolean) {
     val reset = compactCountdown(metric.resetsAt) ?: metric.resetLabel
+    if (small) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(service.metricLabel(metric), style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(metric.percentText(), style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold, color = valueColor, maxLines = 1)
+            }
+            if (reset != null) {
+                Text(reset, style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        return
+    }
     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             listOfNotNull(service.metricLabel(metric), reset).joinToString(" · "),
@@ -111,7 +128,7 @@ private fun MetricLabelRow(service: ServiceQuotaPresentation, metric: QuotaMetri
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f),
-            maxLines = if (small) 2 else 1,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
         Text(
