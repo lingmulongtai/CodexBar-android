@@ -1,6 +1,6 @@
 # Glisse-inspired Liquid Glass
 
-Development verification, 2026-10-30. This change is not a published Android release.
+Implementation verification, 2026-10-30. The design is included in [Android v0.11.1](releases/v0.11.1.md); that release record covers the versioned APK and current captures.
 
 The Liquid Glass design follows the refraction, fine specular edges, floating capsules and pressed lenses in [Glisse](https://glisse.kelvinzhang.com/) by Kelvin Zhang ([source](https://github.com/0kzh/glisse), MIT). It is implemented natively in Compose; the app does not embed the website, a WebView or the React package. Its gradient backdrop is original, rather than a copy of the demo wallpaper. This is an adaptation to the existing CodexBar layout, not a claim of identical rendering to Safari/iOS.
 
