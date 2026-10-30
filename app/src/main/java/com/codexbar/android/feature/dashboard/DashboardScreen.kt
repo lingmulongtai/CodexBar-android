@@ -1,8 +1,5 @@
 package com.codexbar.android.feature.dashboard
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
@@ -19,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -32,7 +28,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.Restore
 import com.codexbar.android.ui.components.CodexBarButton as Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,11 +37,9 @@ import com.codexbar.android.ui.components.CodexBarIconButton as IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import com.codexbar.android.ui.components.CodexBarTextButton as TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,13 +64,10 @@ import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.ui.components.LocalBottomChromeInset
-import com.codexbar.android.ui.components.glassBackdropSource
 import com.codexbar.android.ui.components.providerDragReorder
-import com.codexbar.android.ui.components.rememberGlassBackdrop
 import com.codexbar.android.ui.components.rememberProviderDragReorder
 import com.codexbar.android.ui.theme.CodexBarSpacing
 import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
-import java.time.Instant
 
 private const val TwoPaneMinWidthDp = 720f
 
@@ -163,22 +153,21 @@ private fun DashboardContent(
     val glass = themeProfile.style == AppThemeStyle.LIQUID_GLASS
     val title = stringResource(R.string.navigation_dashboard)
     val grid = rememberLazyGridState()
-    val backdrop = rememberGlassBackdrop()
     val updatedAt = snapshot?.generatedAt
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val useTwoPane = useTwoPaneDashboard(maxWidth.value)
         Column(Modifier.fillMaxSize()) {
-            if (!glass) {
-                // On wide screens the navigation rail already carries the design's mark.
-                DashboardHeader(
-                    refresh = refresh,
-                    updatedAt = updatedAt,
-                    onRefresh = onRefresh,
-                    showMark = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() } < 600.dp,
-                    onFinishReorder = if (reordering) ({ reordering = false }) else null
-                )
-            }
+            // On wide screens the navigation rail already carries the design's mark.
+            DashboardHeader(
+                refresh = refresh,
+                updatedAt = updatedAt,
+                onRefresh = onRefresh,
+                title = if (glass) title else stringResource(R.string.app_name),
+                showMark = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() } < 600.dp,
+                onStartReorder = if (services.size > 1) ({ showOnlyAttention = false; reordering = true }) else null,
+                onFinishReorder = if (reordering) ({ reordering = false }) else null
+            )
             // The pull gesture starts a refresh; progress is shown in place, never over the content.
             PullToRefreshBox(
                 isRefreshing = false,
@@ -188,7 +177,6 @@ private fun DashboardContent(
                 when (val state = uiState) {
                     is DashboardUiState.Loading -> {
                         Column(Modifier.fillMaxSize()) {
-                            if (glass) GlassLargeTitle(title, refresh, updatedAt, Modifier.padding(horizontal = 16.dp))
                             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                                 SmallSpinner(32.dp)
                             }
@@ -198,7 +186,6 @@ private fun DashboardContent(
                     is DashboardUiState.Content -> {
                         if (state.snapshot.services.isEmpty()) {
                             Column(Modifier.fillMaxSize()) {
-                                if (glass) GlassLargeTitle(title, refresh, updatedAt, Modifier.padding(horizontal = 16.dp))
                                 EmptyState(
                                     onOpenConnections = onNavigateToConnections,
                                     windowsMode = state.acquisitionMode == AcquisitionMode.WINDOWS,
@@ -235,7 +222,6 @@ private fun DashboardContent(
                                     CardList(
                                         grid = grid,
                                         services = visibleServices,
-                                        allServices = state.snapshot.services,
                                         summary = summary,
                                         errorBanner = errorBanner,
                                         attentionCount = summary.attentionCount,
@@ -244,7 +230,6 @@ private fun DashboardContent(
                                         selectedServiceName = paneService.service.name,
                                         expandedServiceName = null,
                                         refresh = refresh,
-                                        updatedAt = updatedAt,
                                         onServiceClick = {
                                             selectedServiceName = it.service.name
                                         },
@@ -253,18 +238,14 @@ private fun DashboardContent(
                                         onSummaryProviderClick = { selectedServiceName = it.name },
                                         reordering = reordering,
                                         hasCustomOrder = providerOrder.isNotEmpty(),
-                                        onToggleOrder = { showOnlyAttention = false; reordering = !reordering },
                                         onResetOrder = { onProviderOrderChange(emptyList()) },
                                         onReorder = reorder,
-                                        modifier = Modifier
-                                            .weight(0.55f)
-                                            .then(if (glass) Modifier.glassBackdropSource(backdrop) else Modifier)
+                                        modifier = Modifier.weight(0.55f)
                                     )
                                     Box(
                                         modifier = Modifier
                                             .weight(0.45f)
                                             .fillMaxHeight()
-                                            .then(if (glass) Modifier.statusBarsPadding() else Modifier)
                                             .padding(
                                                 start = CodexBarSpacing.small,
                                                 end = CodexBarSpacing.large,
@@ -284,7 +265,6 @@ private fun DashboardContent(
                                 CardList(
                                     grid = grid,
                                     services = visibleServices,
-                                    allServices = state.snapshot.services,
                                     summary = summary,
                                     errorBanner = errorBanner,
                                     attentionCount = summary.attentionCount,
@@ -293,7 +273,6 @@ private fun DashboardContent(
                                     selectedServiceName = null,
                                     expandedServiceName = expandedServiceName,
                                     refresh = refresh,
-                                    updatedAt = updatedAt,
                                     onServiceClick = {
                                         selectedServiceName = it.service.name
                                     },
@@ -302,36 +281,14 @@ private fun DashboardContent(
                                     onSummaryProviderClick = { selectedServiceName = it.name },
                                     reordering = reordering,
                                     hasCustomOrder = providerOrder.isNotEmpty(),
-                                    onToggleOrder = { showOnlyAttention = false; reordering = !reordering },
                                     onResetOrder = { onProviderOrderChange(emptyList()) },
                                     onReorder = reorder,
-                                    modifier = if (glass) Modifier.glassBackdropSource(backdrop) else Modifier
+                                    modifier = Modifier
                                 )
                             }
                         }
                     }
                 }
-            }
-        }
-
-        if (glass && uiState is DashboardUiState.Content && services.isNotEmpty()) {
-            val collapsed by remember(grid) {
-                derivedStateOf { grid.firstVisibleItemIndex > 0 || grid.firstVisibleItemScrollOffset > 120 }
-            }
-            AnimatedVisibility(
-                visible = collapsed,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.align(Alignment.TopStart)
-            ) {
-                GlassCollapsedHeader(
-                    title = title,
-                    refresh = refresh,
-                    updatedAt = updatedAt,
-                    backdrop = backdrop,
-                    modifier = if (useTwoPane) Modifier.fillMaxWidth(0.55f) else Modifier,
-                    onFinishReorder = if (reordering) ({ reordering = false }) else null
-                )
             }
         }
 
@@ -356,7 +313,6 @@ private fun DashboardContent(
 private fun CardList(
     grid: LazyGridState,
     services: List<ServiceQuotaPresentation>,
-    allServices: List<ServiceQuotaPresentation>,
     summary: DashboardSummary,
     errorBanner: String?,
     attentionCount: Int,
@@ -365,14 +321,12 @@ private fun CardList(
     selectedServiceName: String?,
     expandedServiceName: String?,
     refresh: DashboardRefreshState,
-    updatedAt: Instant?,
     onServiceClick: (ServiceQuotaPresentation) -> Unit,
     onOpenDetails: (ServiceQuotaPresentation) -> Unit,
     onManageConnection: () -> Unit,
     onSummaryProviderClick: (AiService) -> Unit,
     reordering: Boolean,
     hasCustomOrder: Boolean,
-    onToggleOrder: () -> Unit,
     onResetOrder: () -> Unit,
     onReorder: (List<AiService>) -> Unit,
     modifier: Modifier = Modifier
@@ -412,17 +366,6 @@ private fun CardList(
             verticalArrangement = Arrangement.spacedBy(cardSpacing),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (themeProfile.style == AppThemeStyle.LIQUID_GLASS) {
-                item(key = "title", span = { GridItemSpan(maxLineSpan) }) {
-                    GlassLargeTitle(
-                        title = stringResource(R.string.navigation_dashboard),
-                        refresh = refresh,
-                        updatedAt = updatedAt,
-                        modifier = sectionGap
-                    )
-                }
-            }
-
             item(key = "summary", span = { GridItemSpan(maxLineSpan) }) {
                 DashboardHero(
                     summary = summary,
@@ -487,10 +430,8 @@ private fun CardList(
             item(key = "section", span = { GridItemSpan(maxLineSpan) }) {
                 SectionHeader(
                     count = services.size,
-                    canReorder = allServices.size > 1,
                     reordering = reordering,
                     hasCustomOrder = hasCustomOrder,
-                    onToggleOrder = onToggleOrder,
                     onResetOrder = onResetOrder,
                     modifier = Modifier.padding(bottom = 8.dp - cardSpacing.coerceAtMost(8.dp))
                 )
@@ -522,8 +463,8 @@ private fun CardList(
 
 @Composable
 private fun SectionHeader(
-    count: Int, canReorder: Boolean, reordering: Boolean, hasCustomOrder: Boolean,
-    onToggleOrder: () -> Unit, onResetOrder: () -> Unit, modifier: Modifier = Modifier
+    count: Int, reordering: Boolean, hasCustomOrder: Boolean,
+    onResetOrder: () -> Unit, modifier: Modifier = Modifier
 ) {
     val style = LocalCodexBarThemeProfile.current.style
     val colors = MaterialTheme.colorScheme
@@ -553,15 +494,6 @@ private fun SectionHeader(
                         Icon(Icons.Rounded.Restore, contentDescription = stringResource(R.string.dashboard_order_automatic),
                             tint = if (hasCustomOrder) colors.onSurfaceVariant else colors.onSurface.copy(alpha = 0.38f))
                     }
-                    Spacer(Modifier.width(8.dp))
-                    TextButton(onClick = onToggleOrder) { Text(stringResource(R.string.provider_order_done)) }
-                } else if (canReorder) {
-                    IconButton(onClick = onToggleOrder) {
-                        Icon(Icons.Rounded.SwapVert, contentDescription = stringResource(R.string.provider_order_action),
-                            tint = colors.onSurfaceVariant)
-                    }
-                } else {
-                    Spacer(Modifier.height(48.dp))
                 }
             }
             if (reordering) Text(stringResource(R.string.dashboard_order_inline_hint),
