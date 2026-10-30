@@ -30,6 +30,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -166,10 +167,17 @@ private fun GlassHero(tightest: TightestQuota, onClick: () -> Unit, modifier: Mo
     val profile = LocalCodexBarThemeProfile.current
     val colors = MaterialTheme.colorScheme
     val tone = severityTone(tightest.severity, profile, colors.onSurface)
+    val accent = providerVisualStyle(tightest.service).accent
     GlassCard(onClick = onClick, modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp)) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            Modifier.background(Brush.linearGradient(listOf(
+                accent.copy(alpha = if (profile.isDark) 0.17f else 0.10f),
+                Color.Transparent
+            ))).padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ProviderIcon(tightest.service, modifier = Modifier.size(32.dp))
+                ProviderBadge(tightest.service, 40.dp)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(stringResource(R.string.dashboard_summary_title), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
                     Text(stringResource(R.string.dashboard_summary_window, tightest.service.displayName, tightest.metricLabel),
