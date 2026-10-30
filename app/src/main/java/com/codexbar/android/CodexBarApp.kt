@@ -234,7 +234,7 @@ fun CodexBarApp(
                         navHost(Modifier.fillMaxSize())
                     }
                 }
-                Column(Modifier.align(Alignment.BottomCenter)) {
+                Column(Modifier.align(Alignment.BottomCenter), horizontalAlignment = Alignment.CenterHorizontally) {
                     WallpaperAttribution(wallpaper, Modifier.height(attributionHeight))
                 GlassNavigationBar(
                     entries = entries,
