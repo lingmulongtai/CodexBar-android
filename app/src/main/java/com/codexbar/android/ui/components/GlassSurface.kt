@@ -134,23 +134,13 @@ fun GlassSurface(
                 } else {
                     drawPath(path, fallback)
                 }
-                // A restrained top light gives the glass depth without washing out its content.
-                drawPath(
-                    path = path,
-                    brush = Brush.verticalGradient(
-                        0f to Color.White.copy(alpha = 0.08f),
-                        0.45f to Color.Transparent,
-                        1f to Color.Black.copy(alpha = 0.025f),
-                        startY = 0f,
-                        endY = size.height
-                    )
-                )
+                // Keep the highlight in the existing rim draw, without another gradient layer.
                 drawPath(
                     path = path,
                     brush = Brush.linearGradient(
                         0f to rim,
-                        0.36f to rim.copy(alpha = rim.alpha * 0.12f),
-                        0.64f to rim.copy(alpha = rim.alpha * 0.08f),
+                        0.36f to rim.copy(alpha = rim.alpha * 0.22f),
+                        0.64f to rim.copy(alpha = rim.alpha * 0.12f),
                         1f to rim.copy(alpha = rim.alpha * 0.65f),
                         start = Offset.Zero,
                         end = Offset(size.width, size.height)

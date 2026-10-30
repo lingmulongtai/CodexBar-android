@@ -2,7 +2,7 @@
 
 ## LastWave-inspired refinement
 
-The glass presentation also takes visual cues from [LastWave-Native](https://github.com/Clash-Projects/LastWave-Native) (reference main `b016e52fd93ff2a6aa2ee0212250afb64f6d06a5`): a restrained light across glass, spring feedback on actions, rounded grouped service rows, and provider color on the leading quota. The floating navigation retains its held-drag interaction and exposes every tab name and selection state to accessibility services. These are independently implemented design ideas; LastWave source and artwork are not included.
+The glass presentation also takes visual cues from [LastWave-Native](https://github.com/Clash-Projects/LastWave-Native) (reference main `b016e52fd93ff2a6aa2ee0212250afb64f6d06a5`): directional highlights at glass edges, spring feedback on actions, rounded grouped service rows, and provider color on the leading quota. The highlight uses the existing rim draw instead of an additional gradient layer. The floating navigation retains its held-drag interaction and exposes every tab name and selection state to accessibility services. These are independently implemented design ideas; LastWave source and artwork are not included.
 
 Read-only upstream `hyunnnchoi/CodexBar-android` main was checked at `1811d1fe032fd4a80240fd6bc5d04cee649a0afb`; it had no upstream-only commits to incorporate or defer.
 
