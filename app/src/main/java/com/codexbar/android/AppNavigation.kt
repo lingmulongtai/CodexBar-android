@@ -328,7 +328,7 @@ private fun GlassTabRow(entries: List<NavigationEntry>, backdrop: GlassBackdrop)
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Icon(entry.icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
-                        Text(entry.label, color = tint, fontSize = 10.sp,
+                        Text(entry.label, color = tint, fontSize = 10.sp, lineHeight = 14.sp,
                             fontWeight = if (highlighted) FontWeight.Bold else FontWeight.SemiBold,
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
