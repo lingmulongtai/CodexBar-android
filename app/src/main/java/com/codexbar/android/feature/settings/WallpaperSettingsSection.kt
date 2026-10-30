@@ -2,6 +2,7 @@ package com.codexbar.android.feature.settings
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -11,6 +12,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -75,6 +77,7 @@ fun WallpaperSettingsSection(model: DailyWallpaperViewModel = hiltViewModel()) {
                 Text(stringResource(R.string.wallpaper_key_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedTextField(key, { key = it.trim(); failed = false }, label = { Text(stringResource(R.string.wallpaper_access_key)) },
                     visualTransformation = PasswordVisualTransformation(), singleLine = true, enabled = !saving,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
                     isError = failed, modifier = Modifier.fillMaxWidth())
                 CodexBarButton(onClick = {
                     if (!key.matches(Regex("[A-Za-z0-9_-]{16,128}"))) failed = true
