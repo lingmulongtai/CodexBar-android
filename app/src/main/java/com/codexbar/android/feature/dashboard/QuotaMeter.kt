@@ -20,7 +20,7 @@ import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 
 /**
  * The remaining-quota bar in each design's form: Expressive leaves a gap before the track and ends
- * it with a stop dot, Liquid Glass draws a slim bar on a neutral track and Instrument a thin line.
+ * it with a stop dot, Liquid Glass draws a slim bar on a neutral track.
  * Pace guide ticks mark where the remaining quota should be now, in an hour and by end of day.
  */
 @Composable
@@ -30,12 +30,10 @@ internal fun QuotaMeter(progress: Float, color: Color, guide: QuotaPaceGuide?, m
     val height = when (style) {
         AppThemeStyle.MATERIAL_3 -> 8.dp
         AppThemeStyle.LIQUID_GLASS -> 6.dp
-        AppThemeStyle.INSTRUMENT -> 4.dp
     }
     val track = when (style) {
         AppThemeStyle.MATERIAL_3 -> color.copy(alpha = 0.18f)
         AppThemeStyle.LIQUID_GLASS -> colors.onSurface.copy(alpha = 0.08f)
-        AppThemeStyle.INSTRUMENT -> colors.surfaceContainerHighest
     }
     val marker = colors.onSurface
     val remaining = progress.coerceIn(0f, 1f)

@@ -6,6 +6,7 @@ import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import com.codexbar.android.R
 
@@ -31,3 +32,11 @@ val PlexMonoFamily = FontFamily(
     Font(R.font.ibm_plex_mono_medium, FontWeight.Medium),
     Font(R.font.ibm_plex_mono_semibold, FontWeight.SemiBold)
 )
+
+private fun inter(weight: Int) = Font(
+    resId = R.font.inter_variable,
+    weight = FontWeight(weight),
+    variationSettings = FontVariation.Settings(FontVariation.weight(weight), FontVariation.opticalSizing(14.sp))
+)
+
+val InterFamily = FontFamily(inter(400), inter(500), inter(600), inter(700), inter(800))

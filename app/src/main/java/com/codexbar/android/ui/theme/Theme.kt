@@ -27,8 +27,7 @@ fun CodexBarTheme(
     style: AppThemeStyle = AppThemeStyle.MATERIAL_3,
     content: @Composable () -> Unit
 ) {
-    // Instrument is an always-dark design; the others follow the system appearance.
-    val useDarkTheme = style == AppThemeStyle.INSTRUMENT || darkTheme
+    val useDarkTheme = darkTheme
     val colorScheme = when (style) {
         AppThemeStyle.MATERIAL_3 -> when {
             dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
@@ -39,7 +38,7 @@ fun CodexBarTheme(
             else -> CodexBarLightColors
         }
         AppThemeStyle.LIQUID_GLASS -> if (useDarkTheme) LiquidGlassDarkColors else LiquidGlassLightColors
-        AppThemeStyle.INSTRUMENT -> InstrumentColors
+
     }
     val profile = themeProfile(style, colorScheme, useDarkTheme)
     SystemBarAppearance(darkTheme = useDarkTheme)
@@ -150,42 +149,4 @@ private val LiquidGlassDarkColors = darkColorScheme(
     surfaceContainer = Color(0xFF232326),
     surfaceContainerHigh = Color(0xFF2C2C2E),
     surfaceContainerHighest = Color(0xFF3A3A3C)
-)
-
-private val InstrumentColors = darkColorScheme(
-    primary = InstrumentMint,
-    onPrimary = Color(0xFF032816),
-    primaryContainer = Color(0xFF123A29),
-    onPrimaryContainer = Color(0xFFA5F4CB),
-    inversePrimary = Color(0xFF0F7A4D),
-    secondary = Color(0xFFA0A6B2),
-    onSecondary = Color(0xFF15181D),
-    secondaryContainer = Color(0xFF23262E),
-    onSecondaryContainer = Color(0xFFECEEF2),
-    tertiary = InstrumentAmber,
-    onTertiary = Color(0xFF2E1B00),
-    tertiaryContainer = Color(0xFF3B2A0E),
-    onTertiaryContainer = Color(0xFFFFDDAA),
-    error = InstrumentCoral,
-    onError = Color(0xFF3A0600),
-    errorContainer = Color(0xFF3A1512),
-    onErrorContainer = Color(0xFFFFB4AB),
-    background = Color(0xFF0B0C0F),
-    onBackground = Color(0xFFECEEF2),
-    surface = Color(0xFF0B0C0F),
-    onSurface = Color(0xFFECEEF2),
-    surfaceVariant = Color(0xFF1C1F26),
-    onSurfaceVariant = Color(0xFFA0A6B2),
-    surfaceTint = Color.White,
-    inverseSurface = Color(0xFFECEEF2),
-    inverseOnSurface = Color(0xFF14161B),
-    outline = Color(0xFF4A4F5A),
-    outlineVariant = Color(0xFF262A33),
-    surfaceBright = Color(0xFF262A33),
-    surfaceDim = Color(0xFF0B0C0F),
-    surfaceContainerLowest = Color(0xFF08090B),
-    surfaceContainerLow = Color(0xFF14161B),
-    surfaceContainer = Color(0xFF181A20),
-    surfaceContainerHigh = Color(0xFF1F2229),
-    surfaceContainerHighest = Color(0xFF262A33)
 )

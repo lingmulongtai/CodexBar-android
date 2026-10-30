@@ -30,16 +30,6 @@ class CodexBarThemeProfileTest {
     }
 
     @Test
-    fun `Instrument is always dark with monospaced readings and fixed state colors`() {
-        val profile = themeProfile(AppThemeStyle.INSTRUMENT, darkColorScheme(), darkTheme = false)
-
-        assertTrue(profile.isDark)
-        assertEquals(PlexMonoFamily, profile.numeralFamily)
-        assertEquals(InstrumentMint, profile.goodColor)
-        assertNotEquals(profile.warningColor, profile.criticalColor)
-    }
-
-    @Test
     fun `every design has its own shape scale`() {
         val shapes = AppThemeStyle.entries.map(::shapesFor)
         assertEquals(shapes.size, shapes.distinct().size)

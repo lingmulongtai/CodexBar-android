@@ -9,15 +9,23 @@ import androidx.compose.ui.graphics.asComposeRenderEffect
 /** Native backdrop lens inspired by Glisse. Foreground labels are drawn outside this effect. */
 @RequiresApi(33)
 internal class GlassLens {
-    private val shader = RuntimeShader(SOURCE)
+    // A null/different-root backdrop, flat chrome or an unsupported outline never needs a shader.
+    private val shader by lazy(LazyThreadSafetyMode.NONE) { RuntimeShader(SOURCE) }
+    private var previous: Parameters? = null
+    private var cachedEffect: androidx.compose.ui.graphics.RenderEffect? = null
+
+    private data class Parameters(val width: Float, val height: Float, val corner: Float,
+        val blur: Float, val bend: Float, val density: Float)
 
     fun effect(width: Float, height: Float, corner: Float, blur: Float, bend: Float, density: Float): androidx.compose.ui.graphics.RenderEffect {
+        val parameters = Parameters(width, height, corner, blur, bend, density)
+        if (previous == parameters) cachedEffect?.let { return it }
         shader.setFloatUniform("panelSize", width, height)
         shader.setFloatUniform("corner", corner)
         shader.setFloatUniform("bend", bend)
         shader.setFloatUniform("density", density)
         val lens = RenderEffect.createRuntimeShaderEffect(shader, "backdrop")
-        return if (blur > 0f) {
+        val effect = if (blur > 0f) {
             RenderEffect.createChainEffect(
                 lens,
                 RenderEffect.createBlurEffect(blur, blur, Shader.TileMode.CLAMP)
@@ -25,6 +33,9 @@ internal class GlassLens {
         } else {
             lens.asComposeRenderEffect()
         }
+        previous = parameters
+        cachedEffect = effect
+        return effect
     }
 
     private companion object {

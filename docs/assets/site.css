@@ -1100,12 +1100,6 @@ button {
   background: #eef6f5;
 }
 
-.themes-section[data-theme-section="instrument"] {
-  --theme-accent: #398571;
-  --theme-aura: rgba(74, 159, 132, 0.22);
-  background: #e8edeb;
-}
-
 .themes-heading > div {
   max-width: 680px;
 }
@@ -1209,16 +1203,6 @@ button {
 
 .swatch-liquid {
   background: linear-gradient(135deg, #d7f2ef, #e8e2f7);
-}
-
-.swatch-instrument {
-  background: linear-gradient(135deg, #101412, #213a30);
-  border-radius: 5px;
-}
-
-.swatch-instrument::after {
-  background: #62c79e;
-  border-radius: 2px;
 }
 
 .theme-hint {

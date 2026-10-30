@@ -14,12 +14,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material3.Card
+import com.codexbar.android.ui.components.CodexBarCard as Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import com.codexbar.android.ui.components.CodexBarOutlinedButton as OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -70,9 +70,7 @@ fun ServiceCard(
     when (LocalCodexBarThemeProfile.current.style) {
         AppThemeStyle.MATERIAL_3 -> ExpressiveServiceCard(service, onClick, selected, refreshing, grouping, selectedModifier)
         AppThemeStyle.LIQUID_GLASS -> GlassServiceRow(service, onClick, selected, refreshing, grouping, modifier.fillMaxWidth())
-        AppThemeStyle.INSTRUMENT -> InstrumentServiceRow(
-            service, onClick, selected, refreshing, grouping, expanded, onOpenDetails, onManageConnection, selectedModifier
-        )
+
     }
 }
 
@@ -249,175 +247,6 @@ private fun GlassServiceRow(
     }
 }
 
-@Composable
-private fun InstrumentServiceRow(
-    service: ServiceQuotaPresentation,
-    onClick: () -> Unit,
-    selected: Boolean,
-    refreshing: Boolean,
-    grouping: CardGrouping,
-    expanded: Boolean,
-    onOpenDetails: () -> Unit,
-    onManageConnection: () -> Unit,
-    modifier: Modifier
-) {
-    val profile = LocalCodexBarThemeProfile.current
-    val colors = MaterialTheme.colorScheme
-    Surface(
-        onClick = onClick,
-        modifier = modifier,
-        shape = grouping.shape(outer = 20.dp, inner = 0.dp),
-        color = if (expanded) colors.surfaceContainer else profile.cardColor,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        border = if (selected) BorderStroke(1.dp, colors.primary) else null
-    ) {
-        Column {
-            if (grouping.hasRowAbove) HorizontalDivider(color = colors.outlineVariant)
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                ProviderIcon(service.service, modifier = Modifier.size(30.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(
-                        service.service.displayName,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        if (refreshing) SmallSpinner(11.dp)
-                        Text(
-                            if (refreshing) stringResource(R.string.dashboard_refreshing) else service.sourceAndAge(),
-                            fontFamily = PlexMonoFamily,
-                            fontSize = 11.sp,
-                            color = if (refreshing) colors.onSurfaceVariant else service.statusColor(),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-                val metrics = service.displayedMetrics()
-                if (metrics.isEmpty()) {
-                    Text(
-                        service.tier ?: service.status.toLabel(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.onSurfaceVariant,
-                        maxLines = 1
-                    )
-                }
-                metrics.forEach { metric -> InstrumentCell(service, metric) }
-                if (metrics.size == 1) InstrumentCell(service, null)
-            }
-            AnimatedVisibility(visible = expanded) {
-                InstrumentDetail(service, onOpenDetails, onManageConnection)
-            }
-        }
-    }
-}
-
-@Composable
-private fun InstrumentCell(service: ServiceQuotaPresentation, metric: QuotaMetricPresentation?) {
-    val profile = LocalCodexBarThemeProfile.current
-    val colors = MaterialTheme.colorScheme
-    val tone = metric?.let { severityTone(it.severity, profile, colors.onSurface) } ?: colors.outline
-    Column(Modifier.width(72.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(
-                metric?.let { service.metricLabel(it) }.orEmpty(),
-                fontFamily = PlexMonoFamily,
-                fontSize = 10.sp,
-                color = colors.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                metric?.remainingPercent?.toString() ?: metric?.remainingLabel ?: "—",
-                fontFamily = PlexMonoFamily,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Medium,
-                color = tone,
-                maxLines = 1
-            )
-        }
-        if (metric != null) QuotaMeter(metric.barProgress, tone, metric.pace.guide)
-    }
-}
-
-@Composable
-private fun InstrumentDetail(
-    service: ServiceQuotaPresentation,
-    onOpenDetails: () -> Unit,
-    onManageConnection: () -> Unit
-) {
-    val profile = LocalCodexBarThemeProfile.current
-    val colors = MaterialTheme.colorScheme
-    Column(
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            service.displayedMetrics().forEach { metric ->
-                Surface(
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    color = colors.surfaceContainerHigh
-                ) {
-                    Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            listOfNotNull(service.metricLabel(metric), compactCountdown(metric.resetsAt)).joinToString(" · "),
-                            fontFamily = PlexMonoFamily,
-                            fontSize = 10.sp,
-                            color = colors.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            metric.percentText(),
-                            fontFamily = PlexMonoFamily,
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = severityTone(metric.severity, profile, colors.onSurface)
-                        )
-                    }
-                }
-            }
-        }
-        service.primaryMetric?.let { metric ->
-            QuotaHistorySparkline(metric.history, severityTone(metric.severity, profile, colors.primary))
-            metric.pace.label.takeIf { it.isNotBlank() }?.let { pace ->
-                Text(pace, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(
-                onClick = onOpenDetails,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(10.dp),
-                border = BorderStroke(1.dp, colors.outline)
-            ) {
-                Text(stringResource(R.string.dashboard_open_details), color = colors.onSurface)
-            }
-            OutlinedButton(
-                onClick = onManageConnection,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(10.dp),
-                border = BorderStroke(1.dp, colors.outline)
-            ) {
-                Text(
-                    stringResource(R.string.action_manage_connection),
-                    color = colors.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
-}
-
 /** The provider's mark set in the design's container: a cookie, a glass tile or a bare plate. */
 @Composable
 internal fun ProviderBadge(service: AiService, size: Dp) {
@@ -441,7 +270,6 @@ internal fun ProviderBadge(service: AiService, size: Dp) {
                 ProviderIcon(service, modifier = Modifier.size(size * 0.6f))
             }
         }
-        AppThemeStyle.INSTRUMENT -> ProviderIcon(service, modifier = Modifier.size(size * 0.8f))
     }
 }
 

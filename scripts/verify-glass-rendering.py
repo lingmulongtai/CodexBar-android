@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import subprocess
 import time
+import xml.etree.ElementTree as ET
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--serial", required=True)
@@ -37,6 +38,19 @@ def assert_idle(label):
     # Allow occasional label/inset updates, but reject a sustained animation/draw loop.
     assert frames <= 8, f"{label}: {frames} frames in 5 idle seconds (expected <=8)"
     assert adb("shell", "pidof", package), f"{label}: app exited"
+    # A stopped process or a system ANR dialog can also render zero frames. Require the real app
+    # to be the visible surface, and never accept a stale hierarchy after a failed dump.
+    for _ in range(5):
+        dumped = adb("shell", "uiautomator", "dump", "/sdcard/glass-idle.xml")
+        if "dumped to" in dumped:
+            root = ET.fromstring(adb("shell", "cat", "/sdcard/glass-idle.xml"))
+            nodes = list(root.iter("node"))
+            assert any(node.get("package") == package for node in nodes), f"{label}: app is obscured"
+            assert not any("isn't responding" in node.get("text", "") or "keeps stopping" in node.get("text", "") for node in nodes), f"{label}: error dialog"
+            break
+        time.sleep(0.5)
+    else:
+        raise AssertionError(f"{label}: no fresh UI hierarchy")
     print(f"PASS {label}: {frames} frames in 5 idle seconds", flush=True)
 
 

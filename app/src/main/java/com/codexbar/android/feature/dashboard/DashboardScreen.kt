@@ -3,6 +3,7 @@ package com.codexbar.android.feature.dashboard
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,16 +33,16 @@ import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.rounded.SwapVert
-import androidx.compose.material3.Button
+import com.codexbar.android.ui.components.CodexBarButton as Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
+import com.codexbar.android.ui.components.CodexBarFilterChip as FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.codexbar.android.ui.components.CodexBarIconButton as IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.codexbar.android.ui.components.CodexBarTextButton as TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -309,12 +310,7 @@ private fun DashboardContent(
                                     refresh = refresh,
                                     updatedAt = updatedAt,
                                     onServiceClick = {
-                                        if (themeProfile.style == AppThemeStyle.INSTRUMENT) {
-                                            // Instrument opens readings in place; Details opens the sheet.
-                                            expandedServiceName = it.service.name.takeIf { name -> name != expandedServiceName }
-                                        } else {
-                                            selectedServiceName = it.service.name
-                                        }
+                                        selectedServiceName = it.service.name
                                     },
                                     onOpenDetails = { selectedServiceName = it.service.name },
                                     onManageConnection = onNavigateToConnections,
@@ -393,11 +389,9 @@ private fun CardList(
     val order = services.map { it.service }
     val drag = rememberProviderDragReorder(grid, order, onReorder)
     BoxWithConstraints(modifier.fillMaxSize()) {
-        // Instrument's table rows need room for two reading cells beside the name.
         val cardMinWidth = when (themeProfile.style) {
             AppThemeStyle.MATERIAL_3 -> 300.dp
             AppThemeStyle.LIQUID_GLASS -> 340.dp
-            AppThemeStyle.INSTRUMENT -> 420.dp
         }
         val columns = ((maxWidth - 32.dp) / cardMinWidth).toInt().coerceIn(1, 3)
         // A single column groups the providers into one list; wider grids use separate cards.
@@ -440,7 +434,6 @@ private fun CardList(
             item(key = "summary", span = { GridItemSpan(maxLineSpan) }) {
                 DashboardHero(
                     summary = summary,
-                    services = allServices,
                     onProviderClick = onSummaryProviderClick,
                     modifier = sectionGap
                 )
@@ -538,6 +531,7 @@ private fun SectionHeader(count: Int, canReorder: Boolean, onShowOrder: () -> Un
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .then(if (style == AppThemeStyle.LIQUID_GLASS) Modifier.background(colors.surface.copy(alpha = 0.85f), CircleShape) else Modifier)
             .padding(start = if (style == AppThemeStyle.LIQUID_GLASS) 16.dp else 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

@@ -38,6 +38,10 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import com.codexbar.android.core.data.WallpaperPreferences
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -319,6 +323,7 @@ class EncryptedPrefsManager @Inject constructor(
 
     suspend fun deleteAllCredentials() {
         dataStore.edit { prefs ->
+            prefs.remove(stringPreferencesKey("wallpaper_access_key"))
             AiService.entries.forEach { prefs.removeServiceEntries(it) }
             prefs.removeCodexTelemetryEntries()
             prefs.asMap().keys.filter { it.name.startsWith(DESKTOP_PREFIX) }.forEach { key ->
@@ -388,6 +393,25 @@ class EncryptedPrefsManager @Inject constructor(
             prefs[KEY_APP_THEME_STYLE] = style.name
         }
         updateCache()
+    }
+
+    val wallpaperPreferences = dataStore.data.catch { error ->
+        if (error is IOException) emit(emptyPreferences()) else throw error
+    }.map { stored ->
+        WallpaperPreferences(stored[booleanPreferencesKey("wallpaper_enabled")] ?: true,
+            stored[stringPreferencesKey("wallpaper_access_key")] != null)
+    }.distinctUntilChanged()
+
+    suspend fun loadWallpaperAccessKey(): String? = readPreferencesOrNull()?.getEncryptedString("wallpaper_access_key")
+
+    suspend fun saveWallpaperPreferences(enabled: Boolean, replacementKey: String?) {
+        dataStore.edit { stored ->
+            stored[booleanPreferencesKey("wallpaper_enabled")] = enabled
+            if (replacementKey != null) {
+                if (replacementKey.isBlank()) stored.remove(stringPreferencesKey("wallpaper_access_key"))
+                else stored.putEncryptedString("wallpaper_access_key", replacementKey)
+            }
+        }
     }
 
     suspend fun saveResetTimes(service: AiService, windows: List<Pair<String, Instant?>>) {

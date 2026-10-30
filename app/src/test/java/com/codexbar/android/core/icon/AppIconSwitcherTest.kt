@@ -33,6 +33,8 @@ class AppIconSwitcherTest {
         val activity = manifest.substringAfter("android:name=\".MainActivity\"").substringBefore("</activity>")
         assertFalse(activity.contains("android.intent.category.LAUNCHER"))
         assertTrue(activity.contains("<data android:scheme=\"codexbar\" />"))
-        assertEquals(AppThemeStyle.entries.size, Regex("android.intent.category.LAUNCHER").findAll(manifest).count())
+        // The retired alias stays until an installed Instrument launcher migrates.
+        assertTrue(manifest.contains("android:name=\".LauncherInstrument\""))
+        assertEquals(AppThemeStyle.entries.size + 1, Regex("android.intent.category.LAUNCHER").findAll(manifest).count())
     }
 }

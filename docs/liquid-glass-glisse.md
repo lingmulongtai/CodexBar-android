@@ -1,5 +1,7 @@
 # Glisse-inspired Liquid Glass
 
+The original implementation record below is from 2026-10-30. For the expanded v0.12.0 controls and daily-photo design, see the current verification record at the end.
+
 Implementation verification, 2026-10-30. The design is included in [Android v0.11.1](releases/v0.11.1.md); that release record covers the versioned APK and current captures.
 
 The Liquid Glass design follows the refraction, fine specular edges, floating capsules and pressed lenses in [Glisse](https://glisse.kelvinzhang.com/) by Kelvin Zhang ([source](https://github.com/0kzh/glisse), MIT). It is implemented natively in Compose; the app does not embed the website, a WebView or the React package. Its gradient backdrop is original, rather than a copy of the demo wallpaper. This is an adaptation to the existing CodexBar layout, not a claim of identical rendering to Safari/iOS.
@@ -15,7 +17,7 @@ The Liquid Glass design follows the refraction, fine specular edges, floating ca
 
 The native shader uses the Android [RuntimeShader/RenderEffect](https://developer.android.com/develop/ui/views/graphics/agsl/using-agsl) APIs. Material 3 Expressive and Instrument retain their existing rendering paths.
 
-## Current emulator captures
+## v0.11.1 emulator captures
 
 All captures below are the real Compose UI from the debug-only screenshot harness, using synthetic quota/history/spend data. Phone: 1080 × 2400 at 420 dpi. Tablet: 2560 × 1600 at 240 dpi. Emulator: Android API 36.1, software renderer. These images do not represent live account data or physical-device acceptance.
 
@@ -49,3 +51,19 @@ python scripts/verify-glass-rendering.py --serial <emulator-id> --adb <adb-path>
 ```
 
 The debug-only `.debug.ScreenshotActivity` accepts `theme=LIQUID_GLASS`, `dark_theme=true/false`, `analytics=true` and `destination=dashboard/spend/settings`. On Windows, an ASCII build directory outside OneDrive avoids AGP's non-ASCII path check and generated-resource access errors; verification used an exact source copy with build outputs outside the checkout.
+
+
+## v0.12.0 controls and daily photography
+
+The native adaptation now includes long-press-and-slide navigation and switches, native glass sliders, shared glass actions/choice rows/panels, a single focused home reading, Inter text with increased leading, and daily Unsplash backgrounds. Only Liquid Glass and Material 3 Expressive remain selectable. Legacy Instrument/Aurora settings migrate to Expressive; the old launcher alias remains as an upgrade entry until the replacement is enabled.
+
+Photos and optional personal API settings are documented in [Daily photography](daily-wallpaper.md). Foreground checks do not clear the displayed photo; successful days make no extra network requests. Background-only and visible sources use exactly the same crop/scrim. Different-root dialog surfaces use readable fallback, rather than sampling an unrelated window origin. Runtime shaders are created only when used; unchanged lens parameters reuse their render effects. Wallpaper filesystem/cache/TLS initialization occurs on IO, outside composition.
+
+`python scripts/verify-glass-controls.py --serial <emulator> --adb <adb>` launches the debug-only isolated control harness. It checks held tab/switch/slider gestures, tap navigation, cancellation without state commits, exactly one callback on release, disabled switches and RTL order. Controls have at least 48 dp touch targets. ScreenshotActivity also accepts `--ez trace_startup true` to sample main-thread stacks from a background thread for 15 seconds; this flag and activity are absent from the production APK.
+
+The API 36.1 Play Store emulator initially ran with 2 GiB RAM and showed system UI/phone/Bluetooth failures and heavy swap. A bugreport and debug stack samples identified system/renderer waits rather than a quota-network wait or a source/consumer feedback loop. Final image and verification records specify the test configuration; these observations do not establish physical-device startup or low-memory performance.
+
+
+Final v0.12.0 verification on 2026-10-31: strict dependency unit tests passed (443 total, 441 passed, 2 skipped, 0 failures/errors); lint had 0 errors and 139 warnings. The final input pass at 130% font scale covered LTR/RTL held gestures, taps, cancellation, one callback per commit and disabled switches. Fresh-hierarchy idle verification passed: light dashboard 1/0 and Spend 5/0 frames; dark dashboard 4/0 and Spend 4/0, initial/after-scroll over five seconds. [Capture configuration and source images](images/releases/v0.12.0/README.md)
+
+The Glisse reference source was inspected at `0kzh/glisse` commit `46be5ba07b60eb507e887ff338ded7840576a79f`. Read-only Android upstream was unchanged at `1811d1fe032fd4a80240fd6bc5d04cee649a0afb`; no upstream-only change was omitted.

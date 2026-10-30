@@ -28,7 +28,7 @@ import kotlin.math.sin
 
 /**
  * The CodexBar mark of each design, drawn in the 72-unit visible area of the matching adaptive
- * launcher icon: a gauge "C", three glass quota bars, or a prompt whose cursor is a meter.
+ * launcher icon: a gauge "C", three glass quota bars,.
  */
 @Composable
 fun BrandGlyph(style: AppThemeStyle, modifier: Modifier = Modifier) {
@@ -38,7 +38,7 @@ fun BrandGlyph(style: AppThemeStyle, modifier: Modifier = Modifier) {
             when (style) {
                 AppThemeStyle.MATERIAL_3 -> drawGaugeGlyph(primary)
                 AppThemeStyle.LIQUID_GLASS -> drawGlassBarsGlyph()
-                AppThemeStyle.INSTRUMENT -> drawPromptGlyph()
+
             }
         }
     }
@@ -71,25 +71,6 @@ private fun DrawScope.drawGlassBarsGlyph() {
         drawRoundRect(Color.White.copy(alpha = 0.3f), Offset(x, 16f), Size(10f, 40f), CornerRadius(5f))
         drawRoundRect(Color.White, Offset(x, 56f - fill), Size(10f, fill), CornerRadius(5f))
     }
-}
-
-private fun DrawScope.drawPromptGlyph() {
-    drawRoundRect(Color(0xFF14161B), size = GlyphSize, cornerRadius = CornerRadius(17f))
-    drawRoundRect(
-        Color(0xFF2A2E37),
-        topLeft = Offset(1f, 1f),
-        size = Size(70f, 70f),
-        cornerRadius = CornerRadius(16f),
-        style = Stroke(width = 2f)
-    )
-    val chevron = Path().apply {
-        moveTo(15f, 20f)
-        lineTo(29f, 34f)
-        lineTo(15f, 48f)
-    }
-    drawPath(chevron, Color(0xFF5EE3A1), style = Stroke(width = 9f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-    drawRoundRect(Color(0xFFECEEF2).copy(alpha = 0.2f), Offset(35f, 42f), Size(24f, 9f), CornerRadius(4.5f))
-    drawRoundRect(Color(0xFFECEEF2), Offset(35f, 42f), Size(15f, 9f), CornerRadius(4.5f))
 }
 
 /** Material 3 Expressive's nine-scallop "cookie" shape. */

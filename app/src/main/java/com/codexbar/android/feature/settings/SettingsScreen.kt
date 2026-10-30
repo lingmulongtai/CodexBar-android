@@ -17,6 +17,8 @@ import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -54,27 +56,27 @@ import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import com.codexbar.android.ui.components.CodexBarButton as Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
+import com.codexbar.android.ui.components.CodexBarCard as Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
+import com.codexbar.android.ui.components.CodexBarFilterChip as FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.codexbar.android.ui.components.CodexBarIconButton as IconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import com.codexbar.android.ui.components.CodexBarOutlinedButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Slider
+import com.codexbar.android.ui.components.CodexBarSlider as Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.codexbar.android.ui.components.CodexBarTextButton as TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -101,6 +103,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
+import com.codexbar.android.ui.components.GlassChoiceRow
+import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 import com.codexbar.android.ui.components.CodexBarSwitch
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppThemeStyle
@@ -285,6 +289,8 @@ fun SettingsScreen(
                     selectedStyle = uiState.appThemeStyle,
                     onStyleSelected = viewModel::setAppThemeStyle
                 )
+
+                if (uiState.appThemeStyle == AppThemeStyle.LIQUID_GLASS) WallpaperSettingsSection()
 
                 LanguageSection(
                     selectedLanguage = selectedLanguage,
@@ -594,15 +600,15 @@ private fun ThemeStyleSection(
             )
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 AppThemeStyle.entries.forEach { style ->
                     ThemeStyleOption(
                         style = style,
                         selected = style == selectedStyle,
-                        onClick = { onStyleSelected(style) }
+                        onClick = { onStyleSelected(style) },
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
@@ -614,11 +620,12 @@ private fun ThemeStyleSection(
 private fun ThemeStyleOption(
     style: AppThemeStyle,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier.width(184.dp),
+        modifier = modifier,
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = if (selected) {
@@ -674,14 +681,12 @@ private fun ThemeStyleOption(
 private fun AppThemeStyle.titleResource(): Int = when (this) {
     AppThemeStyle.MATERIAL_3 -> R.string.theme_style_material_3
     AppThemeStyle.LIQUID_GLASS -> R.string.theme_style_liquid_glass
-    AppThemeStyle.INSTRUMENT -> R.string.theme_style_instrument
 }
 
 @StringRes
 private fun AppThemeStyle.descriptionResource(): Int = when (this) {
     AppThemeStyle.MATERIAL_3 -> R.string.theme_style_material_3_description
     AppThemeStyle.LIQUID_GLASS -> R.string.theme_style_liquid_glass_description
-    AppThemeStyle.INSTRUMENT -> R.string.theme_style_instrument_description
 }
 
 @Composable
@@ -690,8 +695,12 @@ private fun SettingsSectionHeader(
     description: String
 ) {
     Column(
-        modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        modifier = Modifier.fillMaxWidth().then(
+            if (LocalCodexBarThemeProfile.current.style == AppThemeStyle.LIQUID_GLASS)
+                Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.86f), RoundedCornerShape(22.dp)).padding(16.dp)
+            else Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp)
+        ),
+        verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
         Text(
             text = title,
@@ -791,6 +800,10 @@ private fun LanguageSection(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (LocalCodexBarThemeProfile.current.style == AppThemeStyle.LIQUID_GLASS) {
+                GlassChoiceRow(AppLanguage.entries.map { stringResource(it.labelRes) },
+                    AppLanguage.entries.indexOf(selectedLanguage), { onLanguageSelected(AppLanguage.entries[it]) })
+            } else {
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 AppLanguage.entries.forEachIndexed { index, language ->
                     SegmentedButton(
@@ -804,6 +817,7 @@ private fun LanguageSection(
                         Text(stringResource(language.labelRes))
                     }
                 }
+            }
             }
         }
     }
@@ -855,6 +869,10 @@ private fun ProviderDirectoryControls(
                 }
             )
 
+            if (LocalCodexBarThemeProfile.current.style == AppThemeStyle.LIQUID_GLASS) {
+                GlassChoiceRow(ProviderConnectionFilter.entries.map { stringResource(it.labelRes()) },
+                    ProviderConnectionFilter.entries.indexOf(filter), { onFilterChange(ProviderConnectionFilter.entries[it]) })
+            } else {
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 ProviderConnectionFilter.entries.forEachIndexed { index, option ->
                     SegmentedButton(
@@ -868,6 +886,7 @@ private fun ProviderDirectoryControls(
                         Text(stringResource(option.labelRes()))
                     }
                 }
+            }
             }
 
             Row(
@@ -1019,7 +1038,7 @@ private fun ServiceCredentialSection(
                     }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(
                         text = service.displayName,
                         style = MaterialTheme.typography.titleLarge
@@ -2261,7 +2280,7 @@ private fun RefreshIntervalSection(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(
                         text = stringResource(R.string.background_refresh_title),
                         style = MaterialTheme.typography.titleMedium
@@ -2378,7 +2397,7 @@ private fun NotificationsSection(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(
                         text = stringResource(R.string.notifications_persistent_title),
                         style = MaterialTheme.typography.titleMedium
@@ -2407,7 +2426,7 @@ private fun NotificationsSection(
             }
 
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
+                Column(Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(stringResource(R.string.notifications_reset_title), style = MaterialTheme.typography.titleMedium)
                     Text(stringResource(R.string.notifications_reset_description), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -2685,7 +2704,7 @@ private fun PrivacyToggle(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium
