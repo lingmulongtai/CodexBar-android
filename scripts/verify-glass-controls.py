@@ -111,6 +111,10 @@ for rtl in (False, True):
     root = tree()
     assert node("Disabled switch", root).get("checked") == "true"
     text_exists(root, "Switch commits: 1")
+    adb("shell", "input", "tap", *centre(node("Interactive switch", root)))
+    root = tree()
+    assert node("Interactive switch", root).get("checked") == "true"
+    text_exists(root, "Switch commits: 2")
     slider = node("Test slider", root)
     left, top, right, bottom = bounds(slider)
     held_drag(centre(slider), (left + 2 if rtl else right - 2, (top + bottom) // 2))
