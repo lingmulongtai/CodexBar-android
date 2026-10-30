@@ -97,7 +97,9 @@ private fun AnalyticsContent(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp + LocalBottomChromeInset.current),
             verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.then(if (profile.style == AppThemeStyle.LIQUID_GLASS)
+                    Modifier.background(profile.cardColor.copy(alpha = 0.86f), MaterialTheme.shapes.large).padding(16.dp) else Modifier),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(if (page == UsageAnalyticsPage.History) R.string.analytics_history_help else R.string.analytics_spend_help),
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (page == UsageAnalyticsPage.Spend) SpendOverview(rows)

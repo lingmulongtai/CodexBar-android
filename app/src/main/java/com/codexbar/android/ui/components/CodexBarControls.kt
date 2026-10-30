@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
@@ -23,6 +24,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
+
+/** Transparent state tints sit over the neutral glass, retaining their original lightness. */
+internal fun glassPanelTint(color: Color, base: Color, dark: Boolean): Color =
+    color.compositeOver(base).copy(alpha = if (dark) 0.74f else 0.72f)
 
 /** Passive glass grouping, with no spurious click action on charts or settings sections. */
 @Composable
@@ -35,7 +40,7 @@ fun CodexBarPanel(modifier: Modifier = Modifier, shape: Shape = MaterialTheme.sh
         Surface(modifier, shape = shape, color = color, border = border, contentColor = contentColor, tonalElevation = tonalElevation, content = content)
         return
     }
-    GlassSurface(LocalGlassCardBackdrop.current, shape, color.copy(alpha = if (profile.isDark) 0.74f else 0.72f), color,
+    GlassSurface(LocalGlassCardBackdrop.current, shape, glassPanelTint(color, profile.cardColor, profile.isDark), color.compositeOver(profile.cardColor),
         Color.White.copy(alpha = if (profile.isDark) 0.18f else 0.70f), modifier.then(if (border != null) Modifier.border(border, shape) else Modifier),
         blurRadius = 16.dp, refraction = 0.18f, elevation = 2.dp) {
         CompositionLocalProvider(LocalContentColor provides contentColor, content = content)
