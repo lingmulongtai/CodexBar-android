@@ -23,6 +23,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.codexbar.android.ui.components.GlassCard
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -194,12 +195,10 @@ private fun GlassServiceRow(
     val profile = LocalCodexBarThemeProfile.current
     val colors = MaterialTheme.colorScheme
     val accent = providerVisualStyle(service.service).accent
-    Surface(
+    GlassCard(
         onClick = onClick,
         modifier = modifier,
         shape = grouping.shape(outer = 26.dp, inner = 0.dp),
-        color = profile.cardColor,
-        contentColor = MaterialTheme.colorScheme.onSurface,
         border = if (selected) BorderStroke(2.dp, colors.primary) else null
     ) {
         Column {
