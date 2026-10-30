@@ -45,6 +45,15 @@ class ScreenshotActivity : AppCompatActivity() {
     @Inject lateinit var notificationService: QuotaNotificationService
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        if (intent.getBooleanExtra("trace_startup", false)) {
+            val main = android.os.Looper.getMainLooper().thread
+            Thread({
+                repeat(30) { sample ->
+                    Thread.sleep(500)
+                    android.util.Log.i("CodexBarStartup", "sample=$sample\n" + main.stackTrace.take(18).joinToString("\n"))
+                }
+            }, "CodexBarStartupSampler").apply { isDaemon = true; start() }
+        }
         super.onCreate(savedInstanceState)
         val style = AppThemeStyle.fromStoredValue(intent.getStringExtra(EXTRA_THEME))
         val darkTheme = intent.getBooleanExtra(EXTRA_DARK_THEME, false)
