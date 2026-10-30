@@ -2,6 +2,7 @@ package com.codexbar.android.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.snap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -50,7 +51,8 @@ fun CodexBarSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifie
     var dragPosition by remember { mutableStateOf<Float?>(null) }
     var startX by remember { mutableFloatStateOf(0f) }
     var from by remember { mutableFloatStateOf(0f) }
-    val settled by animateFloatAsState(if (checked) 1f else 0f, spring(stiffness = 700f), label = "switch_position")
+    val settled by animateFloatAsState(dragPosition ?: if (checked) 1f else 0f,
+        if (dragPosition != null) snap() else spring(stiffness = 700f), label = "switch_position")
     val lift by animateFloatAsState(if (dragPosition != null) 1f else 0f, spring(stiffness = 600f), label = "switch_lift")
     val position = dragPosition ?: settled
     val green = if (profile.isDark) Color(0xFF30D158) else Color(0xFF34C759)

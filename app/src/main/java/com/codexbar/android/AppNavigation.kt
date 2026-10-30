@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.snap
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -267,7 +268,9 @@ private fun GlassTabRow(entries: List<NavigationEntry>, backdrop: GlassBackdrop)
     val latestEntries by rememberUpdatedState(entries)
     var dragPosition by remember { mutableStateOf<Float?>(null) }
     val selectedIndex = entries.indexOfFirst { it.selected }.coerceAtLeast(0)
-    val settledPosition by animateFloatAsState(selectedIndex.toFloat(), spring(stiffness = 500f), label = "glass_tab_position")
+    // Keep the spring on the finger too, so releasing never jumps back to the old tab first.
+    val settledPosition by animateFloatAsState(dragPosition ?: selectedIndex.toFloat(),
+        if (dragPosition != null) snap() else spring(stiffness = 500f), label = "glass_tab_position")
     val lift by animateFloatAsState(if (dragPosition != null) 1f else 0f, spring(dampingRatio = 0.65f, stiffness = 500f), label = "glass_tab_lift")
     BoxWithConstraints(
         Modifier.fillMaxSize().padding(4.dp).selectableGroup()
