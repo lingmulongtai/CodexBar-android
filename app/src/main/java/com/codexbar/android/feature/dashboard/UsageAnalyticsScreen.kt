@@ -12,11 +12,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.material3.*
+import com.codexbar.android.ui.components.CodexBarFilterChip as FilterChip
+import com.codexbar.android.ui.components.CodexBarTextButton as TextButton
+import com.codexbar.android.ui.components.CodexBarOutlinedButton as OutlinedButton
+import com.codexbar.android.ui.components.CodexBarPanel
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
@@ -101,7 +108,7 @@ private fun AnalyticsContent(
                 }
             }
             items(rows, key = { it.service.name }) { service ->
-                Surface(shape = MaterialTheme.shapes.large, color = profile.cardColor, border = BorderStroke(1.dp, profile.cardBorderColor)) {
+                CodexBarPanel(shape = MaterialTheme.shapes.large, color = profile.cardColor, border = BorderStroke(1.dp, profile.cardBorderColor)) {
                     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             ProviderIcon(service.service, Modifier.size(28.dp))
@@ -210,6 +217,7 @@ private fun ProviderSpend(service: ServiceQuotaPresentation) {
     val values = series.map { if (tokens) it.tokens?.toDouble() else it.costUsd }
     val selected = series.indexOfFirst { it.day == selectedDay }.takeIf { it >= 0 } ?: series.lastIndex
     val accent = providerVisualStyle(service.service).accent
+    val glassChart = LocalCodexBarThemeProfile.current.style == AppThemeStyle.LIQUID_GLASS
     val description = stringResource(R.string.analytics_chart_description, values.count { it != null }, values.size)
     Canvas(Modifier.fillMaxWidth().height(144.dp).onSizeChanged { chartWidth = it.width.coerceAtLeast(1) }
         .pointerInput(series, tokens) { detectTapGestures { offset ->
@@ -221,7 +229,14 @@ private fun ProviderSpend(service: ServiceQuotaPresentation) {
             if (value != null) {
                 val x = (index + 0.5f) * width
                 val y = (size.height * (1 - value / max)).toFloat()
+                if (glassChart) {
+                    val barWidth = (width * 0.62f).coerceAtLeast(2f)
+                    val barHeight = (size.height - y).coerceAtLeast(1f)
+                    drawRoundRect(Brush.verticalGradient(listOf(accent.copy(alpha = if (index == selected) 1f else 0.75f), accent.copy(alpha = 0.20f))),
+                        topLeft = Offset(x - barWidth / 2, y), size = Size(barWidth, barHeight), cornerRadius = CornerRadius(3.dp.toPx()))
+                } else {
                 drawLine(accent.copy(alpha = if (index == selected) 1f else 0.55f), Offset(x, size.height - 1), Offset(x, y.coerceAtMost(size.height - 1)), strokeWidth = (width * 0.65f).coerceAtLeast(2f))
+                }
                 if (value == 0.0) drawCircle(accent, 2f, Offset(x, size.height - 2f))
             }
         }

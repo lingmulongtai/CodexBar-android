@@ -20,6 +20,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.codexbar.android.ui.components.CodexBarPanel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -48,7 +49,7 @@ internal fun CodexTelemetryCompactCard(
     accent: Color,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    CodexBarPanel(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.88f),
@@ -109,7 +110,7 @@ internal fun CodexTelemetryDetail(
         verticalArrangement = Arrangement.spacedBy(CodexBarSpacing.medium)
     ) {
         telemetry.currentContext?.let { context ->
-            Surface(
+            CodexBarPanel(
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
                 color = MaterialTheme.colorScheme.surface,
@@ -174,7 +175,7 @@ internal fun CodexTelemetryDetail(
             )
         }
 
-        Surface(
+        CodexBarPanel(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.surface,
@@ -202,7 +203,7 @@ internal fun CodexTelemetryDetail(
         }
 
         if (telemetry.tokenUsage.models.isNotEmpty()) {
-            Surface(
+            CodexBarPanel(
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
                 color = MaterialTheme.colorScheme.surface,
@@ -310,7 +311,7 @@ private fun TokenPeriodCard(
     accent: Color,
     modifier: Modifier
 ) {
-    Surface(
+    CodexBarPanel(
         modifier = modifier.widthIn(min = 94.dp),
         shape = MaterialTheme.shapes.medium,
         color = accent.copy(alpha = 0.10f),
@@ -356,7 +357,7 @@ private fun TokenBreakdown(totals: CodexTokenTotalsPresentation) {
 
 @Composable
 private fun TelemetryDetailChip(label: String) {
-    Surface(
+    CodexBarPanel(
         shape = MaterialTheme.shapes.small,
         color = MaterialTheme.colorScheme.secondaryContainer
     ) {
