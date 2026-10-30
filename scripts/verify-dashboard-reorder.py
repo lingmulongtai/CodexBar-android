@@ -14,6 +14,7 @@ parser.add_argument("--adb", default="adb")
 parser.add_argument("--screenshots", type=Path)
 parser.add_argument("--theme", choices=("LIQUID_GLASS", "MATERIAL_3"), default="LIQUID_GLASS")
 parser.add_argument("--dark", action="store_true")
+parser.add_argument("--locale", choices=("en", "ja"), default="en")
 args = parser.parse_args()
 package = "com.codexbar.android"
 
@@ -51,17 +52,22 @@ def top(root, label):
 
 
 assert adb("shell", "getprop", "ro.kernel.qemu") == "1", "Use a disposable emulator"
-adb("shell", "cmd", "locale", "set-app-locales", package, "--locales", "en")
+labels = {
+    "en": ("Reorder", "Arrange services", "Touch and hold a card to move it. Your order is saved automatically.", "Use automatic order", "Done"),
+    "ja": ("並び替え", "並び替え中", "カードを長押しして移動。順番は自動保存されます。", "自動の並び順に戻す", "完了"),
+}
+reorder, editing, hint, automatic, done = labels[args.locale]
+adb("shell", "cmd", "locale", "set-app-locales", package, "--locales", args.locale)
 adb("shell", "am", "start", "-W", "-f", "0x14000000", "-n", f"{package}/.debug.ScreenshotActivity",
     "--es", "theme", args.theme, "--es", "destination", "dashboard", "--ez", "analytics", "true",
     "--ez", "dark_theme", str(args.dark).lower())
 time.sleep(5)
 root = tree()
 assert top(root, "Codex") < top(root, "Cline")
-tap(find(root, "Reorder"))
+tap(find(root, reorder))
 root = tree()
-find(root, "Arrange services")
-find(root, "Touch and hold a card to move it. Your order is saved automatically.")
+find(root, editing)
+find(root, hint)
 if args.screenshots:
     args.screenshots.mkdir(parents=True, exist_ok=True)
     (args.screenshots / "editing.png").write_bytes(subprocess.check_output([args.adb, "-s", args.serial, "exec-out", "screencap", "-p"]))
@@ -72,15 +78,15 @@ destination = (first[0], second[1] + (second[1] - first[1]) // 2)
 adb("shell", "input", "touchscreen", "draganddrop", *first, *destination, 1800)
 root = tree()
 assert top(root, "Cline") < top(root, "Codex"), "drag did not move Codex below Cline"
-tap(find(root, "Use automatic order"))
+tap(find(root, automatic))
 root = tree()
 assert top(root, "Codex") < top(root, "Cline"), "automatic order was not restored"
-tap(find(root, "Done"))
+tap(find(root, done))
 root = tree()
-find(root, "Reorder")
-assert not any(n.get("text") == "Arrange services" for n in root.iter("node"))
-tap(find(root, "Reorder"))
-find(tree(), "Arrange services")
+find(root, reorder)
+assert not any(n.get("text") == editing for n in root.iter("node"))
+tap(find(root, reorder))
+find(tree(), editing)
 adb("shell", "input", "keyevent", "BACK")
-find(tree(), "Reorder")
+find(tree(), reorder)
 print("PASS inline reorder, automatic reset, Done, and Back")
