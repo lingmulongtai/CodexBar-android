@@ -1,5 +1,7 @@
 package com.codexbar.android.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -106,9 +108,14 @@ private fun GlassAction(onClick: () -> Unit, modifier: Modifier, enabled: Boolea
     val profile = LocalCodexBarThemeProfile.current
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 1.025f else 1f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 500f),
+        label = "glass_action_press"
+    )
     GlassSurface(LocalGlassCardBackdrop.current, shape, tint, tint.copy(alpha = 1f),
         Color.White.copy(alpha = if (profile.isDark) 0.25f else 0.75f),
-        modifier.heightIn(min = 48.dp).graphicsLayer { scaleX = if (pressed) 1.025f else 1f; scaleY = if (pressed) 1.025f else 1f },
+        modifier.heightIn(min = 48.dp).graphicsLayer { scaleX = scale; scaleY = scale },
         elevation = if (pressed) 4.dp else 1.dp, refraction = if (pressed) 0.55f else 0.30f) {
         Surface(onClick, modifier = Modifier.semantics { role = Role.Button; if (selectedState != null) selected = selectedState }, enabled = enabled, shape = shape, color = Color.Transparent,
             contentColor = foreground, border = border, interactionSource = interaction) {
