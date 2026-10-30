@@ -491,7 +491,6 @@
     <string name="provider_order_done">Done</string>
     <string name="dashboard_order_editing">Arrange services</string>
     <string name="dashboard_order_inline_hint">Hold a card to move it · Saved automatically</string>
-    <string name="dashboard_order_hint">Long-press a card or row, then drag it to a new position. Changes are saved automatically; each widget has its own order. Screen readers offer move actions.</string>
     <string name="quota_guide_now">Remaining guide: now</string>
     <string name="quota_guide_hour">In 1h</string>
     <string name="quota_guide_today">End of today</string>
