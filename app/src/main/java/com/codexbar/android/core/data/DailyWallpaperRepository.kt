@@ -45,10 +45,13 @@ private data class SavedWallpaper(val day: String, val photo: WallpaperPhoto, va
 class DailyWallpaperRepository @Inject constructor(
     @ApplicationContext context: Context, private val prefs: EncryptedPrefsManager
 ) {
-    private val directory = File(context.filesDir, "daily-wallpaper").apply { mkdirs() }
-    private val record = AtomicFile(File(directory, "selection.json"))
-    private val client = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false)
-        .callTimeout(20, TimeUnit.SECONDS).cache(Cache(File(context.cacheDir, "wallpaper-http"), 20L * 1024 * 1024)).build()
+    private val directory by lazy { File(context.filesDir, "daily-wallpaper").apply { mkdirs() } }
+    private val record by lazy { AtomicFile(File(directory, "selection.json")) }
+    // First touched by the IO coroutine, never while Hilt creates this repository in composition.
+    private val client by lazy {
+        OkHttpClient.Builder().followRedirects(false).followSslRedirects(false)
+            .callTimeout(20, TimeUnit.SECONDS).cache(Cache(File(context.cacheDir, "wallpaper-http"), 20L * 1024 * 1024)).build()
+    }
     private val json = Json { ignoreUnknownKeys = true }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutex = Mutex()
