@@ -8,7 +8,7 @@ Read-only upstream `hyunnnchoi/CodexBar-android` main was checked at `1811d1fe03
 
 ### Inline provider ordering
 
-The dashboard's compact ordering control enters an inline edit state. Hold a card to move it, use the reset control to return to automatic order, and finish from the section or the pinned header. The order is saved as it changes, including when leaving the edit state; an interrupted drag does not roll back changes. Filtering is cleared when entering edit mode, and disconnected providers retain their stored positions. Screen-reader move actions and the widget's separate ordering editor remain available. Edge scrolling uses device-independent distances and speed.
+The dashboard's compact ordering control enters an inline edit state. Hold a card to move it, use the reset control to return to automatic order, and finish from the section or the pinned header. A short tap does not open details during editing. The order is saved as it changes, including when leaving the edit state; an interrupted drag does not roll back changes. Filtering is cleared when entering edit mode, and disconnected providers retain their stored positions. Screen-reader move actions and the widget's separate ordering editor remain available. Edge scrolling uses device-independent distances and speed.
 
 For this change, the read-only upstream main was checked again at `1811d1fe032fd4a80240fd6bc5d04cee649a0afb`; there were no upstream-only commits to port or defer. The disposable-emulator flow can be exercised with `scripts/verify-dashboard-reorder.py`; `--edge`, `--locale ja`, `--dark`, and `--theme MATERIAL_3` cover the corresponding variants.
 

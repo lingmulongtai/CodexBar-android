@@ -24,6 +24,7 @@ fun GlassCard(
     modifier: Modifier = Modifier,
     border: BorderStroke? = null,
     selected: Boolean? = null,
+    enabled: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val profile = LocalCodexBarThemeProfile.current
@@ -40,16 +41,15 @@ fun GlassCard(
         refraction = 0.18f,
         elevation = 3.dp
     ) {
-        Surface(
-            onClick = onClick,
-            modifier = Modifier.fillMaxWidth().semantics {
-                if (selectedState != null) this.selected = selectedState
-            },
-            shape = shape,
-            color = Color.Transparent,
-            contentColor = colors.onSurface,
-            border = border,
-            content = content
-        )
+        val cardModifier = Modifier.fillMaxWidth().semantics {
+            if (selectedState != null) this.selected = selectedState
+        }
+        if (enabled) {
+            Surface(onClick = onClick, modifier = cardModifier, shape = shape, color = Color.Transparent,
+                contentColor = colors.onSurface, border = border, content = content)
+        } else {
+            Surface(modifier = cardModifier, shape = shape, color = Color.Transparent,
+                contentColor = colors.onSurface, border = border, content = content)
+        }
     }
 }

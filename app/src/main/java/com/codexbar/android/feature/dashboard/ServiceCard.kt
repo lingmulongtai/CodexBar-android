@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -156,16 +157,10 @@ private fun ExpressiveServiceCard(
     val profile = LocalCodexBarThemeProfile.current
     val colors = MaterialTheme.colorScheme
     val accent = providerVisualStyle(service.service).accent
-    Card(
-        onClick = onClick,
-        modifier = modifier,
-        shape = grouping.shape(outer = 28.dp, inner = 8.dp),
-        border = if (selected) BorderStroke(2.dp, colors.primary) else null,
-        colors = CardDefaults.cardColors(
-            containerColor = profile.cardColor,
-            contentColor = MaterialTheme.colorScheme.onSurface
-        )
-    ) {
+    val shape = grouping.shape(outer = 28.dp, inner = 8.dp)
+    val border = if (selected) BorderStroke(2.dp, colors.primary) else null
+    val cardColors = CardDefaults.cardColors(containerColor = profile.cardColor, contentColor = colors.onSurface)
+    val content: @Composable ColumnScope.() -> Unit = {
         Column(
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -197,6 +192,11 @@ private fun ExpressiveServiceCard(
             }
         }
     }
+    if (reordering) {
+        Card(modifier = modifier, shape = shape, border = border, colors = cardColors, content = content)
+    } else {
+        Card(onClick = onClick, modifier = modifier, shape = shape, border = border, colors = cardColors, content = content)
+    }
 }
 
 @Composable
@@ -217,6 +217,7 @@ private fun GlassServiceRow(
         modifier = modifier,
         shape = grouping.shape(outer = 26.dp, inner = 10.dp),
         selected = selected,
+        enabled = !reordering,
         border = if (selected) BorderStroke(2.dp, colors.primary) else null
     ) {
         Column {

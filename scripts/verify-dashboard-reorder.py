@@ -26,10 +26,14 @@ def adb(*parts):
 
 def tree():
     for _ in range(5):
-        result = adb("shell", "uiautomator", "dump", "/sdcard/dashboard-reorder.xml")
+        try:
+            result = adb("shell", "uiautomator", "dump", "/sdcard/dashboard-reorder.xml")
+        except subprocess.CalledProcessError:
+            time.sleep(0.5)
+            continue
         if "dumped to" in result:
             root = ET.fromstring(adb("shell", "cat", "/sdcard/dashboard-reorder.xml"))
-            assert not any("isn't responding" in n.get("text", "") or "keeps stopping" in n.get("text", "") for n in root.iter("node")), "error dialog"
+            assert not any("isn't responding" in n.get("text", "") or "isn’t responding" in n.get("text", "") or "keeps stopping" in n.get("text", "") for n in root.iter("node")), "error dialog"
             return root
         time.sleep(0.5)
     raise AssertionError("Could not read the dashboard")
@@ -65,12 +69,18 @@ adb("shell", "am", "start", "-W", "-f", "0x14000000", "-n", f"{package}/.debug.S
 time.sleep(5)
 root = tree()
 assert top(root, "Codex") < top(root, "Cline")
+if args.screenshots:
+    args.screenshots.mkdir(parents=True, exist_ok=True)
+    (args.screenshots / "normal.png").write_bytes(subprocess.check_output([args.adb, "-s", args.serial, "exec-out", "screencap", "-p"]))
 tap(find(root, reorder))
 root = tree()
 find(root, editing)
 find(root, hint)
+tap(find(root, "Codex"))
+root = tree()
+find(root, editing)
+find(root, "Cline")
 if args.screenshots:
-    args.screenshots.mkdir(parents=True, exist_ok=True)
     (args.screenshots / "editing.png").write_bytes(subprocess.check_output([args.adb, "-s", args.serial, "exec-out", "screencap", "-p"]))
 
 first = centre(find(root, "Codex"))
@@ -118,8 +128,22 @@ if args.edge:
     root = tree()
     cline = [n for n in root.iter("node") if n.get("text") == "Cline"]
     assert not cline or centre(cline[0])[1] < before - 50, "dragging near the edge did not scroll"
-    tap(find(root, done))
+    # Move the section header fully out of view before testing the pinned action.
+    adb("shell", "input", "swipe", int(size[0]) // 2, int(size[1]) * 3 // 4,
+        int(size[0]) // 2, int(size[1]) // 4, 500)
     root = tree()
+    done_nodes = [n for n in root.iter("node") if n.get("text") == done]
+    def height(node):
+        values = list(map(int, re.findall(r"\d+", node.get("bounds"))))
+        return values[3] - values[1]
+    max_height = max(map(height, done_nodes))
+    visible_done = [n for n in done_nodes if height(n) >= max_height * 0.8]
+    pinned = min(visible_done, key=lambda n: centre(n)[1])
+    assert centre(pinned)[1] < int(size[1]) // 4, "pinned Done is not visible near the top"
+    print("Pinned Done", centre(pinned), flush=True)
+    tap(pinned)
+    root = tree()
+    print("Done buttons after tap", [n.get("bounds") for n in root.iter("node") if n.get("text") == done], flush=True)
     assert not any(n.get("text") == done for n in root.iter("node")), "pinned Done did not finish editing"
     print("PASS edge scrolling")
 print("PASS inline reorder, automatic reset, Done, and Back")
