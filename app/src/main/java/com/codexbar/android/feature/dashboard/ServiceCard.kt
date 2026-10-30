@@ -69,7 +69,7 @@ fun ServiceCard(
     val selectedModifier = modifier.fillMaxWidth().semantics { this.selected = selected }
     when (LocalCodexBarThemeProfile.current.style) {
         AppThemeStyle.MATERIAL_3 -> ExpressiveServiceCard(service, onClick, selected, refreshing, grouping, selectedModifier)
-        AppThemeStyle.LIQUID_GLASS -> GlassServiceRow(service, onClick, selected, refreshing, grouping, selectedModifier)
+        AppThemeStyle.LIQUID_GLASS -> GlassServiceRow(service, onClick, selected, refreshing, grouping, modifier.fillMaxWidth())
         AppThemeStyle.INSTRUMENT -> InstrumentServiceRow(
             service, onClick, selected, refreshing, grouping, expanded, onOpenDetails, onManageConnection, selectedModifier
         )
@@ -199,6 +199,7 @@ private fun GlassServiceRow(
         onClick = onClick,
         modifier = modifier,
         shape = grouping.shape(outer = 26.dp, inner = 0.dp),
+        selected = selected,
         border = if (selected) BorderStroke(2.dp, colors.primary) else null
     ) {
         Column {

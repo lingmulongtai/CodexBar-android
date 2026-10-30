@@ -413,7 +413,10 @@ private fun CardList(
             state = grid,
             modifier = Modifier
                 .fillMaxSize()
-                .background(themeProfile.backgroundBrush),
+                .then(
+                    if (themeProfile.style == AppThemeStyle.LIQUID_GLASS) Modifier
+                    else Modifier.background(themeProfile.backgroundBrush)
+                ),
             contentPadding = PaddingValues(
                 start = 16.dp,
                 end = 16.dp,

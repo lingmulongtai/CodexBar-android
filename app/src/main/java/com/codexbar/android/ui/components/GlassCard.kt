@@ -9,6 +9,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.unit.dp
 import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 
@@ -21,10 +23,12 @@ fun GlassCard(
     shape: Shape,
     modifier: Modifier = Modifier,
     border: BorderStroke? = null,
+    selected: Boolean? = null,
     content: @Composable () -> Unit
 ) {
     val profile = LocalCodexBarThemeProfile.current
     val colors = MaterialTheme.colorScheme
+    val selectedState = selected
     GlassSurface(
         backdrop = LocalGlassCardBackdrop.current,
         shape = shape,
@@ -38,7 +42,9 @@ fun GlassCard(
     ) {
         Surface(
             onClick = onClick,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().semantics {
+                if (selectedState != null) this.selected = selectedState
+            },
             shape = shape,
             color = Color.Transparent,
             contentColor = colors.onSurface,
