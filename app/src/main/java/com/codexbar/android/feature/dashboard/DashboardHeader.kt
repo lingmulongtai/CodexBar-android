@@ -24,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.codexbar.android.ui.components.CodexBarTextButton as TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -71,7 +72,8 @@ internal fun DashboardHeader(
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
     title: String = stringResource(R.string.app_name),
-    showMark: Boolean = true
+    showMark: Boolean = true,
+    onFinishReorder: (() -> Unit)? = null
 ) {
     val profile = LocalCodexBarThemeProfile.current
     Row(
@@ -92,7 +94,11 @@ internal fun DashboardHeader(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        RefreshStatusButton(refresh, updatedAt, onRefresh)
+        if (onFinishReorder != null) {
+            TextButton(onClick = onFinishReorder) { Text(stringResource(R.string.provider_order_done)) }
+        } else {
+            RefreshStatusButton(refresh, updatedAt, onRefresh)
+        }
     }
 }
 
@@ -173,7 +179,8 @@ internal fun GlassCollapsedHeader(
     refresh: DashboardRefreshState,
     updatedAt: Instant?,
     backdrop: GlassBackdrop,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onFinishReorder: (() -> Unit)? = null
 ) {
     val profile = LocalCodexBarThemeProfile.current
     val colors = MaterialTheme.colorScheme
@@ -190,18 +197,24 @@ internal fun GlassCollapsedHeader(
         modifier = modifier.fillMaxWidth()
     ) {
         Column(Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(1.dp)
-            ) {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    if (refresh.active) SmallSpinner(11.dp, colors.onSurfaceVariant)
-                    Text(status, style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+            Box(Modifier.fillMaxWidth().statusBarsPadding().heightIn(min = 56.dp).padding(vertical = 8.dp)) {
+                Column(
+                    modifier = Modifier.align(Alignment.Center).padding(horizontal = if (onFinishReorder != null) 88.dp else 0.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                ) {
+                    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        if (refresh.active) SmallSpinner(11.dp, colors.onSurfaceVariant)
+                        Text(status, style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                if (onFinishReorder != null) {
+                    TextButton(onClick = onFinishReorder, modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp)) {
+                        Text(stringResource(R.string.provider_order_done))
+                    }
                 }
             }
             HorizontalDivider(thickness = 0.5.dp, color = if (profile.isDark) colors.outlineVariant else colors.outlineVariant.copy(alpha = 0.6f))

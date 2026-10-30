@@ -175,7 +175,8 @@ private fun DashboardContent(
                     refresh = refresh,
                     updatedAt = updatedAt,
                     onRefresh = onRefresh,
-                    showMark = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() } < 600.dp
+                    showMark = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() } < 600.dp,
+                    onFinishReorder = if (reordering) ({ reordering = false }) else null
                 )
             }
             // The pull gesture starts a refresh; progress is shown in place, never over the content.
@@ -328,7 +329,8 @@ private fun DashboardContent(
                     refresh = refresh,
                     updatedAt = updatedAt,
                     backdrop = backdrop,
-                    modifier = if (useTwoPane) Modifier.fillMaxWidth(0.55f) else Modifier
+                    modifier = if (useTwoPane) Modifier.fillMaxWidth(0.55f) else Modifier,
+                    onFinishReorder = if (reordering) ({ reordering = false }) else null
                 )
             }
         }

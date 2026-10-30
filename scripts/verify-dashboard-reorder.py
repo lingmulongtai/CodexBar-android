@@ -118,5 +118,8 @@ if args.edge:
     root = tree()
     cline = [n for n in root.iter("node") if n.get("text") == "Cline"]
     assert not cline or centre(cline[0])[1] < before - 50, "dragging near the edge did not scroll"
+    tap(find(root, done))
+    root = tree()
+    assert not any(n.get("text") == done for n in root.iter("node")), "pinned Done did not finish editing"
     print("PASS edge scrolling")
 print("PASS inline reorder, automatic reset, Done, and Back")
