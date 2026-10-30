@@ -134,6 +134,17 @@ fun GlassSurface(
                 } else {
                     drawPath(path, fallback)
                 }
+                // A restrained top light gives the glass depth without washing out its content.
+                drawPath(
+                    path = path,
+                    brush = Brush.verticalGradient(
+                        0f to Color.White.copy(alpha = 0.08f),
+                        0.45f to Color.Transparent,
+                        1f to Color.Black.copy(alpha = 0.025f),
+                        startY = 0f,
+                        endY = size.height
+                    )
+                )
                 drawPath(
                     path = path,
                     brush = Brush.linearGradient(
