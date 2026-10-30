@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
@@ -14,11 +15,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.addOutline
@@ -40,7 +43,7 @@ import androidx.compose.ui.unit.dp
  */
 @Stable
 class GlassBackdrop internal constructor(internal val layer: GraphicsLayer) {
-    internal var originInRoot: Offset = Offset.Zero
+    internal var originInRoot by mutableStateOf(Offset.Zero)
 
     /** Bumped after each recording so glass panels redraw with what is now behind them. */
     internal var generation by mutableIntStateOf(0)
@@ -65,13 +68,14 @@ fun Modifier.glassBackdropSource(backdrop: GlassBackdrop): Modifier = this
     }
 
 private class PositionHolder {
-    var value: Offset = Offset.Zero
+    // Moving a panel over a static backdrop must resample it even if the source did not redraw.
+    var value by mutableStateOf(Offset.Zero)
 }
 
 /**
- * A glass panel: the recorded backdrop, blurred and tinted, clipped to [shape], with a light rim
- * that is brighter along the top edge. Android 11 and older cannot blur render nodes, so they get
- * an opaque [fallback] that keeps text readable.
+ * A backdrop lens with a directional specular rim. Android 13+ bends the real backdrop at the
+ * edges; Android 12 uses backdrop blur, and older versions use the readable [fallback].
+ * Set [refraction] and [elevation] to zero for flat, full-width chrome.
  */
 @Composable
 fun GlassSurface(
@@ -81,14 +85,20 @@ fun GlassSurface(
     fallback: Color,
     rim: Color,
     modifier: Modifier = Modifier,
-    blurRadius: Dp = 22.dp,
+    blurRadius: Dp = 5.dp,
+    refraction: Float = 0.45f,
+    elevation: Dp = 10.dp,
     contentAlignment: Alignment = Alignment.Center,
     content: @Composable BoxScope.() -> Unit
 ) {
     val blurLayer = rememberGraphicsLayer()
+    val lens = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) GlassLens() else null
+    }
     val position = remember { PositionHolder() }
     Box(
         modifier = modifier
+            .shadow(elevation, shape, clip = false)
             .onGloballyPositioned { position.value = it.positionInRoot() }
             .graphicsLayer()
             .drawBehind {
@@ -98,7 +108,18 @@ fun GlassSurface(
                     backdrop.generation
                     val offset = position.value - backdrop.originInRoot
                     val radius = blurRadius.toPx()
-                    blurLayer.renderEffect = BlurEffect(radius, radius, TileMode.Clamp)
+                    val rounded = (outline as? Outline.Rounded)?.roundRect
+                    val uniformCorners = rounded == null || (
+                        rounded.topLeftCornerRadius == rounded.topRightCornerRadius &&
+                            rounded.topLeftCornerRadius == rounded.bottomLeftCornerRadius &&
+                            rounded.topLeftCornerRadius == rounded.bottomRightCornerRadius
+                        )
+                    blurLayer.renderEffect = if (lens != null && Build.VERSION.SDK_INT >= 33 && refraction > 0f && outline !is Outline.Generic && uniformCorners) {
+                        val corner = rounded?.topLeftCornerRadius?.x ?: 0f
+                        lens.effect(size.width, size.height, corner, radius, refraction, density)
+                    } else {
+                        BlurEffect(radius, radius, TileMode.Clamp)
+                    }
                     blurLayer.record {
                         translate(-offset.x, -offset.y) { drawLayer(backdrop.layer) }
                     }
@@ -111,8 +132,15 @@ fun GlassSurface(
                 }
                 drawPath(
                     path = path,
-                    brush = Brush.verticalGradient(listOf(rim, rim.copy(alpha = rim.alpha * 0.3f))),
-                    style = Stroke(width = 1.dp.toPx())
+                    brush = Brush.linearGradient(
+                        0f to rim,
+                        0.36f to rim.copy(alpha = rim.alpha * 0.12f),
+                        0.64f to rim.copy(alpha = rim.alpha * 0.08f),
+                        1f to rim.copy(alpha = rim.alpha * 0.65f),
+                        start = Offset.Zero,
+                        end = Offset(size.width, size.height)
+                    ),
+                    style = Stroke(width = 0.8.dp.toPx())
                 )
             },
         contentAlignment = contentAlignment,
