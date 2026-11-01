@@ -1,5 +1,7 @@
 package com.codexbar.android.feature.github
 
+import android.util.Log
+import com.codexbar.android.BuildConfig
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codexbar.android.core.domain.model.GitHubContributionsSession
@@ -17,6 +19,9 @@ import com.codexbar.android.core.network.github.GitHubTokenResponse
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.IOException
+import java.net.UnknownHostException
+import java.net.ConnectException
+import java.net.SocketTimeoutException
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -40,9 +45,11 @@ internal enum class GitHubDashboardError { Unavailable, Unauthorized, RateLimite
 internal data class GitHubDashboardState(
     val loading: Boolean = false,
     val userCode: String? = null,
+    val deviceRetrying: Boolean = false,
     val hasStoredSession: Boolean = false,
     val profile: GitHubProfile? = null,
     val layout: GitHubDashboardLayout? = null,
+    val widgetSaveError: Boolean = false,
     val repositories: List<GitHubRepository> = emptyList(),
     val repositoriesComplete: Boolean = false,
     val starred: List<GitHubRepository>? = null,
@@ -68,6 +75,7 @@ internal class GitHubDashboardViewModel @Inject constructor(
     private var contributionsLoginJob: Job? = null
     private var refreshJob: Job? = null
     private var signOutJob: Job? = null
+    private var linkContributionsAfterLogin = false
     private var layoutSaveJob: Job? = null
     private var layoutRevision: Long? = null
     private var layoutRefreshToken: String? = null
@@ -83,6 +91,7 @@ internal class GitHubDashboardViewModel @Inject constructor(
                     layoutSaveJob?.cancel()
                     layoutRevision = null
                     layoutRefreshToken = null
+                    linkContributionsAfterLogin = false
                     _state.value = GitHubDashboardState()
                 }
                 previous = revision
@@ -96,9 +105,12 @@ internal class GitHubDashboardViewModel @Inject constructor(
         loginJob = viewModelScope.launch {
             refreshJob?.cancelAndJoin()
             _state.update { it.copy(loading = true, userCode = null, error = null) }
+            var stage = "revision"
             try {
                 val revision = prefs.currentGitHubDashboardRevision()
+                stage = "client_id"
                 val clientId = api.clientId()
+                stage = "device_code"
                 val challenge = api.start(clientId)
                 _state.update { it.copy(userCode = challenge.userCode) }
                 val end = System.currentTimeMillis() + challenge.expiresIn * 1000
@@ -106,13 +118,22 @@ internal class GitHubDashboardViewModel @Inject constructor(
                 var completed = false
                 while (isActive && System.currentTimeMillis() < end) {
                     delay(interval * 1000)
-                    val token = api.poll(clientId, challenge.deviceCode)
+                    stage = "poll"
+                    val token = try { api.poll(clientId, challenge.deviceCode) } catch (error: IOException) {
+                        currentCoroutineContext().ensureActive()
+                        if (!error.retryableDevicePoll()) throw error
+                        _state.update { it.copy(deviceRetrying = true) }
+                        continue
+                    }
+                    _state.update { it.copy(deviceRetrying = false) }
                     when (token.error) {
                         "authorization_pending" -> continue
                         "slow_down" -> { interval = (interval + 5).coerceAtMost(120); continue }
                         "expired_token", "access_denied" -> throw GitHubLoginExpired()
                         null -> {
+                            stage = "token"
                             val session = token.toSession(clientId)
+                            stage = "save_session"
                             currentCoroutineContext().ensureActive()
                             if (!prefs.saveGitHubDashboardSessionIfRevision(session, revision)) {
                                 _state.value = GitHubDashboardState()
@@ -126,10 +147,14 @@ internal class GitHubDashboardViewModel @Inject constructor(
                     }
                 }
                 if (!completed) throw GitHubLoginExpired()
-                _state.update { it.copy(userCode = null, loading = false) }
+                _state.update { it.copy(userCode = null, loading = false, deviceRetrying = false) }
+                linkContributionsAfterLogin = true
                 refresh()
             } catch (cancelled: CancellationException) { throw cancelled }
-            catch (error: Exception) { _state.update { it.copy(loading = false, userCode = null, error = error.toDashboardError()) } }
+            catch (error: Exception) {
+                runCatching { Log.w("GitHubDashboard", "sign_in stage=$stage type=${error.javaClass.simpleName} status=${(error as? GitHubDashboardException)?.status ?: 0}") }
+                _state.update { it.copy(loading = false, userCode = null, error = error.toDashboardError()) }
+            }
         }
     }
 
@@ -148,7 +173,13 @@ internal class GitHubDashboardViewModel @Inject constructor(
                 var completed = false
                 while (isActive && System.currentTimeMillis() < end) {
                     delay(interval * 1000)
-                    val response = api.poll(clientId, challenge.deviceCode)
+                    val response = try { api.poll(clientId, challenge.deviceCode) } catch (error: IOException) {
+                        currentCoroutineContext().ensureActive()
+                        if (!error.retryableDevicePoll()) throw error
+                        _state.update { it.copy(deviceRetrying = true) }
+                        continue
+                    }
+                    _state.update { it.copy(deviceRetrying = false) }
                     when (response.error) {
                         "authorization_pending" -> continue
                         "slow_down" -> { interval = (interval + 5).coerceAtMost(120); continue }
@@ -168,7 +199,7 @@ internal class GitHubDashboardViewModel @Inject constructor(
                     }
                 }
                 if (!completed) throw GitHubLoginExpired()
-                _state.update { it.copy(contributionsLoginLoading = false, contributionsUserCode = null) }
+                _state.update { it.copy(contributionsLoginLoading = false, contributionsUserCode = null, deviceRetrying = false) }
                 refreshJob?.cancelAndJoin()
                 refresh()
             } catch (cancelled: CancellationException) { throw cancelled }
@@ -179,30 +210,37 @@ internal class GitHubDashboardViewModel @Inject constructor(
 
     fun cancelContributionsLogin() {
         contributionsLoginJob?.cancel()
-        _state.update { it.copy(contributionsLoginLoading = false, contributionsUserCode = null, contributionsLoginError = null) }
+        _state.update { it.copy(contributionsLoginLoading = false, contributionsUserCode = null, contributionsLoginError = null, deviceRetrying = false) }
     }
 
     fun refresh() {
         if (refreshJob?.isActive == true || signOutJob?.isActive == true) return
         refreshJob = viewModelScope.launch {
             _state.update { it.copy(loading = true, error = null) }
+            var stage = "load_session"
             try {
                 val revision = prefs.currentGitHubDashboardRevision()
                 var session = prefs.loadGitHubDashboardSession()
                 if (session == null) { _state.value = GitHubDashboardState(); return@launch }
                 _state.update { it.copy(hasStoredSession = true) }
                 if (session.expiresAtMillis <= System.currentTimeMillis() + 60_000) {
+                    stage = "refresh_session"
                     val previous = session
-                    val rotated = api.refresh(previous).toSession(previous.clientId)
+                    val rotated = withContext(NonCancellable) {
+                        val token = api.refresh(previous).toSession(previous.clientId)
+                        if (!prefs.replaceGitHubDashboardSession(previous.refreshToken, token)) null else token
+                    }
                     currentCoroutineContext().ensureActive()
-                    if (!prefs.replaceGitHubDashboardSession(previous.refreshToken, rotated)) {
+                    if (rotated == null) {
                         _state.value = GitHubDashboardState()
                         return@launch
                     }
                     session = rotated
                 }
+                stage = "profile"
                 val profile = api.profile(session.accessToken)
                 if (!profile.login.matches(Regex("[A-Za-z0-9-]{1,39}"))) throw IOException("Invalid GitHub profile")
+                stage = "repositories"
                 val repositoryResult = api.allRepositories(session.accessToken)
                 val repos = repositoryResult.items.filter { isGitHubRepositoryUrl(it.htmlUrl, it.fullName) }
                 currentCoroutineContext().ensureActive()
@@ -210,6 +248,7 @@ internal class GitHubDashboardViewModel @Inject constructor(
                     _state.value = GitHubDashboardState()
                     return@launch
                 }
+                stage = "layout"
                 val layout = profile.id?.takeIf { it > 0 }?.let { ownerId ->
                     _state.value.layout?.takeIf { it.ownerId == ownerId } ?: prefs.loadGitHubDashboardLayout(ownerId)
                 }
@@ -218,6 +257,7 @@ internal class GitHubDashboardViewModel @Inject constructor(
                 layoutRefreshToken = session.refreshToken
                 _state.update { it.copy(profile = profile, layout = layout, repositories = repos,
                     repositoriesComplete = repositoryResult.complete && repos.size == repositoryResult.items.size, error = null) }
+                stage = "contributions"
                 var privateToken: String? = null
                 val savedContributions = prefs.loadGitHubContributionsSession()
                 if (profile.id != null && savedContributions?.ownerId == profile.id) {
@@ -254,8 +294,16 @@ internal class GitHubDashboardViewModel @Inject constructor(
                     privateContributionsConnected = privateToken != null && contributions != null,
                     contributionsUnavailable = contributions == null, repositoryActivity = activity,
                     starred = safeStars, starredComplete = starred?.complete == true && safeStars?.size == starred.items.size) }
+                if (linkContributionsAfterLogin) {
+                    linkContributionsAfterLogin = false
+                    if (privateToken == null && BuildConfig.GITHUB_CONTRIBUTIONS_CLIENT_ID.isNotBlank())
+                        signInContributions(BuildConfig.GITHUB_CONTRIBUTIONS_CLIENT_ID)
+                }
             } catch (cancelled: CancellationException) { throw cancelled }
-            catch (error: Exception) { _state.update { it.copy(loading = false, error = error.toDashboardError()) } }
+            catch (error: Exception) {
+                runCatching { Log.w("GitHubDashboard", "refresh stage=$stage type=${error.javaClass.simpleName} status=${(error as? GitHubDashboardException)?.status ?: 0}") }
+                _state.update { it.copy(loading = false, error = error.toDashboardError()) }
+            }
         }
     }
 
@@ -264,17 +312,21 @@ internal class GitHubDashboardViewModel @Inject constructor(
         val revision = layoutRevision ?: return
         val token = layoutRefreshToken ?: return
         val next = layout.copy(widgets = widgets).normalized(layout.ownerId)
-        _state.update { it.copy(layout = next) }
+        _state.update { it.copy(layout = next, widgetSaveError = false) }
         val previous = layoutSaveJob
         layoutSaveJob = viewModelScope.launch {
             previous?.join()
-            if (!prefs.saveGitHubDashboardLayoutIfCurrent(next, revision, token) &&
-                layoutRevision == revision && _state.value.profile?.id == next.ownerId) {
-                refreshJob?.join()
-                val currentToken = layoutRefreshToken
-                if (currentToken != null && layoutRevision == revision && _state.value.profile?.id == next.ownerId)
-                    prefs.saveGitHubDashboardLayoutIfCurrent(next, revision, currentToken)
-            }
+            try {
+                var saved = prefs.saveGitHubDashboardLayoutIfCurrent(next, revision, token)
+                if (!saved && layoutRevision == revision && _state.value.profile?.id == next.ownerId) {
+                    refreshJob?.join()
+                    val currentToken = layoutRefreshToken
+                    if (currentToken != null && layoutRevision == revision && _state.value.profile?.id == next.ownerId)
+                        saved = prefs.saveGitHubDashboardLayoutIfCurrent(next, revision, currentToken)
+                }
+                if (!saved && layoutRevision == revision) _state.update { it.copy(widgetSaveError = true) }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { if (layoutRevision == revision) _state.update { it.copy(widgetSaveError = true) } }
         }
     }
 
@@ -288,6 +340,7 @@ internal class GitHubDashboardViewModel @Inject constructor(
         layoutSaveJob = null
         layoutRevision = null
         layoutRefreshToken = null
+        linkContributionsAfterLogin = false
         loginJob = null
         refreshJob = null
         val hadStoredSession = _state.value.hasStoredSession
@@ -334,6 +387,12 @@ internal fun GitHubTokenResponse.toContributionsToken(clientId: String): GitHubD
     if ("read:user" !in scopes || scopes.any { it !in setOf("read:user", "offline_access") } ||
         !tokenType.equals("bearer", ignoreCase = true)) throw IOException("Invalid GitHub contribution scope")
     return toSession(clientId)
+}
+
+internal fun IOException.retryableDevicePoll(): Boolean = when (this) {
+    is UnknownHostException, is ConnectException, is SocketTimeoutException -> true
+    is GitHubDashboardException -> status == 429 || status in 500..599
+    else -> false
 }
 
 private class GitHubLoginExpired : IOException()

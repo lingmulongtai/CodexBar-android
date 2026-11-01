@@ -110,6 +110,32 @@ class GitHubDashboardCancellationTest {
         } finally { Dispatchers.resetMain() }
     }
 
+    @Test fun `temporary DNS failure keeps the device code and retries`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val prefs = mock(EncryptedPrefsManager::class.java)
+            `when`(prefs.gitHubDashboardRevision).thenReturn(MutableStateFlow(0L))
+            `when`(prefs.currentGitHubDashboardRevision()).thenReturn(0L)
+            var polls = 0
+            val api = GitHubDashboardApi(Json { ignoreUnknownKeys = true }) { request ->
+                when {
+                    request.url.encodedPath.startsWith("/apps/") -> GitHubHttpResponse(200, """{"client_id":"client-id","slug":"codexbar-android-dashboard","owner":{"login":"lingmulongtai"}}""")
+                    request.url.encodedPath.endsWith("/device/code") -> GitHubHttpResponse(200, """{"device_code":"secret","user_code":"ABCD-1234","verification_uri":"https://github.com/login/device","expires_in":900,"interval":5}""")
+                    else -> { polls++; if (polls == 1) throw java.net.UnknownHostException() else GitHubHttpResponse(200, """{"error":"authorization_pending"}""") }
+                }
+            }
+            val vm = GitHubDashboardViewModel(api, prefs)
+            runCurrent(); vm.signIn(); runCurrent(); advanceTimeBy(5001); runCurrent()
+            assertEquals("ABCD-1234", vm.state.value.userCode)
+            assertTrue(vm.state.value.deviceRetrying)
+            advanceTimeBy(5000); runCurrent()
+            assertEquals(2, polls)
+            assertEquals("ABCD-1234", vm.state.value.userCode)
+            assertFalse(vm.state.value.deviceRetrying)
+            vm.signOut(); runCurrent()
+        } finally { Dispatchers.resetMain() }
+    }
+
     @Test fun `contribution authorization rejects a different GitHub account`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
