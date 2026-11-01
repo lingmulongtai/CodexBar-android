@@ -25,7 +25,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.GitHubWidgetKind
-import com.codexbar.android.core.domain.model.GitHubWidgetSize
 import com.codexbar.android.core.network.github.GitHubContributionCalendar
 import com.codexbar.android.core.network.github.GitHubContributionDay
 import com.codexbar.android.core.network.github.GitHubContributions
@@ -36,7 +35,7 @@ import java.time.LocalDate
 @Composable
 internal fun GitHubContributionCards(data: GitHubContributions?, unavailable: Boolean, loading: Boolean,
     selectedDay: GitHubContributionDay?, onSelectDay: (GitHubContributionDay?) -> Unit,
-    kind: GitHubWidgetKind? = null, size: GitHubWidgetSize = GitHubWidgetSize.MEDIUM) {
+    kind: GitHubWidgetKind? = null, calendarScale: Float = 1f) {
     if (data == null) {
         if ((kind == null || kind == GitHubWidgetKind.COMMITS) && unavailable && !loading) CodexBarCard(Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.github_profile_unavailable), modifier = Modifier.padding(18.dp),
@@ -65,7 +64,7 @@ internal fun GitHubContributionCards(data: GitHubContributions?, unavailable: Bo
             if (data.partial) Text(stringResource(R.string.github_profile_partial), style = MaterialTheme.typography.bodySmall)
         }
     }
-    if (kind == null || kind == GitHubWidgetKind.CALENDAR) viewer.year?.contributionCalendar?.let { ContributionCalendarCard(it, selectedDay, onSelectDay, size) }
+    if (kind == null || kind == GitHubWidgetKind.CALENDAR) viewer.year?.contributionCalendar?.let { ContributionCalendarCard(it, selectedDay, onSelectDay, calendarScale) }
     if (kind == null || kind == GitHubWidgetKind.ACTIVITY) viewer.year?.let { year ->
         val values = listOf(year.totalCommitContributions, year.totalIssueContributions,
             year.totalPullRequestContributions, year.totalPullRequestReviewContributions)
@@ -103,11 +102,11 @@ internal fun GitHubContributionCards(data: GitHubContributions?, unavailable: Bo
 
 @Composable
 private fun ContributionCalendarCard(calendar: GitHubContributionCalendar, selected: GitHubContributionDay?,
-    onSelect: (GitHubContributionDay?) -> Unit, size: GitHubWidgetSize) {
+    onSelect: (GitHubContributionDay?) -> Unit, scale: Float) {
     val dark = LocalCodexBarThemeProfile.current.isDark
     val density = LocalDensity.current
-    val stepDp = when (size) { GitHubWidgetSize.SMALL -> 10.dp; GitHubWidgetSize.MEDIUM -> 12.dp; GitHubWidgetSize.LARGE -> 16.dp }
-    val cellDp = stepDp - 3.dp
+    val stepDp = 12.dp * scale.coerceIn(0.42f, 1.6f)
+    val cellDp = stepDp * 0.75f
     val step = with(density) { stepDp.toPx() }
     val cell = with(density) { cellDp.toPx() }
     val days = remember(calendar) {
@@ -124,7 +123,7 @@ private fun ContributionCalendarCard(calendar: GitHubContributionCalendar, selec
                 fontWeight = FontWeight.SemiBold)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(description, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                if (selected != null) Text(stringResource(R.string.github_profile_calendar_selected, selected.date, selected.contributionCount),
+                if (selected != null) Text(stringResource(R.string.github_profile_calendar_selected, selected.date.drop(5).replace('-', '/'), selected.contributionCount),
                     style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
             }
             if (days.isNotEmpty()) {

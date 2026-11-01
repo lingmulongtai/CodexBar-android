@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Folder
@@ -37,9 +36,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
-import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -71,35 +67,9 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
     var sort by rememberSaveable { mutableStateOf(RepositorySort.Updated) }
     var selectedDay by remember { mutableStateOf<GitHubContributionDay?>(null) }
     var editingWidgets by rememberSaveable { mutableStateOf(false) }
-    val widgetBounds = remember { mutableStateMapOf<String, androidx.compose.ui.geometry.Rect>() }
     val dashboardGrid = rememberLazyGridState()
-    var draggedWidget by remember { mutableStateOf<String?>(null) }
-    var dragPosition by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
-    val screenHeight = with(LocalDensity.current) { LocalConfiguration.current.screenHeightDp.dp.toPx() }
-    val edge = with(LocalDensity.current) { 100.dp.toPx() }
-    val scrollStep = with(LocalDensity.current) { 7.dp.toPx() }
-    fun moveWidget(from: String, target: String) {
-        val list = viewModel.state.value.layout?.widgets?.toMutableList() ?: return
-        val i = list.indexOfFirst { it.key == from }
-        val j = list.indexOfFirst { it.key == target }
-        if (i >= 0 && j >= 0 && i != j) { list.add(j, list.removeAt(i)); viewModel.updateWidgets(list) }
-    }
-    LaunchedEffect(editingWidgets, draggedWidget) {
-        while (editingWidgets && draggedWidget != null) {
-            val point = dragPosition
-            if (point != null) {
-                val delta = when { point.y < edge -> -scrollStep; point.y > screenHeight - edge -> scrollStep; else -> 0f }
-                if (delta != 0f) {
-                    dashboardGrid.scrollBy(delta)
-                    val from = draggedWidget
-                    widgetBounds.entries.firstOrNull { it.key != from && it.value.contains(point) }?.let {
-                        if (from != null) moveWidget(from, it.key)
-                    }
-                }
-            }
-            delay(16)
-        }
-    }
+    val dashboardWidgets = state.layout?.widgets.orEmpty()
+    val widgetDrag = rememberGitHubWidgetDragReorder(dashboardGrid, dashboardWidgets, viewModel::updateWidgets)
     val swipeEnabled = LocalTopLevelSwipeEnabled.current
     DisposableEffect(page, editingWidgets, swipeEnabled) {
         if (page == GitHubPage.Widgets || editingWidgets) swipeEnabled?.value = false
@@ -138,7 +108,7 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
     }) { headerHeight ->
         if (page == GitHubPage.Profile || state.profile == null) {
             val profile = state.profile
-            val widgets = state.layout?.widgets.orEmpty()
+            val widgets = dashboardWidgets
             LazyVerticalGrid(columns = GridCells.Fixed(2), state = dashboardGrid, modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = headerHeight + 8.dp,
                     bottom = LocalBottomChromeInset.current + 32.dp),
@@ -154,12 +124,16 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
                     gridItems(widgets, key = { it.key }, span = { widget ->
                         GridItemSpan(if (widget.kind == GitHubWidgetKind.REPOSITORY && widget.size == GitHubWidgetSize.SMALL) 1 else maxLineSpan)
                     }) { widget ->
-                        GitHubWidgetFrame(widget = widget, editing = editingWidgets, bounds = widgetBounds,
-                            modifier = Modifier.fillMaxWidth(), onMove = ::moveWidget,
-                            onDragPosition = { key, position -> draggedWidget = if (position == null) null else key; dragPosition = position },
+                        GitHubWidgetFrame(widget = widget, editing = editingWidgets, drag = widgetDrag,
+                            modifier = Modifier.fillMaxWidth(),
                             onResize = { size ->
                                 viewModel.state.value.layout?.widgets?.let { list ->
                                     viewModel.updateWidgets(list.map { if (it.key == widget.key) it.copy(size = size) else it })
+                                }
+                            },
+                            onCalendarScale = { scale ->
+                                viewModel.state.value.layout?.widgets?.let { list ->
+                                    viewModel.updateWidgets(list.map { if (it.key == widget.key) it.copy(calendarScale = scale) else it })
                                 }
                             },
                             onRemove = { viewModel.state.value.layout?.widgets?.let { list ->
@@ -171,13 +145,13 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
                                     onStarred = { sort = RepositorySort.Updated; page = GitHubPage.Starred })
                                 GitHubWidgetKind.COMMITS -> Column {
                                     GitHubContributionCards(state.contributions, state.contributionsUnavailable, state.loading,
-                                        selectedDay = selectedDay, onSelectDay = { selectedDay = it }, kind = widget.kind, size = widget.size)
+                                        selectedDay = selectedDay, onSelectDay = { selectedDay = it }, kind = widget.kind, calendarScale = widget.effectiveCalendarScale)
                                     if (!state.privateContributionsConnected && !state.contributionsLoginLoading && !editingWidgets)
                                         GitHubContributionsLogin(state, viewModel, ::open)
                                 }
                                 GitHubWidgetKind.CALENDAR, GitHubWidgetKind.ACTIVITY ->
                                     GitHubContributionCards(state.contributions, state.contributionsUnavailable, state.loading,
-                                        selectedDay = selectedDay, onSelectDay = { selectedDay = it }, kind = widget.kind, size = widget.size)
+                                        selectedDay = selectedDay, onSelectDay = { selectedDay = it }, kind = widget.kind, calendarScale = widget.effectiveCalendarScale)
                                 GitHubWidgetKind.REPOSITORY -> {
                                     val repo = state.repositories.find { it.id == widget.repositoryId }
                                     if (repo != null) GitHubPinnedRepository(repo, widget.size, ::open)

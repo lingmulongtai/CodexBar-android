@@ -2,9 +2,9 @@ package com.codexbar.android.feature.github
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,15 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,31 +55,17 @@ internal fun GitHubPinnedRepository(repo: GitHubRepository, size: GitHubWidgetSi
 
 /** Widget content remains visible while its long-press reorder and resize handles are active. */
 @Composable
-internal fun GitHubWidgetFrame(widget: GitHubWidget, editing: Boolean, bounds: MutableMap<String, Rect>,
-    onMove: (String, String) -> Unit, onResize: (GitHubWidgetSize) -> Unit, onRemove: () -> Unit,
-    onDragPosition: (String, Offset?) -> Unit, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    val haptic = LocalHapticFeedback.current
+internal fun GitHubWidgetFrame(widget: GitHubWidget, editing: Boolean, drag: GitHubWidgetDragReorder,
+    onResize: (GitHubWidgetSize) -> Unit, onCalendarScale: (Float) -> Unit, onRemove: () -> Unit,
+    modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val resizeStep = with(LocalDensity.current) { 30.dp.toPx() }
-    var pointer by remember(widget.key) { mutableStateOf(Offset.Zero) }
-    val currentMove by rememberUpdatedState(onMove)
+    val calendarHeight = with(LocalDensity.current) { 84.dp.toPx() }
     val currentSize by rememberUpdatedState(widget.size)
+    val currentScale by rememberUpdatedState(widget.effectiveCalendarScale)
     val currentResize by rememberUpdatedState(onResize)
-    Box(modifier.onGloballyPositioned { coordinates ->
-        val origin = coordinates.positionInWindow()
-        bounds[widget.key] = Rect(origin, androidx.compose.ui.geometry.Size(coordinates.size.width.toFloat(), coordinates.size.height.toFloat()))
-    }.then(if (editing) Modifier.border(1.dp, Color.White.copy(alpha = 0.75f), RoundedCornerShape(20.dp))
-        .pointerInput(widget.key) {
-            detectDragGesturesAfterLongPress(onDragStart = { offset ->
-                pointer = (bounds[widget.key]?.topLeft ?: Offset.Zero) + offset
-                onDragPosition(widget.key, pointer)
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            }, onDragEnd = { onDragPosition(widget.key, null) }, onDragCancel = { onDragPosition(widget.key, null) },
-            onDrag = { change, delta ->
-                change.consume(); pointer += delta
-                onDragPosition(widget.key, pointer)
-                bounds.entries.firstOrNull { it.key != widget.key && it.value.contains(pointer) }?.let { currentMove(widget.key, it.key) }
-            })
-        } else Modifier)) {
+    val currentCalendarScale by rememberUpdatedState(onCalendarScale)
+    Box(modifier.then(if (editing) Modifier.border(1.dp, Color.White.copy(alpha = 0.75f), RoundedCornerShape(20.dp))
+        .gitHubWidgetDragReorder(drag, widget.key) else Modifier)) {
         content()
         if (editing) {
             IconButtonGlass(onClick = onRemove, modifier = Modifier.align(Alignment.TopStart),
@@ -92,17 +73,27 @@ internal fun GitHubWidgetFrame(widget: GitHubWidget, editing: Boolean, bounds: M
             if (widget.kind == GitHubWidgetKind.CALENDAR || widget.kind == GitHubWidgetKind.REPOSITORY) {
                 Box(Modifier.align(Alignment.BottomEnd).size(44.dp).pointerInput(widget.key) {
                     var delta = 0f
-                    detectDragGestures(onDragStart = { delta = 0f }, onDrag = { change, amount ->
-                        change.consume(); delta += if (kotlin.math.abs(amount.y) >= kotlin.math.abs(amount.x)) amount.y else amount.x
-                        if (delta >= resizeStep || delta <= -resizeStep) {
-                            val direction = if (delta > 0) 1 else -1
-                            val sizes = GitHubWidgetSize.entries
-                            val next = (sizes.indexOf(currentSize) + direction).coerceIn(0, sizes.lastIndex)
-                            currentResize(sizes[next]); delta = 0f
+                    var scale = 1f
+                    detectDragGestures(onDragStart = { delta = 0f; scale = currentScale }, onDrag = { change, amount ->
+                        change.consume()
+                        val motion = if (kotlin.math.abs(amount.y) >= kotlin.math.abs(amount.x)) amount.y else amount.x
+                        if (widget.kind == GitHubWidgetKind.CALENDAR) {
+                            scale = (scale + motion / calendarHeight).coerceIn(0.42f, 1.6f)
+                            currentCalendarScale(scale)
+                        } else {
+                            delta += motion
+                            if (delta >= resizeStep || delta <= -resizeStep) {
+                                val direction = if (delta > 0) 1 else -1
+                                val sizes = GitHubWidgetSize.entries
+                                val next = (sizes.indexOf(currentSize) + direction).coerceIn(0, sizes.lastIndex)
+                                currentResize(sizes[next]); delta = 0f
+                            }
                         }
                     })
                 }, contentAlignment = Alignment.BottomEnd) {
                     Canvas(Modifier.size(28.dp).padding(6.dp)) {
+                        drawLine(Color.Black.copy(alpha = .6f), Offset(size.width * .25f, size.height), Offset(size.width, size.height * .25f),
+                            strokeWidth = 4.dp.toPx(), cap = StrokeCap.Round)
                         drawLine(Color.White, Offset(size.width * .25f, size.height), Offset(size.width, size.height * .25f),
                             strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
                         drawLine(Color.White, Offset(size.width * .58f, size.height), Offset(size.width, size.height * .58f),
@@ -112,14 +103,14 @@ internal fun GitHubWidgetFrame(widget: GitHubWidget, editing: Boolean, bounds: M
             }
         }
     }
-    DisposableEffect(widget.key) { onDispose { bounds.remove(widget.key) } }
 }
 
 @Composable
 private fun IconButtonGlass(onClick: () -> Unit, modifier: Modifier, description: String) {
-    androidx.compose.material3.IconButton(onClick = onClick, modifier = modifier.size(36.dp)
-        .padding(5.dp).clip(CircleShape).background(Color(0xDD20242B))) {
-        Icon(Icons.Rounded.Remove, contentDescription = description, tint = Color.White, modifier = Modifier.size(19.dp))
+    Box(modifier.size(32.dp).clickable(onClickLabel = description, onClick = onClick), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(20.dp).clip(CircleShape).background(Color(0xE620242B)), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.Remove, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+        }
     }
 }
 
@@ -130,10 +121,8 @@ internal fun GitHubWidgetPicker(state: GitHubDashboardState, headerHeight: Dp,
     var searching by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
     val available = remember(state.repositories, widgets, search) {
-        if (search.isBlank()) emptyList() else {
-            val pinned = widgets.mapNotNull { it.repositoryId }.toSet()
-            state.repositories.filter { it.id !in pinned && it.fullName.contains(search.trim(), ignoreCase = true) }.take(100)
-        }
+        val pinned = widgets.mapNotNull { it.repositoryId }.toSet()
+        state.repositories.filter { it.id !in pinned && it.fullName.contains(search.trim(), ignoreCase = true) }.take(100)
     }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp,
         top = headerHeight + 8.dp, bottom = LocalBottomChromeInset.current + 32.dp),
@@ -157,7 +146,7 @@ internal fun GitHubWidgetPicker(state: GitHubDashboardState, headerHeight: Dp,
         } else {
             item { CodexBarOutlinedTextField(search, { search = it }, Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.github_widgets_search)) }, singleLine = true) }
-            if (search.isNotBlank() && available.isEmpty()) item { Text(stringResource(R.string.github_widgets_no_results)) }
+            if (available.isEmpty()) item { Text(stringResource(R.string.github_widgets_no_results)) }
             items(available, key = { it.id }) { repo ->
                 CodexBarCard(onClick = { onChange(widgets + GitHubWidget(GitHubWidgetKind.REPOSITORY, repo.id)); onAdded() },
                     modifier = Modifier.fillMaxWidth()) {
