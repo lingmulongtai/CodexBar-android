@@ -201,7 +201,6 @@ fun CodexBarApp(
     ) {
         when {
             themeProfile.floatingNavigation -> {
-                val refresh = dashboardViewModel?.refreshState?.collectAsStateWithLifecycle()?.value
                 val wallpaperModel: DailyWallpaperViewModel = hiltViewModel()
                 val wallpaper by wallpaperModel.state.collectAsStateWithLifecycle()
                 val lifecycleOwner = LocalLifecycleOwner.current
@@ -234,7 +233,6 @@ fun CodexBarApp(
                 GlassNavigationBar(
                     entries = entries,
                     backdrop = backdrop,
-                    refresh = refresh,
                     onRefresh = dashboardViewModel?.let { model -> { model.refresh() } },
                     modifier = Modifier.align(Alignment.BottomCenter)
                 )

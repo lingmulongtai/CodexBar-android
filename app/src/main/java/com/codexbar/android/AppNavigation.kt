@@ -1,6 +1,5 @@
 package com.codexbar.android
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -53,12 +52,8 @@ import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -76,7 +71,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
 import com.codexbar.android.core.domain.model.AppThemeStyle
-import com.codexbar.android.feature.dashboard.DashboardRefreshState
 import com.codexbar.android.ui.components.BrandGlyph
 import com.codexbar.android.ui.components.GlassBackdrop
 import com.codexbar.android.ui.components.GlassSurface
@@ -156,7 +150,6 @@ internal fun AppNavigationRail(entries: List<NavigationEntry>, modifier: Modifie
 internal fun GlassNavigationBar(
     entries: List<NavigationEntry>,
     backdrop: GlassBackdrop,
-    refresh: DashboardRefreshState?,
     onRefresh: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
@@ -188,7 +181,6 @@ internal fun GlassNavigationBar(
         }
         if (onRefresh != null) {
             val refreshLabel = stringResource(R.string.action_refresh)
-            val active = refresh?.active == true
             val interaction = remember { MutableInteractionSource() }
             val pressed by interaction.collectIsPressedAsState()
             val focused by interaction.collectIsFocusedAsState()
@@ -214,41 +206,10 @@ internal fun GlassNavigationBar(
                         contentDescription = refreshLabel
                     }
             ) {
-                if (active) {
-                    val total = refresh?.total ?: 0
-                    val fraction = if (total > 0) {
-                        (refresh?.completed ?: 0).toFloat() / total
-                    } else {
-                        0f
-                    }.coerceAtLeast(0.08f)
-                    val ring = colors.primary
-                    Canvas(Modifier.fillMaxSize().padding(3.dp)) {
-                        val stroke = 3.dp.toPx()
-                        val inset = stroke / 2
-                        drawArc(
-                            color = ring.copy(alpha = 0.16f),
-                            startAngle = 0f,
-                            sweepAngle = 360f,
-                            useCenter = false,
-                            topLeft = Offset(inset, inset),
-                            size = Size(size.width - stroke, size.height - stroke),
-                            style = Stroke(stroke)
-                        )
-                        drawArc(
-                            color = ring,
-                            startAngle = -90f,
-                            sweepAngle = 360f * fraction,
-                            useCenter = false,
-                            topLeft = Offset(inset, inset),
-                            size = Size(size.width - stroke, size.height - stroke),
-                            style = Stroke(stroke, cap = StrokeCap.Round)
-                        )
-                    }
-                }
                 Icon(
                     Icons.Rounded.Refresh,
                     contentDescription = null,
-                    tint = if (active) colors.primary else colors.onSurface,
+                    tint = colors.onSurface,
                     modifier = Modifier.size(24.dp)
                 )
             }
