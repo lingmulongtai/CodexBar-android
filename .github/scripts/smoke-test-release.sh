@@ -18,7 +18,7 @@ package_name='com.codexbar.android'
 adb_bounded() { timeout "${ADB_TIMEOUT_SECONDS:-30}" adb "$@"; }
 assert_device() {
   state="$(adb_bounded get-state 2>/dev/null || true)"
-  if [ "$state" != 'device' ]; then
+  if [ "$state" != 'device' ] || ! adb_bounded shell true >/dev/null 2>&1; then
     printf '::error::ADB device disconnected or did not respond during release smoke test.\n'
     exit 1
   fi
