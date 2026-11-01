@@ -312,7 +312,8 @@ fun ConnectionsScreen(
     onGeminiPairingConsumed: () -> Unit = {},
     initialCodexTelemetryPairingUri: String? = null,
     onCodexTelemetryPairingConsumed: () -> Unit = {},
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = hiltViewModel(),
+    onOpenSettings: (() -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -372,7 +373,8 @@ fun ConnectionsScreen(
                                 )
                             }
                         }
-                    }
+                    },
+                    actions = { onOpenSettings?.let { com.codexbar.android.ui.components.AppSettingsAction(it) } }
                 )
             }
         }

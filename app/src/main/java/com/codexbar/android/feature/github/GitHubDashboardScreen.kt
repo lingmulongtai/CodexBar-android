@@ -59,7 +59,8 @@ private enum class GitHubPage { Profile, Repositories, Starred, Widgets }
 internal enum class RepositorySort { Updated, Pushed, Stars, Name, Commits, Contributions }
 
 @Composable
-internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltViewModel()) {
+internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltViewModel(),
+    onOpenSettings: (() -> Unit)? = null) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val uri = LocalUriHandler.current
     var browserError by remember { mutableStateOf(false) }
@@ -98,12 +99,15 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.action_back))
             }
         }, actions = {
-            if (page == GitHubPage.Profile && editingWidgets) {
-                CodexBarIconButton(onClick = { page = GitHubPage.Widgets }) {
-                    Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.github_widgets_add))
-                }
-                CodexBarTextButton(onClick = { editingWidgets = false }) { Text(stringResource(R.string.provider_order_done)) }
+            if (page == GitHubPage.Profile && state.profile != null) {
+                if (editingWidgets) {
+                    CodexBarIconButton(onClick = { page = GitHubPage.Widgets }) {
+                        Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.github_widgets_add))
+                    }
+                    CodexBarTextButton(onClick = { editingWidgets = false }) { Text(stringResource(R.string.provider_order_done)) }
+                } else CodexBarTextButton(onClick = { editingWidgets = true }) { Text(stringResource(R.string.github_widgets_edit)) }
             }
+            onOpenSettings?.let { AppSettingsAction(it) }
         })
     }) { headerHeight ->
         if (page == GitHubPage.Profile || state.profile == null) {
@@ -163,14 +167,7 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
                         }
                     }
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                            if (!editingWidgets) CodexBarOutlinedButton(onClick = viewModel::signOut) { Text(stringResource(R.string.github_dashboard_sign_out)) }
-                            else Spacer(Modifier.width(1.dp))
-                            CodexBarIconButton(onClick = { if (editingWidgets) page = GitHubPage.Widgets else editingWidgets = true }) {
-                                Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.github_widgets_title))
-                            }
-                        }
+                        CodexBarOutlinedButton(onClick = viewModel::signOut) { Text(stringResource(R.string.github_dashboard_sign_out)) }
                     }
                     if (state.widgetSaveError) item(span = { GridItemSpan(maxLineSpan) }) {
                         Text(stringResource(R.string.github_widgets_save_error), color = MaterialTheme.colorScheme.error)

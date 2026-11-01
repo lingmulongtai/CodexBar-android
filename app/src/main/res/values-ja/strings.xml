@@ -727,4 +727,5 @@
     <string name="github_widgets_save_error">ウィジェットを保存できませんでした。もう一度編集してください。</string>
     <string name="github_widgets_direct_hint">ウィジェットを長押しして移動、右下の角をドラッグしてサイズ変更できます。</string>
     <string name="github_dashboard_retrying">通信が途切れたため再接続中…</string>
+    <string name="github_widgets_edit">編集</string>
 </resources>

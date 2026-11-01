@@ -304,6 +304,7 @@ private fun AppNavHost(
     onTrendsPageChange: (UsageAnalyticsPage) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val openSettings = { navController.navigate(SettingsRoute) { launchSingleTop = true } }
     NavHost(
         navController = navController,
         startDestination = DashboardRoute,
@@ -321,7 +322,7 @@ private fun AppNavHost(
                 DashboardScreen(
                     viewModel = dashboardViewModel,
                     onNavigateToConnections = navigateToConnections,
-                    onNavigateToSettings = { navController.navigate(SettingsRoute) { launchSingleTop = true } },
+                    onNavigateToSettings = openSettings,
                     initialSelectedService = initialDashboardService,
                     onInitialSelectionConsumed = onDashboardServiceConsumed
                 )
@@ -329,7 +330,7 @@ private fun AppNavHost(
                 DashboardPreviewScreen(
                     snapshot = dashboardPreviewSnapshot,
                     onNavigateToConnections = navigateToConnections,
-                    onNavigateToSettings = { navController.navigate(SettingsRoute) { launchSingleTop = true } }
+                    onNavigateToSettings = openSettings
                 )
             }
         }
@@ -343,7 +344,8 @@ private fun AppNavHost(
                 onGeminiPairingConsumed = onGeminiPairingConsumed,
                 initialCodexTelemetryPairingUri = initialCodexTelemetryPairingUri,
                 onCodexTelemetryPairingConsumed = onCodexTelemetryPairingConsumed,
-                viewModel = settingsViewModel
+                viewModel = settingsViewModel,
+                onOpenSettings = openSettings
             )
         }
         composable(HistoryRoute) {
@@ -352,7 +354,8 @@ private fun AppNavHost(
                 onConnections = { navController.navigateTopLevel(ConnectionsRoute) },
                 preview = dashboardPreviewSnapshot,
                 model = dashboardViewModel,
-                onPageChange = onTrendsPageChange
+                onPageChange = onTrendsPageChange,
+                onOpenSettings = openSettings
             )
         }
         composable(SpendRoute) {
@@ -361,10 +364,11 @@ private fun AppNavHost(
                 onConnections = { navController.navigateTopLevel(ConnectionsRoute) },
                 preview = dashboardPreviewSnapshot,
                 model = dashboardViewModel,
-                onPageChange = onTrendsPageChange
+                onPageChange = onTrendsPageChange,
+                onOpenSettings = openSettings
             )
         }
-        composable(GitHubRoute) { GitHubDashboardScreen(viewModel = githubViewModel) }
+        composable(GitHubRoute) { GitHubDashboardScreen(viewModel = githubViewModel, onOpenSettings = openSettings) }
         composable(SettingsRoute) {
             SettingsScreen(
                 onNavigateBack = {
