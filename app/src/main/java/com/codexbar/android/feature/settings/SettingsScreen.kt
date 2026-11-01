@@ -1,5 +1,7 @@
 package com.codexbar.android.feature.settings
 
+import com.codexbar.android.ui.components.CodexBarOutlinedTextField as OutlinedTextField
+
 import android.Manifest
 import android.app.NotificationManager
 import android.content.ActivityNotFoundException
@@ -68,7 +70,6 @@ import com.codexbar.android.ui.components.CodexBarIconButton as IconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import com.codexbar.android.ui.components.CodexBarOutlinedButton as OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -2318,6 +2319,8 @@ private fun RefreshIntervalSection(
             }
 
             if (automaticRefresh) {
+                var pendingMinutes by remember { mutableStateOf<Long?>(null) }
+                val displayedMinutes = pendingMinutes ?: currentMinutes
                 val refreshRange = RefreshIntervalPolicy.MIN_MINUTES.toFloat()..
                     RefreshIntervalPolicy.MAX_MINUTES.toFloat()
                 val refreshSteps = (
@@ -2325,16 +2328,18 @@ private fun RefreshIntervalSection(
                         RefreshIntervalPolicy.STEP_MINUTES - 1
                     ).toInt()
                 Text(
-                    text = formatMonitoringDuration(currentMinutes),
+                    text = formatMonitoringDuration(displayedMinutes),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Slider(
-                    value = currentMinutes.toFloat(),
+                    value = displayedMinutes.toFloat(),
                     onValueChange = { value ->
-                        onIntervalChange(
-                            RefreshIntervalPolicy.normalize(value.roundToInt().toLong())
-                        )
+                        pendingMinutes = RefreshIntervalPolicy.normalize(value.roundToInt().toLong())
+                    },
+                    onValueChangeFinished = {
+                        pendingMinutes?.takeIf { it != currentMinutes }?.let(onIntervalChange)
+                        pendingMinutes = null
                     },
                     valueRange = refreshRange,
                     steps = refreshSteps
@@ -2468,22 +2473,27 @@ private fun NotificationsSection(
                 }
             )
 
+            var pendingDuration by remember { mutableStateOf<Long?>(null) }
+            val displayedDuration = pendingDuration ?: durationMinutes
             Text(
                 text = stringResource(R.string.notifications_session_length),
                 style = MaterialTheme.typography.labelLarge
             )
             Text(
-                text = formatMonitoringDuration(durationMinutes),
+                text = formatMonitoringDuration(displayedDuration),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary
             )
             Slider(
-                value = durationMinutes.toFloat(),
+                value = displayedDuration.toFloat(),
                 onValueChange = { value ->
-                    val minutes = ((value / 5f).roundToInt() * 5)
+                    pendingDuration = ((value / 5f).roundToInt() * 5)
                         .coerceIn(15, 180)
                         .toLong()
-                    onDurationChange(minutes)
+                },
+                onValueChangeFinished = {
+                    pendingDuration?.takeIf { it != durationMinutes }?.let(onDurationChange)
+                    pendingDuration = null
                 },
                 valueRange = 15f..180f,
                 steps = 32,
