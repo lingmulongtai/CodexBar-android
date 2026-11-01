@@ -51,9 +51,11 @@ fun CodexBarSlider(value: Float, onValueChange: (Float) -> Unit, modifier: Modif
                     val inset = 3.dp.toPx()
                     drawLine(colors.onSurface.copy(alpha = 0.18f * lift), Offset(inset, middle),
                         Offset(size.width - inset, middle), 8.dp.toPx(), StrokeCap.Round)
-                    val from = if (rtl) size.width - inset else inset
-                    drawLine(colors.primary.copy(alpha = 0.60f * lift), Offset(from, middle),
-                        Offset(size.width / 2, middle), 8.dp.toPx(), StrokeCap.Round)
+                    if (value > valueRange.start) {
+                        val from = if (rtl) size.width - inset else inset
+                        drawLine(colors.primary.copy(alpha = 0.60f * lift), Offset(from, middle),
+                            Offset(size.width / 2, middle), 8.dp.toPx(), StrokeCap.Round)
+                    }
                 }
             }
         },
