@@ -11,7 +11,20 @@ data class WallpaperPhoto(
     val imageUrl: String, val downloadUrl: String? = null
 )
 
-internal fun curatedWallpaper(date: LocalDate): WallpaperPhoto = CuratedWallpapers[Math.floorMod(date.toEpochDay(), CuratedWallpapers.size.toLong()).toInt()]
+/** Keep the daily default stable, while manual refresh advances to a different available photo. */
+internal fun chooseWallpaper(candidates: List<WallpaperPhoto>, date: LocalDate, currentId: String? = null,
+    changePhoto: Boolean = false, avoidRepeat: Boolean = false): WallpaperPhoto? {
+    val unique = candidates.distinctBy { it.id }
+    if (unique.isEmpty()) return null
+    val current = unique.indexOfFirst { it.id == currentId }
+    if (changePhoto && current >= 0) return unique[(current + 1) % unique.size]
+    val daily = Math.floorMod(date.toEpochDay(), unique.size.toLong()).toInt()
+    return unique[if (avoidRepeat && unique.size > 1 && daily == current) (daily + 1) % unique.size else daily]
+}
+
+internal fun curatedWallpaper(date: LocalDate, currentId: String? = null, changePhoto: Boolean = false,
+    avoidRepeat: Boolean = false): WallpaperPhoto =
+    requireNotNull(chooseWallpaper(CuratedWallpapers, date, currentId, changePhoto, avoidRepeat))
 
 /** Only public Unsplash HTTPS hosts; API authorization is never attached to image requests. */
 internal fun isWallpaperUrl(value: String, host: String): Boolean = value.toHttpUrlOrNull()?.let {
@@ -27,7 +40,8 @@ internal val CuratedWallpapers = listOf(
     WallpaperPhoto("dJVU4jXV1Q8", "Sebastian Unrau", "https://unsplash.com/@sebastian_unrau", "https://unsplash.com/photos/dJVU4jXV1Q8", "https://images.unsplash.com/photo-1440847899694-90043f91c7f9")
 )
 
-internal fun selectEditorialWallpaper(data: JsonArray, date: LocalDate): WallpaperPhoto? {
+internal fun selectEditorialWallpaper(data: JsonArray, date: LocalDate, currentId: String? = null,
+    changePhoto: Boolean = false, avoidRepeat: Boolean = false): WallpaperPhoto? {
     val candidates = data.mapNotNull { value ->
         runCatching {
             val photo = value.jsonObject
@@ -43,6 +57,5 @@ internal fun selectEditorialWallpaper(data: JsonArray, date: LocalDate): Wallpap
             }
         }.getOrNull()
     }
-    if (candidates.isEmpty()) return null
-    return candidates[Math.floorMod(date.toEpochDay(), candidates.size.toLong()).toInt()]
+    return chooseWallpaper(candidates, date, currentId, changePhoto, avoidRepeat)
 }

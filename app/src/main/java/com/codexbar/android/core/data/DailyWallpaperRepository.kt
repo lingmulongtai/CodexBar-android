@@ -82,7 +82,7 @@ class DailyWallpaperRepository @Inject constructor(
         }
     }
 
-    fun refreshInBackground(force: Boolean = false) { scope.launch { refresh(force) } }
+    fun refreshInBackground(force: Boolean = false) { scope.launch { refresh(force, changePhoto = force) } }
 
     suspend fun save(enabled: Boolean, replacementKey: String?) {
         require(replacementKey == null || replacementKey.isEmpty() || replacementKey.matches(Regex("[A-Za-z0-9_-]{16,128}")))
@@ -91,7 +91,7 @@ class DailyWallpaperRepository @Inject constructor(
         refresh(force = true)
     }
 
-    private suspend fun refresh(force: Boolean = false) = withContext(Dispatchers.IO) {
+    private suspend fun refresh(force: Boolean = false, changePhoto: Boolean = false) = withContext(Dispatchers.IO) {
         mutex.withLock {
             if (!_state.value.preferences.enabled) return@withLock
             val today = LocalDate.now()
@@ -104,7 +104,10 @@ class DailyWallpaperRepository @Inject constructor(
             nextAttempt = System.currentTimeMillis() + 30 * 60_000L
             _state.update { it.copy(status = WallpaperStatus.Updating) }
             try {
-                val photo = if (key == null) curatedWallpaper(today) else editorial(today, key)
+                val currentId = _state.value.photo?.id
+                val avoidRepeat = saved?.day != null && saved?.day != today.toString()
+                val photo = if (key == null) curatedWallpaper(today, currentId, changePhoto, avoidRepeat)
+                    else editorial(today, key, currentId, changePhoto, avoidRepeat)
                 val image = photo.imageUrl.toHttpUrl().newBuilder()
                     .setQueryParameter("w", "1600").setQueryParameter("q", "80")
                     .setQueryParameter("fit", "max").setQueryParameter("auto", "format").setQueryParameter("fm", "jpg").build()
@@ -136,9 +139,9 @@ class DailyWallpaperRepository @Inject constructor(
         }
     }
 
-    private suspend fun editorial(date: LocalDate, key: String): WallpaperPhoto {
+    private suspend fun editorial(date: LocalDate, key: String, currentId: String?, changePhoto: Boolean, avoidRepeat: Boolean): WallpaperPhoto {
         val data = json.parseToJsonElement(fetch(apiRequest("https://api.unsplash.com/photos?per_page=30&page=1", key), 1024 * 1024).decodeToString()).jsonArray
-        return selectEditorialWallpaper(data, date) ?: throw IOException("No suitable Editorial background")
+        return selectEditorialWallpaper(data, date, currentId, changePhoto, avoidRepeat) ?: throw IOException("No suitable Editorial background")
     }
 
     private fun apiRequest(url: String, key: String): Request {
