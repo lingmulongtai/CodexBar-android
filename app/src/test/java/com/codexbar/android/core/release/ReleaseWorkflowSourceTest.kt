@@ -71,6 +71,16 @@ class ReleaseWorkflowSourceTest {
     }
 
     @Test
+    fun `release runner stops build daemons before emulator startup`() {
+        val workflow = File(repoDir, ".github/workflows/release.yml").readText()
+        val cleanup = workflow.substringAfter("- name: Release build resources before emulator startup")
+            .substringBefore("- name: Enable KVM access")
+        assertTrue(cleanup.contains("./gradlew --stop"))
+        assertTrue(workflow.indexOf("- name: Release build resources before emulator startup") <
+            workflow.indexOf("- name: Smoke test signed release APK"))
+    }
+
+    @Test
     fun `release runner enables hardware acceleration before emulator startup`() {
         val workflow = File(repoDir, ".github/workflows/release.yml").readText()
         val kvmStep = workflow

@@ -16,16 +16,24 @@ fi
 package_name='com.codexbar.android'
 # Bound every ADB call so a disconnected emulator cannot stall diagnostics forever.
 adb_bounded() { timeout "${ADB_TIMEOUT_SECONDS:-30}" adb "$@"; }
+report_host_diagnostics() {
+  printf '%s\n' 'Host memory and emulator process diagnostics:'
+  free -m 2>/dev/null || true
+  ps -eo pid,stat,rss,comm 2>/dev/null | awk 'NR == 1 || $4 ~ /qemu|emulator/' || true
+  if [ -r /sys/fs/cgroup/memory.events ]; then cat /sys/fs/cgroup/memory.events; fi
+}
 assert_device() {
   state="$(adb_bounded get-state 2>/dev/null || true)"
-  if [ "$state" != 'device' ]; then
+  if [ "$state" != 'device' ] || ! adb_bounded shell true >/dev/null 2>&1; then
     printf '::error::ADB device disconnected or did not respond during release smoke test.\n'
+    report_host_diagnostics
     exit 1
   fi
 }
 check_launch() {
   if ! output="$(adb_bounded shell am start -W "$@")"; then
     printf '::error::ADB could not start the release app.\n'
+    report_host_diagnostics
     exit 1
   fi
   printf '%s\n' "$output"
@@ -41,11 +49,13 @@ check_running() {
   if [ -z "$app_pid" ]; then
     assert_device
     printf '::error::Release app process exited during %s.\n' "$1"
+    report_host_diagnostics
     adb_bounded logcat -b crash -d || true
     exit 1
   fi
   if ! crash_output="$(adb_bounded logcat -b crash -d)"; then
     printf '::error::Could not read the release app crash log.\n'
+    report_host_diagnostics
     exit 1
   fi
   if printf '%s\n' "$crash_output" | grep -Fq "Process: $package_name"; then
