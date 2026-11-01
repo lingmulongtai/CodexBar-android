@@ -299,8 +299,12 @@ fun SettingsScreen(
                     selectedLanguage = selectedLanguage,
                     onLanguageSelected = { language ->
                         selectedLanguage = language
-                        language.apply()
-                        viewModel.refreshLocalizedSurfaces()
+                        val motionScale = Settings.Global.getFloat(
+                            context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f
+                        ).coerceIn(0f, 2f)
+                        val delayMillis = if (uiState.appThemeStyle == AppThemeStyle.LIQUID_GLASS)
+                            (200f * motionScale).toLong() else 0L
+                        viewModel.setAppLanguage(language, delayMillis)
                     }
                 )
 
