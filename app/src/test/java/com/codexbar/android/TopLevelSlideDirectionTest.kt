@@ -9,6 +9,10 @@ class TopLevelSlideDirectionTest {
         assertEquals(-1, topLevelSlideDirection("github", "dashboard", false))
         assertEquals(-1, topLevelSlideDirection("dashboard", "connections", true))
         assertEquals(1, topLevelSlideDirection("connections", "history", true))
+        assertEquals(1, topLevelSlideDirection("dashboard", "settings", false))
+        assertEquals(-1, topLevelSlideDirection("settings", "dashboard", false))
+        assertEquals(-1, topLevelSlideDirection("dashboard", "settings", true))
+        assertEquals(1, topLevelSlideDirection("settings", "dashboard", true))
         assertEquals(0, topLevelSlideDirection("history", "spend", false))
         assertEquals(0, topLevelSlideDirection("unknown", "dashboard", false))
     }

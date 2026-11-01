@@ -3,9 +3,6 @@ package com.codexbar.android
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.core.tween
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -307,7 +304,6 @@ private fun AppNavHost(
     onTrendsPageChange: (UsageAnalyticsPage) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val settingsSlideDirection = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
     NavHost(
         navController = navController,
         startDestination = DashboardRoute,
@@ -369,11 +365,7 @@ private fun AppNavHost(
             )
         }
         composable(GitHubRoute) { GitHubDashboardScreen(viewModel = githubViewModel) }
-        composable(
-            SettingsRoute,
-            enterTransition = { slideInHorizontally(tween(260)) { it * settingsSlideDirection } },
-            popExitTransition = { slideOutHorizontally(tween(260)) { it * settingsSlideDirection } }
-        ) {
+        composable(SettingsRoute) {
             SettingsScreen(
                 onNavigateBack = {
                     if (!navController.popBackStack()) navController.navigateTopLevel(DashboardRoute)
@@ -392,6 +384,7 @@ internal fun topLevelSlideDirection(from: String?, to: String?, rtl: Boolean): I
         HistoryRoute, SpendRoute -> 1
         ConnectionsRoute -> 2
         GitHubRoute -> 3
+        SettingsRoute -> 4
         else -> -1
     }
     val start = index(from)
