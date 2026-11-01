@@ -118,6 +118,7 @@ import com.codexbar.android.core.security.ConnectionHealth
 import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
 import com.codexbar.android.ui.components.ProviderIcon
 import com.codexbar.android.ui.theme.providerVisualStyle
+import com.codexbar.android.ui.components.CodexBarPanel
 import com.codexbar.android.ui.components.GlassHeaderOverlay
 import com.codexbar.android.ui.components.WallpaperFooter
 import com.codexbar.android.ui.components.LocalBottomChromeInset
@@ -555,10 +556,11 @@ private fun ConnectionSummaryCard(
     connectedCount: Int,
     totalCount: Int
 ) {
-    Surface(
+    CodexBarPanel(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.primaryContainer
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.56f),
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
     ) {
         Row(
             modifier = Modifier.padding(18.dp),
