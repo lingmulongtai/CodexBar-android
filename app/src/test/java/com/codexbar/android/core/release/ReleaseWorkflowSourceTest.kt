@@ -46,6 +46,7 @@ class ReleaseWorkflowSourceTest {
 
         assertTrue(smokeStep.contains("ReactiveCircus/android-emulator-runner@"))
         assertTrue(smokeStep.contains("api-level: 36"))
+        assertTrue(smokeStep.contains("-gpu swangle"))
         assertTrue(smokeStep.contains("script: sh .github/scripts/smoke-test-release.sh"))
         assertFalse(smokeStep.contains("script: |"))
         assertFalse(smokeStep.contains("for candidate"))
