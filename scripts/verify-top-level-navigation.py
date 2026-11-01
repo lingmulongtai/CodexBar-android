@@ -42,21 +42,21 @@ adb('shell', 'cmd', 'locale', 'set-app-locales', package, '--locales', 'en')
 adb('shell', 'am', 'start', '-W', '-f', '0x14000000', '-n', package+'/com.codexbar.android.debug.ScreenshotActivity',
     '--es', 'theme', 'LIQUID_GLASS', '--es', 'destination', 'settings', '--ez', 'dark_theme', 'true')
 time.sleep(4)
-assert has(tree(), 'Monitoring'), 'Settings did not open'
+assert has(tree(), 'Persistent quota status'), 'Settings did not open'
 # Scroll away from the first section; navigating back should preserve this position.
 adb('shell', 'input', 'swipe', 500, 1700, 500, 650, 350)
 time.sleep(1)
-assert not has(tree(), 'Monitoring'), 'Settings did not scroll'
+assert not has(tree(), 'Persistent quota status'), 'Settings did not scroll'
 tap('Usage')
 assert has(tree(), 'Running out first'), 'Settings to Usage failed'
 tap('Settings')
-assert not has(tree(), 'Monitoring'), 'Settings scroll position was not restored'
+assert not has(tree(), 'Persistent quota status'), 'Settings scroll position was not restored'
 tap('Trends')
 assert has(tree(), 'History'), 'Trends did not open'
 tap('Usage')
 assert has(tree(), 'Running out first'), 'Trends to Usage failed'
 tap('Connections')
-assert has(tree(), 'Connect AI providers'), 'Connections did not open'
+assert has(tree(), 'Usage source & Windows connection'), 'Connections did not open'
 tap('Usage')
 assert has(tree(), 'Running out first'), 'Connections to Usage failed'
 print('PASS Settings/Trends/Connections to Usage and Settings scroll restoration')
