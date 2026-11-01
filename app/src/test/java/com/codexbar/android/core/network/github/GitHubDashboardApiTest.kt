@@ -47,6 +47,32 @@ class GitHubDashboardApiTest {
         assertEquals("owner/private", repo.fullName)
     }
 
+    @Test fun `repository pagination collects later pages without losing visibility`() = runTest {
+        val api = GitHubDashboardApi(json) { request ->
+            val page = request.url.queryParameter("page")!!.toInt()
+            val rows = if (page == 1) (1..100) else 101..101
+            val body = rows.joinToString(prefix = "[", postfix = "]") { id ->
+                """{"id":$id,"full_name":"owner/repo$id","private":${id == 101},"html_url":"https://github.com/owner/repo$id"}"""
+            }
+            GitHubHttpResponse(200, body)
+        }
+        val result = api.allRepositories("test-token")
+        assertTrue(result.complete)
+        assertEquals(101, result.items.size)
+        assertTrue(result.items.last().isPrivate)
+    }
+
+    @Test fun `duplicate repository pages are marked incomplete`() = runTest {
+        val body = (1..100).joinToString(prefix = "[", postfix = "]") { id ->
+            """{"id":$id,"full_name":"owner/repo$id","html_url":"https://github.com/owner/repo$id"}"""
+        }
+        val api = GitHubDashboardApi(json) { request ->
+            GitHubHttpResponse(200, if (request.url.queryParameter("page") == "1") body else
+                """[{"id":1,"full_name":"owner/repo1","html_url":"https://github.com/owner/repo1"}]""")
+        }
+        assertFalse(api.allRepositories("test-token").complete)
+    }
+
     @Test fun `rate limit and authorization errors are not treated as empty data`() = runTest {
         for (status in listOf(401, 403, 429, 500)) {
             val api = GitHubDashboardApi(json) { GitHubHttpResponse(status, "{}") }

@@ -41,15 +41,30 @@ internal data class GitHubTokenResponse(
 ) { override fun toString(): String = "GitHubTokenResponse(redacted)" }
 
 @Serializable
-internal data class GitHubProfile(val login: String, val name: String? = null,
-    @kotlinx.serialization.SerialName("public_repos") val publicRepos: Int = 0)
+internal data class GitHubProfile(
+    val login: String,
+    val name: String? = null,
+    @kotlinx.serialization.SerialName("public_repos") val publicRepos: Int = 0,
+    @kotlinx.serialization.SerialName("avatar_url") val avatarUrl: String? = null,
+    val bio: String? = null,
+    val location: String? = null,
+    val email: String? = null,
+    val followers: Int = 0,
+    val following: Int = 0
+)
 
 @Serializable
 internal data class GitHubRepository(val id: Long,
     @kotlinx.serialization.SerialName("full_name") val fullName: String,
     @kotlinx.serialization.SerialName("private") val isPrivate: Boolean = false,
     @kotlinx.serialization.SerialName("html_url") val htmlUrl: String,
-    val description: String? = null)
+    val description: String? = null,
+    @kotlinx.serialization.SerialName("stargazers_count") val stars: Int = 0,
+    @kotlinx.serialization.SerialName("updated_at") val updatedAt: String? = null,
+    @kotlinx.serialization.SerialName("pushed_at") val pushedAt: String? = null,
+    val language: String? = null)
+
+internal data class GitHubRepositories(val items: List<GitHubRepository>, val complete: Boolean)
 
 internal data class GitHubHttpResponse(val status: Int, val body: String)
 
@@ -91,8 +106,22 @@ internal class GitHubDashboardApi internal constructor(
     suspend fun profile(token: String): GitHubProfile =
         json.decodeFromString(successful(get("https://api.github.com/user", token)))
 
-    suspend fun repositories(token: String): List<GitHubRepository> =
-        json.decodeFromString(successful(get("https://api.github.com/user/repos?per_page=100&sort=updated", token)))
+    suspend fun repositories(token: String): List<GitHubRepository> = repositoryPage(token, 1)
+
+    /** GitHub App permissions limit results to repositories shared with the installation. */
+    suspend fun allRepositories(token: String): GitHubRepositories {
+        val collected = LinkedHashMap<Long, GitHubRepository>()
+        var duplicate = false
+        for (page in 1..20) {
+            val batch = repositoryPage(token, page)
+            batch.forEach { if (collected.put(it.id, it) != null) duplicate = true }
+            if (batch.size < 100) return GitHubRepositories(collected.values.toList(), complete = !duplicate)
+        }
+        return GitHubRepositories(collected.values.toList(), complete = false)
+    }
+
+    private suspend fun repositoryPage(token: String, page: Int): List<GitHubRepository> =
+        json.decodeFromString(successful(get("https://api.github.com/user/repos?per_page=100&sort=updated&page=$page", token)))
 
     private suspend fun post(url: String, fields: Map<String, String>): GitHubHttpResponse {
         val form = FormBody.Builder().apply { fields.forEach { (name, value) -> add(name, value) } }.build()
