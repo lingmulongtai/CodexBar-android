@@ -41,6 +41,7 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
     var browserError by remember { mutableStateOf(false) }
     var page by rememberSaveable { mutableStateOf(GitHubPage.Profile) }
     var sort by rememberSaveable { mutableStateOf(RepositorySort.Updated) }
+    LaunchedEffect(state.profile) { if (state.profile == null) page = GitHubPage.Profile }
     fun open(url: String) { browserError = runCatching { uri.openUri(url) }.isFailure }
     BackHandler(enabled = page != GitHubPage.Profile) { page = GitHubPage.Profile }
     val title = when (page) {

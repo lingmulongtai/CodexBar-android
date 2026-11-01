@@ -148,4 +148,3 @@ private fun ContributionCalendarCard(calendar: GitHubContributionCalendar) {
         }
     }
 }
-
