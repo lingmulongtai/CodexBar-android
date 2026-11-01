@@ -77,6 +77,9 @@ jobs:
       - name: Verify release tag matches APK version
         run: bash scripts/verify-release-version.sh
 
+      - name: Verify release smoke checks
+        run: bash scripts/test-release-smoke.sh
+
       - name: Build signed release artifacts
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -163,6 +166,7 @@ jobs:
           test -w /dev/kvm
 
       - name: Smoke test signed release APK
+        timeout-minutes: 15
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 36
