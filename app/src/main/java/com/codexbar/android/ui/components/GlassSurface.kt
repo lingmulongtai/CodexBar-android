@@ -108,9 +108,8 @@ fun GlassSurface(
     content: @Composable BoxScope.() -> Unit
 ) {
     val blurLayer = rememberGraphicsLayer()
-    val lens = remember {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) GlassLens() else null
-    }
+    // Diagnostic branch only: compare the emulator with shader refraction disabled.
+    val lens: GlassLens? = null
     val position = remember { PositionHolder() }
     Box(
         modifier = modifier
