@@ -77,7 +77,7 @@ fun CodexBarSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifie
                     },
                     onDrag = { change, _ ->
                         change.consume()
-                        dragPosition = glassSwitchPosition(from, change.position.x - startX, 20.dp.toPx(), rtl)
+                        dragPosition = glassSwitchPosition(from, change.position.x - startX, 32.dp.toPx(), rtl)
                     },
                     onDragEnd = {
                         val next = dragPosition?.let { it > 0.5f }
@@ -98,9 +98,9 @@ fun CodexBarSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifie
                 tint = Color.White.copy(alpha = 0.94f - lift * 0.48f), fallback = Color.White,
                 rim = Color.White.copy(alpha = 0.95f), blurRadius = 2.dp,
                 refraction = 0.45f + lift * 0.35f, elevation = 2.dp,
-                modifier = Modifier.align(AbsoluteAlignment.TopLeft).size(36.dp, 24.dp)
-                    .absoluteOffset { IntOffset((2.dp.toPx() + 20.dp.toPx() * visual).roundToInt(), 1.dp.roundToPx()) }
-                    .graphicsLayer { scaleX = 1f + lift * 0.36f; scaleY = 1f + lift * 0.30f }
+                modifier = Modifier.align(AbsoluteAlignment.TopLeft).size(24.dp)
+                    .absoluteOffset { IntOffset((2.dp.toPx() + 32.dp.toPx() * visual).roundToInt(), 1.dp.roundToPx()) }
+                    .graphicsLayer { scaleX = 1f + lift * 0.80f; scaleY = 1f + lift * 0.30f }
             ) {
                 // The lifted lens reveals the colored track beneath it, as in Glisse.
                 Box(Modifier.fillMaxWidth(0.90f).height(18.dp)

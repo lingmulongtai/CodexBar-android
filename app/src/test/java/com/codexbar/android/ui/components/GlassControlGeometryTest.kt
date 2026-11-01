@@ -25,5 +25,8 @@ class GlassControlGeometryTest {
         assertEquals(0f, glassSwitchPosition(1f, -80f, 28f, false), 0.001f)
         assertEquals(0.25f, glassSwitchPosition(1f, 21f, 28f, true), 0.001f)
         assertEquals(1f, glassSwitchPosition(1f, 80f, 0f, false), 0.001f)
+        // The round thumb travels 32 dp in the 60 dp track.
+        assertEquals(0.5f, glassSwitchPosition(0f, 16f, 32f, false), 0.001f)
+        assertEquals(0.5f, glassSwitchPosition(1f, 16f, 32f, true), 0.001f)
     }
 }

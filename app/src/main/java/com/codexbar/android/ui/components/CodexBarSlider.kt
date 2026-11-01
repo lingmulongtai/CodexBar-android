@@ -42,8 +42,8 @@ fun CodexBarSlider(value: Float, onValueChange: (Float) -> Unit, modifier: Modif
         thumb = {
             GlassSurface(LocalGlassCardBackdrop.current, CircleShape, Color.White.copy(alpha = 0.94f - lift * 0.48f),
                 Color.White, Color.White.copy(alpha = 0.95f),
-                Modifier.size(36.dp, 24.dp).graphicsLayer {
-                    scaleX = 1f + lift * 0.60f; scaleY = 1f + lift * 0.60f
+                Modifier.size(26.dp).graphicsLayer {
+                    scaleX = 1f + lift * 0.70f; scaleY = 1f + lift * 0.20f
                     alpha = if (enabled) 1f else 0.5f
                 }, blurRadius = 2.dp, refraction = 0.45f + lift * 0.35f, elevation = 3.dp) {
                 Canvas(Modifier.fillMaxSize()) {

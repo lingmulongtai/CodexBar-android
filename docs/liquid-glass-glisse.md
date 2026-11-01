@@ -4,7 +4,7 @@
 
 Wallpaper attribution now follows page content rather than covering the floating navigation: the photographer and Unsplash links remain at the end of each scrollable page. Settings and Connections use the same top spacing as the dashboard. The floating refresh action no longer shows progress; the dashboard header retains refresh status.
 
-Switches and sliders use elongated resting thumbs which lift to a translucent lens over the colored track while pressed. The History/Spend control follows a held drag and commits on release; cancellation restores the current page. Language-choice feedback is clipped to its rounded shape. Material 3 controls retain their existing behavior.
+Switches and sliders use round resting thumbs which widen into a translucent lens over the colored track while pressed. The History/Spend control follows a held drag and commits on release; cancellation restores the current page. Language-choice feedback is clipped to its rounded shape. Material 3 controls retain their existing behavior.
 
 For this refinement, read-only upstream main was fetched at `1811d1fe032fd4a80240fd6bc5d04cee649a0afb`. There were no upstream-only changes to incorporate or defer. The disposable-emulator checks are `scripts/verify-glass-controls.py`, `scripts/verify-trends-tabs.py`, and `scripts/verify-glass-rendering.py`.
 
