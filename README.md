@@ -14,7 +14,7 @@ Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT
 
 ## Latest release — v0.13.3
 
-v0.13.3 refines **Liquid Glass** with a scroll-behind glass header, Glisse-inspired controls and smoother navigation and ordering. Daily photography now favors portrait images, and Settings includes version, project links and update checks. Install **CodexBar-Android-v0.13.3.apk** over the existing app; version code **42** retains the production signing identity. **Shared PC history, spend and remote settings require Windows v0.71.0 or later.** [Release notes and verification](docs/releases/v0.13.3.md) · [Glass design decisions](docs/liquid-glass-design-contract.md)
+v0.13.3 introduces the new CodexBar app icon and refines **Liquid Glass** with a scroll-behind glass header, Glisse-inspired controls and smoother navigation and ordering. Daily photography now favors portrait images, and Settings includes version, project links and update checks. Install **CodexBar-Android-v0.13.3.apk** over the existing app; version code **42** retains the production signing identity. **Shared PC history, spend and remote settings require Windows v0.71.0 or later.** [Release notes and verification](docs/releases/v0.13.3.md) · [Glass design decisions](docs/liquid-glass-design-contract.md)
 
 ![Tablet PC spend dashboard with synthetic data](docs/images/mobile-dashboard/tablet-spend.png)
 
