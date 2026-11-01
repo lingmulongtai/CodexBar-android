@@ -16,10 +16,17 @@ fi
 package_name='com.codexbar.android'
 # Bound every ADB call so a disconnected emulator cannot stall diagnostics forever.
 adb_bounded() { timeout "${ADB_TIMEOUT_SECONDS:-30}" adb "$@"; }
+report_host_diagnostics() {
+  printf '%s\n' 'Host memory and emulator process diagnostics:'
+  free -m 2>/dev/null || true
+  ps -C qemu-system-x86_64 -o pid,stat,rss,comm 2>/dev/null || true
+  if [ -r /sys/fs/cgroup/memory.events ]; then cat /sys/fs/cgroup/memory.events; fi
+}
 assert_device() {
   state="$(adb_bounded get-state 2>/dev/null || true)"
   if [ "$state" != 'device' ] || ! adb_bounded shell true >/dev/null 2>&1; then
     printf '::error::ADB device disconnected or did not respond during release smoke test.\n'
+    report_host_diagnostics
     exit 1
   fi
 }
@@ -41,6 +48,7 @@ check_running() {
   if [ -z "$app_pid" ]; then
     assert_device
     printf '::error::Release app process exited during %s.\n' "$1"
+    report_host_diagnostics
     adb_bounded logcat -b crash -d || true
     exit 1
   fi
