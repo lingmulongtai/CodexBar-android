@@ -3,6 +3,8 @@ package com.codexbar.android.feature.github
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codexbar.android.core.domain.model.GitHubDashboardSession
+import com.codexbar.android.core.network.github.GitHubContributions
+import com.codexbar.android.core.network.github.GitHubRepositoryActivity
 import com.codexbar.android.core.network.github.GitHubDashboardApi
 import com.codexbar.android.core.network.github.GitHubDashboardException
 import com.codexbar.android.core.network.github.GitHubProfile
@@ -33,6 +35,12 @@ internal data class GitHubDashboardState(
     val hasStoredSession: Boolean = false,
     val profile: GitHubProfile? = null,
     val repositories: List<GitHubRepository> = emptyList(),
+    val repositoriesComplete: Boolean = false,
+    val starred: List<GitHubRepository>? = null,
+    val starredComplete: Boolean = false,
+    val contributions: GitHubContributions? = null,
+    val contributionsUnavailable: Boolean = false,
+    val repositoryActivity: GitHubRepositoryActivity? = null,
     val error: GitHubDashboardError? = null
 )
 
@@ -107,13 +115,27 @@ internal class GitHubDashboardViewModel @Inject constructor(
                 }
                 val profile = api.profile(session.accessToken)
                 if (!profile.login.matches(Regex("[A-Za-z0-9-]{1,39}"))) throw IOException("Invalid GitHub profile")
-                val repos = api.repositories(session.accessToken).filter { isGitHubRepositoryUrl(it.htmlUrl, it.fullName) }
+                val repositoryResult = api.allRepositories(session.accessToken)
+                val repos = repositoryResult.items.filter { isGitHubRepositoryUrl(it.htmlUrl, it.fullName) }
                 currentCoroutineContext().ensureActive()
                 if (prefs.loadGitHubDashboardSession()?.refreshToken != session.refreshToken) {
                     _state.value = GitHubDashboardState()
                     return@launch
                 }
-                _state.update { it.copy(loading = false, profile = profile, repositories = repos, error = null) }
+                _state.update { it.copy(profile = profile, repositories = repos,
+                    repositoriesComplete = repositoryResult.complete && repos.size == repositoryResult.items.size, error = null) }
+                val contributions = optionalGitHubData { api.contributions(session.accessToken) }
+                val activity = optionalGitHubData { api.repositoryActivity(session.accessToken) }
+                val starred = optionalGitHubData { api.starred(profile.login) }
+                currentCoroutineContext().ensureActive()
+                if (prefs.loadGitHubDashboardSession()?.refreshToken != session.refreshToken) {
+                    _state.value = GitHubDashboardState()
+                    return@launch
+                }
+                val safeStars = starred?.items?.filter { isGitHubRepositoryUrl(it.htmlUrl, it.fullName) }
+                _state.update { it.copy(loading = false, contributions = contributions,
+                    contributionsUnavailable = contributions == null, repositoryActivity = activity,
+                    starred = safeStars, starredComplete = starred?.complete == true && safeStars?.size == starred.items.size) }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { _state.update { it.copy(loading = false, error = error.toDashboardError()) } }
         }
@@ -138,6 +160,10 @@ internal class GitHubDashboardViewModel @Inject constructor(
         }
     }
 }
+
+private suspend fun <T> optionalGitHubData(block: suspend () -> T): T? = try { block() }
+catch (cancelled: CancellationException) { throw cancelled }
+catch (_: Exception) { null }
 
 internal fun isGitHubRepositoryUrl(value: String, fullName: String): Boolean {
     val parts = fullName.split('/')
