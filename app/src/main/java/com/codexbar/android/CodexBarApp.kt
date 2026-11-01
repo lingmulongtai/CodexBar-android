@@ -67,7 +67,6 @@ import com.codexbar.android.feature.settings.SettingsScreen
 import com.codexbar.android.feature.settings.SettingsViewModel
 import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.ui.components.LocalGlassHeaderHeight
-import com.codexbar.android.ui.components.LocalGlassHeaderTitle
 import com.codexbar.android.ui.components.LocalTopLevelSlideDirection
 import com.codexbar.android.ui.components.LocalBottomChromeInset
 import com.codexbar.android.ui.components.LocalGlassCardBackdrop
@@ -238,7 +237,6 @@ fun CodexBarApp(
                 val backdrop = rememberGlassBackdrop()
                 val cardBackdrop = rememberGlassBackdrop()
                 val headerHeight = remember { Animatable(0f) }
-                val headerTitle = remember { mutableStateOf<String?>(null) }
                 Box(Modifier.fillMaxSize().glassBackdropSource(cardBackdrop)) {
                     LiquidGlassWallpaper(wallpaper)
                 }
@@ -248,7 +246,6 @@ fun CodexBarApp(
                     LocalBottomChromeInset provides bottomInset,
                     LocalTopLevelSlideDirection provides slideDirection,
                     LocalGlassHeaderHeight provides headerHeight,
-                    LocalGlassHeaderTitle provides headerTitle,
                     LocalGlassCardBackdrop provides cardBackdrop,
                     LocalWallpaperState provides wallpaper
                 ) {

@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.constrainHeight
@@ -91,12 +90,10 @@ fun GlassPageHeader(
 ) {
     val shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
     val sharedHeight = LocalGlassHeaderHeight.current
-    val sharedTitle = LocalGlassHeaderTitle.current
     val direction = LocalTopLevelSlideDirection.current
-    val previousTitle = remember(title) { sharedTitle?.value?.takeIf { direction != 0 && it != title } }
     var naturalHeight by remember { mutableIntStateOf(0) }
-    val contentAlpha = remember { Animatable(if (direction == 0) 1f else if (previousTitle != null) 0f else 0.55f) }
-    LaunchedEffect(title) { sharedTitle?.value = title }
+    val onNaturalHeight = LocalGlassHeaderNaturalHeight.current
+    val contentAlpha = remember { Animatable(if (direction == 0) 1f else 0f) }
     LaunchedEffect(contentAlpha) { contentAlpha.animateTo(1f, tween(200)) }
     LaunchedEffect(sharedHeight, naturalHeight) {
         if (sharedHeight != null && naturalHeight > 0) {
@@ -127,7 +124,7 @@ fun GlassPageHeader(
                     val child = measurable.measure(constraints.copy(minHeight = 0))
                     val animated = sharedHeight?.value?.takeIf { it > 0f }?.roundToInt() ?: child.height
                     layout(child.width, constraints.constrainHeight(animated)) { child.placeRelative(0, 0) }
-                }.onSizeChanged { naturalHeight = it.height }
+                }.onSizeChanged { naturalHeight = it.height; onNaturalHeight(it.height) }
                     .statusBarsPadding().heightIn(min = 72.dp)
                     .padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -135,16 +132,9 @@ fun GlassPageHeader(
             ) {
                 Box(Modifier.graphicsLayer { alpha = contentAlpha.value }) { navigationIcon() }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Box {
-                        if (previousTitle != null && contentAlpha.value < 1f) {
-                            Text(previousTitle, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.clearAndSetSemantics {}.graphicsLayer { alpha = 1f - contentAlpha.value })
-                        }
-                        Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.graphicsLayer { alpha = contentAlpha.value })
-                    }
-                    if (subtitle != null) Box(Modifier.graphicsLayer { alpha = contentAlpha.value }) { subtitle() }
+                    Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    subtitle?.invoke()
                 }
                 Row(Modifier.graphicsLayer { alpha = contentAlpha.value }) { actions() }
             }
