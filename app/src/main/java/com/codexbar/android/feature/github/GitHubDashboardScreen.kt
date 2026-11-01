@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -32,6 +33,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -41,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.BuildConfig
 import com.codexbar.android.R
 import com.codexbar.android.LocalTopLevelSwipeEnabled
+import com.codexbar.android.core.domain.model.GitHubWidget
 import com.codexbar.android.core.domain.model.GitHubWidgetKind
 import com.codexbar.android.core.domain.model.GitHubWidgetSize
 import com.codexbar.android.core.network.github.GitHubContributionDay
@@ -62,14 +67,46 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
     var page by rememberSaveable { mutableStateOf(GitHubPage.Profile) }
     var sort by rememberSaveable { mutableStateOf(RepositorySort.Updated) }
     var selectedDay by remember { mutableStateOf<GitHubContributionDay?>(null) }
+    var editingWidgets by rememberSaveable { mutableStateOf(false) }
+    val widgetBounds = remember { mutableStateMapOf<String, androidx.compose.ui.geometry.Rect>() }
+    val dashboardScroll = rememberScrollState()
+    var draggedWidget by remember { mutableStateOf<String?>(null) }
+    var dragPosition by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
+    val screenHeight = with(LocalDensity.current) { LocalConfiguration.current.screenHeightDp.dp.toPx() }
+    val edge = with(LocalDensity.current) { 100.dp.toPx() }
+    val scrollStep = with(LocalDensity.current) { 7.dp.toPx() }
+    fun moveWidget(from: String, target: String) {
+        val list = viewModel.state.value.layout?.widgets?.toMutableList() ?: return
+        val i = list.indexOfFirst { it.key == from }
+        val j = list.indexOfFirst { it.key == target }
+        if (i >= 0 && j >= 0 && i != j) { list.add(j, list.removeAt(i)); viewModel.updateWidgets(list) }
+    }
+    LaunchedEffect(editingWidgets, draggedWidget) {
+        while (editingWidgets && draggedWidget != null) {
+            val point = dragPosition
+            if (point != null) {
+                val delta = when { point.y < edge -> -scrollStep; point.y > screenHeight - edge -> scrollStep; else -> 0f }
+                if (delta != 0f) {
+                    dashboardScroll.scrollBy(delta)
+                    val from = draggedWidget
+                    widgetBounds.entries.firstOrNull { it.key != from && it.value.contains(point) }?.let {
+                        if (from != null) moveWidget(from, it.key)
+                    }
+                }
+            }
+            delay(16)
+        }
+    }
     val swipeEnabled = LocalTopLevelSwipeEnabled.current
-    DisposableEffect(page, swipeEnabled) {
-        if (page == GitHubPage.Widgets) swipeEnabled?.value = false
+    DisposableEffect(page, editingWidgets, swipeEnabled) {
+        if (page == GitHubPage.Widgets || editingWidgets) swipeEnabled?.value = false
         onDispose { swipeEnabled?.value = true }
     }
-    LaunchedEffect(state.profile) { if (state.profile == null) page = GitHubPage.Profile }
+    LaunchedEffect(state.profile) { if (state.profile == null) { page = GitHubPage.Profile; editingWidgets = false } }
     fun open(url: String) { browserError = runCatching { uri.openUri(url) }.isFailure }
-    BackHandler(enabled = page != GitHubPage.Profile) { page = GitHubPage.Profile }
+    BackHandler(enabled = page != GitHubPage.Profile || editingWidgets) {
+        if (page != GitHubPage.Profile) page = GitHubPage.Profile else editingWidgets = false
+    }
     val title = when (page) {
         GitHubPage.Profile -> stringResource(R.string.github_dashboard_title)
         GitHubPage.Repositories -> stringResource(R.string.github_profile_repositories)
@@ -87,16 +124,25 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
             if (page != GitHubPage.Profile) CodexBarIconButton(onClick = { page = GitHubPage.Profile }) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.action_back))
             }
+        }, actions = {
+            if (page == GitHubPage.Profile && editingWidgets) {
+                CodexBarIconButton(onClick = { page = GitHubPage.Widgets }) {
+                    Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.github_widgets_add))
+                }
+                CodexBarTextButton(onClick = { editingWidgets = false }) { Text(stringResource(R.string.provider_order_done)) }
+            }
         })
     }) { headerHeight ->
         if (page == GitHubPage.Profile || state.profile == null) {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            Column(Modifier.fillMaxSize().verticalScroll(dashboardScroll)
                 .padding(horizontal = 16.dp).padding(top = headerHeight + 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 val profile = state.profile
                 if (profile == null) {
                     GitHubSignInCard(state, viewModel, ::open, browserError)
                 } else {
+                    if (state.contributionsLoginLoading || state.contributionsUserCode != null)
+                        GitHubContributionsLogin(state, viewModel, ::open)
                     val widgets = state.layout?.widgets.orEmpty()
                     val rows = remember(widgets) {
                         val result = mutableListOf<List<com.codexbar.android.core.domain.model.GitHubWidget>>()
@@ -111,52 +157,67 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
                         }
                         result
                     }
+                    if (editingWidgets) Text(stringResource(R.string.github_widgets_direct_hint), style = MaterialTheme.typography.bodyMedium)
                     rows.forEach { row ->
-                        if (row.size == 2) {
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                row.forEach { widget ->
-                                    Box(Modifier.weight(1f)) {
-                                        state.repositories.find { it.id == widget.repositoryId }?.let { GitHubPinnedRepository(it, widget.size, ::open) }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            row.forEach { widget ->
+                                val widgetModifier = if (row.size == 2) Modifier.weight(1f)
+                                    else if (widget.kind == GitHubWidgetKind.REPOSITORY && widget.size == GitHubWidgetSize.SMALL)
+                                        Modifier.fillMaxWidth(0.5f) else Modifier.fillMaxWidth()
+                                GitHubWidgetFrame(widget = widget, editing = editingWidgets, bounds = widgetBounds,
+                                    modifier = widgetModifier,
+                                    onMove = ::moveWidget,
+                                    onDragPosition = { key, position -> draggedWidget = if (position == null) null else key; dragPosition = position },
+                                    onResize = { size ->
+                                        viewModel.state.value.layout?.widgets?.let { list ->
+                                            viewModel.updateWidgets(list.map { if (it.key == widget.key) it.copy(size = size) else it })
+                                        }
+                                    },
+                                    onRemove = { viewModel.state.value.layout?.widgets?.let { list ->
+                                        viewModel.updateWidgets(list.filterNot { it.key == widget.key })
+                                    } }) {
+                                    when (widget.kind) {
+                                        GitHubWidgetKind.PROFILE -> GitHubProfileCard(profile, state,
+                                            onRepositories = { sort = RepositorySort.Updated; page = GitHubPage.Repositories },
+                                            onStarred = { sort = RepositorySort.Updated; page = GitHubPage.Starred })
+                                        GitHubWidgetKind.COMMITS -> Column {
+                                            GitHubContributionCards(state.contributions, state.contributionsUnavailable, state.loading,
+                                                selectedDay = selectedDay, onSelectDay = { selectedDay = it }, kind = widget.kind, size = widget.size)
+                                            if (!state.privateContributionsConnected && !state.contributionsLoginLoading && !editingWidgets)
+                                                GitHubContributionsLogin(state, viewModel, ::open)
+                                        }
+                                        GitHubWidgetKind.CALENDAR, GitHubWidgetKind.ACTIVITY ->
+                                            GitHubContributionCards(state.contributions, state.contributionsUnavailable, state.loading,
+                                                selectedDay = selectedDay, onSelectDay = { selectedDay = it }, kind = widget.kind, size = widget.size)
+                                        GitHubWidgetKind.REPOSITORY -> {
+                                            val repo = state.repositories.find { it.id == widget.repositoryId }
+                                            if (repo != null) GitHubPinnedRepository(repo, widget.size, ::open)
+                                            else if (editingWidgets) CodexBarCard(Modifier.fillMaxWidth()) {
+                                                Text(stringResource(R.string.github_widgets_missing), Modifier.padding(18.dp))
+                                            }
+                                        }
                                     }
                                 }
                             }
-                        } else {
-                        val widget = row.first()
-                        when (widget.kind) {
-                            GitHubWidgetKind.PROFILE -> GitHubProfileCard(profile, state,
-                                onRepositories = { sort = RepositorySort.Updated; page = GitHubPage.Repositories },
-                                onStarred = { sort = RepositorySort.Updated; page = GitHubPage.Starred })
-                            GitHubWidgetKind.COMMITS -> {
-                                GitHubContributionCards(state.contributions, state.contributionsUnavailable, state.loading,
-                                    selectedDay = selectedDay, onSelectDay = { selectedDay = it }, kind = widget.kind, size = widget.size)
-                                if (!state.privateContributionsConnected) GitHubContributionsLogin(state, viewModel, ::open)
-                            }
-                            GitHubWidgetKind.CALENDAR, GitHubWidgetKind.ACTIVITY ->
-                                GitHubContributionCards(state.contributions, state.contributionsUnavailable, state.loading,
-                                    selectedDay = selectedDay, onSelectDay = { selectedDay = it }, kind = widget.kind, size = widget.size)
-                            GitHubWidgetKind.REPOSITORY -> {
-                                val repo = state.repositories.find { it.id == widget.repositoryId }
-                                if (repo != null) Box(if (widget.size == GitHubWidgetSize.SMALL) Modifier.fillMaxWidth(0.5f) else Modifier.fillMaxWidth()) {
-                                    GitHubPinnedRepository(repo, widget.size, ::open)
-                                }
-                            }
-                        }
                         }
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        CodexBarOutlinedButton(onClick = viewModel::signOut) { Text(stringResource(R.string.github_dashboard_sign_out)) }
-                        CodexBarIconButton(onClick = { page = GitHubPage.Widgets }) {
+                        if (!editingWidgets) CodexBarOutlinedButton(onClick = viewModel::signOut) { Text(stringResource(R.string.github_dashboard_sign_out)) }
+                        else Spacer(Modifier.width(1.dp))
+                        CodexBarIconButton(onClick = { if (editingWidgets) page = GitHubPage.Widgets else editingWidgets = true }) {
                             Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.github_widgets_title))
                         }
                     }
+                    if (state.widgetSaveError) Text(stringResource(R.string.github_widgets_save_error), color = MaterialTheme.colorScheme.error)
                     if (state.error != null || browserError) GitHubStatus(state, browserError)
                 }
                 WallpaperFooter()
                 Spacer(Modifier.height(LocalBottomChromeInset.current + 32.dp))
             }
         } else if (page == GitHubPage.Widgets) {
-            GitHubWidgetEditor(state = state, headerHeight = headerHeight, onChange = viewModel::updateWidgets)
+            GitHubWidgetPicker(state = state, headerHeight = headerHeight, onChange = viewModel::updateWidgets,
+                onAdded = { page = GitHubPage.Profile })
         } else {
             val entries = if (page == GitHubPage.Starred) state.starred else state.repositories
             val shown = remember(entries, sort, state.repositoryActivity) {
@@ -209,7 +270,7 @@ private fun GitHubContributionsLogin(state: GitHubDashboardState, viewModel: Git
             value = clientId, onValueChange = { clientId = it }, modifier = Modifier.fillMaxWidth(),
             label = { Text(stringResource(R.string.github_contributions_client_id)) }, singleLine = true)
         if (state.contributionsUserCode != null) {
-            GitHubDeviceAuthorization(state.contributionsUserCode, open, viewModel::cancelContributionsLogin)
+            GitHubDeviceAuthorization(state.contributionsUserCode, open, viewModel::cancelContributionsLogin, state.deviceRetrying)
         } else {
             CodexBarOutlinedButton(onClick = { viewModel.signInContributions(clientId.trim()) },
                 enabled = !state.contributionsLoginLoading && clientId.isNotBlank()) {
@@ -223,7 +284,7 @@ private fun GitHubContributionsLogin(state: GitHubDashboardState, viewModel: Git
 
 @Suppress("DEPRECATION")
 @Composable
-private fun GitHubDeviceAuthorization(code: String, open: (String) -> Unit, cancel: () -> Unit) {
+private fun GitHubDeviceAuthorization(code: String, open: (String) -> Unit, cancel: () -> Unit, retrying: Boolean) {
     val clipboard = LocalClipboardManager.current
     var copied by remember(code) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
@@ -237,6 +298,8 @@ private fun GitHubDeviceAuthorization(code: String, open: (String) -> Unit, canc
                 Icon(Icons.Rounded.ContentCopy, contentDescription = stringResource(R.string.github_dashboard_copy_code), tint = Color.White)
             }
         }
+        if (retrying) Text(stringResource(R.string.github_dashboard_retrying), color = Color.White,
+            style = MaterialTheme.typography.labelMedium)
         if (copied) Text(stringResource(R.string.github_dashboard_code_copied), color = Color.White,
             style = MaterialTheme.typography.labelMedium)
         Text(stringResource(R.string.github_dashboard_verify_notice), color = Color.White,
@@ -261,7 +324,7 @@ private fun GitHubSignInCard(state: GitHubDashboardState, viewModel: GitHubDashb
                     Text(stringResource(R.string.github_dashboard_sign_out))
                 }
             } else {
-                GitHubDeviceAuthorization(state.userCode, open, viewModel::signOut)
+                GitHubDeviceAuthorization(state.userCode, open, viewModel::signOut, state.deviceRetrying)
             }
             GitHubStatus(state, browserError)
         }

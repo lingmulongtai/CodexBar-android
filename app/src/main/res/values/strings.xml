@@ -726,4 +726,7 @@
     <string name="github_contributions_error">Could not connect. Check the account and try again.</string>
     <string name="github_dashboard_copy_code">Copy code</string>
     <string name="github_dashboard_code_copied">Code copied</string>
+    <string name="github_widgets_save_error">Could not save widget changes. Try editing again.</string>
+    <string name="github_widgets_direct_hint">Touch and hold a widget to move it. Drag its corner to resize.</string>
+    <string name="github_dashboard_retrying">Connection interrupted. Retrying…</string>
 </resources>

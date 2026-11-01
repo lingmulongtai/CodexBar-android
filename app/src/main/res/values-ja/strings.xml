@@ -724,4 +724,7 @@
     <string name="github_contributions_error">連携できませんでした。アカウントを確認してもう一度お試しください。</string>
     <string name="github_dashboard_copy_code">コードをコピー</string>
     <string name="github_dashboard_code_copied">コードをコピーしました</string>
+    <string name="github_widgets_save_error">ウィジェットを保存できませんでした。もう一度編集してください。</string>
+    <string name="github_widgets_direct_hint">ウィジェットを長押しして移動、右下の角をドラッグしてサイズ変更できます。</string>
+    <string name="github_dashboard_retrying">通信が途切れたため再接続中…</string>
 </resources>
