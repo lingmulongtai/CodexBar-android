@@ -40,6 +40,7 @@ import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
+import com.codexbar.android.ui.components.WallpaperFooter
 import com.codexbar.android.ui.components.LocalBottomChromeInset
 import com.codexbar.android.ui.components.GlassSurface
 import com.codexbar.android.ui.components.LocalGlassCardBackdrop
@@ -120,6 +121,7 @@ private fun AnalyticsContent(
                     }
                 }
             }
+            item(key = "wallpaper-credit", span = { GridItemSpan(maxLineSpan) }) { WallpaperFooter() }
         }
         }
     }

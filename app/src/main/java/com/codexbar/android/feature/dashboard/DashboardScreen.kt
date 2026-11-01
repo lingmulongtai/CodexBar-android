@@ -63,6 +63,7 @@ import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
+import com.codexbar.android.ui.components.WallpaperFooter
 import com.codexbar.android.ui.components.LocalBottomChromeInset
 import com.codexbar.android.ui.components.providerDragReorder
 import com.codexbar.android.ui.components.rememberProviderDragReorder
@@ -180,6 +181,7 @@ private fun DashboardContent(
                             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                                 SmallSpinner(32.dp)
                             }
+                            WallpaperFooter(Modifier.padding(bottom = LocalBottomChromeInset.current))
                         }
                     }
 
@@ -191,6 +193,7 @@ private fun DashboardContent(
                                     windowsMode = state.acquisitionMode == AcquisitionMode.WINDOWS,
                                     modifier = Modifier.weight(1f)
                                 )
+                                WallpaperFooter(Modifier.padding(bottom = LocalBottomChromeInset.current))
                             }
                         } else {
                             val failedServices = state.snapshot.services
@@ -457,6 +460,7 @@ private fun CardList(
                     modifier = Modifier.providerDragReorder(drag, service.service, order)
                 )
             }
+            item(key = "wallpaper-credit", span = { GridItemSpan(maxLineSpan) }) { WallpaperFooter() }
         }
     }
 }

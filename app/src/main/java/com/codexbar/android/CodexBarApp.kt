@@ -1,11 +1,8 @@
 package com.codexbar.android
 
 import androidx.annotation.StringRes
-import com.codexbar.android.ui.components.WallpaperAttribution
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.sp
+import com.codexbar.android.ui.components.LocalWallpaperState
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.height
 import com.codexbar.android.ui.components.LiquidGlassWallpaper
 import com.codexbar.android.ui.components.DailyWallpaperViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -222,28 +219,25 @@ fun CodexBarApp(
                 Box(Modifier.fillMaxSize().glassBackdropSource(cardBackdrop)) {
                     LiquidGlassWallpaper(wallpaper)
                 }
-                val attributionHeight = if (wallpaper.preferences.enabled && wallpaper.bitmap != null) with(LocalDensity.current) { 18.sp.toDp() } + 12.dp else 0.dp
-                val bottomInset = attributionHeight + GlassBarHeight + GlassBarMargin * 2 +
+                val bottomInset = GlassBarHeight + GlassBarMargin * 2 +
                     WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                 CompositionLocalProvider(
                     LocalBottomChromeInset provides bottomInset,
-                    LocalGlassCardBackdrop provides cardBackdrop
+                    LocalGlassCardBackdrop provides cardBackdrop,
+                    LocalWallpaperState provides wallpaper
                 ) {
                     Box(Modifier.fillMaxSize().glassBackdropSource(backdrop)) {
                         LiquidGlassWallpaper(wallpaper)
                         navHost(Modifier.fillMaxSize())
                     }
                 }
-                Column(Modifier.align(Alignment.BottomCenter), horizontalAlignment = Alignment.CenterHorizontally) {
-                    WallpaperAttribution(wallpaper, Modifier.height(attributionHeight))
                 GlassNavigationBar(
                     entries = entries,
                     backdrop = backdrop,
                     refresh = refresh,
                     onRefresh = dashboardViewModel?.let { model -> { model.refresh() } },
-                    modifier = Modifier
+                    modifier = Modifier.align(Alignment.BottomCenter)
                 )
-                }
             }
             useExpandedNavigation(maxWidth.value) -> Row(modifier = Modifier.fillMaxSize()) {
                 AppNavigationRail(entries)

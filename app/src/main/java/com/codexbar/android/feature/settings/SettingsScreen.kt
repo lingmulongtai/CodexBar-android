@@ -120,6 +120,7 @@ import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
 import com.codexbar.android.ui.components.ProviderIcon
 import com.codexbar.android.ui.theme.providerVisualStyle
 import com.codexbar.android.ui.components.BrandGlyph
+import com.codexbar.android.ui.components.WallpaperFooter
 import com.codexbar.android.ui.components.LocalBottomChromeInset
 import com.codexbar.android.ui.components.ThemedTopBar
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -309,6 +310,7 @@ fun SettingsScreen(
                     }
                 )
 
+                WallpaperFooter()
                 Spacer(modifier = Modifier.height(32.dp + LocalBottomChromeInset.current))
             }
         }
@@ -508,6 +510,7 @@ fun ConnectionsScreen(
                     onDeleteAll = { viewModel.showDeleteConfirmDialog() }
                 )
 
+                WallpaperFooter()
                 Spacer(modifier = Modifier.height(32.dp + LocalBottomChromeInset.current))
             }
         }
