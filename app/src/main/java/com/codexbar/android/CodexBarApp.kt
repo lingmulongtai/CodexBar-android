@@ -66,6 +66,7 @@ import com.codexbar.android.feature.dashboard.DashboardScreen
 import com.codexbar.android.feature.dashboard.DashboardPreviewScreen
 import com.codexbar.android.feature.dashboard.DashboardViewModel
 import com.codexbar.android.feature.github.GitHubDashboardScreen
+import com.codexbar.android.feature.github.GitHubDashboardViewModel
 import com.codexbar.android.feature.settings.ConnectionsScreen
 import com.codexbar.android.feature.settings.SettingsScreen
 import com.codexbar.android.feature.settings.SettingsViewModel
@@ -142,6 +143,7 @@ fun CodexBarApp(
         configuration.resetNotificationEnabled && (configuration.desktop.services.isNotEmpty() || configuration.serviceStates.values.any { it.isConnected }))
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentEntry?.destination?.route ?: initialDestination
+    val githubViewModel: GitHubDashboardViewModel = hiltViewModel()
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     var slideDirection by remember { mutableStateOf(0) }
     val topLevelSwipeEnabled = remember { mutableStateOf(true) }
@@ -214,6 +216,7 @@ fun CodexBarApp(
             onScreenPrivacyChanged = onScreenPrivacyChanged,
             settingsViewModel = settingsViewModel,
             dashboardViewModel = dashboardViewModel,
+            githubViewModel = githubViewModel,
             dashboardPreviewSnapshot = dashboardPreviewSnapshot,
             trendsPage = if (lastTrendsRoute == SpendRoute) UsageAnalyticsPage.Spend else UsageAnalyticsPage.History,
             onTrendsPageChange = { page -> lastTrendsRoute = if (page == UsageAnalyticsPage.Spend) SpendRoute else HistoryRoute },
@@ -266,7 +269,8 @@ fun CodexBarApp(
                 GlassNavigationBar(
                     entries = entries,
                     backdrop = backdrop,
-                    onRefresh = dashboardViewModel?.let { model -> { model.refresh() } },
+                    onRefresh = if (currentRoute == GitHubRoute) ({ githubViewModel.refresh() })
+                        else dashboardViewModel?.let { model -> { model.refresh() } },
                     modifier = Modifier.align(Alignment.BottomCenter)
                 )
             }
@@ -297,6 +301,7 @@ private fun AppNavHost(
     onScreenPrivacyChanged: (Boolean) -> Unit,
     settingsViewModel: SettingsViewModel,
     dashboardViewModel: DashboardViewModel?,
+    githubViewModel: GitHubDashboardViewModel,
     dashboardPreviewSnapshot: QuotaPresentationSnapshot?,
     trendsPage: UsageAnalyticsPage,
     onTrendsPageChange: (UsageAnalyticsPage) -> Unit,
@@ -363,7 +368,7 @@ private fun AppNavHost(
                 onPageChange = onTrendsPageChange
             )
         }
-        composable(GitHubRoute) { GitHubDashboardScreen() }
+        composable(GitHubRoute) { GitHubDashboardScreen(viewModel = githubViewModel) }
         composable(
             SettingsRoute,
             enterTransition = { slideInHorizontally(tween(260)) { it * settingsSlideDirection } },
