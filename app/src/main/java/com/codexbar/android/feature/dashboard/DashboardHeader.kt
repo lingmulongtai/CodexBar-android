@@ -1,5 +1,10 @@
 package com.codexbar.android.feature.dashboard
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -107,12 +112,18 @@ internal fun DashboardHeader(
 
 @Composable
 private fun DashboardOrderAction(onStart: (() -> Unit)?, onFinish: (() -> Unit)?) {
-    if (onFinish != null) {
-        TextButton(onClick = onFinish) { Text(stringResource(R.string.provider_order_done)) }
-    } else if (onStart != null) {
-        IconButton(onClick = onStart) {
-            Icon(Icons.Rounded.SwapVert, contentDescription = stringResource(R.string.provider_order_action),
-                tint = if (LocalCodexBarThemeProfile.current.style == AppThemeStyle.LIQUID_GLASS) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant)
+    AnimatedContent(
+        targetState = onFinish != null,
+        transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(140)) },
+        label = "order_action"
+    ) { editing ->
+        if (editing) {
+            TextButton(onClick = { onFinish?.invoke() }, enabled = onFinish != null) { Text(stringResource(R.string.provider_order_done)) }
+        } else if (onStart != null) {
+            IconButton(onClick = onStart) {
+                Icon(Icons.Rounded.SwapVert, contentDescription = stringResource(R.string.provider_order_action),
+                    tint = if (LocalCodexBarThemeProfile.current.style == AppThemeStyle.LIQUID_GLASS) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }

@@ -1,6 +1,11 @@
 package com.codexbar.android.feature.dashboard
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -473,6 +478,17 @@ private fun CardList(
 
 @Composable
 private fun SectionHeader(
+    count: Int, reordering: Boolean, hasCustomOrder: Boolean,
+    onResetOrder: () -> Unit, modifier: Modifier = Modifier
+) {
+    AnimatedContent(targetState = reordering, modifier = modifier,
+        transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(140)) }, label = "order_section") { editing ->
+        SectionHeaderContent(count, editing, hasCustomOrder, onResetOrder)
+    }
+}
+
+@Composable
+private fun SectionHeaderContent(
     count: Int, reordering: Boolean, hasCustomOrder: Boolean,
     onResetOrder: () -> Unit, modifier: Modifier = Modifier
 ) {
