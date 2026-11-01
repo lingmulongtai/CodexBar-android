@@ -63,6 +63,7 @@ import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
+import com.codexbar.android.ui.components.GlassHeaderOverlay
 import com.codexbar.android.ui.components.WallpaperFooter
 import com.codexbar.android.ui.components.LocalBottomChromeInset
 import com.codexbar.android.ui.components.providerDragReorder
@@ -158,7 +159,7 @@ private fun DashboardContent(
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val useTwoPane = useTwoPaneDashboard(maxWidth.value)
-        Column(Modifier.fillMaxSize()) {
+        GlassHeaderOverlay(header = {
             // On wide screens the navigation rail already carries the design's mark.
             DashboardHeader(
                 refresh = refresh,
@@ -169,15 +170,16 @@ private fun DashboardContent(
                 onStartReorder = if (services.size > 1) ({ showOnlyAttention = false; reordering = true }) else null,
                 onFinishReorder = if (reordering) ({ reordering = false }) else null
             )
+        }) { headerHeight ->
             // The pull gesture starts a refresh; progress is shown in place, never over the content.
             PullToRefreshBox(
                 isRefreshing = false,
                 onRefresh = onRefresh,
-                modifier = Modifier.weight(1f).fillMaxWidth()
+                modifier = Modifier.fillMaxSize()
             ) {
                 when (val state = uiState) {
                     is DashboardUiState.Loading -> {
-                        Column(Modifier.fillMaxSize()) {
+                        Column(Modifier.fillMaxSize().padding(top = headerHeight)) {
                             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                                 SmallSpinner(32.dp)
                             }
@@ -187,7 +189,7 @@ private fun DashboardContent(
 
                     is DashboardUiState.Content -> {
                         if (state.snapshot.services.isEmpty()) {
-                            Column(Modifier.fillMaxSize()) {
+                            Column(Modifier.fillMaxSize().padding(top = headerHeight)) {
                                 EmptyState(
                                     onOpenConnections = onNavigateToConnections,
                                     windowsMode = state.acquisitionMode == AcquisitionMode.WINDOWS,
@@ -224,6 +226,7 @@ private fun DashboardContent(
                                 Row(modifier = Modifier.fillMaxSize()) {
                                     CardList(
                                         grid = grid,
+                                        contentTop = headerHeight,
                                         services = visibleServices,
                                         summary = summary,
                                         errorBanner = errorBanner,
@@ -252,7 +255,7 @@ private fun DashboardContent(
                                             .padding(
                                                 start = CodexBarSpacing.small,
                                                 end = CodexBarSpacing.large,
-                                                top = CodexBarSpacing.small,
+                                                top = headerHeight + CodexBarSpacing.small,
                                                 bottom = CodexBarSpacing.large + LocalBottomChromeInset.current
                                             )
                                     ) {
@@ -267,6 +270,7 @@ private fun DashboardContent(
                             } else {
                                 CardList(
                                     grid = grid,
+                                    contentTop = headerHeight,
                                     services = visibleServices,
                                     summary = summary,
                                     errorBanner = errorBanner,
@@ -315,6 +319,7 @@ private fun DashboardContent(
 @Composable
 private fun CardList(
     grid: LazyGridState,
+    contentTop: Dp,
     services: List<ServiceQuotaPresentation>,
     summary: DashboardSummary,
     errorBanner: String?,
@@ -363,7 +368,7 @@ private fun CardList(
             contentPadding = PaddingValues(
                 start = 16.dp,
                 end = 16.dp,
-                top = 8.dp,
+                top = contentTop + 8.dp,
                 bottom = 16.dp + LocalBottomChromeInset.current
             ),
             verticalArrangement = Arrangement.spacedBy(cardSpacing),

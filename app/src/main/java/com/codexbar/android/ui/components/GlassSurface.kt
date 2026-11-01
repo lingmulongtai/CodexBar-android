@@ -58,13 +58,20 @@ fun rememberGlassBackdrop(): GlassBackdrop {
     return remember(layer) { GlassBackdrop(layer) }
 }
 
-fun Modifier.glassBackdropSource(backdrop: GlassBackdrop): Modifier = this
+fun Modifier.glassBackdropSource(backdrop: GlassBackdrop, behind: GlassBackdrop? = null): Modifier = this
     .onGloballyPositioned { backdrop.originInRoot = it.positionInRoot(); backdrop.coordinateRoot = it.findRootCoordinates() }
     // Keep the source's display list when only a glass consumer needs redrawing. Without this
     // boundary, its generation write and the consumer's invalidation keep redrawing each other.
     .graphicsLayer()
     .drawWithContent {
-        backdrop.layer.record { this@drawWithContent.drawContent() }
+        backdrop.layer.record {
+            if (behind != null && behind.coordinateRoot != null && behind.coordinateRoot === backdrop.coordinateRoot) {
+                behind.generation
+                val offset = behind.originInRoot - backdrop.originInRoot
+                translate(offset.x, offset.y) { drawLayer(behind.layer) }
+            }
+            this@drawWithContent.drawContent()
+        }
         drawLayer(backdrop.layer)
         // Written without observing it, so the source never invalidates its own drawing.
         Snapshot.withoutReadObservation { backdrop.generation++ }

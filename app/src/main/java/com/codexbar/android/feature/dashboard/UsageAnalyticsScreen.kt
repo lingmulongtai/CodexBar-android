@@ -47,6 +47,9 @@ import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.ui.components.GlassSegmentedControl
+import com.codexbar.android.ui.components.GlassHeaderOverlay
+import com.codexbar.android.ui.components.LocalGlassCardBackdrop
+import com.codexbar.android.ui.components.LocalGlassHeaderBackdrop
 import com.codexbar.android.ui.components.WallpaperFooter
 import com.codexbar.android.ui.components.LocalBottomChromeInset
 import com.codexbar.android.ui.components.ProviderIcon
@@ -89,17 +92,22 @@ private fun AnalyticsContent(
     onPageChange: (UsageAnalyticsPage) -> Unit
 ) {
     val profile = LocalCodexBarThemeProfile.current
-    Column(Modifier.fillMaxSize()) {
-        // Liquid Glass refreshes from its floating button; the docked designs refresh here.
-        ThemedTopBar(title = stringResource(R.string.navigation_trends), actions = {
-            if (!profile.floatingNavigation) RefreshStatusButton(refresh, snapshot?.generatedAt, onRefresh, Modifier.padding(end = 8.dp))
-        })
-        TrendsTabs(page, onPageChange, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+    GlassHeaderOverlay(header = {
+        Column {
+            ThemedTopBar(title = stringResource(R.string.navigation_trends), actions = {
+                if (!profile.floatingNavigation) RefreshStatusButton(refresh, snapshot?.generatedAt, onRefresh, Modifier.padding(end = 8.dp))
+            })
+            // Keep the selector attached to the header while content slides underneath both.
+            CompositionLocalProvider(LocalGlassCardBackdrop provides LocalGlassHeaderBackdrop.current) {
+                TrendsTabs(page, onPageChange, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+            }
+        }
+    }, initialExtraHeight = 56.dp) { headerHeight ->
         val stateHolder = rememberSaveableStateHolder()
         val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
         AnimatedContent(
             targetState = page,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.fillMaxSize(),
             transitionSpec = {
                 val forward = (targetState.ordinal > initialState.ordinal) != rtl
                 val direction = if (forward) 1 else -1
@@ -114,7 +122,7 @@ private fun AnalyticsContent(
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     val columns = minOf(rows.size.coerceAtLeast(1), (maxWidth / 340.dp).toInt().coerceAtLeast(1))
                     LazyVerticalGrid(columns = GridCells.Fixed(columns), modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp + LocalBottomChromeInset.current),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = headerHeight + 12.dp, bottom = 16.dp + LocalBottomChromeInset.current),
                         verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
                             Column(Modifier.then(if (profile.style == AppThemeStyle.LIQUID_GLASS)

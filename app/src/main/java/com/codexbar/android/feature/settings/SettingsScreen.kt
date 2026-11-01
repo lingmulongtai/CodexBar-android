@@ -118,6 +118,7 @@ import com.codexbar.android.core.security.ConnectionHealth
 import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
 import com.codexbar.android.ui.components.ProviderIcon
 import com.codexbar.android.ui.theme.providerVisualStyle
+import com.codexbar.android.ui.components.GlassHeaderOverlay
 import com.codexbar.android.ui.components.WallpaperFooter
 import com.codexbar.android.ui.components.LocalBottomChromeInset
 import com.codexbar.android.ui.components.ThemedTopBar
@@ -178,9 +179,8 @@ fun SettingsScreen(
         }
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
+    GlassHeaderOverlay(
+        header = {
             // Align the title with the centered content column on wide screens.
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
                 ThemedTopBar(
@@ -199,12 +199,8 @@ fun SettingsScreen(
                 )
             }
         }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
+    ) { headerHeight ->
+        Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -212,7 +208,7 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp)
-                    .padding(top = if (LocalCodexBarThemeProfile.current.style == AppThemeStyle.LIQUID_GLASS) 8.dp else 0.dp),
+                    .padding(top = headerHeight + 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 NotificationsSection(
@@ -358,9 +354,8 @@ fun ConnectionsScreen(
         }
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
+    GlassHeaderOverlay(
+        header = {
             // Align the title with the centered content column on wide screens.
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
                 ThemedTopBar(
@@ -379,12 +374,8 @@ fun ConnectionsScreen(
                 )
             }
         }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
+    ) { headerHeight ->
+        Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -392,7 +383,7 @@ fun ConnectionsScreen(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp)
-                    .padding(top = if (LocalCodexBarThemeProfile.current.style == AppThemeStyle.LIQUID_GLASS) 8.dp else 0.dp),
+                    .padding(top = headerHeight + 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 ConnectionSummaryCard(

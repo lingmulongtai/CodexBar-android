@@ -17,6 +17,9 @@ import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 /** Background-only source: a card must never sample the layer containing the card itself. */
 val LocalGlassCardBackdrop = staticCompositionLocalOf<GlassBackdrop?> { null }
 
+/** Screen content, recorded separately from the overlay that consumes it. */
+val LocalGlassHeaderBackdrop = staticCompositionLocalOf<GlassBackdrop?> { null }
+
 @Composable
 fun GlassCard(
     onClick: () -> Unit,

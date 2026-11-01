@@ -77,7 +77,7 @@ fun GlassPageHeader(
 ) {
     val shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
     GlassSurface(
-        backdrop = LocalGlassCardBackdrop.current,
+        backdrop = LocalGlassHeaderBackdrop.current ?: LocalGlassCardBackdrop.current,
         shape = shape,
         tint = Color.Transparent,
         fallback = Color.Transparent,
