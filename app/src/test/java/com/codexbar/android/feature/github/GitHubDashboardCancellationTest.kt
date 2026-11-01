@@ -110,6 +110,38 @@ class GitHubDashboardCancellationTest {
         } finally { Dispatchers.resetMain() }
     }
 
+    @Test fun `rapid widget edits persist only the final layout`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val prefs = mock(EncryptedPrefsManager::class.java)
+            val layout = GitHubDashboardLayout.default(1L)
+            val last = layout.copy(widgets = layout.widgets.reversed())
+            `when`(prefs.gitHubDashboardRevision).thenReturn(MutableStateFlow(0L))
+            `when`(prefs.currentGitHubDashboardRevision()).thenReturn(0L)
+            `when`(prefs.loadGitHubDashboardSession()).thenReturn(
+                GitHubDashboardSession("app", "app-access", "app-refresh", Long.MAX_VALUE))
+            `when`(prefs.loadGitHubDashboardLayout(1L)).thenReturn(layout)
+            `when`(prefs.saveGitHubDashboardLayoutIfCurrent(last, 0L, "app-refresh")).thenReturn(true)
+            val api = GitHubDashboardApi(Json { ignoreUnknownKeys = true }) { request ->
+                when (request.url.encodedPath) {
+                    "/user" -> GitHubHttpResponse(200, """{"login":"example","id":1}""")
+                    "/user/repos" -> GitHubHttpResponse(200, "[]")
+                    else -> throw java.io.IOException("optional data unavailable")
+                }
+            }
+            val vm = GitHubDashboardViewModel(api, prefs)
+            runCurrent()
+            vm.updateWidgets(layout.widgets.drop(1))
+            vm.updateWidgets(last.widgets)
+            runCurrent(); advanceTimeBy(251); runCurrent()
+            val saves = mockingDetails(prefs).invocations.filter { it.method.name == "saveGitHubDashboardLayoutIfCurrent" }
+            assertEquals(1, saves.size)
+            assertEquals(last, saves.single().arguments[0])
+            assertEquals(0L, saves.single().arguments[1])
+            assertEquals("app-refresh", saves.single().arguments[2])
+        } finally { Dispatchers.resetMain() }
+    }
+
     @Test fun `temporary DNS failure keeps the device code and retries`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {

@@ -315,8 +315,10 @@ internal class GitHubDashboardViewModel @Inject constructor(
         val next = layout.copy(widgets = widgets).normalized(layout.ownerId)
         _state.update { it.copy(layout = next, widgetSaveError = false) }
         val previous = layoutSaveJob
+        previous?.cancel()
         layoutSaveJob = viewModelScope.launch {
             previous?.join()
+            delay(250)
             try {
                 var saved = prefs.saveGitHubDashboardLayoutIfCurrent(next, revision, token)
                 if (!saved && layoutRevision == revision && _state.value.profile?.id == next.ownerId) {
@@ -325,9 +327,9 @@ internal class GitHubDashboardViewModel @Inject constructor(
                     if (currentToken != null && layoutRevision == revision && _state.value.profile?.id == next.ownerId)
                         saved = prefs.saveGitHubDashboardLayoutIfCurrent(next, revision, currentToken)
                 }
-                if (!saved && layoutRevision == revision) _state.update { it.copy(widgetSaveError = true) }
+                if (!saved && layoutRevision == revision && _state.value.layout == next) _state.update { it.copy(widgetSaveError = true) }
             } catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { if (layoutRevision == revision) _state.update { it.copy(widgetSaveError = true) } }
+            catch (_: Exception) { if (layoutRevision == revision && _state.value.layout == next) _state.update { it.copy(widgetSaveError = true) } }
         }
     }
 
