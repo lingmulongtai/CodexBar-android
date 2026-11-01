@@ -666,7 +666,7 @@
     <string name="github_profile_developer">GitHub Developer Program</string>
     <string name="github_profile_badges">実績・Pro を GitHub で確認</string>
     <string name="github_profile_open">GitHub プロフィールを開く</string>
-    <string name="github_profile_period_title">コミット</string>
+    <string name="github_profile_period_title">コミット（取得可能分）</string>
     <string name="github_profile_today">今日</string>
     <string name="github_profile_week">今週</string>
     <string name="github_profile_month">今月</string>
@@ -674,7 +674,7 @@
     <string name="github_profile_contribution_note">この GitHub App が取得できる範囲の件数です。非公開分を含む GitHub 全体の件数より少ない場合があります。</string>
     <string name="github_profile_calendar">コントリビューション</string>
     <string name="github_profile_calendar_total">今年 %1$d 件の貢献</string>
-    <string name="github_profile_calendar_selected">%1$s · %2$d 件の貢献</string>
+    <string name="github_profile_calendar_selected">%1$s · %2$d 件</string>
     <string name="github_profile_calendar_hint">マスをタップすると日付ごとの件数を表示します。</string>
     <string name="github_profile_activity">アクティビティ</string>
     <string name="github_profile_commits">コミット</string>

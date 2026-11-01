@@ -2,6 +2,8 @@ package com.codexbar.android.feature.github
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,12 +11,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -23,13 +29,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
+import com.codexbar.android.core.network.github.GitHubContributionDay
 import com.codexbar.android.core.network.github.GitHubProfile
 import com.codexbar.android.core.network.github.GitHubRepository
 import com.codexbar.android.core.network.github.GitHubRepositoryActivity
 import com.codexbar.android.ui.components.*
 
 private const val GITHUB_DEVICE_URL = "https://github.com/login/device"
-private const val GITHUB_INSTALL_URL = "https://github.com/apps/codexbar-android-dashboard/installations/new"
 
 private enum class GitHubPage { Profile, Repositories, Starred }
 internal enum class RepositorySort { Updated, Pushed, Stars, Name, Commits, Contributions }
@@ -41,6 +47,7 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
     var browserError by remember { mutableStateOf(false) }
     var page by rememberSaveable { mutableStateOf(GitHubPage.Profile) }
     var sort by rememberSaveable { mutableStateOf(RepositorySort.Updated) }
+    var selectedDay by remember { mutableStateOf<GitHubContributionDay?>(null) }
     LaunchedEffect(state.profile) { if (state.profile == null) page = GitHubPage.Profile }
     fun open(url: String) { browserError = runCatching { uri.openUri(url) }.isFailure }
     BackHandler(enabled = page != GitHubPage.Profile) { page = GitHubPage.Profile }
@@ -49,6 +56,12 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
         GitHubPage.Repositories -> stringResource(R.string.github_profile_repositories)
         GitHubPage.Starred -> stringResource(R.string.github_profile_starred)
     }
+    Box(Modifier.fillMaxSize().pointerInput(Unit) {
+        awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            selectedDay = null
+        }
+    }) {
     GlassHeaderOverlay(header = {
         ThemedTopBar(title = title, navigationIcon = {
             if (page != GitHubPage.Profile) CodexBarIconButton(onClick = { page = GitHubPage.Profile }) {
@@ -64,10 +77,13 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
                 if (profile == null) {
                     GitHubSignInCard(state, viewModel, ::open, browserError)
                 } else {
-                    GitHubProfileCard(profile, state, viewModel, ::open,
+                    GitHubProfileCard(profile, state,
                         onRepositories = { sort = RepositorySort.Updated; page = GitHubPage.Repositories },
-                        onStarred = { sort = RepositorySort.Updated; page = GitHubPage.Starred }, browserError = browserError)
-                    GitHubContributionCards(state.contributions, state.contributionsUnavailable, state.loading)
+                        onStarred = { sort = RepositorySort.Updated; page = GitHubPage.Starred })
+                    GitHubContributionCards(state.contributions, state.contributionsUnavailable, state.loading,
+                        selectedDay = selectedDay, onSelectDay = { selectedDay = it })
+                    CodexBarOutlinedButton(onClick = viewModel::signOut) { Text(stringResource(R.string.github_dashboard_sign_out)) }
+                    if (state.error != null || browserError) GitHubStatus(state, browserError)
                 }
                 WallpaperFooter()
                 Spacer(Modifier.height(LocalBottomChromeInset.current + 32.dp))
@@ -112,6 +128,7 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
             }
         }
     }
+    }
 }
 
 @Composable
@@ -140,59 +157,42 @@ private fun GitHubSignInCard(state: GitHubDashboardState, viewModel: GitHubDashb
 
 @Composable
 private fun GitHubProfileCard(profile: GitHubProfile, state: GitHubDashboardState,
-    viewModel: GitHubDashboardViewModel, open: (String) -> Unit,
-    onRepositories: () -> Unit, onStarred: () -> Unit, browserError: Boolean) {
+    onRepositories: () -> Unit, onStarred: () -> Unit) {
     val privateCount = state.repositories.count { it.isPrivate && it.fullName.substringBefore('/').equals(profile.login, true) }
     val privateLabel = (if (state.repositoriesComplete) "" else "≥") + privateCount
     val starLabel = state.starred?.size?.let { (if (state.starredComplete) "" else "≥") + it } ?: "—"
     CodexBarCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 GitHubAvatar(profile.avatarUrl, profile.login)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(profile.name?.takeIf { it.isNotBlank() } ?: profile.login,
-                        style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text("@" + profile.login, style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (state.contributions?.viewer?.isDeveloperProgramMember == true)
                         Text(stringResource(R.string.github_profile_developer), style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary)
+                            color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                CodexBarIconButton(onClick = onRepositories) {
+                    Icon(Icons.Rounded.Folder, contentDescription = stringResource(R.string.github_profile_repositories))
+                }
+                CodexBarIconButton(onClick = onStarred) {
+                    Icon(Icons.Rounded.Star, contentDescription = stringResource(R.string.github_profile_starred))
                 }
             }
-            Text(profile.bio?.takeIf { it.isNotBlank() } ?: stringResource(R.string.github_profile_bio_empty),
-                style = MaterialTheme.typography.bodyMedium)
+            profile.bio?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(stringResource(R.string.github_profile_followers, profile.followers), style = MaterialTheme.typography.labelLarge)
                 Text(stringResource(R.string.github_profile_following, profile.following), style = MaterialTheme.typography.labelLarge)
             }
             profile.location?.takeIf { it.isNotBlank() }?.let {
-                Text(stringResource(R.string.github_profile_location, it), style = MaterialTheme.typography.bodySmall)
+                Text(it, style = MaterialTheme.typography.bodySmall)
             }
-            Text(profile.email?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.github_profile_public_email, it) }
-                ?: stringResource(R.string.github_profile_email_unavailable), style = MaterialTheme.typography.bodySmall)
-            Text(stringResource(R.string.github_profile_timezone), style = MaterialTheme.typography.bodySmall)
             Text(stringResource(R.string.github_dashboard_public_count, profile.publicRepos) + "  ·  " +
                 stringResource(R.string.github_profile_private_count, privateLabel), style = MaterialTheme.typography.bodySmall)
             Text(stringResource(R.string.github_profile_star_count, starLabel), style = MaterialTheme.typography.bodySmall)
-            Text(stringResource(R.string.github_profile_private_scope), style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CodexBarOutlinedButton(onClick = onRepositories, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.github_profile_repositories), maxLines = 1)
-                }
-                CodexBarOutlinedButton(onClick = onStarred, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.github_profile_starred), maxLines = 1)
-                }
-            }
-            CodexBarTextButton(onClick = { open("https://github.com/${profile.login}") }) {
-                Text(stringResource(R.string.github_profile_badges))
-            }
-            CodexBarTextButton(onClick = { open(GITHUB_INSTALL_URL) }) { Text(stringResource(R.string.github_dashboard_manage_access)) }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CodexBarOutlinedButton(onClick = viewModel::refresh, enabled = !state.loading) { Text(stringResource(R.string.action_refresh)) }
-                CodexBarOutlinedButton(onClick = viewModel::signOut) { Text(stringResource(R.string.github_dashboard_sign_out)) }
-            }
-            GitHubStatus(state, browserError)
         }
     }
 }

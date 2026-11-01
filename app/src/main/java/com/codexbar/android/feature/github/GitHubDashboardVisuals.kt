@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -31,7 +32,8 @@ import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 import java.time.LocalDate
 
 @Composable
-internal fun GitHubContributionCards(data: GitHubContributions?, unavailable: Boolean, loading: Boolean) {
+internal fun GitHubContributionCards(data: GitHubContributions?, unavailable: Boolean, loading: Boolean,
+    selectedDay: GitHubContributionDay?, onSelectDay: (GitHubContributionDay?) -> Unit) {
     if (data == null) {
         if (unavailable && !loading) CodexBarCard(Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.github_profile_unavailable), modifier = Modifier.padding(18.dp),
@@ -57,12 +59,10 @@ internal fun GitHubContributionCards(data: GitHubContributions?, unavailable: Bo
                     }
                 }
             }
-            Text(stringResource(R.string.github_profile_contribution_note), style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (data.partial) Text(stringResource(R.string.github_profile_partial), style = MaterialTheme.typography.bodySmall)
         }
     }
-    viewer.year?.contributionCalendar?.let { ContributionCalendarCard(it) }
+    viewer.year?.contributionCalendar?.let { ContributionCalendarCard(it, selectedDay, onSelectDay) }
     viewer.year?.let { year ->
         val values = listOf(year.totalCommitContributions, year.totalIssueContributions,
             year.totalPullRequestContributions, year.totalPullRequestReviewContributions)
@@ -99,12 +99,12 @@ internal fun GitHubContributionCards(data: GitHubContributions?, unavailable: Bo
 }
 
 @Composable
-private fun ContributionCalendarCard(calendar: GitHubContributionCalendar) {
+private fun ContributionCalendarCard(calendar: GitHubContributionCalendar, selected: GitHubContributionDay?,
+    onSelect: (GitHubContributionDay?) -> Unit) {
     val dark = LocalCodexBarThemeProfile.current.isDark
-    var selected by remember(calendar) { mutableStateOf<GitHubContributionDay?>(null) }
     val density = LocalDensity.current
-    val step = with(density) { 14.dp.toPx() }
-    val cell = with(density) { 11.dp.toPx() }
+    val step = with(density) { 12.dp.toPx() }
+    val cell = with(density) { 9.dp.toPx() }
     val days = remember(calendar) {
         calendar.weeks.map { week -> week.contributionDays.mapNotNull { day ->
             runCatching { LocalDate.parse(day.date).dayOfWeek.value % 7 to day }.getOrNull()
@@ -117,17 +117,21 @@ private fun ContributionCalendarCard(calendar: GitHubContributionCalendar) {
         Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(stringResource(R.string.github_profile_calendar), style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold)
-            Text(description, style = MaterialTheme.typography.bodyMedium)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(description, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                if (selected != null) Text(stringResource(R.string.github_profile_calendar_selected, selected.date, selected.contributionCount),
+                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
+            }
             if (days.isNotEmpty()) {
                 val scroll = rememberScrollState(initial = Int.MAX_VALUE)
                 Box(Modifier.fillMaxWidth().horizontalScroll(scroll)) {
-                    Canvas(Modifier.width((calendar.weeks.size * 14).dp).height((7 * 14).dp)
+                    Canvas(Modifier.width((calendar.weeks.size * 12).dp).height((7 * 12).dp)
                         .semantics { contentDescription = description }
                         .pointerInput(days, step) {
                             detectTapGestures { offset ->
                                 val week = (offset.x / step).toInt()
                                 val day = (offset.y / step).toInt()
-                                selected = days.getOrNull(week)?.firstOrNull { it.first == day }?.second
+                                onSelect(days.getOrNull(week)?.firstOrNull { it.first == day }?.second)
                             }
                         }) {
                         days.forEachIndexed { week, entries -> entries.forEach { (dayIndex, day) ->
@@ -135,16 +139,16 @@ private fun ContributionCalendarCard(calendar: GitHubContributionCalendar) {
                                 "FIRST_QUARTILE" -> 1; "SECOND_QUARTILE" -> 2
                                 "THIRD_QUARTILE" -> 3; "FOURTH_QUARTILE" -> 4; else -> 0
                             }
-                            drawRoundRect(colors[level], topLeft = Offset(week * step, dayIndex * step),
+                            val topLeft = Offset(week * step, dayIndex * step)
+                            drawRoundRect(colors[level], topLeft = topLeft,
                                 size = Size(cell, cell), cornerRadius = CornerRadius(3.dp.toPx()))
+                            if (selected?.date == day.date) drawRoundRect(Color.White, topLeft = topLeft,
+                                size = Size(cell, cell), cornerRadius = CornerRadius(3.dp.toPx()),
+                                style = Stroke(width = 1.5.dp.toPx()))
                         } }
                     }
                 }
             }
-            val selectedDay = selected
-            Text(if (selectedDay == null) stringResource(R.string.github_profile_calendar_hint)
-                else stringResource(R.string.github_profile_calendar_selected, selectedDay.date, selectedDay.contributionCount),
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
