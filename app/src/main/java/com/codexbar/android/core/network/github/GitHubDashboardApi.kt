@@ -154,15 +154,27 @@ internal class GitHubDashboardApi internal constructor(
             put("year", start(today.withDayOfYear(1)))
             put("end", now.toString())
         }
-        val body = buildJsonObject { put("query", GITHUB_CONTRIBUTIONS_QUERY); put("variables", variables) }
+        val result = json.decodeFromString<GitHubContributionsResponse>(graphQl(token, GITHUB_CONTRIBUTIONS_QUERY, variables))
+        val viewer = result.data?.viewer ?: throw IOException("GitHub contributions are unavailable")
+        return GitHubContributions(viewer, partial = result.errors.isNotEmpty())
+    }
+
+    suspend fun repositoryActivity(token: String, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): GitHubRepositoryActivity {
+        val firstDay = now.atZone(zone).toLocalDate().withDayOfYear(1).atStartOfDay(zone).toInstant()
+        val variables = buildJsonObject { put("year", firstDay.toString()); put("end", now.toString()) }
+        val result = json.decodeFromString<GitHubActivityResponse>(graphQl(token, GITHUB_ACTIVITY_QUERY, variables))
+        val collection = result.data?.viewer?.year ?: throw IOException("GitHub repository activity is unavailable")
+        return collection.toActivity(partial = result.errors.isNotEmpty())
+    }
+
+    private suspend fun graphQl(token: String, query: String, variables: kotlinx.serialization.json.JsonObject): String {
+        val body = buildJsonObject { put("query", query); put("variables", variables) }
             .toString().toRequestBody("application/json; charset=utf-8".toMediaType())
         val request = Request.Builder().url("https://api.github.com/graphql")
             .header("Accept", "application/vnd.github+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
             .header("Authorization", "Bearer $token").post(body).build()
-        val result = json.decodeFromString<GitHubContributionsResponse>(successful(execute(request)))
-        val viewer = result.data?.viewer ?: throw IOException("GitHub contributions are unavailable")
-        return GitHubContributions(viewer, partial = result.errors.isNotEmpty())
+        return successful(execute(request))
     }
 
     private suspend fun post(url: String, fields: Map<String, String>): GitHubHttpResponse {
