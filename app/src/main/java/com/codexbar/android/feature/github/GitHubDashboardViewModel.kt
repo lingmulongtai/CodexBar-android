@@ -3,6 +3,9 @@ package com.codexbar.android.feature.github
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codexbar.android.core.domain.model.GitHubDashboardSession
+import com.codexbar.android.core.domain.model.GitHubDashboardLayout
+import com.codexbar.android.core.domain.model.GitHubWidget
+import com.codexbar.android.core.domain.model.normalized
 import com.codexbar.android.core.network.github.GitHubContributions
 import com.codexbar.android.core.network.github.GitHubRepositoryActivity
 import com.codexbar.android.core.network.github.GitHubDashboardApi
@@ -36,6 +39,7 @@ internal data class GitHubDashboardState(
     val userCode: String? = null,
     val hasStoredSession: Boolean = false,
     val profile: GitHubProfile? = null,
+    val layout: GitHubDashboardLayout? = null,
     val repositories: List<GitHubRepository> = emptyList(),
     val repositoriesComplete: Boolean = false,
     val starred: List<GitHubRepository>? = null,
@@ -56,6 +60,9 @@ internal class GitHubDashboardViewModel @Inject constructor(
     private var loginJob: Job? = null
     private var refreshJob: Job? = null
     private var signOutJob: Job? = null
+    private var layoutSaveJob: Job? = null
+    private var layoutRevision: Long? = null
+    private var layoutRefreshToken: String? = null
 
     init {
         viewModelScope.launch {
@@ -64,6 +71,9 @@ internal class GitHubDashboardViewModel @Inject constructor(
                 if (previous != null && previous != revision) {
                     loginJob?.cancel()
                     refreshJob?.cancel()
+                    layoutSaveJob?.cancel()
+                    layoutRevision = null
+                    layoutRefreshToken = null
                     _state.value = GitHubDashboardState()
                 }
                 previous = revision
@@ -119,6 +129,7 @@ internal class GitHubDashboardViewModel @Inject constructor(
         refreshJob = viewModelScope.launch {
             _state.update { it.copy(loading = true, error = null) }
             try {
+                val revision = prefs.currentGitHubDashboardRevision()
                 var session = prefs.loadGitHubDashboardSession()
                 if (session == null) { _state.value = GitHubDashboardState(); return@launch }
                 _state.update { it.copy(hasStoredSession = true) }
@@ -141,7 +152,13 @@ internal class GitHubDashboardViewModel @Inject constructor(
                     _state.value = GitHubDashboardState()
                     return@launch
                 }
-                _state.update { it.copy(profile = profile, repositories = repos,
+                val layout = profile.id?.takeIf { it > 0 }?.let { ownerId ->
+                    _state.value.layout?.takeIf { it.ownerId == ownerId } ?: prefs.loadGitHubDashboardLayout(ownerId)
+                }
+                if (prefs.currentGitHubDashboardRevision() != revision) return@launch
+                layoutRevision = revision
+                layoutRefreshToken = session.refreshToken
+                _state.update { it.copy(profile = profile, layout = layout, repositories = repos,
                     repositoriesComplete = repositoryResult.complete && repos.size == repositoryResult.items.size, error = null) }
                 val (contributions, activity, starred) = coroutineScope {
                     val contributions = async { optionalGitHubData { api.contributions(session.accessToken) } }
@@ -163,10 +180,27 @@ internal class GitHubDashboardViewModel @Inject constructor(
         }
     }
 
+    fun updateWidgets(widgets: List<GitHubWidget>) {
+        val layout = _state.value.layout ?: return
+        val revision = layoutRevision ?: return
+        val token = layoutRefreshToken ?: return
+        val next = layout.copy(widgets = widgets).normalized(layout.ownerId)
+        _state.update { it.copy(layout = next) }
+        val previous = layoutSaveJob
+        layoutSaveJob = viewModelScope.launch {
+            previous?.join()
+            prefs.saveGitHubDashboardLayoutIfCurrent(next, revision, token)
+        }
+    }
+
     fun signOut() {
         if (signOutJob?.isActive == true) return
         val previousLogin = loginJob
         val previousRefresh = refreshJob
+        val previousLayoutSave = layoutSaveJob
+        layoutSaveJob = null
+        layoutRevision = null
+        layoutRefreshToken = null
         loginJob = null
         refreshJob = null
         val hadStoredSession = _state.value.hasStoredSession
@@ -174,6 +208,7 @@ internal class GitHubDashboardViewModel @Inject constructor(
         signOutJob = viewModelScope.launch {
             previousLogin?.cancelAndJoin()
             previousRefresh?.cancelAndJoin()
+            previousLayoutSave?.cancelAndJoin()
             try {
                 prefs.deleteGitHubDashboardSession()
                 _state.value = GitHubDashboardState()

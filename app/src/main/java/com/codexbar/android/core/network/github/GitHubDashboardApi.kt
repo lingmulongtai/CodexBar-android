@@ -56,7 +56,8 @@ internal data class GitHubProfile(
     val location: String? = null,
     val email: String? = null,
     val followers: Int = 0,
-    val following: Int = 0
+    val following: Int = 0,
+    val id: Long? = null
 )
 
 @Serializable

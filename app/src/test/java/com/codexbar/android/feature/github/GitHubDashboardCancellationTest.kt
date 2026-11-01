@@ -89,6 +89,7 @@ class GitHubDashboardCancellationTest {
             val prefs = mock(EncryptedPrefsManager::class.java)
             val revisions = MutableStateFlow(0L)
             `when`(prefs.gitHubDashboardRevision).thenReturn(revisions)
+            `when`(prefs.currentGitHubDashboardRevision()).thenReturn(0L)
             `when`(prefs.loadGitHubDashboardSession()).thenReturn(
                 GitHubDashboardSession("client", "access", "refresh", Long.MAX_VALUE))
             val api = GitHubDashboardApi(Json { ignoreUnknownKeys = true }) { request ->
