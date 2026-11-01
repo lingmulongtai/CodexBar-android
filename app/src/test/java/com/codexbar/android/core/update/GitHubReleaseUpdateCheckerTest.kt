@@ -95,6 +95,18 @@ class GitHubReleaseUpdateCheckerTest {
     }
 
     @Test
+    fun `manual check distinguishes current version network failure and preview`() = runTest {
+        server.enqueue(releaseResponse(tag = "v0.2.1", assetUrl = TRUSTED_APK_URL))
+        server.enqueue(MockResponse().setResponseCode(503))
+        server.enqueue(releaseResponse(tag = "v0.3.0", assetUrl = TRUSTED_APK_URL))
+        server.enqueue(releaseResponse(tag = "v0.3.0", assetUrl = TRUSTED_APK_URL))
+        assertEquals(UpdateCheckResult.UpToDate, checker().checkForUpdates("0.2.1"))
+        assertEquals(UpdateCheckResult.Unavailable, checker().checkForUpdates("0.2.1"))
+        assertEquals(UpdateCheckResult.VersionNotComparable, checker().checkForUpdates("0.2.1-preview"))
+        assertTrue(checker().checkForUpdates("0.2.1") is UpdateCheckResult.Available)
+    }
+
+    @Test
     fun `version comparison is numeric and stable only`() {
         assertTrue(isNewerStableVersion("v1.10.0", "1.9.9"))
         assertTrue(isNewerStableVersion("2.0", "1.99.99"))

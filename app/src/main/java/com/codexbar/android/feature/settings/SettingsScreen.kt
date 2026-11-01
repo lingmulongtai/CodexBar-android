@@ -295,6 +295,7 @@ fun SettingsScreen(
                     }
                 )
 
+                AppInfoSection()
                 WallpaperFooter()
                 Spacer(modifier = Modifier.height(32.dp + LocalBottomChromeInset.current))
             }

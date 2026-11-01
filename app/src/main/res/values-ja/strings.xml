@@ -622,4 +622,16 @@
     <string name="wallpaper_key_invalid">Access Key を確認して、もう一度保存してください。</string>
     <string name="wallpaper_save_key">Access Key を保存</string>
     <string name="wallpaper_remove_key">キーを削除し、厳選写真に戻す</string>
+    <string name="app_info_title">CodexBar について</string>
+    <string name="app_info_version">バージョン %1$s · ビルド %2$d</string>
+    <string name="app_info_android_project">Android プロジェクト（GitHub）</string>
+    <string name="app_info_windows_project">Windows 連携アプリ（GitHub）</string>
+    <string name="app_info_releases">リリースを見る</string>
+    <string name="app_info_check_updates">アップデートを確認</string>
+    <string name="app_info_checking">アップデートを確認中…</string>
+    <string name="app_info_update_available">バージョン %1$s を利用できます。</string>
+    <string name="app_info_up_to_date">最新の安定版を使用しています。</string>
+    <string name="app_info_preview_version">プレビュー版は安定版と比較できません。リリース一覧をご確認ください。</string>
+    <string name="app_info_update_unavailable">アップデートを確認できませんでした。通信を確認して再度お試しください。</string>
+    <string name="app_info_browser_unavailable">リンクを開けませんでした。ブラウザーを確認してください。</string>
 </resources>
