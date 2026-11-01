@@ -1,6 +1,7 @@
 package com.codexbar.android.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
@@ -33,19 +34,32 @@ fun CodexBarSlider(value: Float, onValueChange: (Float) -> Unit, modifier: Modif
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val dragged by interaction.collectIsDraggedAsState()
-    val lift by animateFloatAsState(if (pressed || dragged) 1f else 0f, label = "slider_lift")
+    val lift by animateFloatAsState(if (pressed || dragged) 1f else 0f, spring(stiffness = 600f), label = "slider_lift")
     val colors = MaterialTheme.colorScheme
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Slider(value, onValueChange, modifier.heightIn(min = 48.dp), enabled, valueRange = valueRange, steps = steps,
         onValueChangeFinished = onValueChangeFinished, interactionSource = interaction,
         thumb = {
-            GlassSurface(LocalGlassCardBackdrop.current, CircleShape, Color.White.copy(alpha = 0.90f - lift * 0.30f),
+            GlassSurface(LocalGlassCardBackdrop.current, CircleShape, Color.White.copy(alpha = 0.94f - lift * 0.48f),
                 Color.White, Color.White.copy(alpha = 0.95f),
-                Modifier.size(28.dp).graphicsLayer { scaleX = 1f + lift * 0.22f; scaleY = 1f + lift * 0.22f; alpha = if (enabled) 1f else 0.5f },
-                blurRadius = 1.dp, refraction = 0.45f + lift * 0.35f, elevation = 3.dp) {}
+                Modifier.size(36.dp, 24.dp).graphicsLayer {
+                    scaleX = 1f + lift * 0.60f; scaleY = 1f + lift * 0.60f
+                    alpha = if (enabled) 1f else 0.5f
+                }, blurRadius = 2.dp, refraction = 0.45f + lift * 0.35f, elevation = 3.dp) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val middle = size.height / 2
+                    val inset = 3.dp.toPx()
+                    drawLine(colors.onSurface.copy(alpha = 0.18f * lift), Offset(inset, middle),
+                        Offset(size.width - inset, middle), 8.dp.toPx(), StrokeCap.Round)
+                    val from = if (rtl) size.width - inset else inset
+                    drawLine(colors.primary.copy(alpha = 0.60f * lift), Offset(from, middle),
+                        Offset(size.width / 2, middle), 8.dp.toPx(), StrokeCap.Round)
+                }
+            }
         },
         track = {
-            val fraction = ((value - valueRange.start) / (valueRange.endInclusive - valueRange.start)).coerceIn(0f, 1f)
+            val range = valueRange.endInclusive - valueRange.start
+            val fraction = if (range > 0f) ((value - valueRange.start) / range).coerceIn(0f, 1f) else 0f
             Canvas(Modifier.fillMaxWidth().height(6.dp)) {
                 val middle = size.height / 2
                 val start = if (rtl) size.width else 0f
