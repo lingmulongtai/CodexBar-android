@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -144,7 +145,7 @@ fun GlassChoiceRow(labels: List<String>, selected: Int, onSelect: (Int) -> Unit,
         Row(Modifier.fillMaxWidth().padding(4.dp).selectableGroup(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             labels.forEachIndexed { index, label ->
                 val active = index == selected
-                Surface(Modifier.weight(1f).selectable(active, onClick = { onSelect(index) }, role = Role.Tab),
+                Surface(Modifier.weight(1f).clip(CircleShape).selectable(active, onClick = { onSelect(index) }, role = Role.Tab),
                     shape = CircleShape, color = if (active) colors.primary.copy(alpha = 0.12f) else Color.Transparent) {
                     Box(Modifier.heightIn(min = 48.dp).padding(horizontal = 8.dp, vertical = 12.dp), contentAlignment = Alignment.Center) {
                         Text(label, style = MaterialTheme.typography.labelLarge, color = if (active) colors.primary else colors.onSurface)
