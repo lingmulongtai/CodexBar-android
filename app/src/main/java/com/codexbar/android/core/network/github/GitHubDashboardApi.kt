@@ -43,7 +43,9 @@ internal data class GitHubTokenResponse(
     @kotlinx.serialization.SerialName("access_token") val accessToken: String? = null,
     @kotlinx.serialization.SerialName("refresh_token") val refreshToken: String? = null,
     @kotlinx.serialization.SerialName("expires_in") val expiresIn: Long? = null,
-    val error: String? = null
+    val error: String? = null,
+    val scope: String? = null,
+    @kotlinx.serialization.SerialName("token_type") val tokenType: String? = null
 ) { override fun toString(): String = "GitHubTokenResponse(redacted)" }
 
 @Serializable
@@ -91,9 +93,13 @@ internal class GitHubDashboardApi internal constructor(
         return app.clientId
     }
 
-    suspend fun start(clientId: String): GitHubDeviceCode {
+    suspend fun start(clientId: String): GitHubDeviceCode = startDeviceFlow(clientId, "offline_access")
+
+    suspend fun startContributions(clientId: String): GitHubDeviceCode = startDeviceFlow(clientId, "read:user offline_access")
+
+    private suspend fun startDeviceFlow(clientId: String, scope: String): GitHubDeviceCode {
         require(clientId.matches(Regex("[A-Za-z0-9._-]{1,128}")))
-        val response = post("https://github.com/login/device/code", mapOf("client_id" to clientId, "scope" to "offline_access"))
+        val response = post("https://github.com/login/device/code", mapOf("client_id" to clientId, "scope" to scope))
         val code = json.decodeFromString<GitHubDeviceCode>(successful(response))
         if (code.verificationUri != "https://github.com/login/device" ||
             !code.userCode.matches(Regex("[A-Z0-9-]{4,32}")) ||

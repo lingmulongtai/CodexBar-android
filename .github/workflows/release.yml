@@ -82,6 +82,7 @@ jobs:
 
       - name: Build signed release artifacts
         env:
+          CODEXBAR_GITHUB_CONTRIBUTIONS_CLIENT_ID: ${{ vars.CODEXBAR_GITHUB_CONTRIBUTIONS_CLIENT_ID }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}

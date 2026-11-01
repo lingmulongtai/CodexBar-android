@@ -19,6 +19,10 @@ android {
         versionCode = 42
         versionName = "0.13.3"
 
+        val contributionsClientId = providers.environmentVariable("CODEXBAR_GITHUB_CONTRIBUTIONS_CLIENT_ID").orNull.orEmpty()
+        require(contributionsClientId.isEmpty() || contributionsClientId.matches(Regex("[A-Za-z0-9._-]{1,128}")))
+        buildConfigField("String", "GITHUB_CONTRIBUTIONS_CLIENT_ID", "\"$contributionsClientId\"")
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

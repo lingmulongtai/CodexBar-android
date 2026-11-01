@@ -35,6 +35,16 @@ class GitHubDashboardApiTest {
         try { unsafe.start("public-client-id"); fail("unsafe verification URL") } catch (_: IOException) { }
     }
 
+    @Test fun `contributions authorization requests read only profile scope`() = runTest {
+        val api = GitHubDashboardApi(json) { request ->
+            val form = request.body as FormBody
+            val values = (0 until form.size).associate { form.name(it) to form.value(it) }
+            assertEquals("read:user offline_access", values["scope"])
+            GitHubHttpResponse(200, """{"device_code":"secret","user_code":"ABCD-1234","verification_uri":"https://github.com/login/device","expires_in":900,"interval":5}""")
+        }
+        api.startContributions("public-client-id")
+    }
+
     @Test fun `private repository requests stay on the GitHub API and parse visibility`() = runTest {
         val api = GitHubDashboardApi(json) { request ->
             assertEquals("https", request.url.scheme)
