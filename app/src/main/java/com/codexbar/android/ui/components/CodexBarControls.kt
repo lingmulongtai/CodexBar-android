@@ -43,10 +43,13 @@ fun CodexBarPanel(modifier: Modifier = Modifier, shape: Shape = MaterialTheme.sh
         Surface(modifier, shape = shape, color = color, border = border, contentColor = contentColor, tonalElevation = tonalElevation, content = content)
         return
     }
-    GlassSurface(LocalGlassCardBackdrop.current, shape, glassPanelTint(color, profile.cardColor, profile.isDark), color.compositeOver(profile.cardColor),
+    val depth = LocalGlassPanelDepth.current
+    val flat = if (profile.isDark) Color.White.copy(alpha = 0.07f) else Color.Black.copy(alpha = 0.05f)
+    GlassSurface(if (depth == 0) LocalGlassCardBackdrop.current else null, shape,
+        glassPanelTint(color, profile.cardColor, profile.isDark), if (depth == 0) color.compositeOver(profile.cardColor) else flat,
         Color.White.copy(alpha = if (profile.isDark) 0.18f else 0.70f), modifier.then(if (border != null) Modifier.border(border, shape) else Modifier),
-        blurRadius = 16.dp, refraction = 0.18f, elevation = 2.dp) {
-        CompositionLocalProvider(LocalContentColor provides contentColor, content = content)
+        blurRadius = 16.dp, refraction = 0.18f, elevation = if (depth == 0) 2.dp else 0.dp) {
+        CompositionLocalProvider(LocalContentColor provides contentColor, LocalGlassPanelDepth provides depth + 1, content = content)
     }
 }
 
@@ -108,6 +111,7 @@ private fun GlassAction(onClick: () -> Unit, modifier: Modifier, enabled: Boolea
     tint: Color, foreground: Color, border: BorderStroke?, padding: PaddingValues, selectedState: Boolean? = null, content: @Composable RowScope.() -> Unit) {
     val profile = LocalCodexBarThemeProfile.current
     val interaction = remember { MutableInteractionSource() }
+    val nested = LocalGlassPanelDepth.current > 0
     val pressed by interaction.collectIsPressedAsState()
     val focused by interaction.collectIsFocusedAsState()
     var width by remember { mutableIntStateOf(1) }
@@ -123,7 +127,8 @@ private fun GlassAction(onClick: () -> Unit, modifier: Modifier, enabled: Boolea
         .semantics { if (selectedState != null) selected = selectedState }, contentAlignment = Alignment.Center) {
         val innerWidth = if (constraints.hasFixedWidth) Modifier.fillMaxWidth() else Modifier
         Box(innerWidth, contentAlignment = Alignment.Center) {
-            GlassSurface(LocalGlassCardBackdrop.current, shape, tint, tint.copy(alpha = 1f),
+            val flat = if (tint.alpha >= 0.9f) tint else if (profile.isDark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.07f)
+            GlassSurface(if (nested) null else LocalGlassCardBackdrop.current, shape, tint, if (nested) flat else tint.copy(alpha = 1f),
                 if (profile.isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.08f),
                 modifier = Modifier.matchParentSize().onSizeChanged { width = it.width }.graphicsLayer {
                     scaleX = 1f + lift * (15.dp.toPx() / width.coerceAtLeast(1))

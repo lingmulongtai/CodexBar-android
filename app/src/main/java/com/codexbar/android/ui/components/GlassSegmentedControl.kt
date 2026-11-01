@@ -38,6 +38,7 @@ import kotlin.math.roundToInt
 fun GlassSegmentedControl(labels: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
     if (labels.isEmpty()) return
     val profile = LocalCodexBarThemeProfile.current
+    val nested = LocalGlassPanelDepth.current > 0
     val colors = MaterialTheme.colorScheme
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val latestSelect by rememberUpdatedState(onSelect)
@@ -87,9 +88,9 @@ fun GlassSegmentedControl(labels: List<String>, selected: Int, onSelect: (Int) -
         val visual = if (rtl) labels.lastIndex - position else position
         val foreground = if (profile.isDark) Color.White else Color.Black
         Box(Modifier.fillMaxSize().glassBackdropSource(lensBackdrop)) {
-            GlassSurface(LocalGlassCardBackdrop.current, CircleShape,
+            GlassSurface(if (nested) null else LocalGlassCardBackdrop.current, CircleShape,
                 if (profile.isDark) Color(0xFF282828).copy(alpha = 0.62f) else Color(0xFF767680).copy(alpha = 0.12f),
-                colors.surfaceContainerHigh, if (profile.isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.08f),
+                if (nested) (if (profile.isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.06f)) else colors.surfaceContainerHigh, if (profile.isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.08f),
                 modifier = Modifier.fillMaxWidth().height(32.dp).align(Alignment.Center),
                 blurRadius = 3.dp, refraction = 0f, elevation = if (profile.isDark) 0.dp else 1.dp) {}
         }

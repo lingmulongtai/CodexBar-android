@@ -40,11 +40,14 @@ fun CodexBarOutlinedTextField(
         return
     }
     val colors = MaterialTheme.colorScheme
+    val nested = LocalGlassPanelDepth.current > 0
     GlassSurface(
-        backdrop = LocalGlassCardBackdrop.current,
+        backdrop = if (nested) null else LocalGlassCardBackdrop.current,
         shape = RoundedCornerShape(20.dp),
         tint = if (profile.isDark) Color(0xFF282828).copy(alpha = 0.62f) else Color.White.copy(alpha = 0.60f),
-        fallback = colors.surfaceContainerHigh,
+        fallback = if (nested) {
+            if (profile.isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
+        } else colors.surfaceContainerHigh,
         rim = if (profile.isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.08f),
         modifier = modifier, blurRadius = 3.dp, refraction = 0f,
         elevation = if (profile.isDark) 0.dp else 1.dp
