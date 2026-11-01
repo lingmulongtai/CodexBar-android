@@ -1,7 +1,10 @@
 package com.codexbar.android.feature.dashboard
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -9,6 +12,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,10 +32,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import com.codexbar.android.ui.components.CodexBarTextButton as TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +49,13 @@ import com.codexbar.android.core.presentation.ExtraUsagePresentation
 import com.codexbar.android.core.presentation.QuotaMetricPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.core.presentation.ServiceQuotaStatus
+import com.codexbar.android.ui.components.CodexBarPanel
+import com.codexbar.android.ui.components.GlassSurface
+import com.codexbar.android.ui.components.LiquidGlassWallpaper
+import com.codexbar.android.ui.components.LocalGlassPanelDepth
+import com.codexbar.android.ui.components.LocalWallpaperState
+import com.codexbar.android.ui.components.glassBackdropSource
+import com.codexbar.android.ui.components.rememberGlassBackdrop
 import com.codexbar.android.ui.theme.CodexBarSpacing
 import com.codexbar.android.ui.theme.CodexBarStateColors
 import com.codexbar.android.ui.theme.providerVisualStyle
@@ -62,23 +76,37 @@ fun ServiceDetailSheet(
     onClearResetHistory: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val profile = LocalCodexBarThemeProfile.current
+    val wallpaper = LocalWallpaperState.current
+    val sheetBackdrop = rememberGlassBackdrop()
+    val shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         modifier = modifier,
-        containerColor = LocalCodexBarThemeProfile.current.cardColor
+        containerColor = Color.Transparent,
+        dragHandle = null
     ) {
-        ServiceDetailContent(
-            service = service,
-            onRefresh = onRefresh,
-            onManageConnection = onManageConnection,
-            onClearResetHistory = onClearResetHistory,
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = CodexBarSpacing.large)
-                .padding(bottom = CodexBarSpacing.xlarge)
-        )
+        Box(Modifier.fillMaxWidth()) {
+            Box(Modifier.matchParentSize().clip(shape).glassBackdropSource(sheetBackdrop)) {
+                if (wallpaper != null) LiquidGlassWallpaper(wallpaper)
+                else Box(Modifier.fillMaxSize().background(profile.backgroundBrush))
+            }
+            GlassSurface(sheetBackdrop, shape,
+                tint = profile.cardColor.copy(alpha = if (profile.isDark) 0.56f else 0.58f),
+                fallback = profile.cardColor.copy(alpha = 0.94f),
+                rim = Color.White.copy(alpha = if (profile.isDark) 0.18f else 0.60f),
+                modifier = Modifier.fillMaxWidth(), blurRadius = 16.dp, refraction = 0.18f,
+                allowAsymmetricCorners = true, elevation = 0.dp) {
+                CompositionLocalProvider(LocalGlassPanelDepth provides 1) {
+                    Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState())
+                        .padding(horizontal = CodexBarSpacing.large).padding(bottom = CodexBarSpacing.xlarge)) {
+                        Box(Modifier.align(Alignment.CenterHorizontally).padding(vertical = 12.dp)
+                            .width(32.dp).height(4.dp).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f), RoundedCornerShape(50)))
+                        ServiceDetailContent(service, onRefresh, onManageConnection, onClearResetHistory, Modifier.fillMaxWidth())
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -91,7 +119,7 @@ fun ServiceDetailPane(
     modifier: Modifier = Modifier
 ) {
     val themeProfile = LocalCodexBarThemeProfile.current
-    Surface(
+    CodexBarPanel(
         modifier = modifier.fillMaxSize(),
         shape = MaterialTheme.shapes.large,
         color = themeProfile.cardColor,
@@ -227,7 +255,7 @@ private fun ServiceDetailHeader(service: ServiceQuotaPresentation, accent: Color
 @Composable
 private fun ServiceStateSummary(service: ServiceQuotaPresentation, accent: Color) {
     val statusColor = service.status.statusColor(accent)
-    Surface(
+    CodexBarPanel(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
@@ -256,12 +284,11 @@ private fun ServiceStateSummary(service: ServiceQuotaPresentation, accent: Color
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MetricDetailCard(metric: QuotaMetricPresentation, accent: Color) {
-    Surface(
+    CodexBarPanel(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp,
-        shadowElevation = 1.dp
+        tonalElevation = 1.dp
     ) {
         Column(
             modifier = Modifier.padding(CodexBarSpacing.large),
@@ -328,12 +355,11 @@ private fun MetricDetailCard(metric: QuotaMetricPresentation, accent: Color) {
 
 @Composable
 private fun ExtraUsageCard(extraUsage: ExtraUsagePresentation, accent: Color) {
-    Surface(
+    CodexBarPanel(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp,
-        shadowElevation = 1.dp
+        tonalElevation = 1.dp
     ) {
         Column(
             modifier = Modifier.padding(CodexBarSpacing.large),
