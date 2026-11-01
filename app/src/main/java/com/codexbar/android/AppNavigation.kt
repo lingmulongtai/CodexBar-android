@@ -196,17 +196,16 @@ internal fun GlassNavigationBar(
                     fallback = glassFallback, rim = rim, blurRadius = 3.dp, refraction = 0f,
                     elevation = if (profile.isDark) 0.dp else 1.dp,
                     modifier = Modifier.size(40.dp).graphicsLayer { scaleX = scale; scaleY = scale }
-                ) {
-                    Icon(Icons.Rounded.Refresh, contentDescription = null, tint = colors.onSurface,
-                        modifier = Modifier.size(20.dp))
-                }
+                ) {}
+                Icon(Icons.Rounded.Refresh, contentDescription = null, tint = colors.onSurface,
+                    modifier = Modifier.size(20.dp))
             }
         }
     }
 }
 
 
-/** The lens samples a separate recording of the bar and labels, never its own output. */
+/** The lens samples only the bar; labels stay crisp and unscaled above it. */
 @Composable
 private fun GlassTabRow(
     entries: List<NavigationEntry>, backdrop: GlassBackdrop, glassTint: Color,
@@ -270,32 +269,11 @@ private fun GlassTabRow(
         val cell = (maxWidth - 8.dp) / entries.size
         val logical = settledPosition
         val visual = if (rtl) entries.lastIndex - logical else logical
-        // This layer contains only the glass bar and labels; the lens is a separate sibling.
+        // Record only the glass bar, keeping the foreground outside the magnified lens.
         Box(Modifier.fillMaxSize().glassBackdropSource(lensBackdrop)) {
             GlassSurface(backdrop, CircleShape, glassTint, glassFallback, rim,
                 modifier = Modifier.fillMaxSize(), blurRadius = 3.dp, refraction = 0f,
                 elevation = if (profile.isDark) 0.dp else 1.dp) {}
-            Row(Modifier.fillMaxSize().padding(4.dp)) {
-                entries.forEachIndexed { index, entry ->
-                    val highlighted = index == (dragPosition?.roundToInt() ?: pressedIndex ?: selectedIndex)
-                    val tint = if (highlighted) selectedColor else colors.onSurface
-                    val interaction = remember { MutableInteractionSource() }
-                    val focused by interaction.collectIsFocusedAsState()
-                    Box(
-                        Modifier.weight(1f).fillMaxHeight()
-                            .then(if (focused) Modifier.border(2.dp, colors.primary, CircleShape) else Modifier)
-                            .selectable(entry.selected, onClick = entry.onClick, role = Role.Tab,
-                                interactionSource = interaction, indication = null),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                            Icon(entry.icon, contentDescription = null, tint = tint, modifier = Modifier.size(26.dp))
-                            Text(entry.label, color = tint, fontSize = 10.sp, lineHeight = 14.sp,
-                                fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                }
-            }
         }
         GlassSurface(
             backdrop = lensBackdrop, shape = CircleShape,
@@ -311,5 +289,26 @@ private fun GlassTabRow(
                     scaleY = 1f + lift * (16f / 52f)
                 }
         ) {}
+        Row(Modifier.fillMaxSize().padding(4.dp)) {
+            entries.forEachIndexed { index, entry ->
+                val highlighted = index == (dragPosition?.roundToInt() ?: pressedIndex ?: selectedIndex)
+                val tint = if (highlighted) selectedColor else colors.onSurface
+                val interaction = remember { MutableInteractionSource() }
+                val focused by interaction.collectIsFocusedAsState()
+                Box(
+                    Modifier.weight(1f).fillMaxHeight()
+                        .then(if (focused) Modifier.border(2.dp, colors.primary, CircleShape) else Modifier)
+                        .selectable(entry.selected, onClick = entry.onClick, role = Role.Tab,
+                            interactionSource = interaction, indication = null),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Icon(entry.icon, contentDescription = null, tint = tint, modifier = Modifier.size(26.dp))
+                        Text(entry.label, color = tint, fontSize = 10.sp, lineHeight = 14.sp,
+                            fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
     }
 }

@@ -1,6 +1,5 @@
 package com.codexbar.android.ui.components
 
-import android.os.Build
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.border
@@ -25,7 +24,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -87,7 +85,6 @@ fun GlassSegmentedControl(labels: List<String>, selected: Int, onSelect: (Int) -
         }) {
         val cell = maxWidth / labels.size
         val visual = if (rtl) labels.lastIndex - position else position
-        val selectedLabel = (dragPosition?.roundToInt() ?: pressedIndex ?: selected).coerceIn(labels.indices)
         val foreground = if (profile.isDark) Color.White else Color.Black
         Box(Modifier.fillMaxSize().glassBackdropSource(lensBackdrop)) {
             GlassSurface(LocalGlassCardBackdrop.current, CircleShape,
@@ -95,19 +92,6 @@ fun GlassSegmentedControl(labels: List<String>, selected: Int, onSelect: (Int) -
                 colors.surfaceContainerHigh, if (profile.isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.08f),
                 modifier = Modifier.fillMaxWidth().height(32.dp).align(Alignment.Center),
                 blurRadius = 3.dp, refraction = 0f, elevation = if (profile.isDark) 0.dp else 1.dp) {}
-            Row(Modifier.fillMaxSize()) {
-                labels.forEachIndexed { index, label ->
-                    val interaction = remember { MutableInteractionSource() }
-                    val focused by interaction.collectIsFocusedAsState()
-                    Box(Modifier.weight(1f).fillMaxHeight()
-                        .then(if (focused) Modifier.border(2.dp, colors.primary, CircleShape) else Modifier)
-                        .selectable(selected = index == selected, onClick = { onSelect(index) }, role = Role.Tab,
-                            interactionSource = interaction, indication = null), contentAlignment = Alignment.Center) {
-                        Text(label, color = foreground, fontSize = 13.sp, lineHeight = 17.sp,
-                            fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-            }
         }
         GlassSurface(lensBackdrop, CircleShape,
             if (profile.isDark) Color(0xFFEBEBF5).copy(alpha = 0.30f * (1f - lift))
@@ -120,10 +104,19 @@ fun GlassSegmentedControl(labels: List<String>, selected: Int, onSelect: (Int) -
                     scaleY = 1f + lift * (16f / 28f)
                 }, blurRadius = 0.1.dp, refraction = 0.55f * lift,
             elevation = lift.dp * if (profile.isDark) 0 else 4
-        ) {
-            Text(labels[selectedLabel], color = foreground, fontSize = 13.sp, lineHeight = 17.sp,
-                fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.clearAndSetSemantics {}.graphicsLayer { alpha = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) 1f else 1f - lift })
+        ) {}
+        Row(Modifier.fillMaxSize()) {
+            labels.forEachIndexed { index, label ->
+                val interaction = remember { MutableInteractionSource() }
+                val focused by interaction.collectIsFocusedAsState()
+                Box(Modifier.weight(1f).fillMaxHeight()
+                    .then(if (focused) Modifier.border(2.dp, colors.primary, CircleShape) else Modifier)
+                    .selectable(selected = index == selected, onClick = { onSelect(index) }, role = Role.Tab,
+                        interactionSource = interaction, indication = null), contentAlignment = Alignment.Center) {
+                    Text(label, color = foreground, fontSize = 13.sp, lineHeight = 17.sp,
+                        fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
         }
     }
 }

@@ -122,13 +122,14 @@ private fun GlassAction(onClick: () -> Unit, modifier: Modifier, enabled: Boolea
         .clickable(enabled = enabled, interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
         .semantics { if (selectedState != null) selected = selectedState }, contentAlignment = Alignment.Center) {
         val innerWidth = if (constraints.hasFixedWidth) Modifier.fillMaxWidth() else Modifier
-        GlassSurface(LocalGlassCardBackdrop.current, shape, tint, tint.copy(alpha = 1f),
-            if (profile.isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.08f),
-            modifier = innerWidth.onSizeChanged { width = it.width }.graphicsLayer {
-                scaleX = 1f + lift * (15.dp.toPx() / width.coerceAtLeast(1))
-                alpha = if (enabled) 1f else 0.35f
-            }.then(if (border != null) Modifier.border(border, shape) else Modifier),
-            blurRadius = 3.dp, elevation = if (profile.isDark) 0.dp else 1.dp, refraction = 0f) {
+        Box(innerWidth, contentAlignment = Alignment.Center) {
+            GlassSurface(LocalGlassCardBackdrop.current, shape, tint, tint.copy(alpha = 1f),
+                if (profile.isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.08f),
+                modifier = Modifier.matchParentSize().onSizeChanged { width = it.width }.graphicsLayer {
+                    scaleX = 1f + lift * (15.dp.toPx() / width.coerceAtLeast(1))
+                    alpha = if (enabled) 1f else 0.35f
+                }.then(if (border != null) Modifier.border(border, shape) else Modifier),
+                blurRadius = 3.dp, elevation = if (profile.isDark) 0.dp else 1.dp, refraction = 0f) {}
             CompositionLocalProvider(LocalContentColor provides foreground) {
                 ProvideTextStyle(MaterialTheme.typography.labelLarge) {
                     Row(Modifier.defaultMinSize(minHeight = 40.dp).padding(padding),
