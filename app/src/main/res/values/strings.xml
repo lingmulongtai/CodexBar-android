@@ -661,9 +661,9 @@
     <string name="github_profile_followers">%1$d followers</string>
     <string name="github_profile_following">%1$d following</string>
     <string name="github_profile_private_count">Shared private: %1$s</string>
-    <string name="github_profile_star_count">Starred: %1$s</string>
+    <string name="github_profile_star_count">Publicly starred: %1$s</string>
     <string name="github_profile_repositories">Repositories</string>
-    <string name="github_profile_starred">Starred</string>
+    <string name="github_profile_starred">Public stars</string>
     <string name="github_profile_bio_empty">No profile bio</string>
     <string name="github_profile_developer">GitHub Developer Program</string>
     <string name="github_profile_badges">View achievements and Pro on GitHub</string>
@@ -673,7 +673,7 @@
     <string name="github_profile_week">This week</string>
     <string name="github_profile_month">This month</string>
     <string name="github_profile_year">This year</string>
-    <string name="github_profile_contribution_note">GitHub profile contributions. Private activity depends on visibility and granted permissions.</string>
+    <string name="github_profile_contribution_note">Counts available to this GitHub App; totals can be lower than GitHub when private activity is unavailable.</string>
     <string name="github_profile_calendar">Contribution calendar</string>
     <string name="github_profile_calendar_total">%1$d contributions this year</string>
     <string name="github_profile_calendar_selected">%1$s · %2$d contributions</string>

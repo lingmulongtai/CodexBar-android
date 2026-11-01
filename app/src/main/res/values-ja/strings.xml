@@ -659,9 +659,9 @@
     <string name="github_profile_followers">フォロワー %1$d</string>
     <string name="github_profile_following">フォロー中 %1$d</string>
     <string name="github_profile_private_count">共有した非公開: %1$s</string>
-    <string name="github_profile_star_count">スターしたリポジトリ: %1$s</string>
+    <string name="github_profile_star_count">公開スター: %1$s</string>
     <string name="github_profile_repositories">リポジトリ</string>
-    <string name="github_profile_starred">スター</string>
+    <string name="github_profile_starred">公開スター</string>
     <string name="github_profile_bio_empty">自己紹介は未設定です</string>
     <string name="github_profile_developer">GitHub Developer Program</string>
     <string name="github_profile_badges">実績・Pro を GitHub で確認</string>
@@ -671,7 +671,7 @@
     <string name="github_profile_week">今週</string>
     <string name="github_profile_month">今月</string>
     <string name="github_profile_year">今年</string>
-    <string name="github_profile_contribution_note">GitHub プロフィールに反映される貢献です。非公開分は公開設定と許可された権限によります。</string>
+    <string name="github_profile_contribution_note">この GitHub App が取得できる範囲の件数です。非公開分を含む GitHub 全体の件数より少ない場合があります。</string>
     <string name="github_profile_calendar">コントリビューション</string>
     <string name="github_profile_calendar_total">今年 %1$d 件の貢献</string>
     <string name="github_profile_calendar_selected">%1$s · %2$d 件の貢献</string>
