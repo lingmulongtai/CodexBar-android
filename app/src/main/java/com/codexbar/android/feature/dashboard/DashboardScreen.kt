@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
+import com.codexbar.android.LocalTopLevelSwipeEnabled
 import com.codexbar.android.core.domain.model.AcquisitionMode
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppThemeStyle
@@ -148,6 +149,11 @@ private fun DashboardContent(
     var expandedServiceName by rememberSaveable { mutableStateOf<String?>(null) }
     var showOnlyAttention by rememberSaveable { mutableStateOf(false) }
     var reordering by rememberSaveable { mutableStateOf(false) }
+    val swipeEnabled = LocalTopLevelSwipeEnabled.current
+    androidx.compose.runtime.DisposableEffect(reordering, selectedServiceName, swipeEnabled) {
+        swipeEnabled?.value = !reordering && selectedServiceName == null
+        onDispose { swipeEnabled?.value = true }
+    }
     BackHandler(enabled = reordering) { reordering = false }
     val snapshot = (uiState as? DashboardUiState.Content)?.snapshot
     val services = snapshot?.services.orEmpty()

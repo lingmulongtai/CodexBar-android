@@ -141,6 +141,7 @@ fun CodexBarApp(
     val currentRoute = currentEntry?.destination?.route ?: initialDestination
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     var slideDirection by remember { mutableStateOf(0) }
+    val topLevelSwipeEnabled = remember { mutableStateOf(true) }
     DisposableEffect(navController, rtl) {
         var previousRoute = navController.currentDestination?.route
         val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
@@ -247,13 +248,16 @@ fun CodexBarApp(
                 CompositionLocalProvider(
                     LocalBottomChromeInset provides bottomInset,
                     LocalTopLevelSlideDirection provides slideDirection,
+                    LocalTopLevelSwipeEnabled provides topLevelSwipeEnabled,
                     LocalGlassHeaderHeight provides headerHeight,
                     LocalGlassCardBackdrop provides cardBackdrop,
                     LocalWallpaperState provides wallpaper
                 ) {
                     Box(Modifier.fillMaxSize().glassBackdropSource(backdrop)) {
                         LiquidGlassWallpaper(wallpaper)
-                        navHost(Modifier.fillMaxSize())
+                        navHost(Modifier.fillMaxSize().topLevelSwipe(currentRoute, rtl, topLevelSwipeEnabled.value) {
+                            navController.navigateTopLevel(it)
+                        })
                     }
                 }
                 GlassNavigationBar(
@@ -355,11 +359,11 @@ private fun AppNavHost(
                 onPageChange = onTrendsPageChange
             )
         }
+        composable(GitHubRoute) { GitHubDashboardScreen() }
         composable(SettingsRoute) {
             SettingsScreen(
                 onNavigateBack = {
                     if (!navController.popBackStack()) navController.navigateTopLevel(DashboardRoute)
-        composable(GitHubRoute) { GitHubDashboardScreen() }
                 },
                 showBackButton = true,
                 onScreenPrivacyChanged = onScreenPrivacyChanged,
