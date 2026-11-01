@@ -51,7 +51,9 @@ class ConnectionNavigationSourceTest {
 
         assertTrue(dashboard.contains("onNavigateToConnections"))
         assertTrue(dashboard.contains("R.string.action_open_connections"))
-        assertFalse(dashboard.contains("onNavigateToSettings"))
+        assertTrue(dashboard.contains("onOpenConnections = onNavigateToConnections"))
+        assertTrue(dashboard.contains("onManageConnection = onNavigateToConnections"))
+        assertTrue(dashboard.contains("Button(onClick = onOpenConnections)"))
         assertTrue(widget.contains("Uri.parse(\"codexbar://connections\")"))
         assertFalse(widget.contains("Uri.parse(\"codexbar://settings\")"))
     }
