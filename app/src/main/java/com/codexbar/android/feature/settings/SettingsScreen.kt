@@ -213,7 +213,8 @@ fun SettingsScreen(
                     .widthIn(max = 840.dp)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 16.dp)
+                    .padding(top = if (LocalCodexBarThemeProfile.current.style == AppThemeStyle.LIQUID_GLASS) 8.dp else 0.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 SettingsSectionHeader(
@@ -403,7 +404,8 @@ fun ConnectionsScreen(
                     .widthIn(max = 840.dp)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 16.dp)
+                    .padding(top = if (LocalCodexBarThemeProfile.current.style == AppThemeStyle.LIQUID_GLASS) 8.dp else 0.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 SettingsSectionHeader(
