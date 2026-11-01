@@ -129,6 +129,20 @@ internal class GitHubDashboardApi internal constructor(
     private suspend fun repositoryPage(token: String, page: Int): List<GitHubRepository> =
         json.decodeFromString(successful(get("https://api.github.com/user/repos?per_page=100&sort=updated&page=$page", token)))
 
+    /** Starred repositories exposed publicly on the user's GitHub profile. */
+    suspend fun starred(login: String): GitHubRepositories {
+        require(login.matches(Regex("[A-Za-z0-9-]{1,39}")))
+        val collected = LinkedHashMap<Long, GitHubRepository>()
+        var duplicate = false
+        for (page in 1..20) {
+            val batch: List<GitHubRepository> = json.decodeFromString(successful(
+                get("https://api.github.com/users/$login/starred?per_page=100&page=$page", null)))
+            batch.forEach { if (collected.put(it.id, it) != null) duplicate = true }
+            if (batch.size < 100) return GitHubRepositories(collected.values.toList(), complete = !duplicate)
+        }
+        return GitHubRepositories(collected.values.toList(), complete = false)
+    }
+
     suspend fun contributions(token: String, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): GitHubContributions {
         val today = now.atZone(zone).toLocalDate()
         val week = today.minusDays((today.dayOfWeek.value - 1).toLong())

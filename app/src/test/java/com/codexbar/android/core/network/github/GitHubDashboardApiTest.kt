@@ -73,6 +73,17 @@ class GitHubDashboardApiTest {
         assertFalse(api.allRepositories("test-token").complete)
     }
 
+    @Test fun `starred public repositories are fetched without credentials`() = runTest {
+        val api = GitHubDashboardApi(json) { request ->
+            assertEquals("api.github.com", request.url.host)
+            assertEquals("/users/example/starred", request.url.encodedPath)
+            assertNull(request.header("Authorization"))
+            GitHubHttpResponse(200, """[{"id":1,"full_name":"owner/public","html_url":"https://github.com/owner/public"}]""")
+        }
+        assertEquals(1, api.starred("example").items.size)
+        try { api.starred("../secret"); fail("unsafe login") } catch (_: IllegalArgumentException) { }
+    }
+
     @Test fun `rate limit and authorization errors are not treated as empty data`() = runTest {
         for (status in listOf(401, 403, 429, 500)) {
             val api = GitHubDashboardApi(json) { GitHubHttpResponse(status, "{}") }
