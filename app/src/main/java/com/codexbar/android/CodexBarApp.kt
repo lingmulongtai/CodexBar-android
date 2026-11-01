@@ -31,7 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Speed
-import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Code
 import com.codexbar.android.feature.dashboard.UsageAnalyticsPage
 import com.codexbar.android.feature.dashboard.UsageAnalyticsScreen
 import androidx.compose.material3.MaterialTheme
@@ -62,6 +62,7 @@ import androidx.navigation.compose.rememberNavController
 import com.codexbar.android.feature.dashboard.DashboardScreen
 import com.codexbar.android.feature.dashboard.DashboardPreviewScreen
 import com.codexbar.android.feature.dashboard.DashboardViewModel
+import com.codexbar.android.feature.github.GitHubDashboardScreen
 import com.codexbar.android.feature.settings.ConnectionsScreen
 import com.codexbar.android.feature.settings.SettingsScreen
 import com.codexbar.android.feature.settings.SettingsViewModel
@@ -81,6 +82,7 @@ private const val ConnectionsRoute = "connections"
 private const val HistoryRoute = "history"
 private const val SpendRoute = "spend"
 private const val SettingsRoute = "settings"
+private const val GitHubRoute = "github"
 private const val ExpandedNavigationMinWidthDp = 600f
 
 private enum class AppDestination(
@@ -106,10 +108,10 @@ private enum class AppDestination(
         labelRes = R.string.connections_title,
         icon = Icons.Rounded.Link
     ),
-    Settings(
-        route = SettingsRoute,
-        labelRes = R.string.settings_title,
-        icon = Icons.Rounded.Tune
+    GitHub(
+        route = GitHubRoute,
+        labelRes = R.string.github_dashboard_title,
+        icon = Icons.Rounded.Code
     )
 }
 
@@ -156,7 +158,7 @@ fun CodexBarApp(
     LaunchedEffect(initialDestination, initialDestinationHandled) {
         if (!initialDestinationHandled) {
             initialDestinationHandled = true
-            if (initialDestination in setOf(ConnectionsRoute, SettingsRoute, HistoryRoute, SpendRoute)) {
+            if (initialDestination in setOf(ConnectionsRoute, SettingsRoute, HistoryRoute, SpendRoute, GitHubRoute)) {
                 navController.navigate(initialDestination) {
                     launchSingleTop = true
                 }
@@ -356,9 +358,10 @@ private fun AppNavHost(
         composable(SettingsRoute) {
             SettingsScreen(
                 onNavigateBack = {
-                    navController.navigateTopLevel(DashboardRoute)
+                    if (!navController.popBackStack()) navController.navigateTopLevel(DashboardRoute)
+        composable(GitHubRoute) { GitHubDashboardScreen() }
                 },
-                showBackButton = false,
+                showBackButton = true,
                 onScreenPrivacyChanged = onScreenPrivacyChanged,
                 viewModel = settingsViewModel
             )
@@ -371,7 +374,7 @@ internal fun topLevelSlideDirection(from: String?, to: String?, rtl: Boolean): I
         DashboardRoute -> 0
         HistoryRoute, SpendRoute -> 1
         ConnectionsRoute -> 2
-        SettingsRoute -> 3
+        GitHubRoute -> 3
         else -> -1
     }
     val start = index(from)
