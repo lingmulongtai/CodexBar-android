@@ -94,6 +94,11 @@ for rtl in (False, True):
     root = tree()
     assert node("Second", root).get("selected") == "true"
     text_exists(root, "Tab commits: 2")
+    # A normal horizontal swipe must work without a long press, and commit once.
+    adb("shell", "input", "swipe", *second, *third, 250)
+    root = tree()
+    assert node("Third", root).get("selected") == "true"
+    text_exists(root, "Tab commits: 3")
     switch = node("Interactive switch", root)
     assert switch.get("checked") == "true"
     x, y = centre(switch)
@@ -115,6 +120,13 @@ for rtl in (False, True):
     root = tree()
     assert node("Interactive switch", root).get("checked") == "true"
     text_exists(root, "Switch commits: 2")
+    # The full distance from DOWN counts, including touch slop. A short swipe
+    # exceeding half the thumb travel must toggle without an additional jump.
+    short_off = (x + int(width * 0.28) * (1 if rtl else -1), y)
+    adb("shell", "input", "swipe", x, y, *short_off, 250)
+    root = tree()
+    assert node("Interactive switch", root).get("checked") == "false"
+    text_exists(root, "Switch commits: 3")
     slider = node("Test slider", root)
     left, top, right, bottom = bounds(slider)
     held_drag(centre(slider), (left + 2 if rtl else right - 2, (top + bottom) // 2))
@@ -123,6 +135,6 @@ for rtl in (False, True):
     if args.screenshots:
         target = args.screenshots / ("glass-controls-rtl.png" if rtl else "glass-controls-ltr.png")
         target.write_bytes(subprocess.check_output([args.adb, "-s", args.serial, "exec-out", "screencap", "-p"]))
-    print(f"PASS {'RTL' if rtl else 'LTR'}: held tabs/switch/slider, tap, cancellation, single commit, disabled switch", flush=True)
+    print(f"PASS {'RTL' if rtl else 'LTR'}: held and quick drags, short switch swipe, tap, cancellation, single commit, disabled switch", flush=True)
 
 assert f"Process: {package}" not in adb("logcat", "-b", "crash", "-d"), "App crashed"

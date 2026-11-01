@@ -1,6 +1,9 @@
 package com.codexbar.android
 
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
@@ -56,9 +59,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -75,6 +76,9 @@ import com.codexbar.android.ui.components.BrandGlyph
 import com.codexbar.android.ui.components.GlassBackdrop
 import com.codexbar.android.ui.components.GlassSurface
 import com.codexbar.android.ui.components.glassTabPosition
+import com.codexbar.android.ui.components.glassTabDragPosition
+import com.codexbar.android.ui.components.glassBackdropSource
+import com.codexbar.android.ui.components.rememberGlassBackdrop
 import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 import kotlin.math.roundToInt
 
@@ -85,7 +89,7 @@ internal data class NavigationEntry(
     val onClick: () -> Unit
 )
 
-internal val GlassBarHeight = 64.dp
+internal val GlassBarHeight = 60.dp
 internal val GlassBarMargin = 12.dp
 
 /** Bottom navigation for phones in the docked designs. */
@@ -155,9 +159,9 @@ internal fun GlassNavigationBar(
 ) {
     val profile = LocalCodexBarThemeProfile.current
     val colors = MaterialTheme.colorScheme
-    val glassTint = if (profile.isDark) Color(0xFF202430).copy(alpha = 0.62f) else Color.White.copy(alpha = 0.60f)
+    val glassTint = if (profile.isDark) Color(0xFF282828).copy(alpha = 0.62f) else Color.White.copy(alpha = 0.60f)
     val glassFallback = if (profile.isDark) Color(0xFF1C1C1E).copy(alpha = 0.97f) else Color.White.copy(alpha = 0.97f)
-    val rim = if (profile.isDark) Color.White.copy(alpha = 0.24f) else Color.White.copy(alpha = 0.95f)
+    val rim = if (profile.isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.08f)
     Row(
         modifier = modifier
             .widthIn(max = 560.dp)
@@ -167,18 +171,8 @@ internal fun GlassNavigationBar(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        GlassSurface(
-            backdrop = backdrop,
-            shape = CircleShape,
-            tint = glassTint,
-            fallback = glassFallback,
-            rim = rim,
-            modifier = Modifier
-                .weight(1f)
-                .height(GlassBarHeight)
-        ) {
-            GlassTabRow(entries, backdrop)
-        }
+        GlassTabRow(entries, backdrop, glassTint, glassFallback, rim,
+            Modifier.weight(1f).height(GlassBarHeight))
         if (onRefresh != null) {
             val refreshLabel = stringResource(R.string.action_refresh)
             val interaction = remember { MutableInteractionSource() }
@@ -189,61 +183,80 @@ internal fun GlassNavigationBar(
                 animationSpec = spring(dampingRatio = 0.65f, stiffness = 500f),
                 label = "glass_refresh_lift"
             )
-            GlassSurface(
-                backdrop = backdrop,
-                shape = CircleShape,
-                tint = glassTint,
-                fallback = glassFallback,
-                rim = rim,
-                modifier = Modifier
-                    .size(GlassBarHeight)
-                    .graphicsLayer { scaleX = scale; scaleY = scale }
+            Box(
+                modifier = Modifier.size(48.dp)
                     .then(if (focused) Modifier.border(2.dp, colors.primary, CircleShape) else Modifier)
                     .clip(CircleShape)
                     .clickable(interactionSource = interaction, indication = null, onClick = onRefresh)
-                    .semantics {
-                        role = Role.Button
-                        contentDescription = refreshLabel
-                    }
+                    .semantics { role = Role.Button; contentDescription = refreshLabel },
+                contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Icons.Rounded.Refresh,
-                    contentDescription = null,
-                    tint = colors.onSurface,
-                    modifier = Modifier.size(24.dp)
-                )
+                GlassSurface(
+                    backdrop = backdrop, shape = CircleShape, tint = glassTint,
+                    fallback = glassFallback, rim = rim, blurRadius = 3.dp, refraction = 0f,
+                    elevation = if (profile.isDark) 0.dp else 1.dp,
+                    modifier = Modifier.size(40.dp).graphicsLayer { scaleX = scale; scaleY = scale }
+                ) {
+                    Icon(Icons.Rounded.Refresh, contentDescription = null, tint = colors.onSurface,
+                        modifier = Modifier.size(20.dp))
+                }
             }
         }
     }
 }
 
 
-/** One moving lens, rather than separate pressed backgrounds, follows a held finger. */
+/** The lens samples a separate recording of the bar and labels, never its own output. */
 @Composable
-private fun GlassTabRow(entries: List<NavigationEntry>, backdrop: GlassBackdrop) {
+private fun GlassTabRow(
+    entries: List<NavigationEntry>, backdrop: GlassBackdrop, glassTint: Color,
+    glassFallback: Color, rim: Color, modifier: Modifier = Modifier
+) {
     if (entries.isEmpty()) return
     val profile = LocalCodexBarThemeProfile.current
     val colors = MaterialTheme.colorScheme
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val haptic = LocalHapticFeedback.current
     val latestEntries by rememberUpdatedState(entries)
+    val lensBackdrop = rememberGlassBackdrop()
     var dragPosition by remember { mutableStateOf<Float?>(null) }
+    var pressedIndex by remember { mutableStateOf<Int?>(null) }
+    var anchor by remember { mutableStateOf(0f) }
+    var downX by remember { mutableStateOf(0f) }
+    var movement by remember { mutableStateOf(0f) }
     val selectedIndex = entries.indexOfFirst { it.selected }.coerceAtLeast(0)
-    // Keep the spring on the finger too, so releasing never jumps back to the old tab first.
-    val settledPosition by animateFloatAsState(dragPosition ?: selectedIndex.toFloat(),
-        if (dragPosition != null) snap() else spring(stiffness = 500f), label = "glass_tab_position")
-    val lift by animateFloatAsState(if (dragPosition != null) 1f else 0f, spring(dampingRatio = 0.65f, stiffness = 500f), label = "glass_tab_lift")
+    val target = dragPosition ?: pressedIndex?.toFloat() ?: selectedIndex.toFloat()
+    val settledPosition by animateFloatAsState(target,
+        spring(dampingRatio = if (dragPosition != null) 0.94f else 0.92f,
+            stiffness = if (dragPosition != null) 2500f else 1024f), label = "glass_tab_position")
+    val lift by animateFloatAsState(if (dragPosition != null || pressedIndex != null) 1f else 0f,
+        spring(dampingRatio = 0.92f, stiffness = 676f), label = "glass_tab_lift")
+    val selectedColor = if (profile.isDark) Color(0xFF0091FF) else Color(0xFF0088FF)
     BoxWithConstraints(
-        Modifier.fillMaxSize().padding(4.dp).selectableGroup()
+        modifier.selectableGroup()
             .pointerInput(entries.size, rtl) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { point ->
-                        dragPosition = glassTabPosition(point.x, size.width.toFloat(), latestEntries.size, rtl)
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val inset = 4.dp.toPx()
+                    downX = down.position.x
+                    pressedIndex = glassTabPosition(down.position.x - inset, size.width - 2 * inset,
+                        latestEntries.size, rtl).roundToInt()
+                    try { waitForUpOrCancellation() } finally { pressedIndex = null }
+                }
+            }
+            .pointerInput(entries.size, rtl) {
+                detectHorizontalDragGestures(
+                    onDragStart = {
+                        val inset = 4.dp.toPx()
+                        anchor = glassTabPosition(downX - inset, size.width - 2 * inset,
+                            latestEntries.size, rtl).roundToInt().toFloat()
+                        movement = 0f
+                        dragPosition = anchor
                     },
-                    onDrag = { change, _ ->
+                    onHorizontalDrag = { change, _ ->
                         change.consume()
-                        dragPosition = glassTabPosition(change.position.x, size.width.toFloat(), latestEntries.size, rtl)
+                        movement = change.position.x - downX
+                        val slot = (size.width - 8.dp.toPx()) / latestEntries.size
+                        dragPosition = glassTabDragPosition(anchor, movement, slot, latestEntries.size, rtl)
                     },
                     onDragEnd = {
                         val index = dragPosition?.roundToInt()
@@ -254,47 +267,49 @@ private fun GlassTabRow(entries: List<NavigationEntry>, backdrop: GlassBackdrop)
                 )
             }
     ) {
-        val cell = maxWidth / entries.size
-        val logical = dragPosition ?: settledPosition
+        val cell = (maxWidth - 8.dp) / entries.size
+        val logical = settledPosition
         val visual = if (rtl) entries.lastIndex - logical else logical
-        GlassSurface(
-            backdrop = backdrop,
-            shape = CircleShape,
-            tint = if (profile.isDark) Color.White.copy(alpha = 0.14f) else colors.primary.copy(alpha = 0.09f),
-            fallback = colors.surfaceContainerHigh,
-            rim = Color.White.copy(alpha = if (profile.isDark) 0.30f else 0.65f),
-            blurRadius = 2.dp,
-            refraction = 0.5f + lift * 0.3f,
-            elevation = lift.dp * 4,
-            modifier = Modifier.align(AbsoluteAlignment.TopLeft).width(cell).fillMaxHeight()
-                .absoluteOffset { IntOffset((cell.toPx() * visual).roundToInt(), 0) }
-                .graphicsLayer {
-                    scaleX = 1f + lift * 0.06f
-                    scaleY = 1f + lift * 0.12f
-                    translationY = -2.dp.toPx() * lift
-                }
-        ) {}
-        Row(Modifier.fillMaxSize()) {
-            entries.forEachIndexed { index, entry ->
-                val highlighted = index == (dragPosition?.roundToInt() ?: selectedIndex)
-                val tint = if (highlighted) colors.primary else colors.onSurface
-                val interaction = remember { MutableInteractionSource() }
-                val focused by interaction.collectIsFocusedAsState()
-                Box(
-                    Modifier.weight(1f).fillMaxHeight()
-                        .then(if (focused) Modifier.border(2.dp, colors.primary, CircleShape) else Modifier)
-                        .selectable(entry.selected, onClick = entry.onClick, role = Role.Tab,
-                            interactionSource = interaction, indication = null),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Icon(entry.icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
-                        Text(entry.label, color = tint, fontSize = 10.sp, lineHeight = 14.sp,
-                            fontWeight = if (highlighted) FontWeight.Bold else FontWeight.SemiBold,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // This layer contains only the glass bar and labels; the lens is a separate sibling.
+        Box(Modifier.fillMaxSize().glassBackdropSource(lensBackdrop)) {
+            GlassSurface(backdrop, CircleShape, glassTint, glassFallback, rim,
+                modifier = Modifier.fillMaxSize(), blurRadius = 3.dp, refraction = 0f,
+                elevation = if (profile.isDark) 0.dp else 1.dp) {}
+            Row(Modifier.fillMaxSize().padding(4.dp)) {
+                entries.forEachIndexed { index, entry ->
+                    val highlighted = index == (dragPosition?.roundToInt() ?: pressedIndex ?: selectedIndex)
+                    val tint = if (highlighted) selectedColor else colors.onSurface
+                    val interaction = remember { MutableInteractionSource() }
+                    val focused by interaction.collectIsFocusedAsState()
+                    Box(
+                        Modifier.weight(1f).fillMaxHeight()
+                            .then(if (focused) Modifier.border(2.dp, colors.primary, CircleShape) else Modifier)
+                            .selectable(entry.selected, onClick = entry.onClick, role = Role.Tab,
+                                interactionSource = interaction, indication = null),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Icon(entry.icon, contentDescription = null, tint = tint, modifier = Modifier.size(26.dp))
+                            Text(entry.label, color = tint, fontSize = 10.sp, lineHeight = 14.sp,
+                                fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                     }
                 }
             }
         }
+        GlassSurface(
+            backdrop = lensBackdrop, shape = CircleShape,
+            tint = if (profile.isDark) Color.White.copy(alpha = 0.145f * (1f - lift * 0.62f))
+                else Color.Black.copy(alpha = 0.10f * (1f - lift * 0.70f)),
+            fallback = if (profile.isDark) Color.White.copy(alpha = 0.145f) else Color.Black.copy(alpha = 0.10f),
+            rim = Color.White.copy(alpha = if (profile.isDark) 0.18f else 0.45f),
+            blurRadius = 0.1.dp, refraction = 0.55f * lift, elevation = lift.dp * if (profile.isDark) 0 else 7,
+            modifier = Modifier.align(AbsoluteAlignment.TopLeft).width(cell).height(GlassBarHeight - 8.dp)
+                .absoluteOffset { IntOffset((4.dp.toPx() + cell.toPx() * visual).roundToInt(), 4.dp.roundToPx()) }
+                .graphicsLayer {
+                    scaleX = 1f + lift * (24.dp.toPx() / cell.toPx().coerceAtLeast(1f))
+                    scaleY = 1f + lift * (16f / 52f)
+                }
+        ) {}
     }
 }

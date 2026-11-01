@@ -37,12 +37,15 @@ fun CodexBarSlider(value: Float, onValueChange: (Float) -> Unit, modifier: Modif
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val dragged by interaction.collectIsDraggedAsState()
-    val lift by animateFloatAsState(if (pressed || dragged) 1f else 0f, spring(stiffness = 600f), label = "slider_lift")
+    val lift by animateFloatAsState(if (pressed || dragged) 1f else 0f, spring(dampingRatio = 0.89f, stiffness = 2000f), label = "slider_lift")
     var rawValue by remember(valueRange, steps) { mutableFloatStateOf(value) }
     val interacting = pressed || dragged
     LaunchedEffect(value, interacting) { if (!interacting) rawValue = value }
     val visualValue = if (interacting) rawValue else value
     val colors = MaterialTheme.colorScheme
+    val profile = LocalCodexBarThemeProfile.current
+    val fill = if (profile.isDark) Color(0xFF0091FF) else Color(0xFF0088FF)
+    val trackBackdrop = rememberGlassBackdrop()
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Slider(visualValue, { raw ->
         rawValue = raw
@@ -53,10 +56,11 @@ fun CodexBarSlider(value: Float, onValueChange: (Float) -> Unit, modifier: Modif
     } else Modifier), enabled, valueRange = valueRange, steps = 0,
         onValueChangeFinished = onValueChangeFinished, interactionSource = interaction,
         thumb = {
-            GlassSurface(LocalGlassCardBackdrop.current, CircleShape, Color.White.copy(alpha = 0.94f - lift * 0.48f),
+            GlassSurface(if (lift > 0.01f) trackBackdrop else LocalGlassCardBackdrop.current, CircleShape,
+                Color.White.copy(alpha = 0.94f - lift * 0.70f),
                 Color.White, Color.White.copy(alpha = 0.95f),
-                Modifier.size(26.dp).graphicsLayer {
-                    scaleX = 1f + lift * 0.20f; scaleY = 1f + lift * 0.20f
+                Modifier.size(36.dp, 24.dp).graphicsLayer {
+                    scaleX = 1f + lift * 0.667f; scaleY = 1f + lift * 0.667f
                     alpha = if (enabled) 1f else 0.5f
                 }, blurRadius = 2.dp, refraction = 0.45f + lift * 0.35f, elevation = 3.dp) {
                 Canvas(Modifier.fillMaxSize()) {
@@ -66,7 +70,7 @@ fun CodexBarSlider(value: Float, onValueChange: (Float) -> Unit, modifier: Modif
                         Offset(size.width - inset, middle), 8.dp.toPx(), StrokeCap.Round)
                     if (visualValue > valueRange.start) {
                         val from = if (rtl) size.width - inset else inset
-                        drawLine(colors.primary.copy(alpha = 0.60f * lift), Offset(from, middle),
+                        drawLine(fill.copy(alpha = 0.25f * lift), Offset(from, middle),
                             Offset(size.width / 2, middle), 8.dp.toPx(), StrokeCap.Round)
                     }
                 }
@@ -75,12 +79,12 @@ fun CodexBarSlider(value: Float, onValueChange: (Float) -> Unit, modifier: Modif
         track = {
             val range = valueRange.endInclusive - valueRange.start
             val fraction = if (range > 0f) ((visualValue - valueRange.start) / range).coerceIn(0f, 1f) else 0f
-            Canvas(Modifier.fillMaxWidth().height(6.dp)) {
+            Canvas(Modifier.fillMaxWidth().height(40.dp).glassBackdropSource(trackBackdrop)) {
                 val middle = size.height / 2
                 val start = if (rtl) size.width else 0f
                 val end = if (rtl) size.width * (1f - fraction) else size.width * fraction
-                drawLine(colors.onSurface.copy(alpha = 0.13f), Offset(0f, middle), Offset(size.width, middle), size.height, StrokeCap.Round)
-                drawLine(colors.primary.copy(alpha = if (enabled) 0.90f else 0.35f), Offset(start, middle), Offset(end, middle), size.height, StrokeCap.Round)
+                drawLine(colors.onSurface.copy(alpha = 0.10f), Offset(0f, middle), Offset(size.width, middle), 6.dp.toPx(), StrokeCap.Round)
+                drawLine(fill.copy(alpha = if (enabled) 1f else 0.35f), Offset(start, middle), Offset(end, middle), 6.dp.toPx(), StrokeCap.Round)
             }
         })
 }

@@ -18,6 +18,13 @@ class GlassControlGeometryTest {
         assertEquals(0f, glassTabPosition(0f, 0f, 0, false), 0.001f)
     }
 
+    @Test fun `tab dragging stays anchored to the touched slot in both directions`() {
+        assertEquals(1f, glassTabDragPosition(1f, 0f, 80f, 4, false), 0.001f)
+        assertEquals(1.25f, glassTabDragPosition(1f, 20f, 80f, 4, false), 0.001f)
+        assertEquals(0.75f, glassTabDragPosition(1f, 20f, 80f, 4, true), 0.001f)
+        assertEquals(3f, glassTabDragPosition(2f, 200f, 80f, 4, false), 0.001f)
+    }
+
     @Test fun `a switch keeps its origin and crosses the midpoint only after enough travel`() {
         assertEquals(0f, glassSwitchPosition(0f, 0f, 28f, false), 0.001f)
         assertEquals(0.25f, glassSwitchPosition(0f, 7f, 28f, false), 0.001f)
@@ -25,9 +32,9 @@ class GlassControlGeometryTest {
         assertEquals(0f, glassSwitchPosition(1f, -80f, 28f, false), 0.001f)
         assertEquals(0.25f, glassSwitchPosition(1f, 21f, 28f, true), 0.001f)
         assertEquals(1f, glassSwitchPosition(1f, 80f, 0f, false), 0.001f)
-        // The round thumb travels 22 dp in the 50 dp track.
-        assertEquals(0.5f, glassSwitchPosition(0f, 11f, 22f, false), 0.001f)
-        assertEquals(0.5f, glassSwitchPosition(1f, 11f, 22f, true), 0.001f)
+        // The Glisse thumb travels approximately 21.7 dp in the 60 dp track.
+        assertEquals(0.5f, glassSwitchPosition(0f, 10.85f, 21.7f, false), 0.001f)
+        assertEquals(0.5f, glassSwitchPosition(1f, 10.85f, 21.7f, true), 0.001f)
     }
     @Test fun `slider reports five-minute values without moving the input position`() {
         assertEquals(15f, glassSliderValue(15f, 15f..180f, 32), 0.001f)

@@ -2,9 +2,12 @@
 
 ## Control and page refinement
 
+The native control port references Glisse commit `46be5ba07b60eb507e887ff338ded7840576a79f`. Glisse is MIT-licensed, Copyright (c) 2026 Kelvin Zhang; its license is included in `app/src/main/assets/licenses/glisse-MIT.txt`. Its web backdrop-filter implementation is translated to Android graphics layers and RuntimeShader, with blur/readable fallbacks on older Android. The web and Android renderers need not be pixel-identical across devices.
+
+
 Wallpaper attribution now follows page content rather than covering the floating navigation: the photographer and Unsplash links remain at the end of each scrollable page. Settings and Connections use the same top spacing as the dashboard. The floating refresh action no longer shows progress; the dashboard header retains refresh status.
 
-Switches and sliders keep round thumbs while pressed, with a subtle circular lift over their tracks. The History/Spend control follows a held drag and commits on release; cancellation restores the current page. Language-choice feedback is clipped to its rounded shape. Material 3 controls retain their existing behavior.
+Switches and sliders follow the Glisse proportions: an elongated thumb at rest, lifting into a larger lens over an independently recorded track on press. The History/Spend control follows a held drag and commits on release; cancellation restores the current page. Language-choice feedback is clipped to its rounded shape. Material 3 controls retain their existing behavior.
 
 For this refinement, read-only upstream main was fetched at `1811d1fe032fd4a80240fd6bc5d04cee649a0afb`. There were no upstream-only changes to incorporate or defer. The disposable-emulator checks are `scripts/verify-glass-controls.py`, `scripts/verify-trends-tabs.py`, and `scripts/verify-glass-rendering.py`.
 
