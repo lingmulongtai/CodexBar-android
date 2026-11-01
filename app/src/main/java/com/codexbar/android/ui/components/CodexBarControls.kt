@@ -4,11 +4,11 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
@@ -42,10 +43,13 @@ fun CodexBarPanel(modifier: Modifier = Modifier, shape: Shape = MaterialTheme.sh
         Surface(modifier, shape = shape, color = color, border = border, contentColor = contentColor, tonalElevation = tonalElevation, content = content)
         return
     }
-    GlassSurface(LocalGlassCardBackdrop.current, shape, glassPanelTint(color, profile.cardColor, profile.isDark), color.compositeOver(profile.cardColor),
+    val depth = LocalGlassPanelDepth.current
+    val flat = if (profile.isDark) Color.White.copy(alpha = 0.07f) else Color.Black.copy(alpha = 0.05f)
+    GlassSurface(if (depth == 0) LocalGlassCardBackdrop.current else null, shape,
+        glassPanelTint(color, profile.cardColor, profile.isDark), if (depth == 0) color.compositeOver(profile.cardColor) else flat,
         Color.White.copy(alpha = if (profile.isDark) 0.18f else 0.70f), modifier.then(if (border != null) Modifier.border(border, shape) else Modifier),
-        blurRadius = 16.dp, refraction = 0.18f, elevation = 2.dp) {
-        CompositionLocalProvider(LocalContentColor provides contentColor, content = content)
+        blurRadius = 16.dp, refraction = 0.18f, elevation = if (depth == 0) 2.dp else 0.dp) {
+        CompositionLocalProvider(LocalContentColor provides contentColor, LocalGlassPanelDepth provides depth + 1, content = content)
     }
 }
 
@@ -78,9 +82,15 @@ fun CodexBarButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: 
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding, content: @Composable RowScope.() -> Unit) {
     if (LocalCodexBarThemeProfile.current.style != AppThemeStyle.LIQUID_GLASS) {
         Button(onClick, modifier, enabled, shape, colors, border = border, contentPadding = contentPadding, content = content)
-    } else GlassAction(onClick, modifier, enabled, shape,
-        if (enabled) colors.containerColor else colors.disabledContainerColor,
-        if (enabled) colors.contentColor else colors.disabledContentColor, border, contentPadding, content = content)
+    } else {
+        val defaultColors = ButtonDefaults.buttonColors()
+        val neutral = colors.containerColor == defaultColors.containerColor && colors.contentColor == defaultColors.contentColor
+        val tint = if (enabled && neutral) MaterialTheme.colorScheme.surface.copy(alpha = 0.48f)
+            else if (enabled) colors.containerColor else colors.disabledContainerColor
+        val foreground = if (enabled && neutral) MaterialTheme.colorScheme.onSurface
+            else if (enabled) colors.contentColor else colors.disabledContentColor
+        GlassAction(onClick, modifier, enabled, shape, tint, foreground, border, contentPadding, content = content)
+    }
 }
 
 @Composable
@@ -89,8 +99,13 @@ fun CodexBarOutlinedButton(onClick: () -> Unit, modifier: Modifier = Modifier, e
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding, content: @Composable RowScope.() -> Unit) {
     if (LocalCodexBarThemeProfile.current.style != AppThemeStyle.LIQUID_GLASS) {
         OutlinedButton(onClick, modifier, enabled, shape, colors, border = border ?: ButtonDefaults.outlinedButtonBorder(enabled), contentPadding = contentPadding, content = content)
-    } else GlassAction(onClick, modifier, enabled, shape, MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
-        if (enabled) colors.contentColor else colors.disabledContentColor, border, contentPadding, content = content)
+    } else {
+        val defaultColors = ButtonDefaults.outlinedButtonColors()
+        val foreground = if (enabled && colors.contentColor == defaultColors.contentColor) MaterialTheme.colorScheme.onSurface
+            else if (enabled) colors.contentColor else colors.disabledContentColor
+        GlassAction(onClick, modifier, enabled, shape, MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+            foreground, border, contentPadding, content = content)
+    }
 }
 
 @Composable
@@ -98,8 +113,13 @@ fun CodexBarTextButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabl
     colors: ButtonColors = ButtonDefaults.textButtonColors(), content: @Composable RowScope.() -> Unit) {
     if (LocalCodexBarThemeProfile.current.style != AppThemeStyle.LIQUID_GLASS) {
         TextButton(onClick, modifier, enabled, colors = colors, content = content)
-    } else GlassAction(onClick, modifier, enabled, CircleShape, MaterialTheme.colorScheme.surface.copy(alpha = 0.35f),
-        if (enabled) colors.contentColor else colors.disabledContentColor, null, PaddingValues(horizontal = 12.dp, vertical = 10.dp), content = content)
+    } else {
+        val defaultColors = ButtonDefaults.textButtonColors()
+        val foreground = if (enabled && colors.contentColor == defaultColors.contentColor) MaterialTheme.colorScheme.onSurface
+            else if (enabled) colors.contentColor else colors.disabledContentColor
+        GlassAction(onClick, modifier, enabled, CircleShape, MaterialTheme.colorScheme.surface.copy(alpha = 0.35f),
+            foreground, null, PaddingValues(horizontal = 12.dp, vertical = 10.dp), content = content)
+    }
 }
 
 @Composable
@@ -107,20 +127,36 @@ private fun GlassAction(onClick: () -> Unit, modifier: Modifier, enabled: Boolea
     tint: Color, foreground: Color, border: BorderStroke?, padding: PaddingValues, selectedState: Boolean? = null, content: @Composable RowScope.() -> Unit) {
     val profile = LocalCodexBarThemeProfile.current
     val interaction = remember { MutableInteractionSource() }
+    val nested = LocalGlassPanelDepth.current > 0
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 1.025f else 1f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = 500f),
+    val focused by interaction.collectIsFocusedAsState()
+    var width by remember { mutableIntStateOf(1) }
+    val lift by animateFloatAsState(
+        targetValue = if (pressed) 1f else 0f,
+        animationSpec = if (pressed) spring(dampingRatio = 0.60f, stiffness = 515f)
+            else spring(dampingRatio = 0.37f, stiffness = 250f),
         label = "glass_action_press"
     )
-    GlassSurface(LocalGlassCardBackdrop.current, shape, tint, tint.copy(alpha = 1f),
-        Color.White.copy(alpha = if (profile.isDark) 0.25f else 0.75f),
-        modifier.heightIn(min = 48.dp).graphicsLayer { scaleX = scale; scaleY = scale },
-        elevation = if (pressed) 4.dp else 1.dp, refraction = if (pressed) 0.55f else 0.30f) {
-        Surface(onClick, modifier = Modifier.semantics { role = Role.Button; if (selectedState != null) selected = selectedState }, enabled = enabled, shape = shape, color = Color.Transparent,
-            contentColor = foreground, border = border, interactionSource = interaction) {
-            Row(Modifier.defaultMinSize(minHeight = 48.dp).padding(padding),
-                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically, content = content)
+    BoxWithConstraints(modifier.defaultMinSize(minHeight = 48.dp)
+        .then(if (focused) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape) else Modifier)
+        .clickable(enabled = enabled, interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
+        .semantics { if (selectedState != null) selected = selectedState }, contentAlignment = Alignment.Center) {
+        val innerWidth = if (constraints.hasFixedWidth) Modifier.fillMaxWidth() else Modifier
+        Box(innerWidth, contentAlignment = Alignment.Center) {
+            val flat = if (tint.alpha >= 0.9f) tint else if (profile.isDark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.07f)
+            GlassSurface(if (nested) null else LocalGlassCardBackdrop.current, shape, tint, if (nested) flat else tint.copy(alpha = 1f),
+                if (profile.isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.08f),
+                modifier = Modifier.matchParentSize().onSizeChanged { width = it.width }.graphicsLayer {
+                    scaleX = 1f + lift * (15.dp.toPx() / width.coerceAtLeast(1))
+                    alpha = if (enabled) 1f else 0.35f
+                }.then(if (border != null) Modifier.border(border, shape) else Modifier),
+                blurRadius = 3.dp, elevation = if (profile.isDark) 0.dp else 1.dp, refraction = 0f) {}
+            CompositionLocalProvider(LocalContentColor provides foreground) {
+                ProvideTextStyle(MaterialTheme.typography.labelLarge) {
+                    Row(Modifier.defaultMinSize(minHeight = 40.dp).padding(padding),
+                        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically, content = content)
+                }
+            }
         }
     }
 }
@@ -139,20 +175,7 @@ fun CodexBarFilterChip(selected: Boolean, onClick: () -> Unit, label: @Composabl
 /** Used for language and provider filters; each choice keeps its own accessible tab action. */
 @Composable
 fun GlassChoiceRow(labels: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
-    val colors = MaterialTheme.colorScheme
-    CodexBarPanel(modifier.fillMaxWidth(), CircleShape) {
-        Row(Modifier.fillMaxWidth().padding(4.dp).selectableGroup(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            labels.forEachIndexed { index, label ->
-                val active = index == selected
-                Surface(Modifier.weight(1f).selectable(active, onClick = { onSelect(index) }, role = Role.Tab),
-                    shape = CircleShape, color = if (active) colors.primary.copy(alpha = 0.12f) else Color.Transparent) {
-                    Box(Modifier.heightIn(min = 48.dp).padding(horizontal = 8.dp, vertical = 12.dp), contentAlignment = Alignment.Center) {
-                        Text(label, style = MaterialTheme.typography.labelLarge, color = if (active) colors.primary else colors.onSurface)
-                    }
-                }
-            }
-        }
-    }
+    GlassSegmentedControl(labels, selected, onSelect, modifier)
 }
 
 @Composable

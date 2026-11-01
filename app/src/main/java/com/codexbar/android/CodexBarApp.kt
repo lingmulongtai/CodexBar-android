@@ -1,11 +1,14 @@
 package com.codexbar.android
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.annotation.StringRes
-import com.codexbar.android.ui.components.WallpaperAttribution
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.sp
+import com.codexbar.android.ui.components.LocalWallpaperState
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.height
 import com.codexbar.android.ui.components.LiquidGlassWallpaper
 import com.codexbar.android.ui.components.DailyWallpaperViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -35,7 +38,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -48,6 +53,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.ui.components.ResetNotificationPermissionSetup
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -60,6 +66,8 @@ import com.codexbar.android.feature.settings.ConnectionsScreen
 import com.codexbar.android.feature.settings.SettingsScreen
 import com.codexbar.android.feature.settings.SettingsViewModel
 import com.codexbar.android.core.domain.model.AppThemeStyle
+import com.codexbar.android.ui.components.LocalGlassHeaderHeight
+import com.codexbar.android.ui.components.LocalTopLevelSlideDirection
 import com.codexbar.android.ui.components.LocalBottomChromeInset
 import com.codexbar.android.ui.components.LocalGlassCardBackdrop
 import com.codexbar.android.ui.components.glassBackdropSource
@@ -129,11 +137,20 @@ fun CodexBarApp(
         configuration.resetNotificationEnabled && (configuration.desktop.services.isNotEmpty() || configuration.serviceStates.values.any { it.isConnected }))
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentEntry?.destination?.route ?: initialDestination
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    var slideDirection by remember { mutableStateOf(0) }
+    DisposableEffect(navController, rtl) {
+        var previousRoute = navController.currentDestination?.route
+        val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
+            slideDirection = topLevelSlideDirection(previousRoute, destination.route, rtl)
+            previousRoute = destination.route
+        }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
+    }
     var initialDestinationHandled by rememberSaveable { mutableStateOf(false) }
-    var lastTrendsRoute by rememberSaveable { mutableStateOf(HistoryRoute) }
-
-    LaunchedEffect(currentRoute) {
-        if (currentRoute in AppDestination.Trends.routes) lastTrendsRoute = currentRoute
+    var lastTrendsRoute by rememberSaveable {
+        mutableStateOf(if (initialDestination == SpendRoute) SpendRoute else HistoryRoute)
     }
 
     LaunchedEffect(initialDestination, initialDestinationHandled) {
@@ -175,8 +192,7 @@ fun CodexBarApp(
             icon = destination.icon,
             selected = currentRoute in destination.routes,
             onClick = {
-                val route = if (destination == AppDestination.Trends) lastTrendsRoute else destination.route
-                navController.navigateTopLevel(route)
+                navController.navigateTopLevel(destination.route)
             }
         )
     }
@@ -193,6 +209,8 @@ fun CodexBarApp(
             settingsViewModel = settingsViewModel,
             dashboardViewModel = dashboardViewModel,
             dashboardPreviewSnapshot = dashboardPreviewSnapshot,
+            trendsPage = if (lastTrendsRoute == SpendRoute) UsageAnalyticsPage.Spend else UsageAnalyticsPage.History,
+            onTrendsPageChange = { page -> lastTrendsRoute = if (page == UsageAnalyticsPage.Spend) SpendRoute else HistoryRoute },
             modifier = hostModifier
         )
     }
@@ -204,7 +222,6 @@ fun CodexBarApp(
     ) {
         when {
             themeProfile.floatingNavigation -> {
-                val refresh = dashboardViewModel?.refreshState?.collectAsStateWithLifecycle()?.value
                 val wallpaperModel: DailyWallpaperViewModel = hiltViewModel()
                 val wallpaper by wallpaperModel.state.collectAsStateWithLifecycle()
                 val lifecycleOwner = LocalLifecycleOwner.current
@@ -219,31 +236,30 @@ fun CodexBarApp(
                 }
                 val backdrop = rememberGlassBackdrop()
                 val cardBackdrop = rememberGlassBackdrop()
+                val headerHeight = remember { Animatable(0f) }
                 Box(Modifier.fillMaxSize().glassBackdropSource(cardBackdrop)) {
                     LiquidGlassWallpaper(wallpaper)
                 }
-                val attributionHeight = if (wallpaper.preferences.enabled && wallpaper.bitmap != null) with(LocalDensity.current) { 18.sp.toDp() } + 12.dp else 0.dp
-                val bottomInset = attributionHeight + GlassBarHeight + GlassBarMargin * 2 +
+                val bottomInset = GlassBarHeight + GlassBarMargin * 2 +
                     WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                 CompositionLocalProvider(
                     LocalBottomChromeInset provides bottomInset,
-                    LocalGlassCardBackdrop provides cardBackdrop
+                    LocalTopLevelSlideDirection provides slideDirection,
+                    LocalGlassHeaderHeight provides headerHeight,
+                    LocalGlassCardBackdrop provides cardBackdrop,
+                    LocalWallpaperState provides wallpaper
                 ) {
                     Box(Modifier.fillMaxSize().glassBackdropSource(backdrop)) {
                         LiquidGlassWallpaper(wallpaper)
                         navHost(Modifier.fillMaxSize())
                     }
                 }
-                Column(Modifier.align(Alignment.BottomCenter), horizontalAlignment = Alignment.CenterHorizontally) {
-                    WallpaperAttribution(wallpaper, Modifier.height(attributionHeight))
                 GlassNavigationBar(
                     entries = entries,
                     backdrop = backdrop,
-                    refresh = refresh,
                     onRefresh = dashboardViewModel?.let { model -> { model.refresh() } },
-                    modifier = Modifier
+                    modifier = Modifier.align(Alignment.BottomCenter)
                 )
-                }
             }
             useExpandedNavigation(maxWidth.value) -> Row(modifier = Modifier.fillMaxSize()) {
                 AppNavigationRail(entries)
@@ -273,12 +289,18 @@ private fun AppNavHost(
     settingsViewModel: SettingsViewModel,
     dashboardViewModel: DashboardViewModel?,
     dashboardPreviewSnapshot: QuotaPresentationSnapshot?,
+    trendsPage: UsageAnalyticsPage,
+    onTrendsPageChange: (UsageAnalyticsPage) -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
         navController = navController,
         startDestination = DashboardRoute,
-        modifier = modifier
+        modifier = modifier.clipToBounds(),
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None }
     ) {
         composable(DashboardRoute) {
             val navigateToConnections = {
@@ -311,25 +333,22 @@ private fun AppNavHost(
                 viewModel = settingsViewModel
             )
         }
-        val showTrendsPage = { page: UsageAnalyticsPage ->
-            navController.navigateTopLevel(if (page == UsageAnalyticsPage.History) HistoryRoute else SpendRoute)
-        }
         composable(HistoryRoute) {
             UsageAnalyticsScreen(
-                page = UsageAnalyticsPage.History,
+                page = trendsPage,
                 onConnections = { navController.navigateTopLevel(ConnectionsRoute) },
                 preview = dashboardPreviewSnapshot,
                 model = dashboardViewModel,
-                onPageChange = showTrendsPage
+                onPageChange = onTrendsPageChange
             )
         }
         composable(SpendRoute) {
             UsageAnalyticsScreen(
-                page = UsageAnalyticsPage.Spend,
+                page = trendsPage,
                 onConnections = { navController.navigateTopLevel(ConnectionsRoute) },
                 preview = dashboardPreviewSnapshot,
                 model = dashboardViewModel,
-                onPageChange = showTrendsPage
+                onPageChange = onTrendsPageChange
             )
         }
         composable(SettingsRoute) {
@@ -345,8 +364,31 @@ private fun AppNavHost(
     }
 }
 
+internal fun topLevelSlideDirection(from: String?, to: String?, rtl: Boolean): Int {
+    fun index(route: String?): Int = when (route) {
+        DashboardRoute -> 0
+        HistoryRoute, SpendRoute -> 1
+        ConnectionsRoute -> 2
+        SettingsRoute -> 3
+        else -> -1
+    }
+    val start = index(from)
+    val end = index(to)
+    if (start < 0 || end < 0 || start == end) return 0
+    val direction = if (end > start) 1 else -1
+    return if (rtl) -direction else direction
+}
+
 private fun NavHostController.navigateTopLevel(route: String) {
     if (currentDestination?.route == route) return
+    // Navigating to the start destination with restoreState can restore the tab that was just
+    // popped instead of the dashboard. Pop back to the existing dashboard directly.
+    if (route == DashboardRoute) {
+        if (!popBackStack(DashboardRoute, inclusive = false, saveState = true)) {
+            navigate(DashboardRoute) { launchSingleTop = true; restoreState = false }
+        }
+        return
+    }
     navigate(route) {
         popUpTo(graph.findStartDestination().id) {
             saveState = true

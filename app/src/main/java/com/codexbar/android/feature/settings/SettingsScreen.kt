@@ -1,5 +1,7 @@
 package com.codexbar.android.feature.settings
 
+import com.codexbar.android.ui.components.CodexBarOutlinedTextField as OutlinedTextField
+
 import android.Manifest
 import android.app.NotificationManager
 import android.content.ActivityNotFoundException
@@ -17,8 +19,6 @@ import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -68,7 +68,6 @@ import com.codexbar.android.ui.components.CodexBarIconButton as IconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import com.codexbar.android.ui.components.CodexBarOutlinedButton as OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -119,7 +118,9 @@ import com.codexbar.android.core.security.ConnectionHealth
 import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
 import com.codexbar.android.ui.components.ProviderIcon
 import com.codexbar.android.ui.theme.providerVisualStyle
-import com.codexbar.android.ui.components.BrandGlyph
+import com.codexbar.android.ui.components.CodexBarPanel
+import com.codexbar.android.ui.components.GlassHeaderOverlay
+import com.codexbar.android.ui.components.WallpaperFooter
 import com.codexbar.android.ui.components.LocalBottomChromeInset
 import com.codexbar.android.ui.components.ThemedTopBar
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -179,9 +180,8 @@ fun SettingsScreen(
         }
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
+    GlassHeaderOverlay(
+        header = {
             // Align the title with the centered content column on wide screens.
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
                 ThemedTopBar(
@@ -200,26 +200,18 @@ fun SettingsScreen(
                 )
             }
         }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
+    ) { headerHeight ->
+        Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .widthIn(max = 840.dp)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 16.dp)
+                    .padding(top = headerHeight + 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                SettingsSectionHeader(
-                    title = stringResource(R.string.settings_monitoring_title),
-                    description = stringResource(R.string.settings_monitoring_description)
-                )
-
                 NotificationsSection(
                     persistentEnabled = uiState.persistentNotificationEnabled,
                     resetEnabled = uiState.resetNotificationEnabled,
@@ -280,24 +272,18 @@ fun SettingsScreen(
                     TextButton(onClick = { viewModel.setRefreshInterval(15L) }) { Text(stringResource(R.string.reset_enable_background_refresh)) }
                 }
 
-                SettingsSectionHeader(
-                    title = stringResource(R.string.settings_preferences_title),
-                    description = stringResource(R.string.settings_preferences_description)
-                )
-
-                ThemeStyleSection(
-                    selectedStyle = uiState.appThemeStyle,
-                    onStyleSelected = viewModel::setAppThemeStyle
-                )
-
-                if (uiState.appThemeStyle == AppThemeStyle.LIQUID_GLASS) WallpaperSettingsSection()
+                WallpaperSettingsSection()
 
                 LanguageSection(
                     selectedLanguage = selectedLanguage,
                     onLanguageSelected = { language ->
                         selectedLanguage = language
-                        language.apply()
-                        viewModel.refreshLocalizedSurfaces()
+                        val motionScale = Settings.Global.getFloat(
+                            context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f
+                        ).coerceIn(0f, 2f)
+                        val delayMillis = if (uiState.appThemeStyle == AppThemeStyle.LIQUID_GLASS)
+                            (200f * motionScale).toLong() else 0L
+                        viewModel.setAppLanguage(language, delayMillis)
                     }
                 )
 
@@ -309,6 +295,8 @@ fun SettingsScreen(
                     }
                 )
 
+                AppInfoSection()
+                WallpaperFooter()
                 Spacer(modifier = Modifier.height(32.dp + LocalBottomChromeInset.current))
             }
         }
@@ -368,9 +356,8 @@ fun ConnectionsScreen(
         }
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
+    GlassHeaderOverlay(
+        header = {
             // Align the title with the centered content column on wide screens.
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
                 ThemedTopBar(
@@ -389,26 +376,18 @@ fun ConnectionsScreen(
                 )
             }
         }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
+    ) { headerHeight ->
+        Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .widthIn(max = 840.dp)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 16.dp)
+                    .padding(top = headerHeight + 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                SettingsSectionHeader(
-                    title = stringResource(R.string.connections_manage_title),
-                    description = stringResource(R.string.connections_manage_description)
-                )
-
                 ConnectionSummaryCard(
                     connectedCount = connectedCount,
                     totalCount = AiService.entries.size
@@ -508,6 +487,7 @@ fun ConnectionsScreen(
                     onDeleteAll = { viewModel.showDeleteConfirmDialog() }
                 )
 
+                WallpaperFooter()
                 Spacer(modifier = Modifier.height(32.dp + LocalBottomChromeInset.current))
             }
         }
@@ -573,157 +553,15 @@ private fun startClaudePairingScan(
 }
 
 @Composable
-private fun ThemeStyleSection(
-    selectedStyle: AppThemeStyle,
-    onStyleSelected: (AppThemeStyle) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.theme_style_title),
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(
-                text = stringResource(R.string.theme_style_description),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                AppThemeStyle.entries.forEach { style ->
-                    ThemeStyleOption(
-                        style = style,
-                        selected = style == selectedStyle,
-                        onClick = { onStyleSelected(style) },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ThemeStyleOption(
-    style: AppThemeStyle,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        onClick = onClick,
-        modifier = modifier,
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = if (selected) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
-        ),
-        border = BorderStroke(
-            width = if (selected) 2.dp else 1.dp,
-            color = if (selected) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.outlineVariant
-            }
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                BrandGlyph(style, Modifier.size(32.dp))
-                Spacer(modifier = Modifier.weight(1f))
-                if (selected) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = stringResource(R.string.theme_style_selected),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-            Text(
-                text = stringResource(style.titleResource()),
-                style = MaterialTheme.typography.labelLarge
-            )
-            Text(
-                text = stringResource(style.descriptionResource()),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                minLines = 2
-            )
-        }
-    }
-}
-
-@StringRes
-private fun AppThemeStyle.titleResource(): Int = when (this) {
-    AppThemeStyle.MATERIAL_3 -> R.string.theme_style_material_3
-    AppThemeStyle.LIQUID_GLASS -> R.string.theme_style_liquid_glass
-}
-
-@StringRes
-private fun AppThemeStyle.descriptionResource(): Int = when (this) {
-    AppThemeStyle.MATERIAL_3 -> R.string.theme_style_material_3_description
-    AppThemeStyle.LIQUID_GLASS -> R.string.theme_style_liquid_glass_description
-}
-
-@Composable
-private fun SettingsSectionHeader(
-    title: String,
-    description: String
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth().then(
-            if (LocalCodexBarThemeProfile.current.style == AppThemeStyle.LIQUID_GLASS)
-                Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.86f), RoundedCornerShape(22.dp)).padding(16.dp)
-            else Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp)
-        ),
-        verticalArrangement = Arrangement.spacedBy(7.dp)
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
 private fun ConnectionSummaryCard(
     connectedCount: Int,
     totalCount: Int
 ) {
-    Surface(
+    CodexBarPanel(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.primaryContainer
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.56f),
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
     ) {
         Row(
             modifier = Modifier.padding(18.dp),
@@ -2313,6 +2151,8 @@ private fun RefreshIntervalSection(
             }
 
             if (automaticRefresh) {
+                var pendingMinutes by remember { mutableStateOf<Long?>(null) }
+                val displayedMinutes = pendingMinutes ?: currentMinutes
                 val refreshRange = RefreshIntervalPolicy.MIN_MINUTES.toFloat()..
                     RefreshIntervalPolicy.MAX_MINUTES.toFloat()
                 val refreshSteps = (
@@ -2320,16 +2160,18 @@ private fun RefreshIntervalSection(
                         RefreshIntervalPolicy.STEP_MINUTES - 1
                     ).toInt()
                 Text(
-                    text = formatMonitoringDuration(currentMinutes),
+                    text = formatMonitoringDuration(displayedMinutes),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Slider(
-                    value = currentMinutes.toFloat(),
+                    value = displayedMinutes.toFloat(),
                     onValueChange = { value ->
-                        onIntervalChange(
-                            RefreshIntervalPolicy.normalize(value.roundToInt().toLong())
-                        )
+                        pendingMinutes = RefreshIntervalPolicy.normalize(value.roundToInt().toLong())
+                    },
+                    onValueChangeFinished = {
+                        pendingMinutes?.takeIf { it != currentMinutes }?.let(onIntervalChange)
+                        pendingMinutes = null
                     },
                     valueRange = refreshRange,
                     steps = refreshSteps
@@ -2463,25 +2305,30 @@ private fun NotificationsSection(
                 }
             )
 
+            var pendingDuration by remember { mutableStateOf<Long?>(null) }
+            val displayedDuration = pendingDuration ?: durationMinutes
             Text(
                 text = stringResource(R.string.notifications_session_length),
                 style = MaterialTheme.typography.labelLarge
             )
             Text(
-                text = formatMonitoringDuration(durationMinutes),
+                text = formatMonitoringDuration(displayedDuration),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary
             )
             Slider(
-                value = durationMinutes.toFloat(),
+                value = displayedDuration.toFloat(),
                 onValueChange = { value ->
-                    val minutes = ((value / 15f).roundToInt() * 15)
+                    pendingDuration = ((value / 5f).roundToInt() * 5)
                         .coerceIn(15, 180)
                         .toLong()
-                    onDurationChange(minutes)
+                },
+                onValueChangeFinished = {
+                    pendingDuration?.takeIf { it != durationMinutes }?.let(onDurationChange)
+                    pendingDuration = null
                 },
                 valueRange = 15f..180f,
-                steps = 10,
+                steps = 32,
                 enabled = !isMonitoring
             )
             Text(

@@ -57,7 +57,7 @@ class GlassControlsActivity : ComponentActivity() {
                                 NavigationEntry(label, listOf(Icons.Rounded.Home, Icons.Rounded.BarChart, Icons.Rounded.Settings)[index], tab == index) {
                                     tab = index; tabCommits++
                                 }
-                            }, backdrop, null, null, Modifier.align(Alignment.BottomCenter))
+                            }, backdrop, null, Modifier.align(Alignment.BottomCenter))
                         }
                     }
                 }

@@ -1,5 +1,32 @@
 # Glisse-inspired Liquid Glass
 
+## Scrolling behind the header
+
+Each screen records its wallpaper and scrolling content in a source layer separate from the fixed header. The header samples that layer, so cards pass through its glass as they scroll; cards continue to sample only the wallpaper and cannot feed the header back into itself. The Trends selector stays fixed immediately below the header, with its page content scrolling behind both. Initial content padding follows the measured overlay height.
+
+Read-only upstream main was checked at `1811d1fe032fd4a80240fd6bc5d04cee649a0afb`; no upstream-only commits required integration or deferral.
+
+## Header and single design
+
+The existing fixed header retains its dimensions, corner radii and content. Its background transitions from black at the top into a neutral, clear glass layer at the bottom, tuned to Glisse bend 0.45, dispersion 0.4, frost 0 px and rim 0.13; no Siri light or microphone effect is used. Status icons and header content remain light in both system themes. Android 12 and earlier render the same black gradient without the Android 13+ refraction shader.
+
+Liquid Glass is the only selectable design. Existing Material 3 and retired theme values load as Liquid Glass; legacy launcher aliases stay available for safe upgrades. Redundant category banners in Connections and Settings are removed without removing their controls. Read-only upstream main was checked at `1811d1fe032fd4a80240fd6bc5d04cee649a0afb`; no upstream-only commits required integration or deferral.
+
+## Stable selection and page motion
+
+Control lenses enlarge independently of their text and icons. History and Spend share one persistent selector while their content slides between pages, retaining the chosen page and its scroll state. Read-only upstream main was checked at `1811d1fe032fd4a80240fd6bc5d04cee649a0afb`; no upstream-only commits required integration or deferral.
+
+## Control and page refinement
+
+The native control port references Glisse commit `46be5ba07b60eb507e887ff338ded7840576a79f`. Glisse is MIT-licensed, Copyright (c) 2026 Kelvin Zhang; its license is included in `app/src/main/assets/licenses/glisse-MIT.txt`. Its web backdrop-filter implementation is translated to Android graphics layers and RuntimeShader, with blur/readable fallbacks on older Android. The web and Android renderers need not be pixel-identical across devices.
+
+
+Wallpaper attribution now follows page content rather than covering the floating navigation: the photographer and Unsplash links remain at the end of each scrollable page. Settings and Connections use the same top spacing as the dashboard. The floating refresh action no longer shows progress; the dashboard header retains refresh status.
+
+Switches and sliders follow the Glisse proportions: an elongated thumb at rest, lifting into a larger lens over an independently recorded track on press. The History/Spend control follows a held drag and commits on release; cancellation restores the current page. Language-choice feedback is clipped to its rounded shape. Material 3 controls retain their existing behavior.
+
+For this refinement, read-only upstream main was fetched at `1811d1fe032fd4a80240fd6bc5d04cee649a0afb`. There were no upstream-only changes to incorporate or defer. The disposable-emulator checks are `scripts/verify-glass-controls.py`, `scripts/verify-trends-tabs.py`, and `scripts/verify-glass-rendering.py`.
+
 ## LastWave-inspired refinement
 
 The glass presentation also takes visual cues from [LastWave-Native](https://github.com/Clash-Projects/LastWave-Native) (reference main `b016e52fd93ff2a6aa2ee0212250afb64f6d06a5`): directional highlights at glass edges, spring feedback on actions, rounded grouped service rows, and provider color on the leading quota. The highlight uses the existing rim draw instead of an additional gradient layer. The floating navigation retains its held-drag interaction and exposes every tab name and selection state to accessibility services. These are independently implemented design ideas; LastWave source and artwork are not included.

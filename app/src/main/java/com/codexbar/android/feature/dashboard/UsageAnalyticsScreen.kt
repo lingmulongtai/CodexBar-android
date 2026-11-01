@@ -1,14 +1,16 @@
 package com.codexbar.android.feature.dashboard
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.material3.*
@@ -18,9 +20,9 @@ import com.codexbar.android.ui.components.CodexBarOutlinedButton as OutlinedButt
 import com.codexbar.android.ui.components.CodexBarPanel
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
@@ -29,20 +31,25 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
-import com.codexbar.android.ui.components.LocalBottomChromeInset
-import com.codexbar.android.ui.components.GlassSurface
+import com.codexbar.android.ui.components.GlassSegmentedControl
+import com.codexbar.android.ui.components.GlassHeaderOverlay
 import com.codexbar.android.ui.components.LocalGlassCardBackdrop
+import com.codexbar.android.ui.components.LocalGlassHeaderBackdrop
+import com.codexbar.android.ui.components.WallpaperFooter
+import com.codexbar.android.ui.components.LocalBottomChromeInset
 import com.codexbar.android.ui.components.ProviderIcon
 import com.codexbar.android.ui.components.ThemedTopBar
 import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
@@ -83,44 +90,66 @@ private fun AnalyticsContent(
     onPageChange: (UsageAnalyticsPage) -> Unit
 ) {
     val profile = LocalCodexBarThemeProfile.current
-    Column(Modifier.fillMaxSize()) {
-        // Liquid Glass refreshes from its floating button; the docked designs refresh here.
-        ThemedTopBar(title = stringResource(R.string.navigation_trends), actions = {
-            if (!profile.floatingNavigation) RefreshStatusButton(refresh, snapshot?.generatedAt, onRefresh, Modifier.padding(end = 8.dp))
-        })
-        TrendsTabs(page, onPageChange, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
-        val services = snapshot?.services.orEmpty()
-        val rows = services.filter { if (page == UsageAnalyticsPage.Spend) it.desktopSpend != null else it.metrics.isNotEmpty() }
-        BoxWithConstraints(Modifier.fillMaxSize()) {
-        val columns = minOf(rows.size.coerceAtLeast(1), (maxWidth / 340.dp).toInt().coerceAtLeast(1))
-        LazyVerticalGrid(columns = GridCells.Fixed(columns), modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp + LocalBottomChromeInset.current),
-            verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Column(Modifier.then(if (profile.style == AppThemeStyle.LIQUID_GLASS)
-                    Modifier.background(profile.cardColor.copy(alpha = 0.86f), MaterialTheme.shapes.large).padding(16.dp) else Modifier),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(if (page == UsageAnalyticsPage.History) R.string.analytics_history_help else R.string.analytics_spend_help),
-                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (page == UsageAnalyticsPage.Spend) SpendOverview(rows)
-                    if (rows.isEmpty()) {
-                        Text(stringResource(if (page == UsageAnalyticsPage.Spend) R.string.analytics_spend_empty else R.string.analytics_history_empty))
-                        OutlinedButton(onClick = onConnections) { Text(stringResource(R.string.action_open_connections)) }
-                    }
-                }
-            }
-            items(rows, key = { it.service.name }) { service ->
-                CodexBarPanel(shape = MaterialTheme.shapes.large, color = profile.cardColor, border = BorderStroke(1.dp, profile.cardBorderColor)) {
-                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            ProviderIcon(service.service, Modifier.size(28.dp))
-                            Text(service.service.displayName, style = MaterialTheme.typography.titleLarge)
-                        }
-                        if (page == UsageAnalyticsPage.History) ProviderHistory(service) else ProviderSpend(service)
-                    }
-                }
+    GlassHeaderOverlay(header = {
+        Column {
+            ThemedTopBar(title = stringResource(R.string.navigation_trends), actions = {
+                if (!profile.floatingNavigation) RefreshStatusButton(refresh, snapshot?.generatedAt, onRefresh, Modifier.padding(end = 8.dp))
+            })
+            // Keep the selector attached to the header while content slides underneath both.
+            CompositionLocalProvider(LocalGlassCardBackdrop provides LocalGlassHeaderBackdrop.current) {
+                TrendsTabs(page, onPageChange, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
             }
         }
+    }, initialExtraHeight = 56.dp) { headerHeight ->
+        val stateHolder = rememberSaveableStateHolder()
+        val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+        AnimatedContent(
+            targetState = page,
+            modifier = Modifier.fillMaxSize(),
+            transitionSpec = {
+                val forward = (targetState.ordinal > initialState.ordinal) != rtl
+                val direction = if (forward) 1 else -1
+                slideInHorizontally(tween(260)) { it / 4 * direction } togetherWith
+                    slideOutHorizontally(tween(260)) { -it / 4 * direction }
+            },
+            label = "trends_page"
+        ) { visiblePage ->
+            stateHolder.SaveableStateProvider(visiblePage.name) {
+                val services = snapshot?.services.orEmpty()
+                val rows = services.filter { if (visiblePage == UsageAnalyticsPage.Spend) it.desktopSpend != null else it.metrics.isNotEmpty() }
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val columns = minOf(rows.size.coerceAtLeast(1), (maxWidth / 340.dp).toInt().coerceAtLeast(1))
+                    LazyVerticalGrid(columns = GridCells.Fixed(columns), modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = headerHeight + 12.dp, bottom = 16.dp + LocalBottomChromeInset.current),
+                        verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            Column(Modifier.then(if (profile.style == AppThemeStyle.LIQUID_GLASS)
+                                Modifier.background(profile.cardColor.copy(alpha = 0.86f), MaterialTheme.shapes.large).padding(16.dp) else Modifier),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(stringResource(if (visiblePage == UsageAnalyticsPage.History) R.string.analytics_history_help else R.string.analytics_spend_help),
+                                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (visiblePage == UsageAnalyticsPage.Spend) SpendOverview(rows)
+                                if (rows.isEmpty()) {
+                                    Text(stringResource(if (visiblePage == UsageAnalyticsPage.Spend) R.string.analytics_spend_empty else R.string.analytics_history_empty))
+                                    OutlinedButton(onClick = onConnections) { Text(stringResource(R.string.action_open_connections)) }
+                                }
+                            }
+                        }
+                        items(rows, key = { it.service.name }) { service ->
+                            CodexBarPanel(shape = MaterialTheme.shapes.large, color = profile.cardColor, border = BorderStroke(1.dp, profile.cardBorderColor)) {
+                                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        ProviderIcon(service.service, Modifier.size(28.dp))
+                                        Text(service.service.displayName, style = MaterialTheme.typography.titleLarge)
+                                    }
+                                    if (visiblePage == UsageAnalyticsPage.History) ProviderHistory(service) else ProviderSpend(service)
+                                }
+                            }
+                        }
+                        item(key = "wallpaper-credit", span = { GridItemSpan(maxLineSpan) }) { WallpaperFooter() }
+                    }
+                }
+            }
         }
     }
 }
@@ -138,27 +167,12 @@ private fun TrendsTabs(page: UsageAnalyticsPage, onPageChange: (UsageAnalyticsPa
                     shape = SegmentedButtonDefaults.itemShape(index, pages.size)) { Text(stringResource(label)) }
             }
         }
-        AppThemeStyle.LIQUID_GLASS -> GlassSurface(
-            backdrop = LocalGlassCardBackdrop.current,
-            shape = CircleShape,
-            tint = colors.onSurface.copy(alpha = 0.06f),
-            fallback = colors.surfaceContainerHigh,
-            rim = Color.White.copy(alpha = if (profile.isDark) 0.16f else 0.50f),
-            modifier = modifier.fillMaxWidth(),
-            blurRadius = 4.dp,
-            elevation = 0.dp
-        ) {
-            Row(Modifier.fillMaxWidth().padding(3.dp).selectableGroup()) {
-                pages.forEach { (entry, label) ->
-                    val selected = page == entry
-                    Box(Modifier.weight(1f).height(36.dp).clip(CircleShape)
-                        .background(if (selected) profile.cardColor.copy(alpha = 0.90f) else Color.Transparent)
-                        .selectable(selected = selected, onClick = { onPageChange(entry) }, role = Role.Tab), contentAlignment = Alignment.Center) {
-                        Text(stringResource(label), style = MaterialTheme.typography.labelLarge, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium)
-                    }
-                }
-            }
-        }
+        AppThemeStyle.LIQUID_GLASS -> GlassSegmentedControl(
+            labels = pages.map { stringResource(it.second) },
+            selected = pages.indexOfFirst { it.first == page }.coerceAtLeast(0),
+            onSelect = { onPageChange(pages[it].first) },
+            modifier = modifier
+        )
 
     }
 }

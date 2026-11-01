@@ -3,6 +3,7 @@ package com.codexbar.android.core.update
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -18,6 +19,13 @@ internal data class AvailableUpdate(
     val releasePageUrl: String
 )
 
+internal sealed interface UpdateCheckResult {
+    data class Available(val update: AvailableUpdate) : UpdateCheckResult
+    data object UpToDate : UpdateCheckResult
+    data object VersionNotComparable : UpdateCheckResult
+    data object Unavailable : UpdateCheckResult
+}
+
 @Singleton
 class GitHubReleaseUpdateChecker internal constructor(
     private val client: OkHttpClient,
@@ -31,8 +39,11 @@ class GitHubReleaseUpdateChecker internal constructor(
         latestReleaseApiUrl = LATEST_RELEASE_API_URL
     )
 
-    internal suspend fun checkForUpdate(currentVersion: String): AvailableUpdate? {
-        return runCatching {
+    internal suspend fun checkForUpdate(currentVersion: String): AvailableUpdate? =
+        (checkForUpdates(currentVersion) as? UpdateCheckResult.Available)?.update
+
+    internal suspend fun checkForUpdates(currentVersion: String): UpdateCheckResult {
+        return try {
             withContext(Dispatchers.IO) {
                 val request = Request.Builder()
                     .url(latestReleaseApiUrl)
@@ -43,36 +54,39 @@ class GitHubReleaseUpdateChecker internal constructor(
                     .build()
 
                 client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) return@withContext null
-                    val body = response.body?.string() ?: return@withContext null
+                    if (!response.isSuccessful) return@withContext UpdateCheckResult.Unavailable
+                    val body = response.body?.string() ?: return@withContext UpdateCheckResult.Unavailable
                     val release = json.decodeFromString<GitHubReleasePayload>(body)
-                    if (release.draft || release.prerelease) return@withContext null
-                    if (!isNewerStableVersion(release.tagName, currentVersion)) {
-                        return@withContext null
-                    }
+                    if (release.draft || release.prerelease || stableVersionParts(release.tagName) == null)
+                        return@withContext UpdateCheckResult.Unavailable
+                    if (stableVersionParts(currentVersion) == null)
+                        return@withContext UpdateCheckResult.VersionNotComparable
+                    if (!isNewerStableVersion(release.tagName, currentVersion))
+                        return@withContext UpdateCheckResult.UpToDate
 
-                    val releasePageUrl = trustedReleaseUrl(release.htmlUrl)
-                        ?: LATEST_RELEASE_PAGE_URL
+                    val releasePageUrl = trustedReleaseUrl(release.htmlUrl) ?: LATEST_RELEASE_PAGE_URL
                     val downloadUrl = listOf(
                         "CodexBar-Android-v${release.tagName.removePrefix("v")}.apk",
-                        "app-release.apk" // Older stable releases remain installable.
+                        "app-release.apk"
                     ).firstNotNullOfOrNull { name ->
                         release.assets.firstNotNullOfOrNull { asset ->
                             asset.browserDownloadUrl.takeIf {
                                 asset.name == name && trustedApkUrl(it, release.tagName, name)
                             }
                         }
-                    }
-                        ?: releasePageUrl
-
-                    AvailableUpdate(
+                    } ?: releasePageUrl
+                    UpdateCheckResult.Available(AvailableUpdate(
                         version = release.tagName.removePrefix("v"),
                         downloadUrl = downloadUrl,
                         releasePageUrl = releasePageUrl
-                    )
+                    ))
                 }
             }
-        }.getOrNull()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            UpdateCheckResult.Unavailable
+        }
     }
 
     companion object {

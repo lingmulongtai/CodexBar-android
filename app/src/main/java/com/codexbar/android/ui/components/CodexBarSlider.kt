@@ -1,6 +1,7 @@
 package com.codexbar.android.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
@@ -15,6 +16,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.codexbar.android.core.domain.model.AppThemeStyle
@@ -33,25 +37,54 @@ fun CodexBarSlider(value: Float, onValueChange: (Float) -> Unit, modifier: Modif
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val dragged by interaction.collectIsDraggedAsState()
-    val lift by animateFloatAsState(if (pressed || dragged) 1f else 0f, label = "slider_lift")
+    val lift by animateFloatAsState(if (pressed || dragged) 1f else 0f, spring(dampingRatio = 0.89f, stiffness = 2000f), label = "slider_lift")
+    var rawValue by remember(valueRange, steps) { mutableFloatStateOf(value) }
+    val interacting = pressed || dragged
+    LaunchedEffect(value, interacting) { if (!interacting) rawValue = value }
+    val visualValue = if (interacting) rawValue else value
     val colors = MaterialTheme.colorScheme
+    val profile = LocalCodexBarThemeProfile.current
+    val fill = if (profile.isDark) Color(0xFF0091FF) else Color(0xFF0088FF)
+    val trackBackdrop = rememberGlassBackdrop()
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    Slider(value, onValueChange, modifier.heightIn(min = 48.dp), enabled, valueRange = valueRange, steps = steps,
+    Slider(visualValue, { raw ->
+        rawValue = raw
+        val selected = glassSliderValue(raw, valueRange, steps)
+        if (selected != value) onValueChange(selected)
+    }, modifier.heightIn(min = 48.dp).then(if (steps > 0) Modifier.semantics {
+        progressBarRangeInfo = ProgressBarRangeInfo(value, valueRange, steps)
+    } else Modifier), enabled, valueRange = valueRange, steps = 0,
         onValueChangeFinished = onValueChangeFinished, interactionSource = interaction,
         thumb = {
-            GlassSurface(LocalGlassCardBackdrop.current, CircleShape, Color.White.copy(alpha = 0.90f - lift * 0.30f),
+            GlassSurface(if (lift > 0.01f) trackBackdrop else LocalGlassCardBackdrop.current, CircleShape,
+                Color.White.copy(alpha = 0.94f - lift * 0.70f),
                 Color.White, Color.White.copy(alpha = 0.95f),
-                Modifier.size(28.dp).graphicsLayer { scaleX = 1f + lift * 0.22f; scaleY = 1f + lift * 0.22f; alpha = if (enabled) 1f else 0.5f },
-                blurRadius = 1.dp, refraction = 0.45f + lift * 0.35f, elevation = 3.dp) {}
+                Modifier.size(36.dp, 24.dp).graphicsLayer {
+                    scaleX = 1f + lift * 0.667f; scaleY = 1f + lift * 0.667f
+                    alpha = if (enabled) 1f else 0.5f
+                }, blurRadius = 2.dp, refraction = 0.45f + lift * 0.35f, elevation = 3.dp) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val middle = size.height / 2
+                    val inset = 3.dp.toPx()
+                    drawLine(colors.onSurface.copy(alpha = 0.18f * lift), Offset(inset, middle),
+                        Offset(size.width - inset, middle), 8.dp.toPx(), StrokeCap.Round)
+                    if (visualValue > valueRange.start) {
+                        val from = if (rtl) size.width - inset else inset
+                        drawLine(fill.copy(alpha = 0.25f * lift), Offset(from, middle),
+                            Offset(size.width / 2, middle), 8.dp.toPx(), StrokeCap.Round)
+                    }
+                }
+            }
         },
         track = {
-            val fraction = ((value - valueRange.start) / (valueRange.endInclusive - valueRange.start)).coerceIn(0f, 1f)
-            Canvas(Modifier.fillMaxWidth().height(6.dp)) {
+            val range = valueRange.endInclusive - valueRange.start
+            val fraction = if (range > 0f) ((visualValue - valueRange.start) / range).coerceIn(0f, 1f) else 0f
+            Canvas(Modifier.fillMaxWidth().height(40.dp).glassBackdropSource(trackBackdrop)) {
                 val middle = size.height / 2
                 val start = if (rtl) size.width else 0f
                 val end = if (rtl) size.width * (1f - fraction) else size.width * fraction
-                drawLine(colors.onSurface.copy(alpha = 0.13f), Offset(0f, middle), Offset(size.width, middle), size.height, StrokeCap.Round)
-                drawLine(colors.primary.copy(alpha = if (enabled) 0.90f else 0.35f), Offset(start, middle), Offset(end, middle), size.height, StrokeCap.Round)
+                drawLine(colors.onSurface.copy(alpha = 0.10f), Offset(0f, middle), Offset(size.width, middle), 6.dp.toPx(), StrokeCap.Round)
+                drawLine(fill.copy(alpha = if (enabled) 1f else 0.35f), Offset(start, middle), Offset(end, middle), 6.dp.toPx(), StrokeCap.Round)
             }
         })
 }

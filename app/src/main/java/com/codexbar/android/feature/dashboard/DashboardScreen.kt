@@ -1,6 +1,11 @@
 package com.codexbar.android.feature.dashboard
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -63,6 +68,9 @@ import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
+import com.codexbar.android.ui.components.CodexBarPanel
+import com.codexbar.android.ui.components.GlassHeaderOverlay
+import com.codexbar.android.ui.components.WallpaperFooter
 import com.codexbar.android.ui.components.LocalBottomChromeInset
 import com.codexbar.android.ui.components.providerDragReorder
 import com.codexbar.android.ui.components.rememberProviderDragReorder
@@ -157,7 +165,7 @@ private fun DashboardContent(
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val useTwoPane = useTwoPaneDashboard(maxWidth.value)
-        Column(Modifier.fillMaxSize()) {
+        GlassHeaderOverlay(header = {
             // On wide screens the navigation rail already carries the design's mark.
             DashboardHeader(
                 refresh = refresh,
@@ -168,29 +176,32 @@ private fun DashboardContent(
                 onStartReorder = if (services.size > 1) ({ showOnlyAttention = false; reordering = true }) else null,
                 onFinishReorder = if (reordering) ({ reordering = false }) else null
             )
+        }) { headerHeight ->
             // The pull gesture starts a refresh; progress is shown in place, never over the content.
             PullToRefreshBox(
                 isRefreshing = false,
                 onRefresh = onRefresh,
-                modifier = Modifier.weight(1f).fillMaxWidth()
+                modifier = Modifier.fillMaxSize()
             ) {
                 when (val state = uiState) {
                     is DashboardUiState.Loading -> {
-                        Column(Modifier.fillMaxSize()) {
+                        Column(Modifier.fillMaxSize().padding(top = headerHeight)) {
                             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                                 SmallSpinner(32.dp)
                             }
+                            WallpaperFooter(Modifier.padding(bottom = LocalBottomChromeInset.current))
                         }
                     }
 
                     is DashboardUiState.Content -> {
                         if (state.snapshot.services.isEmpty()) {
-                            Column(Modifier.fillMaxSize()) {
+                            Column(Modifier.fillMaxSize().padding(top = headerHeight)) {
                                 EmptyState(
                                     onOpenConnections = onNavigateToConnections,
                                     windowsMode = state.acquisitionMode == AcquisitionMode.WINDOWS,
                                     modifier = Modifier.weight(1f)
                                 )
+                                WallpaperFooter(Modifier.padding(bottom = LocalBottomChromeInset.current))
                             }
                         } else {
                             val failedServices = state.snapshot.services
@@ -221,6 +232,7 @@ private fun DashboardContent(
                                 Row(modifier = Modifier.fillMaxSize()) {
                                     CardList(
                                         grid = grid,
+                                        contentTop = headerHeight,
                                         services = visibleServices,
                                         summary = summary,
                                         errorBanner = errorBanner,
@@ -249,7 +261,7 @@ private fun DashboardContent(
                                             .padding(
                                                 start = CodexBarSpacing.small,
                                                 end = CodexBarSpacing.large,
-                                                top = CodexBarSpacing.small,
+                                                top = headerHeight + CodexBarSpacing.small,
                                                 bottom = CodexBarSpacing.large + LocalBottomChromeInset.current
                                             )
                                     ) {
@@ -264,6 +276,7 @@ private fun DashboardContent(
                             } else {
                                 CardList(
                                     grid = grid,
+                                    contentTop = headerHeight,
                                     services = visibleServices,
                                     summary = summary,
                                     errorBanner = errorBanner,
@@ -312,6 +325,7 @@ private fun DashboardContent(
 @Composable
 private fun CardList(
     grid: LazyGridState,
+    contentTop: Dp,
     services: List<ServiceQuotaPresentation>,
     summary: DashboardSummary,
     errorBanner: String?,
@@ -360,7 +374,7 @@ private fun CardList(
             contentPadding = PaddingValues(
                 start = 16.dp,
                 end = 16.dp,
-                top = 8.dp,
+                top = contentTop + 8.dp,
                 bottom = 16.dp + LocalBottomChromeInset.current
             ),
             verticalArrangement = Arrangement.spacedBy(cardSpacing),
@@ -457,6 +471,7 @@ private fun CardList(
                     modifier = Modifier.providerDragReorder(drag, service.service, order)
                 )
             }
+            item(key = "wallpaper-credit", span = { GridItemSpan(maxLineSpan) }) { WallpaperFooter() }
         }
     }
 }
@@ -466,8 +481,32 @@ private fun SectionHeader(
     count: Int, reordering: Boolean, hasCustomOrder: Boolean,
     onResetOrder: () -> Unit, modifier: Modifier = Modifier
 ) {
+    AnimatedContent(targetState = reordering, modifier = modifier,
+        transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(140)) }, label = "order_section") { editing ->
+        SectionHeaderContent(count, editing, hasCustomOrder, onResetOrder)
+    }
+}
+
+@Composable
+private fun SectionHeaderContent(
+    count: Int, reordering: Boolean, hasCustomOrder: Boolean,
+    onResetOrder: () -> Unit, modifier: Modifier = Modifier
+) {
     val style = LocalCodexBarThemeProfile.current.style
     val colors = MaterialTheme.colorScheme
+    if (!reordering && style == AppThemeStyle.LIQUID_GLASS) {
+        Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            CodexBarPanel(shape = CircleShape) {
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.dashboard_section_services), style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold, color = colors.onSurface)
+                    Spacer(Modifier.width(8.dp))
+                    Text(count.toString(), style = MaterialTheme.typography.labelLarge, color = colors.onSurface)
+                }
+            }
+        }
+        return
+    }
     Surface(
         modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
         color = if (reordering) colors.surface.copy(alpha = 0.94f) else androidx.compose.ui.graphics.Color.Transparent

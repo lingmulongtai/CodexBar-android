@@ -58,13 +58,20 @@ fun rememberGlassBackdrop(): GlassBackdrop {
     return remember(layer) { GlassBackdrop(layer) }
 }
 
-fun Modifier.glassBackdropSource(backdrop: GlassBackdrop): Modifier = this
+fun Modifier.glassBackdropSource(backdrop: GlassBackdrop, behind: GlassBackdrop? = null): Modifier = this
     .onGloballyPositioned { backdrop.originInRoot = it.positionInRoot(); backdrop.coordinateRoot = it.findRootCoordinates() }
     // Keep the source's display list when only a glass consumer needs redrawing. Without this
     // boundary, its generation write and the consumer's invalidation keep redrawing each other.
     .graphicsLayer()
     .drawWithContent {
-        backdrop.layer.record { this@drawWithContent.drawContent() }
+        backdrop.layer.record {
+            if (behind != null && behind.coordinateRoot != null && behind.coordinateRoot === backdrop.coordinateRoot) {
+                behind.generation
+                val offset = behind.originInRoot - backdrop.originInRoot
+                translate(offset.x, offset.y) { drawLayer(behind.layer) }
+            }
+            this@drawWithContent.drawContent()
+        }
         drawLayer(backdrop.layer)
         // Written without observing it, so the source never invalidates its own drawing.
         Snapshot.withoutReadObservation { backdrop.generation++ }
@@ -91,6 +98,11 @@ fun GlassSurface(
     modifier: Modifier = Modifier,
     blurRadius: Dp = 5.dp,
     refraction: Float = 0.45f,
+    dispersion: Float = 0.4f,
+    allowAsymmetricCorners: Boolean = false,
+    bendReachScale: Float = 1f,
+    shaderRimShine: Float = 0.14f,
+    saturation: Float = 1.12f,
     elevation: Dp = 10.dp,
     contentAlignment: Alignment = Alignment.Center,
     content: @Composable BoxScope.() -> Unit
@@ -113,17 +125,25 @@ fun GlassSurface(
                     val offset = position.value - backdrop.originInRoot
                     val radius = blurRadius.toPx()
                     val rounded = (outline as? Outline.Rounded)?.roundRect
+                    val circularCorners = rounded == null || (
+                        rounded.topLeftCornerRadius.x == rounded.topLeftCornerRadius.y &&
+                            rounded.topRightCornerRadius.x == rounded.topRightCornerRadius.y &&
+                            rounded.bottomRightCornerRadius.x == rounded.bottomRightCornerRadius.y &&
+                            rounded.bottomLeftCornerRadius.x == rounded.bottomLeftCornerRadius.y
+                        )
                     val uniformCorners = rounded == null || (
                         rounded.topLeftCornerRadius == rounded.topRightCornerRadius &&
-                            rounded.topLeftCornerRadius == rounded.bottomLeftCornerRadius &&
-                            rounded.topLeftCornerRadius == rounded.bottomRightCornerRadius
+                            rounded.topLeftCornerRadius == rounded.bottomRightCornerRadius &&
+                            rounded.topLeftCornerRadius == rounded.bottomLeftCornerRadius
                         )
-                    blurLayer.renderEffect = if (lens != null && Build.VERSION.SDK_INT >= 33 && refraction > 0f && outline !is Outline.Generic && uniformCorners) {
-                        val corner = rounded?.topLeftCornerRadius?.x ?: 0f
-                        lens.effect(size.width, size.height, corner, radius, refraction, density)
-                    } else {
+                    blurLayer.renderEffect = if (lens != null && Build.VERSION.SDK_INT >= 33 && refraction > 0f && outline !is Outline.Generic && circularCorners && (uniformCorners || allowAsymmetricCorners)) {
+                        lens.effect(size.width, size.height,
+                            rounded?.topLeftCornerRadius?.x ?: 0f, rounded?.topRightCornerRadius?.x ?: 0f,
+                            rounded?.bottomRightCornerRadius?.x ?: 0f, rounded?.bottomLeftCornerRadius?.x ?: 0f,
+                            radius, refraction * bendReachScale, dispersion, shaderRimShine, saturation, density)
+                    } else if (radius > 0f) {
                         BlurEffect(radius, radius, TileMode.Clamp)
-                    }
+                    } else null
                     blurLayer.record {
                         translate(-offset.x, -offset.y) { drawLayer(backdrop.layer) }
                     }

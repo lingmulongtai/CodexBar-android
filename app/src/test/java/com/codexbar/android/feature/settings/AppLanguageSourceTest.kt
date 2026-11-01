@@ -25,8 +25,9 @@ class AppLanguageSourceTest {
         val japaneseResources = File(appDir, "src/main/res/values-ja/strings.xml")
 
         assertTrue(screen.contains("LanguageSection("))
-        assertTrue(screen.contains("language.apply()"))
-        assertTrue(screen.contains("viewModel.refreshLocalizedSurfaces()"))
+        assertTrue(screen.contains("viewModel.setAppLanguage(language, delayMillis)"))
+        assertTrue(settingsViewModel.contains("language.apply()"))
+        assertTrue(settingsViewModel.contains("refreshLocalizedSurfaces()"))
         assertTrue(settingsViewModel.contains("source = \"language_changed\""))
         assertTrue(dashboard.contains("LaunchedEffect(Unit)"))
         assertTrue(japaneseResources.isFile)

@@ -39,6 +39,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,6 +74,7 @@ class SettingsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
     private var antigravityPairingJob: Job? = null
+    private var languageChangeJob: Job? = null
     private var antigravityPairingGeneration = 0L
     private val antigravityPairingMutex = Mutex()
     private val desktopConnection = DesktopBridgeConnection(viewModelScope, desktopPairingClient, prefsManager, quotaResetMonitor, connectionHealthStore, quotaHistoryStore, widgetPrefsManager, monitoringSessionStore, notificationService, appContext)
@@ -387,6 +389,17 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setAppLanguage(language: AppLanguage, animationDelayMillis: Long) {
+        languageChangeJob?.cancel()
+        languageChangeJob = viewModelScope.launch {
+            if (animationDelayMillis > 0) delay(animationDelayMillis)
+            if (language != AppLanguage.current()) {
+                language.apply()
+                refreshLocalizedSurfaces()
+            }
+        }
+    }
+
     fun refreshLocalizedSurfaces() {
         WorkManagerInitializer.enqueueManualQuotaRefresh(
             context = appContext,
@@ -471,12 +484,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setAppThemeStyle(style: AppThemeStyle) {
-        _uiState.update { it.copy(appThemeStyle = style) }
-        viewModelScope.launch {
-            prefsManager.setAppThemeStyle(style)
-        }
-    }
+
 
     fun showDeleteConfirmDialog() {
         _uiState.update { it.copy(showDeleteConfirmDialog = true) }

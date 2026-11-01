@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -16,6 +17,12 @@ import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 
 /** Background-only source: a card must never sample the layer containing the card itself. */
 val LocalGlassCardBackdrop = staticCompositionLocalOf<GlassBackdrop?> { null }
+
+/** Screen content, recorded separately from the overlay that consumes it. */
+val LocalGlassHeaderBackdrop = staticCompositionLocalOf<GlassBackdrop?> { null }
+
+/** Children of a glass panel must not resample a sharper copy of its wallpaper. */
+val LocalGlassPanelDepth = staticCompositionLocalOf { 0 }
 
 @Composable
 fun GlassCard(
@@ -30,11 +37,12 @@ fun GlassCard(
     val profile = LocalCodexBarThemeProfile.current
     val colors = MaterialTheme.colorScheme
     val selectedState = selected
+    val depth = LocalGlassPanelDepth.current
     GlassSurface(
-        backdrop = LocalGlassCardBackdrop.current,
+        backdrop = if (depth == 0) LocalGlassCardBackdrop.current else null,
         shape = shape,
         tint = profile.cardColor.copy(alpha = if (profile.isDark) 0.70f else 0.68f),
-        fallback = profile.cardColor,
+        fallback = if (depth == 0) profile.cardColor else Color.White.copy(alpha = if (profile.isDark) 0.07f else 0.35f),
         rim = Color.White.copy(alpha = if (profile.isDark) 0.20f else 0.72f),
         modifier = modifier,
         blurRadius = 12.dp,
@@ -44,12 +52,14 @@ fun GlassCard(
         val cardModifier = Modifier.fillMaxWidth().semantics {
             if (selectedState != null) this.selected = selectedState
         }
-        if (enabled) {
-            Surface(onClick = onClick, modifier = cardModifier, shape = shape, color = Color.Transparent,
-                contentColor = colors.onSurface, border = border, content = content)
-        } else {
-            Surface(modifier = cardModifier, shape = shape, color = Color.Transparent,
-                contentColor = colors.onSurface, border = border, content = content)
+        CompositionLocalProvider(LocalGlassPanelDepth provides depth + 1) {
+            if (enabled) {
+                Surface(onClick = onClick, modifier = cardModifier, shape = shape, color = Color.Transparent,
+                    contentColor = colors.onSurface, border = border, content = content)
+            } else {
+                Surface(modifier = cardModifier, shape = shape, color = Color.Transparent,
+                    contentColor = colors.onSurface, border = border, content = content)
+            }
         }
     }
 }

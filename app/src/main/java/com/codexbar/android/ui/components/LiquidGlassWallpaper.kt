@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -31,6 +32,14 @@ class DailyWallpaperViewModel @Inject constructor(private val repository: DailyW
     val state = repository.state
     fun refresh(force: Boolean = false) = repository.refreshInBackground(force)
     suspend fun save(enabled: Boolean, replacementKey: String?) = repository.save(enabled, replacementKey)
+}
+
+val LocalWallpaperState = staticCompositionLocalOf<WallpaperState?> { null }
+
+/** Attribution belongs to the end of each scrollable page, below its content. */
+@Composable
+fun WallpaperFooter(modifier: Modifier = Modifier) {
+    LocalWallpaperState.current?.let { WallpaperAttribution(it, modifier.padding(vertical = 8.dp)) }
 }
 
 @Composable

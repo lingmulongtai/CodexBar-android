@@ -1,5 +1,7 @@
 package com.codexbar.android.feature.settings
 
+import com.codexbar.android.ui.components.CodexBarOutlinedTextField as OutlinedTextField
+
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.layout.*

@@ -1,5 +1,10 @@
 package com.codexbar.android.feature.dashboard
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -67,12 +72,12 @@ internal fun DashboardHeader(
     val profile = LocalCodexBarThemeProfile.current
     if (profile.style == AppThemeStyle.LIQUID_GLASS) {
         val status = refreshStatusText(refresh, updatedAt)
-        val colors = MaterialTheme.colorScheme
+        val headerSecondary = Color.White.copy(alpha = 0.74f)
         GlassPageHeader(title = title, modifier = modifier, subtitle = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (refresh.active) SmallSpinner(14.dp, colors.onSurfaceVariant)
+                if (refresh.active) SmallSpinner(14.dp, headerSecondary)
                 Text(if (refresh.active || updatedAt == null) status else stringResource(R.string.dashboard_updated_status, status),
-                    style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium, color = headerSecondary,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }, actions = { DashboardOrderAction(onStartReorder, onFinishReorder) })
@@ -107,12 +112,18 @@ internal fun DashboardHeader(
 
 @Composable
 private fun DashboardOrderAction(onStart: (() -> Unit)?, onFinish: (() -> Unit)?) {
-    if (onFinish != null) {
-        TextButton(onClick = onFinish) { Text(stringResource(R.string.provider_order_done)) }
-    } else if (onStart != null) {
-        IconButton(onClick = onStart) {
-            Icon(Icons.Rounded.SwapVert, contentDescription = stringResource(R.string.provider_order_action),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    AnimatedContent(
+        targetState = onFinish != null,
+        transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(140)) },
+        label = "order_action"
+    ) { editing ->
+        if (editing) {
+            TextButton(onClick = { onFinish?.invoke() }, enabled = onFinish != null) { Text(stringResource(R.string.provider_order_done)) }
+        } else if (onStart != null) {
+            IconButton(onClick = onStart) {
+                Icon(Icons.Rounded.SwapVert, contentDescription = stringResource(R.string.provider_order_action),
+                    tint = if (LocalCodexBarThemeProfile.current.style == AppThemeStyle.LIQUID_GLASS) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }

@@ -5,11 +5,17 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.absoluteOffset
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
@@ -22,9 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntOffset
@@ -45,35 +49,45 @@ fun CodexBarSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifie
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val latestChecked by rememberUpdatedState(checked)
     val latestChange by rememberUpdatedState(onCheckedChange)
-    val haptic = LocalHapticFeedback.current
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    val pressed by interaction.collectIsPressedAsState()
     var dragPosition by remember { mutableStateOf<Float?>(null) }
-    var startX by remember { mutableFloatStateOf(0f) }
+    var movement by remember { mutableFloatStateOf(0f) }
+    var downX by remember { mutableFloatStateOf(0f) }
     var from by remember { mutableFloatStateOf(0f) }
     val settled by animateFloatAsState(dragPosition ?: if (checked) 1f else 0f,
-        if (dragPosition != null) snap() else spring(stiffness = 700f), label = "switch_position")
-    val lift by animateFloatAsState(if (dragPosition != null) 1f else 0f, spring(stiffness = 600f), label = "switch_lift")
+        if (dragPosition != null) snap() else spring(dampingRatio = 1f, stiffness = 1000f), label = "switch_position")
+    val lift by animateFloatAsState(if (pressed || dragPosition != null) 1f else 0f,
+        spring(dampingRatio = 0.89f, stiffness = 2000f), label = "switch_lift")
     val position = dragPosition ?: settled
     val green = if (profile.isDark) Color(0xFF30D158) else Color(0xFF34C759)
-    val grey = if (profile.isDark) Color(0xFF555563) else Color(0xFFB8BBC6)
+    val grey = if (profile.isDark) Color(0xFFEBEBF5).copy(alpha = 0.3f) else Color(0xFF3B3B42).copy(alpha = 0.3f)
+    val trackBackdrop = rememberGlassBackdrop()
     Box(
         modifier.size(64.dp, 48.dp)
             .then(if (focused) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
             .toggleable(checked, enabled = enabled, role = Role.Switch, interactionSource = interaction,
                 indication = null, onValueChange = onCheckedChange)
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                awaitEachGesture {
+                    downX = awaitFirstDown(requireUnconsumed = false).position.x
+                    waitForUpOrCancellation()
+                }
+            }
             .pointerInput(enabled, rtl) {
                 if (!enabled) return@pointerInput
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { point ->
-                        startX = point.x
+                detectHorizontalDragGestures(
+                    onDragStart = {
+                        movement = 0f
                         from = if (latestChecked) 1f else 0f
                         dragPosition = from
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     },
-                    onDrag = { change, _ ->
+                    onHorizontalDrag = { change, _ ->
                         change.consume()
-                        dragPosition = glassSwitchPosition(from, change.position.x - startX, 28.dp.toPx(), rtl)
+                        movement = change.position.x - downX
+                        dragPosition = glassSwitchPosition(from, movement, 21.7.dp.toPx(), rtl)
                     },
                     onDragEnd = {
                         val next = dragPosition?.let { it > 0.5f }
@@ -85,18 +99,23 @@ fun CodexBarSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifie
             },
         contentAlignment = Alignment.Center
     ) {
-        Box(Modifier.size(60.dp, 32.dp).graphicsLayer { alpha = if (enabled) 1f else 0.38f }
-            .background(lerp(grey, green, position.coerceIn(0f, 1f)), CircleShape)) {
+        val track = lerp(grey, green, position.coerceIn(0f, 1f))
+        Box(Modifier.size(60.dp, 25.125.dp).graphicsLayer { alpha = if (enabled) 1f else 0.35f }) {
+            Box(Modifier.matchParentSize().glassBackdropSource(trackBackdrop).background(track, CircleShape))
             val visual = if (rtl) 1f - position else position
             GlassSurface(
-                backdrop = LocalGlassCardBackdrop.current, shape = CircleShape,
-                tint = Color.White.copy(alpha = 0.88f - lift * 0.32f), fallback = Color.White,
-                rim = Color.White.copy(alpha = 0.95f), blurRadius = 1.dp,
+                backdrop = if (lift > 0.01f) trackBackdrop else LocalGlassCardBackdrop.current, shape = CircleShape,
+                tint = Color.White.copy(alpha = 0.94f - lift * 0.48f), fallback = Color.White,
+                rim = Color.White.copy(alpha = 0.95f), blurRadius = 2.dp,
                 refraction = 0.45f + lift * 0.35f, elevation = 2.dp,
-                modifier = Modifier.align(AbsoluteAlignment.TopLeft).size(26.dp)
-                    .absoluteOffset { IntOffset((3.dp.toPx() + 28.dp.toPx() * visual).roundToInt(), 3.dp.roundToPx()) }
-                    .graphicsLayer { scaleX = 1f + lift * 0.16f; scaleY = 1f + lift * 0.16f }
-            ) {}
+                modifier = Modifier.align(AbsoluteAlignment.TopLeft).size(35.6.dp, 22.4.dp)
+                    .absoluteOffset { IntOffset((1.35.dp.toPx() + 21.7.dp.toPx() * visual).roundToInt(), 1.35.dp.roundToPx()) }
+                    .graphicsLayer { scaleX = 1f + lift * 0.385f; scaleY = 1f + lift * 0.385f }
+            ) {
+                // Keep a subtle magnified track within the lifted refractive lens.
+                Box(Modifier.fillMaxWidth(0.90f).height(18.dp)
+                    .background(track.copy(alpha = lift * 0.25f), CircleShape))
+            }
         }
     }
 }

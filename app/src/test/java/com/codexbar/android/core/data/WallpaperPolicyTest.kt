@@ -14,6 +14,27 @@ class WallpaperPolicyTest {
         assertNotNull(curatedWallpaper(LocalDate.of(1960, 1, 1)))
     }
 
+    @Test fun `manual refresh advances and daily rotation avoids repeating the current photo`() {
+        val initial = curatedWallpaper(date)
+        val second = curatedWallpaper(date, initial.id, changePhoto = true)
+        val third = curatedWallpaper(date, second.id, changePhoto = true)
+        assertNotEquals(initial.id, second.id)
+        assertNotEquals(second.id, third.id)
+        val tomorrowDefault = curatedWallpaper(date.plusDays(1))
+        val tomorrow = curatedWallpaper(date.plusDays(1), tomorrowDefault.id, avoidRepeat = true)
+        assertNotEquals(tomorrowDefault.id, tomorrow.id)
+        assertNull(chooseWallpaper(emptyList(), date, initial.id, changePhoto = true))
+        assertEquals(initial, chooseWallpaper(listOf(initial), date, initial.id, changePhoto = true))
+    }
+
+    @Test fun `manual Editorial selection skips the currently displayed image`() {
+        val data = JsonArray(listOf(photo(id = "first"), photo(id = "second")))
+        val current = selectEditorialWallpaper(data, date)!!
+        val next = selectEditorialWallpaper(data, date, current.id, changePhoto = true)!!
+        assertNotEquals(current.id, next.id)
+        assertEquals(current.id, selectEditorialWallpaper(data, date, next.id, changePhoto = true)?.id)
+    }
+
     @Test fun `background hosts reject plaintext credentials lookalikes and nonstandard ports`() {
         assertTrue(isWallpaperUrl("https://images.unsplash.com/photo-1?ixid=retain", "images.unsplash.com"))
         listOf("http://images.unsplash.com/x", "https://images.unsplash.com.evil.example/x",
@@ -37,10 +58,16 @@ class WallpaperPolicyTest {
         assertEquals("https://api.unsplash.com/photos/safe_photo/download?ixid=keep", selected.downloadUrl)
     }
 
-    @Test fun `Editorial skips portraits malformed items and unsafe URLs before choosing a background`() {
-        assertNull(selectEditorialWallpaper(JsonArray(listOf(photo(width = 600), photo(id = "../../x"),
+    @Test fun `Editorial prefers portraits and falls back to landscape`() {
+        val selected = selectEditorialWallpaper(JsonArray(listOf(photo(id = "landscape"), photo(id = "portrait", width = 600))), date)
+        assertEquals("portrait", selected?.id)
+        assertEquals("landscape", selectEditorialWallpaper(JsonArray(listOf(photo(id = "landscape"))), date)?.id)
+    }
+
+    @Test fun `Editorial skips malformed items and unsafe URLs before choosing a background`() {
+        assertNull(selectEditorialWallpaper(JsonArray(listOf(photo(width = 0), photo(id = "../../x"),
             photo(image = "https://evil.example/photo"), photo(download = "https://evil.example/steal"), JsonNull)), date))
-        val selected = selectEditorialWallpaper(JsonArray(listOf(JsonNull, photo(width = 600), photo())), date)
+        val selected = selectEditorialWallpaper(JsonArray(listOf(JsonNull, photo())), date)
         assertEquals("safe_photo", selected?.id)
     }
 }

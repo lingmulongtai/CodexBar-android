@@ -1,5 +1,7 @@
 package com.codexbar.android.feature.dashboard
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -253,12 +255,14 @@ private fun GlassServiceRow(
                         QuotaMeter(metric.barProgress, accent, metric.pace.guide)
                     }
                 }
-                Icon(
-                    if (reordering) Icons.Rounded.DragHandle else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = colors.outline,
-                    modifier = Modifier.size(20.dp)
-                )
+                Crossfade(targetState = reordering, animationSpec = tween(180), label = "order_affordance") { editing ->
+                    Icon(
+                        if (editing) Icons.Rounded.DragHandle else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = colors.outline,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
