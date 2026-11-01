@@ -643,7 +643,7 @@
     <string name="github_dashboard_verify_notice">コードは github.com/login/device にだけ入力してください。</string>
     <string name="github_dashboard_open_github">GitHub を開く</string>
     <string name="github_dashboard_cancel">キャンセル</string>
-    <string name="github_dashboard_sign_out">この端末からアカウントを削除</string>
+    <string name="github_dashboard_sign_out">端末からログアウト</string>
     <string name="github_dashboard_loading">接続中…</string>
     <string name="github_dashboard_unavailable">GitHub に接続できませんでした。もう一度お試しください。</string>
     <string name="github_dashboard_unauthorized">GitHub の認証期限が切れました。再度ログインしてください。</string>

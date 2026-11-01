@@ -645,7 +645,7 @@
     <string name="github_dashboard_verify_notice">Only enter this code at github.com/login/device.</string>
     <string name="github_dashboard_open_github">Open GitHub</string>
     <string name="github_dashboard_cancel">Cancel</string>
-    <string name="github_dashboard_sign_out">Remove account from this device</string>
+    <string name="github_dashboard_sign_out">Sign out on device</string>
     <string name="github_dashboard_loading">Connecting…</string>
     <string name="github_dashboard_unavailable">Could not reach GitHub. Try again.</string>
     <string name="github_dashboard_unauthorized">GitHub authorization expired. Sign in again.</string>
