@@ -14,6 +14,24 @@ if [ "$release_apk_count" -ne 1 ]; then
 fi
 
 package_name='com.codexbar.android'
+# Capture selected guest diagnostics before a stalled ADB connection can prevent retrieval.
+diagnostic_log="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/codexbar-emulator-logcat-$$.log"
+logcat_pid=''
+cleanup_diagnostics() {
+  result=$?
+  trap - EXIT
+  if [ -n "$logcat_pid" ]; then
+    kill "$logcat_pid" 2>/dev/null || true
+    wait "$logcat_pid" 2>/dev/null || true
+  fi
+  if [ "$result" -ne 0 ] && [ -f "$diagnostic_log" ]; then
+    printf '%s\n' 'Recent guest diagnostics before failure:'
+    tail -n 300 "$diagnostic_log" || true
+  fi
+  rm -f "$diagnostic_log"
+  exit "$result"
+}
+trap cleanup_diagnostics EXIT
 # Bound every ADB call so a disconnected emulator cannot stall diagnostics forever.
 adb_bounded() { timeout "${ADB_TIMEOUT_SECONDS:-30}" adb "$@"; }
 report_host_diagnostics() {
@@ -67,6 +85,9 @@ check_running() {
 # Install the entire signed APK before launch; do not depend on incremental serving.
 timeout "${ADB_INSTALL_TIMEOUT_SECONDS:-180}" adb install --no-incremental "$release_apk"
 assert_device
+# The test emulator contains no user account data; restrict captured logs to system and crash tags.
+timeout 180 adb logcat -v threadtime -s ActivityManager:I WindowManager:W InputDispatcher:W AndroidRuntime:E RenderThread:W libc:E >"$diagnostic_log" 2>&1 &
+logcat_pid=$!
 adb_bounded logcat -b crash -c
 adb_bounded shell am force-stop "$package_name"
 launcher_component="$(adb_bounded shell cmd package resolve-activity --brief \
