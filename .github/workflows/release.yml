@@ -155,6 +155,9 @@ jobs:
             exit 1
           fi
 
+      - name: Release build resources before emulator startup
+        run: ./gradlew --stop
+
       - name: Enable KVM access
         run: |
           if [ ! -e /dev/kvm ]; then
