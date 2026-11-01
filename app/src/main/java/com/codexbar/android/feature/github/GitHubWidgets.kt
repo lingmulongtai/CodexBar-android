@@ -93,7 +93,7 @@ internal fun GitHubWidgetFrame(widget: GitHubWidget, editing: Boolean, bounds: M
                 Box(Modifier.align(Alignment.BottomEnd).size(44.dp).pointerInput(widget.key) {
                     var delta = 0f
                     detectDragGestures(onDragStart = { delta = 0f }, onDrag = { change, amount ->
-                        change.consume(); delta += (amount.x + amount.y) / 2f
+                        change.consume(); delta += if (kotlin.math.abs(amount.y) >= kotlin.math.abs(amount.x)) amount.y else amount.x
                         if (delta >= resizeStep || delta <= -resizeStep) {
                             val direction = if (delta > 0) 1 else -1
                             val sizes = GitHubWidgetSize.entries
