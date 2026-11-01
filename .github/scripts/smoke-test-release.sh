@@ -19,7 +19,7 @@ adb_bounded() { timeout "${ADB_TIMEOUT_SECONDS:-30}" adb "$@"; }
 report_host_diagnostics() {
   printf '%s\n' 'Host memory and emulator process diagnostics:'
   free -m 2>/dev/null || true
-  ps -C qemu-system-x86_64 -o pid,stat,rss,comm 2>/dev/null || true
+  ps -eo pid,stat,rss,comm 2>/dev/null | awk 'NR == 1 || $4 ~ /qemu|emulator/' || true
   if [ -r /sys/fs/cgroup/memory.events ]; then cat /sys/fs/cgroup/memory.events; fi
 }
 assert_device() {
