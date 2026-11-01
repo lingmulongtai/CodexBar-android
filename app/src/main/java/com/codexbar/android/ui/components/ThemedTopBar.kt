@@ -1,5 +1,7 @@
 package com.codexbar.android.ui.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
@@ -18,15 +20,27 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 
@@ -76,6 +90,20 @@ fun GlassPageHeader(
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     val shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
+    val sharedHeight = LocalGlassHeaderHeight.current
+    val sharedTitle = LocalGlassHeaderTitle.current
+    val direction = LocalTopLevelSlideDirection.current
+    val previousTitle = remember(title) { sharedTitle?.value?.takeIf { direction != 0 && it != title } }
+    var naturalHeight by remember { mutableIntStateOf(0) }
+    val contentAlpha = remember { Animatable(if (direction == 0) 1f else if (previousTitle != null) 0f else 0.55f) }
+    LaunchedEffect(title) { sharedTitle?.value = title }
+    LaunchedEffect(contentAlpha) { contentAlpha.animateTo(1f, tween(200)) }
+    LaunchedEffect(sharedHeight, naturalHeight) {
+        if (sharedHeight != null && naturalHeight > 0) {
+            if (sharedHeight.value <= 0f) sharedHeight.snapTo(naturalHeight.toFloat())
+            else sharedHeight.animateTo(naturalHeight.toFloat(), tween(240))
+        }
+    }
     GlassSurface(
         backdrop = LocalGlassHeaderBackdrop.current ?: LocalGlassCardBackdrop.current,
         shape = shape,
@@ -95,18 +123,30 @@ fun GlassPageHeader(
         )))
         CompositionLocalProvider(LocalContentColor provides Color.White) {
             Row(
-                Modifier.fillMaxWidth().statusBarsPadding().heightIn(min = 72.dp)
+                Modifier.fillMaxWidth().clipToBounds().layout { measurable, constraints ->
+                    val child = measurable.measure(constraints.copy(minHeight = 0))
+                    val animated = sharedHeight?.value?.takeIf { it > 0f }?.roundToInt() ?: child.height
+                    layout(child.width, constraints.constrainHeight(animated)) { child.placeRelative(0, 0) }
+                }.onSizeChanged { naturalHeight = it.height }
+                    .statusBarsPadding().heightIn(min = 72.dp)
                     .padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                navigationIcon()
+                Box(Modifier.graphicsLayer { alpha = contentAlpha.value }) { navigationIcon() }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    subtitle?.invoke()
+                    Box {
+                        if (previousTitle != null && contentAlpha.value < 1f) {
+                            Text(previousTitle, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.clearAndSetSemantics {}.graphicsLayer { alpha = 1f - contentAlpha.value })
+                        }
+                        Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.graphicsLayer { alpha = contentAlpha.value })
+                    }
+                    if (subtitle != null) Box(Modifier.graphicsLayer { alpha = contentAlpha.value }) { subtitle() }
                 }
-                actions()
+                Row(Modifier.graphicsLayer { alpha = contentAlpha.value }) { actions() }
             }
         }
     }
