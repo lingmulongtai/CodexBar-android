@@ -668,7 +668,7 @@
     <string name="github_profile_developer">GitHub Developer Program</string>
     <string name="github_profile_badges">View achievements and Pro on GitHub</string>
     <string name="github_profile_open">Open GitHub profile</string>
-    <string name="github_profile_period_title">Available commits</string>
+    <string name="github_profile_period_title">Commits</string>
     <string name="github_profile_today">Today</string>
     <string name="github_profile_week">This week</string>
     <string name="github_profile_month">This month</string>
@@ -730,4 +730,5 @@
     <string name="github_widgets_direct_hint">Touch and hold a widget to move it. Drag its corner to resize.</string>
     <string name="github_dashboard_retrying">Connection interrupted. Retrying…</string>
     <string name="github_widgets_edit">Edit</string>
+    <string name="github_profile_period_title_all">All commits</string>
 </resources>

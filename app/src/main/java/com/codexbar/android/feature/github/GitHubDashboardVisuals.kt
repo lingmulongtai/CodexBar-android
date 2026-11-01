@@ -35,7 +35,7 @@ import java.time.LocalDate
 @Composable
 internal fun GitHubContributionCards(data: GitHubContributions?, unavailable: Boolean, loading: Boolean,
     selectedDay: GitHubContributionDay?, onSelectDay: (GitHubContributionDay?) -> Unit,
-    kind: GitHubWidgetKind? = null, calendarScale: Float = 1f) {
+    kind: GitHubWidgetKind? = null, calendarScale: Float = 1f, privateContributionsConnected: Boolean = false) {
     if (data == null) {
         if ((kind == null || kind == GitHubWidgetKind.COMMITS) && unavailable && !loading) CodexBarCard(Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.github_profile_unavailable), modifier = Modifier.padding(18.dp),
@@ -46,7 +46,8 @@ internal fun GitHubContributionCards(data: GitHubContributions?, unavailable: Bo
     val viewer = data.viewer
     if (kind == null || kind == GitHubWidgetKind.COMMITS) CodexBarCard(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(stringResource(R.string.github_profile_period_title), style = MaterialTheme.typography.titleMedium,
+            Text(stringResource(if (privateContributionsConnected && !data.partial) R.string.github_profile_period_title_all
+                else R.string.github_profile_period_title), style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold)
             val labels = listOf(R.string.github_profile_today, R.string.github_profile_week,
                 R.string.github_profile_month, R.string.github_profile_year)

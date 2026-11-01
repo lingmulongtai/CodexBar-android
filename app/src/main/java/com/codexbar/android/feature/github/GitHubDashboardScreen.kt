@@ -149,13 +149,15 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
                                     onStarred = { sort = RepositorySort.Updated; page = GitHubPage.Starred })
                                 GitHubWidgetKind.COMMITS -> Column {
                                     GitHubContributionCards(state.contributions, state.contributionsUnavailable, state.loading,
-                                        selectedDay = selectedDay, onSelectDay = { selectedDay = it }, kind = widget.kind, calendarScale = widget.effectiveCalendarScale)
+                                        selectedDay = selectedDay, onSelectDay = { selectedDay = it }, kind = widget.kind, calendarScale = widget.effectiveCalendarScale,
+                                        privateContributionsConnected = state.privateContributionsConnected)
                                     if (!state.privateContributionsConnected && !state.contributionsLoginLoading && !editingWidgets)
                                         GitHubContributionsLogin(state, viewModel, ::open)
                                 }
                                 GitHubWidgetKind.CALENDAR, GitHubWidgetKind.ACTIVITY ->
                                     GitHubContributionCards(state.contributions, state.contributionsUnavailable, state.loading,
-                                        selectedDay = selectedDay, onSelectDay = { selectedDay = it }, kind = widget.kind, calendarScale = widget.effectiveCalendarScale)
+                                        selectedDay = selectedDay, onSelectDay = { selectedDay = it }, kind = widget.kind, calendarScale = widget.effectiveCalendarScale,
+                                        privateContributionsConnected = state.privateContributionsConnected)
                                 GitHubWidgetKind.REPOSITORY -> {
                                     val repo = state.repositories.find { it.id == widget.repositoryId }
                                     if (repo != null) GitHubPinnedRepository(repo, widget.size, ::open)

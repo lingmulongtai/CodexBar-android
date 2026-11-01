@@ -666,7 +666,7 @@
     <string name="github_profile_developer">GitHub Developer Program</string>
     <string name="github_profile_badges">実績・Pro を GitHub で確認</string>
     <string name="github_profile_open">GitHub プロフィールを開く</string>
-    <string name="github_profile_period_title">コミット（取得可能分）</string>
+    <string name="github_profile_period_title">コミット</string>
     <string name="github_profile_today">今日</string>
     <string name="github_profile_week">今週</string>
     <string name="github_profile_month">今月</string>
@@ -728,4 +728,5 @@
     <string name="github_widgets_direct_hint">ウィジェットを長押しして移動、右下の角をドラッグしてサイズ変更できます。</string>
     <string name="github_dashboard_retrying">通信が途切れたため再接続中…</string>
     <string name="github_widgets_edit">編集</string>
+    <string name="github_profile_period_title_all">すべてのコミット</string>
 </resources>
