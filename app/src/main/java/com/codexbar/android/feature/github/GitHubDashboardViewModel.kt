@@ -30,6 +30,7 @@ internal enum class GitHubDashboardError { Unavailable, Unauthorized, RateLimite
 internal data class GitHubDashboardState(
     val loading: Boolean = false,
     val userCode: String? = null,
+    val hasStoredSession: Boolean = false,
     val profile: GitHubProfile? = null,
     val repositories: List<GitHubRepository> = emptyList(),
     val error: GitHubDashboardError? = null
@@ -71,6 +72,7 @@ internal class GitHubDashboardViewModel @Inject constructor(
                             val session = token.toSession(clientId)
                             currentCoroutineContext().ensureActive()
                             prefs.saveGitHubDashboardSession(session)
+                            _state.update { it.copy(hasStoredSession = true) }
                             completed = true
                             break
                         }
@@ -92,6 +94,7 @@ internal class GitHubDashboardViewModel @Inject constructor(
             try {
                 var session = prefs.loadGitHubDashboardSession()
                 if (session == null) { _state.value = GitHubDashboardState(); return@launch }
+                _state.update { it.copy(hasStoredSession = true) }
                 if (session.expiresAtMillis <= System.currentTimeMillis() + 60_000) {
                     val previous = session
                     val rotated = api.refresh(previous).toSession(previous.clientId)
@@ -122,7 +125,8 @@ internal class GitHubDashboardViewModel @Inject constructor(
         val previousRefresh = refreshJob
         loginJob = null
         refreshJob = null
-        _state.value = GitHubDashboardState(loading = true)
+        val hadStoredSession = _state.value.hasStoredSession
+        _state.value = GitHubDashboardState(loading = true, hasStoredSession = hadStoredSession)
         signOutJob = viewModelScope.launch {
             previousLogin?.cancelAndJoin()
             previousRefresh?.cancelAndJoin()
@@ -130,7 +134,7 @@ internal class GitHubDashboardViewModel @Inject constructor(
                 prefs.deleteGitHubDashboardSession()
                 _state.value = GitHubDashboardState()
             } catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { _state.value = GitHubDashboardState(error = GitHubDashboardError.Unavailable) }
+            catch (_: Exception) { _state.value = GitHubDashboardState(hasStoredSession = hadStoredSession, error = GitHubDashboardError.Unavailable) }
         }
     }
 }

@@ -643,7 +643,7 @@
     <string name="github_dashboard_verify_notice">コードは github.com/login/device にだけ入力してください。</string>
     <string name="github_dashboard_open_github">GitHub を開く</string>
     <string name="github_dashboard_cancel">キャンセル</string>
-    <string name="github_dashboard_sign_out">ログアウト</string>
+    <string name="github_dashboard_sign_out">この端末からアカウントを削除</string>
     <string name="github_dashboard_loading">接続中…</string>
     <string name="github_dashboard_unavailable">GitHub に接続できませんでした。もう一度お試しください。</string>
     <string name="github_dashboard_unauthorized">GitHub の認証期限が切れました。再度ログインしてください。</string>
@@ -651,7 +651,7 @@
     <string name="github_dashboard_expired">ログインコードまたは認証の期限が切れました。再度ログインしてください。</string>
     <string name="github_dashboard_invalid">GitHub の応答を読み取れませんでした。</string>
     <string name="github_dashboard_public_count">公開リポジトリ %1$d 件</string>
-    <string name="github_dashboard_recent_repos">最近更新したリポジトリ</string>
+    <string name="github_dashboard_recent_repos">最近更新したリポジトリ（最大100件）</string>
     <string name="github_dashboard_no_repos">表示できるリポジトリがありません。GitHub App をインストールして共有先を選択してください。</string>
     <string name="github_dashboard_private">非公開</string>
     <string name="github_dashboard_public">公開</string>

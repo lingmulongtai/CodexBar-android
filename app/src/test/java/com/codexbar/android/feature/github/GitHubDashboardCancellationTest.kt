@@ -1,5 +1,6 @@
 package com.codexbar.android.feature.github
 
+import com.codexbar.android.core.domain.model.GitHubDashboardSession
 import com.codexbar.android.core.network.github.GitHubDashboardApi
 import com.codexbar.android.core.network.github.GitHubHttpResponse
 import com.codexbar.android.core.security.EncryptedPrefsManager
@@ -17,13 +18,38 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.mockingDetails
 import org.mockito.Mockito.verify
+import org.mockito.Mockito.`when`
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class GitHubDashboardCancellationTest {
+    @Test fun `offline saved account can still be removed`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val prefs = mock(EncryptedPrefsManager::class.java)
+            `when`(prefs.loadGitHubDashboardSession()).thenReturn(
+                GitHubDashboardSession("client", "access", "refresh", Long.MAX_VALUE)
+            )
+            val api = GitHubDashboardApi(Json { ignoreUnknownKeys = true }) { throw java.io.IOException("offline") }
+            val vm = GitHubDashboardViewModel(api, prefs)
+            runCurrent()
+            assertTrue(vm.state.value.hasStoredSession)
+            assertNull(vm.state.value.profile)
+            assertEquals(GitHubDashboardError.Unavailable, vm.state.value.error)
+            vm.signOut()
+            runCurrent()
+            verify(prefs).deleteGitHubDashboardSession()
+            assertFalse(vm.state.value.hasStoredSession)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     @Test fun `sign out cannot be undone by a late device authorization`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val reply = CompletableDeferred<GitHubHttpResponse>()

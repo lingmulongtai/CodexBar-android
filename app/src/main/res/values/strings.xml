@@ -645,7 +645,7 @@
     <string name="github_dashboard_verify_notice">Only enter this code at github.com/login/device.</string>
     <string name="github_dashboard_open_github">Open GitHub</string>
     <string name="github_dashboard_cancel">Cancel</string>
-    <string name="github_dashboard_sign_out">Sign out</string>
+    <string name="github_dashboard_sign_out">Remove account from this device</string>
     <string name="github_dashboard_loading">Connecting…</string>
     <string name="github_dashboard_unavailable">Could not reach GitHub. Try again.</string>
     <string name="github_dashboard_unauthorized">GitHub authorization expired. Sign in again.</string>
@@ -653,7 +653,7 @@
     <string name="github_dashboard_expired">The sign-in code or session expired. Sign in again.</string>
     <string name="github_dashboard_invalid">GitHub returned an invalid response.</string>
     <string name="github_dashboard_public_count">%1$d public repositories</string>
-    <string name="github_dashboard_recent_repos">Recently updated repositories</string>
+    <string name="github_dashboard_recent_repos">Recently updated repositories (up to 100)</string>
     <string name="github_dashboard_no_repos">No accessible repositories. Install the GitHub App and choose repositories to share.</string>
     <string name="github_dashboard_private">Private</string>
     <string name="github_dashboard_public">Public</string>

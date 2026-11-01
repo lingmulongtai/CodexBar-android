@@ -40,6 +40,11 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
                             CodexBarButton(onClick = viewModel::signIn, enabled = !state.loading) {
                                 Text(stringResource(R.string.github_dashboard_sign_in))
                             }
+                            if (state.hasStoredSession) {
+                                CodexBarOutlinedButton(onClick = viewModel::signOut, enabled = !state.loading) {
+                                    Text(stringResource(R.string.github_dashboard_sign_out))
+                                }
+                            }
                         } else {
                             Text(stringResource(R.string.github_dashboard_enter_code), style = MaterialTheme.typography.bodyMedium)
                             Text(state.userCode.orEmpty(), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
