@@ -41,7 +41,7 @@ fun CodexBarTheme(
 
     }
     val profile = themeProfile(style, colorScheme, useDarkTheme)
-    SystemBarAppearance(darkTheme = useDarkTheme)
+    SystemBarAppearance(darkTheme = useDarkTheme, glassHeader = style == AppThemeStyle.LIQUID_GLASS)
 
     CompositionLocalProvider(LocalCodexBarThemeProfile provides profile) {
         MaterialTheme(
@@ -57,13 +57,13 @@ fun CodexBarTheme(
 
 /** Keeps status and navigation bar icons legible when a design is darker than the system. */
 @Composable
-private fun SystemBarAppearance(darkTheme: Boolean) {
+private fun SystemBarAppearance(darkTheme: Boolean, glassHeader: Boolean) {
     val view = LocalView.current
     if (view.isInEditMode) return
     SideEffect {
         val window = view.context.findActivity()?.window ?: return@SideEffect
         WindowCompat.getInsetsController(window, view).apply {
-            isAppearanceLightStatusBars = !darkTheme
+            isAppearanceLightStatusBars = !darkTheme && !glassHeader
             isAppearanceLightNavigationBars = !darkTheme
         }
     }

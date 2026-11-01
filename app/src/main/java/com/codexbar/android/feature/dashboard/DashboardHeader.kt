@@ -67,12 +67,12 @@ internal fun DashboardHeader(
     val profile = LocalCodexBarThemeProfile.current
     if (profile.style == AppThemeStyle.LIQUID_GLASS) {
         val status = refreshStatusText(refresh, updatedAt)
-        val colors = MaterialTheme.colorScheme
+        val headerSecondary = Color.White.copy(alpha = 0.74f)
         GlassPageHeader(title = title, modifier = modifier, subtitle = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (refresh.active) SmallSpinner(14.dp, colors.onSurfaceVariant)
+                if (refresh.active) SmallSpinner(14.dp, headerSecondary)
                 Text(if (refresh.active || updatedAt == null) status else stringResource(R.string.dashboard_updated_status, status),
-                    style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium, color = headerSecondary,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }, actions = { DashboardOrderAction(onStartReorder, onFinishReorder) })
@@ -112,7 +112,7 @@ private fun DashboardOrderAction(onStart: (() -> Unit)?, onFinish: (() -> Unit)?
     } else if (onStart != null) {
         IconButton(onClick = onStart) {
             Icon(Icons.Rounded.SwapVert, contentDescription = stringResource(R.string.provider_order_action),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                tint = if (LocalCodexBarThemeProfile.current.style == AppThemeStyle.LIQUID_GLASS) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
