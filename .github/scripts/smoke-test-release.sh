@@ -14,10 +14,52 @@ if [ "$release_apk_count" -ne 1 ]; then
 fi
 
 package_name='com.codexbar.android'
-adb install "$release_apk"
-adb logcat -b crash -c
-adb shell am force-stop "$package_name"
-launcher_component="$(adb shell cmd package resolve-activity --brief \
+# Bound every ADB call so a disconnected emulator cannot stall diagnostics forever.
+adb_bounded() { timeout "${ADB_TIMEOUT_SECONDS:-30}" adb "$@"; }
+assert_device() {
+  state="$(adb_bounded get-state 2>/dev/null || true)"
+  if [ "$state" != 'device' ]; then
+    printf '::error::ADB device disconnected or did not respond during release smoke test.\n'
+    exit 1
+  fi
+}
+check_launch() {
+  if ! output="$(adb_bounded shell am start -W "$@")"; then
+    printf '::error::ADB could not start the release app.\n'
+    exit 1
+  fi
+  printf '%s\n' "$output"
+  if ! printf '%s\n' "$output" | tr -d '\r' | grep -Fxq 'Status: ok'; then
+    printf '::error::Release activity did not report a successful launch.\n'
+    exit 1
+  fi
+}
+check_running() {
+  assert_device
+  app_pid="$(adb_bounded shell pidof "$package_name" || true)"
+  app_pid="$(printf '%s' "$app_pid" | tr -d '\r')"
+  if [ -z "$app_pid" ]; then
+    assert_device
+    printf '::error::Release app process exited during %s.\n' "$1"
+    adb_bounded logcat -b crash -d || true
+    exit 1
+  fi
+  if ! crash_output="$(adb_bounded logcat -b crash -d)"; then
+    printf '::error::Could not read the release app crash log.\n'
+    exit 1
+  fi
+  if printf '%s\n' "$crash_output" | grep -Fq "Process: $package_name"; then
+    printf '::error::Release app produced a crash during %s.\n%s\n' "$1" "$crash_output"
+    exit 1
+  fi
+}
+
+# Install the entire signed APK before launch; do not depend on incremental serving.
+timeout "${ADB_INSTALL_TIMEOUT_SECONDS:-180}" adb install --no-incremental "$release_apk"
+assert_device
+adb_bounded logcat -b crash -c
+adb_bounded shell am force-stop "$package_name"
+launcher_component="$(adb_bounded shell cmd package resolve-activity --brief \
   -a android.intent.action.MAIN \
   -c android.intent.category.LAUNCHER \
   "$package_name" | tr -d '\r' | tail -n 1)"
@@ -25,38 +67,11 @@ case "$launcher_component" in
   "$package_name/"*) ;;
   *) printf '::error::No launcher component for %s.\n' "$package_name"; exit 1 ;;
 esac
-adb shell am start -W -n "$launcher_component"
+check_launch -n "$launcher_component"
 sleep 5
+check_running startup
 
-app_pid="$(adb shell pidof "$package_name" || true)"
-app_pid="$(printf '%s' "$app_pid" | tr -d '\r')"
-if [ -z "$app_pid" ]; then
-  printf '::error::Release app process exited during startup.\n'
-  adb logcat -b crash -d
-  exit 1
-fi
-if adb logcat -b crash -d | grep -Fq "Process: $package_name"; then
-  printf '::error::Release app produced a startup crash.\n'
-  adb logcat -b crash -d
-  exit 1
-fi
-
-adb logcat -b crash -c
-adb shell am start -W \
-  -a android.intent.action.VIEW \
-  -d 'codexbar://connections' \
-  "$package_name"
+adb_bounded logcat -b crash -c
+check_launch -a android.intent.action.VIEW -d 'codexbar://connections' "$package_name"
 sleep 5
-
-app_pid="$(adb shell pidof "$package_name" || true)"
-app_pid="$(printf '%s' "$app_pid" | tr -d '\r')"
-if [ -z "$app_pid" ]; then
-  printf '::error::Release app process exited after opening Connections.\n'
-  adb logcat -b crash -d
-  exit 1
-fi
-if adb logcat -b crash -d | grep -Fq "Process: $package_name"; then
-  printf '::error::Release app crashed after opening Connections.\n'
-  adb logcat -b crash -d
-  exit 1
-fi
+check_running 'opening Connections'
