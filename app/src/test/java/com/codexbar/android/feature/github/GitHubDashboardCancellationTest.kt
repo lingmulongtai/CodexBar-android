@@ -30,13 +30,14 @@ class GitHubDashboardCancellationTest {
         try {
             val prefs = mock(EncryptedPrefsManager::class.java)
             val api = GitHubDashboardApi(Json { ignoreUnknownKeys = true }) { request ->
-                if (request.url.encodedPath.endsWith("/device/code")) GitHubHttpResponse(200,
+                if (request.url.encodedPath.startsWith("/apps/")) GitHubHttpResponse(200, """{"client_id":"client-id","slug":"codexbar-android-dashboard","owner":{"login":"lingmulongtai"}}""")
+                else if (request.url.encodedPath.endsWith("/device/code")) GitHubHttpResponse(200,
                     """{"device_code":"secret","user_code":"ABCD-1234","verification_uri":"https://github.com/login/device","expires_in":900,"interval":5}""")
                 else withContext(NonCancellable) { reply.await() }
             }
             val vm = GitHubDashboardViewModel(api, prefs)
             runCurrent()
-            vm.signIn("client-id")
+            vm.signIn()
             runCurrent()
             advanceTimeBy(5001)
             runCurrent()

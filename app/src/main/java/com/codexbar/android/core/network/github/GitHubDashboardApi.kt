@@ -18,6 +18,12 @@ import okhttp3.Request
 import okhttp3.Response
 
 @Serializable
+internal data class GitHubAppInfo(@kotlinx.serialization.SerialName("client_id") val clientId: String,
+    val slug: String, val owner: GitHubAppOwner)
+@Serializable
+internal data class GitHubAppOwner(val login: String)
+
+@Serializable
 internal data class GitHubDeviceCode(
     @kotlinx.serialization.SerialName("device_code") val deviceCode: String,
     @kotlinx.serialization.SerialName("user_code") val userCode: String,
@@ -55,6 +61,14 @@ internal class GitHubDashboardApi internal constructor(
 ) {
     @Inject constructor(json: Json) : this(json, ::executeGitHubRequest)
 
+    /** GitHub publishes App client IDs; resolve ours without embedding a fixed identifier. */
+    suspend fun clientId(): String {
+        val app = json.decodeFromString<GitHubAppInfo>(successful(get("https://api.github.com/apps/codexbar-android-dashboard", null)))
+        if (app.slug != "codexbar-android-dashboard" || app.owner.login != "lingmulongtai" ||
+            !app.clientId.matches(Regex("[A-Za-z0-9._-]{1,128}"))) throw IOException("Invalid GitHub App identifier")
+        return app.clientId
+    }
+
     suspend fun start(clientId: String): GitHubDeviceCode {
         require(clientId.matches(Regex("[A-Za-z0-9._-]{1,128}")))
         val response = post("https://github.com/login/device/code", mapOf("client_id" to clientId, "scope" to "offline_access"))
@@ -85,9 +99,10 @@ internal class GitHubDashboardApi internal constructor(
         return execute(Request.Builder().url(url).header("Accept", "application/json").post(form).build())
     }
 
-    private suspend fun get(url: String, token: String): GitHubHttpResponse = execute(
+    private suspend fun get(url: String, token: String?): GitHubHttpResponse = execute(
         Request.Builder().url(url).header("Accept", "application/vnd.github+json")
-            .header("X-GitHub-Api-Version", "2022-11-28").header("Authorization", "Bearer $token").build())
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .apply { if (token != null) header("Authorization", "Bearer $token") }.build())
 
     private fun successful(response: GitHubHttpResponse): String {
         if (response.status !in 200..299) throw GitHubDashboardException(response.status)

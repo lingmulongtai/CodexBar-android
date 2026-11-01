@@ -17,8 +17,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
 import com.codexbar.android.ui.components.*
 
-/** Client IDs identify public GitHub Apps; they are not client secrets. */
-private const val DEFAULT_GITHUB_APP_CLIENT_ID = "Iv23li5qbXjbIOCe5g6i"
 private const val GITHUB_DEVICE_URL = "https://github.com/login/device"
 private const val GITHUB_INSTALL_URL = "https://github.com/apps/codexbar-android-dashboard/installations/new"
 
@@ -26,7 +24,6 @@ private const val GITHUB_INSTALL_URL = "https://github.com/apps/codexbar-android
 internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val uri = LocalUriHandler.current
-    var clientId by remember { mutableStateOf(DEFAULT_GITHUB_APP_CLIENT_ID) }
     var browserError by remember { mutableStateOf(false) }
     fun open(url: String) { browserError = runCatching { uri.openUri(url) }.isFailure }
     GlassHeaderOverlay(header = { ThemedTopBar(title = stringResource(R.string.github_dashboard_title)) }) { headerHeight ->
@@ -39,13 +36,8 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
                     if (profile == null) {
                         Text(stringResource(R.string.github_dashboard_connect_title), style = MaterialTheme.typography.titleLarge)
                         Text(stringResource(R.string.github_dashboard_connect_description), style = MaterialTheme.typography.bodyMedium)
-                        if (DEFAULT_GITHUB_APP_CLIENT_ID.isEmpty()) {
-                            CodexBarOutlinedTextField(value = clientId, onValueChange = { clientId = it.trim() },
-                                label = { Text(stringResource(R.string.github_dashboard_client_id)) }, singleLine = true,
-                                enabled = !state.loading, modifier = Modifier.fillMaxWidth())
-                        }
                         if (state.userCode == null) {
-                            CodexBarButton(onClick = { viewModel.signIn(clientId) }, enabled = !state.loading && clientId.isNotBlank()) {
+                            CodexBarButton(onClick = viewModel::signIn, enabled = !state.loading) {
                                 Text(stringResource(R.string.github_dashboard_sign_in))
                             }
                         } else {

@@ -48,12 +48,13 @@ internal class GitHubDashboardViewModel @Inject constructor(
 
     init { refresh() }
 
-    fun signIn(clientId: String) {
+    fun signIn() {
         if (loginJob?.isActive == true || signOutJob?.isActive == true) return
         loginJob = viewModelScope.launch {
             refreshJob?.cancelAndJoin()
             _state.update { it.copy(loading = true, userCode = null, error = null) }
             try {
+                val clientId = api.clientId()
                 val challenge = api.start(clientId)
                 _state.update { it.copy(userCode = challenge.userCode) }
                 val end = System.currentTimeMillis() + challenge.expiresIn * 1000

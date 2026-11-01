@@ -10,6 +10,16 @@ import org.junit.Test
 class GitHubDashboardApiTest {
     private val json = Json { ignoreUnknownKeys = true }
 
+    @Test fun `public app identifier is fetched without sending a credential`() = runTest {
+        val api = GitHubDashboardApi(json) { request ->
+            assertEquals("api.github.com", request.url.host)
+            assertEquals("/apps/codexbar-android-dashboard", request.url.encodedPath)
+            assertNull(request.header("Authorization"))
+            GitHubHttpResponse(200, """{"client_id":"public-client-id","slug":"codexbar-android-dashboard","owner":{"login":"lingmulongtai"}}""")
+        }
+        assertEquals("public-client-id", api.clientId())
+    }
+
     @Test fun `device authorization accepts only the official verification page`() = runTest {
         val replies = mutableListOf<String>()
         val api = GitHubDashboardApi(json) { request ->
