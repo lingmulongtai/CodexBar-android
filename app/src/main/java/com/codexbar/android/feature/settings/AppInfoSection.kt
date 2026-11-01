@@ -1,9 +1,11 @@
 package com.codexbar.android.feature.settings
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,7 +37,13 @@ internal fun AppInfoSection(viewModel: AppInfoViewModel = hiltViewModel()) {
     val uri = LocalUriHandler.current
     var browserError by remember { mutableStateOf(false) }
     fun open(url: String) { browserError = runCatching { uri.openUri(url) }.isFailure }
-    CodexBarCard(modifier = Modifier.fillMaxWidth()) {
+    CodexBarCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(stringResource(R.string.app_info_title), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.app_info_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE),
