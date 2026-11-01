@@ -1,5 +1,13 @@
 package com.codexbar.android
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.annotation.StringRes
 import com.codexbar.android.ui.components.LocalWallpaperState
 import androidx.compose.ui.unit.dp
@@ -268,10 +276,27 @@ private fun AppNavHost(
     onTrendsPageChange: (UsageAnalyticsPage) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     NavHost(
         navController = navController,
         startDestination = DashboardRoute,
-        modifier = modifier
+        modifier = modifier.clipToBounds(),
+        enterTransition = {
+            val direction = topLevelSlideDirection(initialState.destination.route, targetState.destination.route, rtl)
+            if (direction == 0) EnterTransition.None else slideInHorizontally(tween(280)) { it * direction }
+        },
+        exitTransition = {
+            val direction = topLevelSlideDirection(initialState.destination.route, targetState.destination.route, rtl)
+            if (direction == 0) ExitTransition.None else slideOutHorizontally(tween(280)) { -it * direction }
+        },
+        popEnterTransition = {
+            val direction = topLevelSlideDirection(initialState.destination.route, targetState.destination.route, rtl)
+            if (direction == 0) EnterTransition.None else slideInHorizontally(tween(280)) { it * direction }
+        },
+        popExitTransition = {
+            val direction = topLevelSlideDirection(initialState.destination.route, targetState.destination.route, rtl)
+            if (direction == 0) ExitTransition.None else slideOutHorizontally(tween(280)) { -it * direction }
+        }
     ) {
         composable(DashboardRoute) {
             val navigateToConnections = {
@@ -333,6 +358,21 @@ private fun AppNavHost(
             )
         }
     }
+}
+
+internal fun topLevelSlideDirection(from: String?, to: String?, rtl: Boolean): Int {
+    fun index(route: String?): Int = when (route) {
+        DashboardRoute -> 0
+        HistoryRoute, SpendRoute -> 1
+        ConnectionsRoute -> 2
+        SettingsRoute -> 3
+        else -> -1
+    }
+    val start = index(from)
+    val end = index(to)
+    if (start < 0 || end < 0 || start == end) return 0
+    val direction = if (end > start) 1 else -1
+    return if (rtl) -direction else direction
 }
 
 private fun NavHostController.navigateTopLevel(route: String) {
