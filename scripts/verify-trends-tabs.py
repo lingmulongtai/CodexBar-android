@@ -38,6 +38,7 @@ def drag(start, end):
     time.sleep(1)
 
 assert adb('shell', 'getprop', 'ro.kernel.qemu') == '1', 'Use a disposable emulator'
+adb('logcat', '-b', 'crash', '-c')
 adb('shell', 'cmd', 'locale', 'set-app-locales', package, '--locales', 'en')
 adb('shell', 'am', 'start', '-W', '-f', '0x14000000', '-n', package+'/.debug.ScreenshotActivity',
     '--es', 'theme', 'LIQUID_GLASS', '--es', 'destination', 'history')
@@ -79,5 +80,13 @@ adb('shell', 'input', 'tap', *tab(root, 'Usage')[1])
 time.sleep(1)
 adb('shell', 'input', 'tap', *tab(tree(), 'Trends')[1])
 time.sleep(1)
-assert tab(tree(), 'Spend')[0], 'Spend selection was not restored'
-print('PASS History/Spend held drag, cancellation, tap, single tab row, and restored selection')
+root = tree()
+assert tab(root, 'Spend')[0], 'Spend selection was not restored'
+# Reverse direction repeatedly without waiting for the page animation to finish.
+h, s = tab(root, 'History')[1], tab(root, 'Spend')[1]
+for point in (h, s, h, s):
+    adb('shell', 'input', 'tap', *point)
+time.sleep(1)
+assert tab(tree(), 'Spend')[0], 'Rapid reversals did not retain the final selection'
+assert f'Process: {package}' not in adb('logcat', '-b', 'crash', '-d'), 'App crashed during tab transitions'
+print('PASS held drag, cancellation, tap, single tab row, restored selection, and rapid reversals')
