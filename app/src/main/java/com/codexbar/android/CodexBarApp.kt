@@ -339,6 +339,14 @@ private fun AppNavHost(
 
 private fun NavHostController.navigateTopLevel(route: String) {
     if (currentDestination?.route == route) return
+    // Navigating to the start destination with restoreState can restore the tab that was just
+    // popped instead of the dashboard. Pop back to the existing dashboard directly.
+    if (route == DashboardRoute) {
+        if (!popBackStack(DashboardRoute, inclusive = false, saveState = true)) {
+            navigate(DashboardRoute) { launchSingleTop = true; restoreState = false }
+        }
+        return
+    }
     navigate(route) {
         popUpTo(graph.findStartDestination().id) {
             saveState = true
