@@ -4,21 +4,21 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
@@ -109,19 +109,32 @@ private fun GlassAction(onClick: () -> Unit, modifier: Modifier, enabled: Boolea
     val profile = LocalCodexBarThemeProfile.current
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 1.025f else 1f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = 500f),
+    val focused by interaction.collectIsFocusedAsState()
+    var width by remember { mutableIntStateOf(1) }
+    val lift by animateFloatAsState(
+        targetValue = if (pressed) 1f else 0f,
+        animationSpec = if (pressed) spring(dampingRatio = 0.60f, stiffness = 515f)
+            else spring(dampingRatio = 0.37f, stiffness = 250f),
         label = "glass_action_press"
     )
-    GlassSurface(LocalGlassCardBackdrop.current, shape, tint, tint.copy(alpha = 1f),
-        Color.White.copy(alpha = if (profile.isDark) 0.25f else 0.75f),
-        modifier.heightIn(min = 48.dp).graphicsLayer { scaleX = scale; scaleY = scale },
-        elevation = if (pressed) 4.dp else 1.dp, refraction = if (pressed) 0.55f else 0.30f) {
-        Surface(onClick, modifier = Modifier.semantics { role = Role.Button; if (selectedState != null) selected = selectedState }, enabled = enabled, shape = shape, color = Color.Transparent,
-            contentColor = foreground, border = border, interactionSource = interaction) {
-            Row(Modifier.defaultMinSize(minHeight = 48.dp).padding(padding),
-                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically, content = content)
+    BoxWithConstraints(modifier.defaultMinSize(minHeight = 48.dp)
+        .then(if (focused) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape) else Modifier)
+        .clickable(enabled = enabled, interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
+        .semantics { if (selectedState != null) selected = selectedState }, contentAlignment = Alignment.Center) {
+        val innerWidth = if (constraints.hasFixedWidth) Modifier.fillMaxWidth() else Modifier
+        GlassSurface(LocalGlassCardBackdrop.current, shape, tint, tint.copy(alpha = 1f),
+            if (profile.isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.08f),
+            modifier = innerWidth.onSizeChanged { width = it.width }.graphicsLayer {
+                scaleX = 1f + lift * (15.dp.toPx() / width.coerceAtLeast(1))
+                alpha = if (enabled) 1f else 0.35f
+            }.then(if (border != null) Modifier.border(border, shape) else Modifier),
+            blurRadius = 3.dp, elevation = if (profile.isDark) 0.dp else 1.dp, refraction = 0f) {
+            CompositionLocalProvider(LocalContentColor provides foreground) {
+                ProvideTextStyle(MaterialTheme.typography.labelLarge) {
+                    Row(Modifier.defaultMinSize(minHeight = 40.dp).padding(padding),
+                        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically, content = content)
+                }
+            }
         }
     }
 }
@@ -140,20 +153,7 @@ fun CodexBarFilterChip(selected: Boolean, onClick: () -> Unit, label: @Composabl
 /** Used for language and provider filters; each choice keeps its own accessible tab action. */
 @Composable
 fun GlassChoiceRow(labels: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
-    val colors = MaterialTheme.colorScheme
-    CodexBarPanel(modifier.fillMaxWidth(), CircleShape) {
-        Row(Modifier.fillMaxWidth().padding(4.dp).selectableGroup(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            labels.forEachIndexed { index, label ->
-                val active = index == selected
-                Surface(Modifier.weight(1f).clip(CircleShape).selectable(active, onClick = { onSelect(index) }, role = Role.Tab),
-                    shape = CircleShape, color = if (active) colors.primary.copy(alpha = 0.12f) else Color.Transparent) {
-                    Box(Modifier.heightIn(min = 48.dp).padding(horizontal = 8.dp, vertical = 12.dp), contentAlignment = Alignment.Center) {
-                        Text(label, style = MaterialTheme.typography.labelLarge, color = if (active) colors.primary else colors.onSurface)
-                    }
-                }
-            }
-        }
-    }
+    GlassSegmentedControl(labels, selected, onSelect, modifier)
 }
 
 @Composable
