@@ -82,9 +82,15 @@ fun CodexBarButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: 
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding, content: @Composable RowScope.() -> Unit) {
     if (LocalCodexBarThemeProfile.current.style != AppThemeStyle.LIQUID_GLASS) {
         Button(onClick, modifier, enabled, shape, colors, border = border, contentPadding = contentPadding, content = content)
-    } else GlassAction(onClick, modifier, enabled, shape,
-        if (enabled) colors.containerColor else colors.disabledContainerColor,
-        if (enabled) colors.contentColor else colors.disabledContentColor, border, contentPadding, content = content)
+    } else {
+        val defaultColors = ButtonDefaults.buttonColors()
+        val neutral = colors.containerColor == defaultColors.containerColor && colors.contentColor == defaultColors.contentColor
+        val tint = if (enabled && neutral) MaterialTheme.colorScheme.surface.copy(alpha = 0.48f)
+            else if (enabled) colors.containerColor else colors.disabledContainerColor
+        val foreground = if (enabled && neutral) MaterialTheme.colorScheme.onSurface
+            else if (enabled) colors.contentColor else colors.disabledContentColor
+        GlassAction(onClick, modifier, enabled, shape, tint, foreground, border, contentPadding, content = content)
+    }
 }
 
 @Composable
@@ -93,8 +99,13 @@ fun CodexBarOutlinedButton(onClick: () -> Unit, modifier: Modifier = Modifier, e
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding, content: @Composable RowScope.() -> Unit) {
     if (LocalCodexBarThemeProfile.current.style != AppThemeStyle.LIQUID_GLASS) {
         OutlinedButton(onClick, modifier, enabled, shape, colors, border = border ?: ButtonDefaults.outlinedButtonBorder(enabled), contentPadding = contentPadding, content = content)
-    } else GlassAction(onClick, modifier, enabled, shape, MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
-        if (enabled) colors.contentColor else colors.disabledContentColor, border, contentPadding, content = content)
+    } else {
+        val defaultColors = ButtonDefaults.outlinedButtonColors()
+        val foreground = if (enabled && colors.contentColor == defaultColors.contentColor) MaterialTheme.colorScheme.onSurface
+            else if (enabled) colors.contentColor else colors.disabledContentColor
+        GlassAction(onClick, modifier, enabled, shape, MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+            foreground, border, contentPadding, content = content)
+    }
 }
 
 @Composable
@@ -102,8 +113,13 @@ fun CodexBarTextButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabl
     colors: ButtonColors = ButtonDefaults.textButtonColors(), content: @Composable RowScope.() -> Unit) {
     if (LocalCodexBarThemeProfile.current.style != AppThemeStyle.LIQUID_GLASS) {
         TextButton(onClick, modifier, enabled, colors = colors, content = content)
-    } else GlassAction(onClick, modifier, enabled, CircleShape, MaterialTheme.colorScheme.surface.copy(alpha = 0.35f),
-        if (enabled) colors.contentColor else colors.disabledContentColor, null, PaddingValues(horizontal = 12.dp, vertical = 10.dp), content = content)
+    } else {
+        val defaultColors = ButtonDefaults.textButtonColors()
+        val foreground = if (enabled && colors.contentColor == defaultColors.contentColor) MaterialTheme.colorScheme.onSurface
+            else if (enabled) colors.contentColor else colors.disabledContentColor
+        GlassAction(onClick, modifier, enabled, CircleShape, MaterialTheme.colorScheme.surface.copy(alpha = 0.35f),
+            foreground, null, PaddingValues(horizontal = 12.dp, vertical = 10.dp), content = content)
+    }
 }
 
 @Composable

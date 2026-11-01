@@ -63,6 +63,7 @@ import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
+import com.codexbar.android.ui.components.CodexBarPanel
 import com.codexbar.android.ui.components.GlassHeaderOverlay
 import com.codexbar.android.ui.components.WallpaperFooter
 import com.codexbar.android.ui.components.LocalBottomChromeInset
@@ -477,6 +478,19 @@ private fun SectionHeader(
 ) {
     val style = LocalCodexBarThemeProfile.current.style
     val colors = MaterialTheme.colorScheme
+    if (!reordering && style == AppThemeStyle.LIQUID_GLASS) {
+        Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            CodexBarPanel(shape = CircleShape) {
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.dashboard_section_services), style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold, color = colors.onSurface)
+                    Spacer(Modifier.width(8.dp))
+                    Text(count.toString(), style = MaterialTheme.typography.labelLarge, color = colors.onSurface)
+                }
+            }
+        }
+        return
+    }
     Surface(
         modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
         color = if (reordering) colors.surface.copy(alpha = 0.94f) else androidx.compose.ui.graphics.Color.Transparent
