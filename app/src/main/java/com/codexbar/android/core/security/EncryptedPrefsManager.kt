@@ -18,6 +18,7 @@ import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.domain.model.CodexTelemetryCredential
 import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.domain.model.DesktopBridgeCredential
+import com.codexbar.android.core.domain.model.GitHubDashboardSession
 import com.codexbar.android.core.domain.model.AcquisitionMode
 import com.codexbar.android.core.domain.model.AcquisitionSettings
 import com.codexbar.android.core.network.desktop.DesktopBridgePairing
@@ -49,6 +50,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 private const val SECURE_DATASTORE_NAME = "codexbar_secure_prefs"
 private const val DEFAULT_REFRESH_INTERVAL_MINUTES = 30L
@@ -321,9 +324,38 @@ class EncryptedPrefsManager @Inject constructor(
         updateCache()
     }
 
+    suspend fun saveGitHubDashboardSession(session: GitHubDashboardSession) {
+        dataStore.edit { it.putEncryptedString(GITHUB_DASHBOARD_SESSION, Json.encodeToString(session)) }
+    }
+
+    suspend fun loadGitHubDashboardSession(): GitHubDashboardSession? {
+        val value = readPreferencesOrNull()?.getEncryptedString(GITHUB_DASHBOARD_SESSION) ?: return null
+        return runCatching { Json.decodeFromString<GitHubDashboardSession>(value) }.getOrNull()
+    }
+
+    /** Never restore a rotated session after a concurrent sign-out or account change. */
+    suspend fun replaceGitHubDashboardSession(expectedRefreshToken: String, session: GitHubDashboardSession): Boolean {
+        var replaced = false
+        dataStore.edit { prefs ->
+            val current = prefs.getEncryptedString(GITHUB_DASHBOARD_SESSION)?.let {
+                runCatching { Json.decodeFromString<GitHubDashboardSession>(it) }.getOrNull()
+            }
+            if (current?.refreshToken == expectedRefreshToken) {
+                prefs.putEncryptedString(GITHUB_DASHBOARD_SESSION, Json.encodeToString(session))
+                replaced = true
+            }
+        }
+        return replaced
+    }
+
+    suspend fun deleteGitHubDashboardSession() {
+        dataStore.edit { it.remove(stringPreferencesKey(GITHUB_DASHBOARD_SESSION)) }
+    }
+
     suspend fun deleteAllCredentials() {
         dataStore.edit { prefs ->
             prefs.remove(stringPreferencesKey("wallpaper_access_key"))
+            prefs.remove(stringPreferencesKey(GITHUB_DASHBOARD_SESSION))
             AiService.entries.forEach { prefs.removeServiceEntries(it) }
             prefs.removeCodexTelemetryEntries()
             prefs.asMap().keys.filter { it.name.startsWith(DESKTOP_PREFIX) }.forEach { key ->
@@ -658,6 +690,7 @@ class EncryptedPrefsManager @Inject constructor(
         const val SECURE_PREFS_NAME = SECURE_DATASTORE_NAME
         const val SECURE_DATASTORE_BACKUP_PATH = "datastore/$SECURE_DATASTORE_NAME.preferences_pb"
 
+        private const val GITHUB_DASHBOARD_SESSION = "LOCAL_GITHUB_DASHBOARD_SESSION"
         private const val CODEX_TELEMETRY_PREFIX = "LOCAL_CODEX_TELEMETRY_"
         private const val DESKTOP_PREFIX = "LOCAL_WINDOWS_BRIDGE_"
 
