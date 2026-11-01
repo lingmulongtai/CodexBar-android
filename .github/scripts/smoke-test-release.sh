@@ -33,6 +33,7 @@ assert_device() {
 check_launch() {
   if ! output="$(adb_bounded shell am start -W "$@")"; then
     printf '::error::ADB could not start the release app.\n'
+    report_host_diagnostics
     exit 1
   fi
   printf '%s\n' "$output"
@@ -54,6 +55,7 @@ check_running() {
   fi
   if ! crash_output="$(adb_bounded logcat -b crash -d)"; then
     printf '::error::Could not read the release app crash log.\n'
+    report_host_diagnostics
     exit 1
   fi
   if printf '%s\n' "$crash_output" | grep -Fq "Process: $package_name"; then
