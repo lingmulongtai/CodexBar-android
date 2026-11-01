@@ -167,7 +167,9 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
                         }
                     }
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        CodexBarOutlinedButton(onClick = viewModel::signOut) { Text(stringResource(R.string.github_dashboard_sign_out)) }
+                        Box(Modifier.fillMaxWidth(), contentAlignment = androidx.compose.ui.Alignment.CenterStart) {
+                            CodexBarOutlinedButton(onClick = viewModel::signOut) { Text(stringResource(R.string.github_dashboard_sign_out)) }
+                        }
                     }
                     if (state.widgetSaveError) item(span = { GridItemSpan(maxLineSpan) }) {
                         Text(stringResource(R.string.github_widgets_save_error), color = MaterialTheme.colorScheme.error)
