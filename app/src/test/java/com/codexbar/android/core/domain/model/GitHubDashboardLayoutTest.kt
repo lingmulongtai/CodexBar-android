@@ -8,7 +8,7 @@ import org.junit.Test
 class GitHubDashboardLayoutTest {
     @Test fun `layout round trip keeps pinned repository size and order`() {
         val layout = GitHubDashboardLayout(10, listOf(
-            GitHubWidget(GitHubWidgetKind.CALENDAR),
+            GitHubWidget(GitHubWidgetKind.CALENDAR, size = GitHubWidgetSize.LARGE),
             GitHubWidget(GitHubWidgetKind.REPOSITORY, 42, GitHubWidgetSize.SMALL),
             GitHubWidget(GitHubWidgetKind.COMMITS)))
         assertEquals(layout, Json.decodeFromString<GitHubDashboardLayout>(Json.encodeToString(layout)).normalized(10))

@@ -705,4 +705,23 @@
     <string name="github_profile_location">Location: %1$s</string>
     <string name="github_profile_loading_repos">Loading GitHub data…</string>
     <string name="github_profile_email_unavailable">No public email on the GitHub profile.</string>
+    <string name="github_widgets_title">Customize widgets</string>
+    <string name="github_widgets_hint">Touch and hold to reorder</string>
+    <string name="github_widgets_add_repository">Add repository</string>
+    <string name="github_widgets_search">Search repositories</string>
+    <string name="github_widgets_missing">Repository unavailable</string>
+    <string name="github_widgets_size">Size</string>
+    <string name="github_widgets_remove">Remove</string>
+    <string name="github_widgets_profile">Profile</string>
+    <string name="github_widgets_commits">Commits</string>
+    <string name="github_widgets_calendar">Contribution calendar</string>
+    <string name="github_widgets_activity">Activity overview</string>
+    <string name="github_widgets_small">Small</string>
+    <string name="github_widgets_medium">Medium</string>
+    <string name="github_widgets_large">Large</string>
+    <string name="github_widgets_add">Add</string>
+    <string name="github_widgets_no_results">No matching repositories</string>
+    <string name="github_contributions_client_id">GitHub OAuth client ID</string>
+    <string name="github_contributions_connect">Connect private contributions</string>
+    <string name="github_contributions_error">Could not connect. Check the account and try again.</string>
 </resources>

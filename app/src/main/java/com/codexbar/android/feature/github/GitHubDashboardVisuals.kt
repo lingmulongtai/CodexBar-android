@@ -24,6 +24,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.codexbar.android.R
+import com.codexbar.android.core.domain.model.GitHubWidgetKind
+import com.codexbar.android.core.domain.model.GitHubWidgetSize
 import com.codexbar.android.core.network.github.GitHubContributionCalendar
 import com.codexbar.android.core.network.github.GitHubContributionDay
 import com.codexbar.android.core.network.github.GitHubContributions
@@ -33,16 +35,17 @@ import java.time.LocalDate
 
 @Composable
 internal fun GitHubContributionCards(data: GitHubContributions?, unavailable: Boolean, loading: Boolean,
-    selectedDay: GitHubContributionDay?, onSelectDay: (GitHubContributionDay?) -> Unit) {
+    selectedDay: GitHubContributionDay?, onSelectDay: (GitHubContributionDay?) -> Unit,
+    kind: GitHubWidgetKind? = null, size: GitHubWidgetSize = GitHubWidgetSize.MEDIUM) {
     if (data == null) {
-        if (unavailable && !loading) CodexBarCard(Modifier.fillMaxWidth()) {
+        if ((kind == null || kind == GitHubWidgetKind.COMMITS) && unavailable && !loading) CodexBarCard(Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.github_profile_unavailable), modifier = Modifier.padding(18.dp),
                 style = MaterialTheme.typography.bodyMedium)
         }
         return
     }
     val viewer = data.viewer
-    CodexBarCard(Modifier.fillMaxWidth()) {
+    if (kind == null || kind == GitHubWidgetKind.COMMITS) CodexBarCard(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.github_profile_period_title), style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold)
@@ -62,8 +65,8 @@ internal fun GitHubContributionCards(data: GitHubContributions?, unavailable: Bo
             if (data.partial) Text(stringResource(R.string.github_profile_partial), style = MaterialTheme.typography.bodySmall)
         }
     }
-    viewer.year?.contributionCalendar?.let { ContributionCalendarCard(it, selectedDay, onSelectDay) }
-    viewer.year?.let { year ->
+    if (kind == null || kind == GitHubWidgetKind.CALENDAR) viewer.year?.contributionCalendar?.let { ContributionCalendarCard(it, selectedDay, onSelectDay, size) }
+    if (kind == null || kind == GitHubWidgetKind.ACTIVITY) viewer.year?.let { year ->
         val values = listOf(year.totalCommitContributions, year.totalIssueContributions,
             year.totalPullRequestContributions, year.totalPullRequestReviewContributions)
         if (values.any { it != null }) CodexBarCard(Modifier.fillMaxWidth()) {
@@ -100,11 +103,13 @@ internal fun GitHubContributionCards(data: GitHubContributions?, unavailable: Bo
 
 @Composable
 private fun ContributionCalendarCard(calendar: GitHubContributionCalendar, selected: GitHubContributionDay?,
-    onSelect: (GitHubContributionDay?) -> Unit) {
+    onSelect: (GitHubContributionDay?) -> Unit, size: GitHubWidgetSize) {
     val dark = LocalCodexBarThemeProfile.current.isDark
     val density = LocalDensity.current
-    val step = with(density) { 12.dp.toPx() }
-    val cell = with(density) { 9.dp.toPx() }
+    val stepDp = when (size) { GitHubWidgetSize.SMALL -> 10.dp; GitHubWidgetSize.MEDIUM -> 12.dp; GitHubWidgetSize.LARGE -> 16.dp }
+    val cellDp = stepDp - 3.dp
+    val step = with(density) { stepDp.toPx() }
+    val cell = with(density) { cellDp.toPx() }
     val days = remember(calendar) {
         calendar.weeks.map { week -> week.contributionDays.mapNotNull { day ->
             runCatching { LocalDate.parse(day.date).dayOfWeek.value % 7 to day }.getOrNull()
@@ -125,7 +130,7 @@ private fun ContributionCalendarCard(calendar: GitHubContributionCalendar, selec
             if (days.isNotEmpty()) {
                 val scroll = rememberScrollState(initial = Int.MAX_VALUE)
                 Box(Modifier.fillMaxWidth().horizontalScroll(scroll)) {
-                    Canvas(Modifier.width((calendar.weeks.size * 12).dp).height((7 * 12).dp)
+                    Canvas(Modifier.width(stepDp * calendar.weeks.size).height(stepDp * 7)
                         .semantics { contentDescription = description }
                         .pointerInput(days, step) {
                             detectTapGestures { offset ->

@@ -703,4 +703,23 @@
     <string name="github_profile_location">場所: %1$s</string>
     <string name="github_profile_loading_repos">GitHub の情報を取得中…</string>
     <string name="github_profile_email_unavailable">GitHub プロフィールに公開メールはありません。</string>
+    <string name="github_widgets_title">ウィジェットを編集</string>
+    <string name="github_widgets_hint">長押しして並び替え</string>
+    <string name="github_widgets_add_repository">リポジトリを追加</string>
+    <string name="github_widgets_search">リポジトリを検索</string>
+    <string name="github_widgets_missing">リポジトリを取得できません</string>
+    <string name="github_widgets_size">サイズ</string>
+    <string name="github_widgets_remove">削除</string>
+    <string name="github_widgets_profile">プロフィール</string>
+    <string name="github_widgets_commits">コミット</string>
+    <string name="github_widgets_calendar">コントリビューション</string>
+    <string name="github_widgets_activity">アクティビティ概要</string>
+    <string name="github_widgets_small">小</string>
+    <string name="github_widgets_medium">中</string>
+    <string name="github_widgets_large">大</string>
+    <string name="github_widgets_add">追加</string>
+    <string name="github_widgets_no_results">一致するリポジトリはありません</string>
+    <string name="github_contributions_client_id">GitHub OAuth クライアント ID</string>
+    <string name="github_contributions_connect">非公開の貢献を連携</string>
+    <string name="github_contributions_error">連携できませんでした。アカウントを確認してもう一度お試しください。</string>
 </resources>

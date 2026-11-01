@@ -32,7 +32,7 @@ fun GitHubDashboardLayout.normalized(ownerId: Long): GitHubDashboardLayout {
         if (widget.kind == GitHubWidgetKind.REPOSITORY) (widget.repositoryId ?: 0L) > 0L
         else widget.repositoryId == null
     }.distinctBy { it.key }.take(40).map { widget ->
-        if (widget.kind != GitHubWidgetKind.REPOSITORY) widget.copy(size = GitHubWidgetSize.MEDIUM) else widget
+        if (widget.kind !in setOf(GitHubWidgetKind.REPOSITORY, GitHubWidgetKind.CALENDAR)) widget.copy(size = GitHubWidgetSize.MEDIUM) else widget
     }.toList()
     return copy(widgets = valid)
 }
