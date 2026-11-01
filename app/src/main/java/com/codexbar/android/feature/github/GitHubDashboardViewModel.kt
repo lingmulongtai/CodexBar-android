@@ -2,6 +2,7 @@ package com.codexbar.android.feature.github
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.codexbar.android.core.domain.model.GitHubContributionsSession
 import com.codexbar.android.core.domain.model.GitHubDashboardSession
 import com.codexbar.android.core.domain.model.GitHubDashboardLayout
 import com.codexbar.android.core.domain.model.GitHubWidget
@@ -19,6 +20,8 @@ import java.io.IOException
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.cancelAndJoin
@@ -46,6 +49,10 @@ internal data class GitHubDashboardState(
     val starredComplete: Boolean = false,
     val contributions: GitHubContributions? = null,
     val contributionsUnavailable: Boolean = false,
+    val privateContributionsConnected: Boolean = false,
+    val contributionsUserCode: String? = null,
+    val contributionsLoginLoading: Boolean = false,
+    val contributionsLoginError: GitHubDashboardError? = null,
     val repositoryActivity: GitHubRepositoryActivity? = null,
     val error: GitHubDashboardError? = null
 )
@@ -58,6 +65,7 @@ internal class GitHubDashboardViewModel @Inject constructor(
     private val _state = MutableStateFlow(GitHubDashboardState())
     val state: StateFlow<GitHubDashboardState> = _state.asStateFlow()
     private var loginJob: Job? = null
+    private var contributionsLoginJob: Job? = null
     private var refreshJob: Job? = null
     private var signOutJob: Job? = null
     private var layoutSaveJob: Job? = null
@@ -70,6 +78,7 @@ internal class GitHubDashboardViewModel @Inject constructor(
             prefs.gitHubDashboardRevision.collect { revision ->
                 if (previous != null && previous != revision) {
                     loginJob?.cancel()
+                    contributionsLoginJob?.cancel()
                     refreshJob?.cancel()
                     layoutSaveJob?.cancel()
                     layoutRevision = null
@@ -124,6 +133,55 @@ internal class GitHubDashboardViewModel @Inject constructor(
         }
     }
 
+    fun signInContributions(clientId: String) {
+        val ownerId = _state.value.profile?.id?.takeIf { it > 0 } ?: return
+        if (contributionsLoginJob?.isActive == true || signOutJob?.isActive == true) return
+        contributionsLoginJob = viewModelScope.launch {
+            _state.update { it.copy(contributionsLoginLoading = true, contributionsUserCode = null, contributionsLoginError = null) }
+            try {
+                val revision = prefs.currentGitHubDashboardRevision()
+                if (prefs.loadGitHubDashboardSession() == null) throw IOException("Missing GitHub session")
+                val challenge = api.startContributions(clientId)
+                _state.update { it.copy(contributionsUserCode = challenge.userCode) }
+                val end = System.currentTimeMillis() + challenge.expiresIn * 1000
+                var interval = challenge.interval
+                var completed = false
+                while (isActive && System.currentTimeMillis() < end) {
+                    delay(interval * 1000)
+                    val response = api.poll(clientId, challenge.deviceCode)
+                    when (response.error) {
+                        "authorization_pending" -> continue
+                        "slow_down" -> { interval = (interval + 5).coerceAtMost(120); continue }
+                        "expired_token", "access_denied" -> throw GitHubLoginExpired()
+                        null -> {
+                            val token = response.toContributionsToken(clientId)
+                            if (api.profile(token.accessToken).id != ownerId) throw IOException("GitHub account mismatch")
+                            val currentApp = prefs.loadGitHubDashboardSession() ?: throw IOException("GitHub session changed")
+                            if (api.profile(currentApp.accessToken).id != ownerId) throw IOException("GitHub account mismatch")
+                            currentCoroutineContext().ensureActive()
+                            if (!prefs.saveGitHubContributionsSessionIfCurrent(GitHubContributionsSession(ownerId, token),
+                                    revision, currentApp.refreshToken)) throw IOException("GitHub session changed")
+                            completed = true
+                            break
+                        }
+                        else -> throw IOException("GitHub authorization failed")
+                    }
+                }
+                if (!completed) throw GitHubLoginExpired()
+                _state.update { it.copy(contributionsLoginLoading = false, contributionsUserCode = null) }
+                refreshJob?.cancelAndJoin()
+                refresh()
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (error: Exception) { _state.update { it.copy(contributionsLoginLoading = false,
+                contributionsUserCode = null, contributionsLoginError = error.toDashboardError()) } }
+        }
+    }
+
+    fun cancelContributionsLogin() {
+        contributionsLoginJob?.cancel()
+        _state.update { it.copy(contributionsLoginLoading = false, contributionsUserCode = null, contributionsLoginError = null) }
+    }
+
     fun refresh() {
         if (refreshJob?.isActive == true || signOutJob?.isActive == true) return
         refreshJob = viewModelScope.launch {
@@ -160,8 +218,28 @@ internal class GitHubDashboardViewModel @Inject constructor(
                 layoutRefreshToken = session.refreshToken
                 _state.update { it.copy(profile = profile, layout = layout, repositories = repos,
                     repositoriesComplete = repositoryResult.complete && repos.size == repositoryResult.items.size, error = null) }
+                var privateToken: String? = null
+                val savedContributions = prefs.loadGitHubContributionsSession()
+                if (profile.id != null && savedContributions?.ownerId == profile.id) {
+                    val valid = optionalGitHubData {
+                        var linked = savedContributions
+                        if (linked.token.expiresAtMillis <= System.currentTimeMillis() + 60_000) {
+                            linked = withContext(NonCancellable) {
+                                val rotated = api.refresh(linked.token).toSession(linked.token.clientId)
+                                val replacement = linked.copy(token = rotated)
+                                if (!prefs.saveGitHubContributionsSessionIfCurrent(replacement, revision,
+                                        session.refreshToken, linked.token.refreshToken)) throw IOException("GitHub session changed")
+                                replacement
+                            }
+                            currentCoroutineContext().ensureActive()
+                        }
+                        if (api.profile(linked.token.accessToken).id != profile.id) throw IOException("GitHub account mismatch")
+                        linked.token.accessToken
+                    }
+                    privateToken = valid
+                }
                 val (contributions, activity, starred) = coroutineScope {
-                    val contributions = async { optionalGitHubData { api.contributions(session.accessToken) } }
+                    val contributions = async { optionalGitHubData { api.contributions(privateToken ?: session.accessToken) } }
                     val activity = async { optionalGitHubData { api.repositoryActivity(session.accessToken) } }
                     val starred = async { optionalGitHubData { api.starred(profile.login) } }
                     Triple(contributions.await(), activity.await(), starred.await())
@@ -173,6 +251,7 @@ internal class GitHubDashboardViewModel @Inject constructor(
                 }
                 val safeStars = starred?.items?.filter { isGitHubRepositoryUrl(it.htmlUrl, it.fullName) }
                 _state.update { it.copy(loading = false, contributions = contributions,
+                    privateContributionsConnected = privateToken != null && contributions != null,
                     contributionsUnavailable = contributions == null, repositoryActivity = activity,
                     starred = safeStars, starredComplete = starred?.complete == true && safeStars?.size == starred.items.size) }
             } catch (cancelled: CancellationException) { throw cancelled }
@@ -196,6 +275,8 @@ internal class GitHubDashboardViewModel @Inject constructor(
     fun signOut() {
         if (signOutJob?.isActive == true) return
         val previousLogin = loginJob
+        val previousContributionsLogin = contributionsLoginJob
+        contributionsLoginJob = null
         val previousRefresh = refreshJob
         val previousLayoutSave = layoutSaveJob
         layoutSaveJob = null
@@ -207,6 +288,7 @@ internal class GitHubDashboardViewModel @Inject constructor(
         _state.value = GitHubDashboardState(loading = true, hasStoredSession = hadStoredSession)
         signOutJob = viewModelScope.launch {
             previousLogin?.cancelAndJoin()
+            previousContributionsLogin?.cancelAndJoin()
             previousRefresh?.cancelAndJoin()
             previousLayoutSave?.cancelAndJoin()
             try {
@@ -239,6 +321,13 @@ private fun GitHubTokenResponse.toSession(clientId: String): GitHubDashboardSess
     val refresh = refreshToken?.takeIf { it.isNotBlank() } ?: throw IOException("Missing GitHub refresh token")
     val expires = expiresIn?.takeIf { it in 1..2_592_000 } ?: throw IOException("Invalid GitHub token expiry")
     return GitHubDashboardSession(clientId, access, refresh, System.currentTimeMillis() + expires * 1000)
+}
+
+internal fun GitHubTokenResponse.toContributionsToken(clientId: String): GitHubDashboardSession {
+    val scopes = scope.orEmpty().split(',', ' ').filter { it.isNotBlank() }.toSet()
+    if ("read:user" !in scopes || scopes.any { it !in setOf("read:user", "offline_access") } ||
+        !tokenType.equals("bearer", ignoreCase = true)) throw IOException("Invalid GitHub contribution scope")
+    return toSession(clientId)
 }
 
 private class GitHubLoginExpired : IOException()
