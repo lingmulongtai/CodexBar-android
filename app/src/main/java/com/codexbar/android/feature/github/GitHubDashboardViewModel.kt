@@ -16,6 +16,8 @@ import java.io.IOException
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -124,9 +126,12 @@ internal class GitHubDashboardViewModel @Inject constructor(
                 }
                 _state.update { it.copy(profile = profile, repositories = repos,
                     repositoriesComplete = repositoryResult.complete && repos.size == repositoryResult.items.size, error = null) }
-                val contributions = optionalGitHubData { api.contributions(session.accessToken) }
-                val activity = optionalGitHubData { api.repositoryActivity(session.accessToken) }
-                val starred = optionalGitHubData { api.starred(profile.login) }
+                val (contributions, activity, starred) = coroutineScope {
+                    val contributions = async { optionalGitHubData { api.contributions(session.accessToken) } }
+                    val activity = async { optionalGitHubData { api.repositoryActivity(session.accessToken) } }
+                    val starred = async { optionalGitHubData { api.starred(profile.login) } }
+                    Triple(contributions.await(), activity.await(), starred.await())
+                }
                 currentCoroutineContext().ensureActive()
                 if (prefs.loadGitHubDashboardSession()?.refreshToken != session.refreshToken) {
                     _state.value = GitHubDashboardState()
