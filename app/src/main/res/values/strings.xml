@@ -724,4 +724,6 @@
     <string name="github_contributions_client_id">GitHub OAuth client ID</string>
     <string name="github_contributions_connect">Connect private contributions</string>
     <string name="github_contributions_error">Could not connect. Check the account and try again.</string>
+    <string name="github_dashboard_copy_code">Copy code</string>
+    <string name="github_dashboard_code_copied">Code copied</string>
 </resources>

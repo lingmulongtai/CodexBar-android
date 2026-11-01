@@ -2,6 +2,8 @@ package com.codexbar.android.feature.github
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
@@ -14,12 +16,19 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalUriHandler
@@ -200,12 +209,7 @@ private fun GitHubContributionsLogin(state: GitHubDashboardState, viewModel: Git
             value = clientId, onValueChange = { clientId = it }, modifier = Modifier.fillMaxWidth(),
             label = { Text(stringResource(R.string.github_contributions_client_id)) }, singleLine = true)
         if (state.contributionsUserCode != null) {
-            Text(state.contributionsUserCode, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text(stringResource(R.string.github_dashboard_verify_notice), style = MaterialTheme.typography.bodySmall)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CodexBarButton(onClick = { open(GITHUB_DEVICE_URL) }) { Text(stringResource(R.string.github_dashboard_open_github)) }
-                CodexBarOutlinedButton(onClick = viewModel::cancelContributionsLogin) { Text(stringResource(R.string.github_dashboard_cancel)) }
-            }
+            GitHubDeviceAuthorization(state.contributionsUserCode, open, viewModel::cancelContributionsLogin)
         } else {
             CodexBarOutlinedButton(onClick = { viewModel.signInContributions(clientId.trim()) },
                 enabled = !state.contributionsLoginLoading && clientId.isNotBlank()) {
@@ -214,6 +218,33 @@ private fun GitHubContributionsLogin(state: GitHubDashboardState, viewModel: Git
         }
         if (state.contributionsLoginError != null) Text(stringResource(R.string.github_contributions_error),
             color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Suppress("DEPRECATION")
+@Composable
+private fun GitHubDeviceAuthorization(code: String, open: (String) -> Unit, cancel: () -> Unit) {
+    val clipboard = LocalClipboardManager.current
+    var copied by remember(code) { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
+        .background(Color(0xFF151A22)).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(stringResource(R.string.github_dashboard_enter_code), color = Color.White,
+            style = MaterialTheme.typography.bodyMedium)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Text(code, Modifier.weight(1f), color = Color.White, fontFamily = FontFamily.Monospace,
+                style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            IconButton(onClick = { clipboard.setText(AnnotatedString(code)); copied = true }) {
+                Icon(Icons.Rounded.ContentCopy, contentDescription = stringResource(R.string.github_dashboard_copy_code), tint = Color.White)
+            }
+        }
+        if (copied) Text(stringResource(R.string.github_dashboard_code_copied), color = Color.White,
+            style = MaterialTheme.typography.labelMedium)
+        Text(stringResource(R.string.github_dashboard_verify_notice), color = Color.White,
+            style = MaterialTheme.typography.bodySmall)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CodexBarButton(onClick = { open(GITHUB_DEVICE_URL) }) { Text(stringResource(R.string.github_dashboard_open_github)) }
+            CodexBarOutlinedButton(onClick = cancel) { Text(stringResource(R.string.github_dashboard_cancel)) }
+        }
     }
 }
 
@@ -230,11 +261,7 @@ private fun GitHubSignInCard(state: GitHubDashboardState, viewModel: GitHubDashb
                     Text(stringResource(R.string.github_dashboard_sign_out))
                 }
             } else {
-                Text(stringResource(R.string.github_dashboard_enter_code), style = MaterialTheme.typography.bodyMedium)
-                Text(state.userCode, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                Text(stringResource(R.string.github_dashboard_verify_notice), style = MaterialTheme.typography.bodySmall)
-                CodexBarButton(onClick = { open(GITHUB_DEVICE_URL) }) { Text(stringResource(R.string.github_dashboard_open_github)) }
-                CodexBarOutlinedButton(onClick = viewModel::signOut) { Text(stringResource(R.string.github_dashboard_cancel)) }
+                GitHubDeviceAuthorization(state.userCode, open, viewModel::signOut)
             }
             GitHubStatus(state, browserError)
         }
