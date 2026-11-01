@@ -2,7 +2,7 @@
 
 ## Header and single design
 
-The existing fixed header retains its dimensions, corner radii and content. Its background transitions from black at the top into a neutral, translucent blurred layer at the bottom; no Siri light or microphone effect is used. Status icons and header content remain light in both system themes. Android 11 and earlier render the same black gradient without backdrop blur.
+The existing fixed header retains its dimensions, corner radii and content. Its background transitions from black at the top into a neutral, clear glass layer at the bottom, tuned to Glisse bend 0.45, dispersion 0.4, frost 0 px and rim 0.13; no Siri light or microphone effect is used. Status icons and header content remain light in both system themes. Android 12 and earlier render the same black gradient without the Android 13+ refraction shader.
 
 Liquid Glass is the only selectable design. Existing Material 3 and retired theme values load as Liquid Glass; legacy launcher aliases stay available for safe upgrades. Redundant category banners in Connections and Settings are removed without removing their controls. Read-only upstream main was checked at `1811d1fe032fd4a80240fd6bc5d04cee649a0afb`; no upstream-only commits required integration or deferral.
 

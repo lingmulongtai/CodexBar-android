@@ -79,10 +79,12 @@ fun GlassPageHeader(
     GlassSurface(
         backdrop = LocalGlassCardBackdrop.current,
         shape = shape,
-        tint = Color.Black.copy(alpha = 0.08f),
+        tint = Color.Transparent,
         fallback = Color.Transparent,
-        rim = Color.White.copy(alpha = 0.16f),
-        blurRadius = 16.dp, refraction = 0f, elevation = 0.dp,
+        rim = Color.White.copy(alpha = 0.13f),
+        blurRadius = 0.dp, refraction = 0.45f, dispersion = 0.4f,
+        // Glisse's reach is a fraction of the full short side; the native rim band is one quarter.
+        allowAsymmetricCorners = true, bendReachScale = 4f, shaderRimShine = 0f, saturation = 1f, elevation = 0.dp,
         modifier = modifier.fillMaxWidth()
     ) {
         Box(Modifier.matchParentSize().clip(shape).background(Brush.verticalGradient(

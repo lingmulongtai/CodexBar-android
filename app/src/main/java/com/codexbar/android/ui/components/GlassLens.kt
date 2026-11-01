@@ -14,15 +14,24 @@ internal class GlassLens {
     private var previous: Parameters? = null
     private var cachedEffect: androidx.compose.ui.graphics.RenderEffect? = null
 
-    private data class Parameters(val width: Float, val height: Float, val corner: Float,
-        val blur: Float, val bend: Float, val density: Float)
+    private data class Parameters(
+        val width: Float, val height: Float, val topLeft: Float, val topRight: Float,
+        val bottomRight: Float, val bottomLeft: Float, val blur: Float, val bend: Float,
+        val dispersion: Float, val rimShine: Float, val saturation: Float, val density: Float
+    )
 
-    fun effect(width: Float, height: Float, corner: Float, blur: Float, bend: Float, density: Float): androidx.compose.ui.graphics.RenderEffect {
-        val parameters = Parameters(width, height, corner, blur, bend, density)
+    fun effect(width: Float, height: Float, topLeft: Float, topRight: Float,
+        bottomRight: Float, bottomLeft: Float, blur: Float, bend: Float, dispersion: Float,
+        rimShine: Float, saturation: Float, density: Float): androidx.compose.ui.graphics.RenderEffect {
+        val parameters = Parameters(width, height, topLeft, topRight, bottomRight, bottomLeft,
+            blur, bend, dispersion, rimShine, saturation, density)
         if (previous == parameters) cachedEffect?.let { return it }
         shader.setFloatUniform("panelSize", width, height)
-        shader.setFloatUniform("corner", corner)
+        shader.setFloatUniform("corners", topLeft, topRight, bottomRight, bottomLeft)
         shader.setFloatUniform("bend", bend)
+        shader.setFloatUniform("dispersion", dispersion)
+        shader.setFloatUniform("rimShine", rimShine)
+        shader.setFloatUniform("saturation", saturation)
         shader.setFloatUniform("density", density)
         val lens = RenderEffect.createRuntimeShaderEffect(shader, "backdrop")
         val effect = if (blur > 0f) {
@@ -44,8 +53,11 @@ internal class GlassLens {
         const val SOURCE = """
             uniform shader backdrop;
             uniform float2 panelSize;
-            uniform float corner;
+            uniform float4 corners;
             uniform float bend;
+            uniform float dispersion;
+            uniform float rimShine;
+            uniform float saturation;
             uniform float density;
 
             float2 bounded(float2 p) {
@@ -55,6 +67,8 @@ internal class GlassLens {
             half4 main(float2 coord) {
                 float2 halfSize = panelSize * 0.5;
                 float2 p = coord - halfSize;
+                float corner = p.y < 0.0 ? (p.x < 0.0 ? corners.x : corners.y)
+                    : (p.x < 0.0 ? corners.w : corners.z);
                 float r = min(corner, min(halfSize.x, halfSize.y));
                 float2 q = abs(p) - halfSize + r;
                 float distance = length(max(q, float2(0.0))) + min(max(q.x, q.y), 0.0) - r;
@@ -68,14 +82,14 @@ internal class GlassLens {
                 float edge = 1.0 - smoothstep(0.0, band, max(0.0, -distance));
                 float2 shift = -normal * edge * edge * band * bend;
                 half4 middle = backdrop.eval(bounded(coord + shift));
-                half red = backdrop.eval(bounded(coord + shift * 1.04)).r;
-                half blue = backdrop.eval(bounded(coord + shift * 0.96)).b;
+                half red = backdrop.eval(bounded(coord + shift * (1.0 + 0.1 * dispersion))).r;
+                half blue = backdrop.eval(bounded(coord + shift * (1.0 - 0.1 * dispersion))).b;
                 half3 colour = half3(red, middle.g, blue);
                 half luminance = dot(colour, half3(0.2126, 0.7152, 0.0722));
-                colour = mix(half3(luminance), colour, 1.12);
+                colour = mix(half3(luminance), colour, half(saturation));
                 float gleam = (1.0 - smoothstep(0.0, 1.2 * density, abs(distance)))
                     * pow(abs(dot(normal, normalize(float2(-1.0, -1.0)))), 2.0);
-                colour = mix(colour, half3(middle.a), half(gleam * 0.14));
+                colour = mix(colour, half3(middle.a), half(gleam * rimShine));
                 return half4(clamp(colour, half3(0.0), half3(middle.a)), middle.a);
             }
         """
