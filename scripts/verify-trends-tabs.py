@@ -67,5 +67,17 @@ root = tree()
 assert tab(root, 'History')[0], 'Cancelled drag changed the page'
 adb('shell', 'input', 'tap', *tab(root, 'Spend')[1])
 time.sleep(1)
-assert tab(tree(), 'Spend')[0], 'Tap navigation failed'
-print('PASS History/Spend held drag in both directions, cancellation, and tap')
+root = tree()
+assert tab(root, 'Spend')[0], 'Tap navigation failed'
+for label in ('History', 'Spend'):
+    count = sum(1 for n in root.iter('node') if n.get('focusable') == 'true'
+                and n.get('selected') in ('true', 'false')
+                and any(c.get('text') == label for c in n.iter('node')))
+    assert count == 1, f'{label} has {count} selectable copies'
+# Keep the chosen page after visiting another top-level section.
+adb('shell', 'input', 'tap', *tab(root, 'Usage')[1])
+time.sleep(1)
+adb('shell', 'input', 'tap', *tab(tree(), 'Trends')[1])
+time.sleep(1)
+assert tab(tree(), 'Spend')[0], 'Spend selection was not restored'
+print('PASS History/Spend held drag, cancellation, tap, single tab row, and restored selection')

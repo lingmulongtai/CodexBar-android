@@ -1,5 +1,9 @@
 # Glisse-inspired Liquid Glass
 
+## Stable selection and page motion
+
+Control lenses enlarge independently of their text and icons. History and Spend share one persistent selector while their content slides between pages, retaining the chosen page and its scroll state. Read-only upstream main was checked at `1811d1fe032fd4a80240fd6bc5d04cee649a0afb`; no upstream-only commits required integration or deferral.
+
 ## Control and page refinement
 
 The native control port references Glisse commit `46be5ba07b60eb507e887ff338ded7840576a79f`. Glisse is MIT-licensed, Copyright (c) 2026 Kelvin Zhang; its license is included in `app/src/main/assets/licenses/glisse-MIT.txt`. Its web backdrop-filter implementation is translated to Android graphics layers and RuntimeShader, with blur/readable fallbacks on older Android. The web and Android renderers need not be pixel-identical across devices.

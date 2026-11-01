@@ -127,10 +127,8 @@ fun CodexBarApp(
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentEntry?.destination?.route ?: initialDestination
     var initialDestinationHandled by rememberSaveable { mutableStateOf(false) }
-    var lastTrendsRoute by rememberSaveable { mutableStateOf(HistoryRoute) }
-
-    LaunchedEffect(currentRoute) {
-        if (currentRoute in AppDestination.Trends.routes) lastTrendsRoute = currentRoute
+    var lastTrendsRoute by rememberSaveable {
+        mutableStateOf(if (initialDestination == SpendRoute) SpendRoute else HistoryRoute)
     }
 
     LaunchedEffect(initialDestination, initialDestinationHandled) {
@@ -172,8 +170,7 @@ fun CodexBarApp(
             icon = destination.icon,
             selected = currentRoute in destination.routes,
             onClick = {
-                val route = if (destination == AppDestination.Trends) lastTrendsRoute else destination.route
-                navController.navigateTopLevel(route)
+                navController.navigateTopLevel(destination.route)
             }
         )
     }
@@ -190,6 +187,8 @@ fun CodexBarApp(
             settingsViewModel = settingsViewModel,
             dashboardViewModel = dashboardViewModel,
             dashboardPreviewSnapshot = dashboardPreviewSnapshot,
+            trendsPage = if (lastTrendsRoute == SpendRoute) UsageAnalyticsPage.Spend else UsageAnalyticsPage.History,
+            onTrendsPageChange = { page -> lastTrendsRoute = if (page == UsageAnalyticsPage.Spend) SpendRoute else HistoryRoute },
             modifier = hostModifier
         )
     }
@@ -265,6 +264,8 @@ private fun AppNavHost(
     settingsViewModel: SettingsViewModel,
     dashboardViewModel: DashboardViewModel?,
     dashboardPreviewSnapshot: QuotaPresentationSnapshot?,
+    trendsPage: UsageAnalyticsPage,
+    onTrendsPageChange: (UsageAnalyticsPage) -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -303,25 +304,22 @@ private fun AppNavHost(
                 viewModel = settingsViewModel
             )
         }
-        val showTrendsPage = { page: UsageAnalyticsPage ->
-            navController.navigateTopLevel(if (page == UsageAnalyticsPage.History) HistoryRoute else SpendRoute)
-        }
         composable(HistoryRoute) {
             UsageAnalyticsScreen(
-                page = UsageAnalyticsPage.History,
+                page = trendsPage,
                 onConnections = { navController.navigateTopLevel(ConnectionsRoute) },
                 preview = dashboardPreviewSnapshot,
                 model = dashboardViewModel,
-                onPageChange = showTrendsPage
+                onPageChange = onTrendsPageChange
             )
         }
         composable(SpendRoute) {
             UsageAnalyticsScreen(
-                page = UsageAnalyticsPage.Spend,
+                page = trendsPage,
                 onConnections = { navController.navigateTopLevel(ConnectionsRoute) },
                 preview = dashboardPreviewSnapshot,
                 model = dashboardViewModel,
-                onPageChange = showTrendsPage
+                onPageChange = onTrendsPageChange
             )
         }
         composable(SettingsRoute) {
