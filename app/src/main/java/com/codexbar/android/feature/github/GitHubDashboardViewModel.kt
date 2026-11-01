@@ -268,7 +268,13 @@ internal class GitHubDashboardViewModel @Inject constructor(
         val previous = layoutSaveJob
         layoutSaveJob = viewModelScope.launch {
             previous?.join()
-            prefs.saveGitHubDashboardLayoutIfCurrent(next, revision, token)
+            if (!prefs.saveGitHubDashboardLayoutIfCurrent(next, revision, token) &&
+                layoutRevision == revision && _state.value.profile?.id == next.ownerId) {
+                refreshJob?.join()
+                val currentToken = layoutRefreshToken
+                if (currentToken != null && layoutRevision == revision && _state.value.profile?.id == next.ownerId)
+                    prefs.saveGitHubDashboardLayoutIfCurrent(next, revision, currentToken)
+            }
         }
     }
 

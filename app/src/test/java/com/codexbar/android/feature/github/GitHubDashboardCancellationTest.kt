@@ -1,6 +1,7 @@
 package com.codexbar.android.feature.github
 
 import com.codexbar.android.core.domain.model.GitHubDashboardSession
+import com.codexbar.android.core.domain.model.GitHubDashboardLayout
 import com.codexbar.android.core.network.github.GitHubDashboardApi
 import com.codexbar.android.core.network.github.GitHubHttpResponse
 import com.codexbar.android.core.security.EncryptedPrefsManager
@@ -106,6 +107,36 @@ class GitHubDashboardCancellationTest {
             runCurrent()
             assertNull(vm.state.value.profile)
             assertFalse(vm.state.value.hasStoredSession)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test fun `contribution authorization rejects a different GitHub account`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val prefs = mock(EncryptedPrefsManager::class.java)
+            `when`(prefs.gitHubDashboardRevision).thenReturn(MutableStateFlow(0L))
+            `when`(prefs.currentGitHubDashboardRevision()).thenReturn(0L)
+            `when`(prefs.loadGitHubDashboardSession()).thenReturn(
+                GitHubDashboardSession("app", "app-access", "app-refresh", Long.MAX_VALUE))
+            `when`(prefs.loadGitHubDashboardLayout(1L)).thenReturn(GitHubDashboardLayout.default(1L))
+            val api = GitHubDashboardApi(Json { ignoreUnknownKeys = true }) { request ->
+                when (request.url.encodedPath) {
+                    "/user" -> if (request.header("Authorization") == "Bearer oauth-access")
+                        GitHubHttpResponse(200, """{"login":"other","id":2}""")
+                        else GitHubHttpResponse(200, """{"login":"example","id":1}""")
+                    "/user/repos" -> GitHubHttpResponse(200, "[]")
+                    "/login/device/code" -> GitHubHttpResponse(200, """{"device_code":"secret","user_code":"ABCD-1234","verification_uri":"https://github.com/login/device","expires_in":900,"interval":5}""")
+                    "/login/oauth/access_token" -> GitHubHttpResponse(200, """{"access_token":"oauth-access","refresh_token":"oauth-refresh","expires_in":28800,"scope":"read:user","token_type":"bearer"}""")
+                    else -> throw java.io.IOException("optional data unavailable")
+                }
+            }
+            val vm = GitHubDashboardViewModel(api, prefs)
+            runCurrent()
+            vm.signInContributions("client")
+            runCurrent(); advanceTimeBy(5001); runCurrent()
+            assertEquals(0, mockingDetails(prefs).invocations.count { it.method.name == "saveGitHubContributionsSessionIfCurrent" })
+            assertFalse(vm.state.value.privateContributionsConnected)
+            assertEquals(GitHubDashboardError.Unavailable, vm.state.value.contributionsLoginError)
         } finally { Dispatchers.resetMain() }
     }
 
