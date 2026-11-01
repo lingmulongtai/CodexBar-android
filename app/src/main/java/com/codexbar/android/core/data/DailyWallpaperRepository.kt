@@ -38,7 +38,7 @@ data class WallpaperState(
 )
 
 @Serializable
-private data class SavedWallpaper(val day: String, val photo: WallpaperPhoto, val filename: String, val editorial: Boolean)
+private data class SavedWallpaper(val day: String, val photo: WallpaperPhoto, val filename: String, val editorial: Boolean, val policyVersion: Int = 0)
 
 /** One app-wide daily selection. Navigation never discards a successfully loaded background. */
 @Singleton
@@ -96,7 +96,7 @@ class DailyWallpaperRepository @Inject constructor(
             if (!_state.value.preferences.enabled) return@withLock
             val today = LocalDate.now()
             val key = prefs.loadWallpaperAccessKey()
-            if (!force && saved?.day == today.toString() && saved?.editorial == (key != null) && _state.value.bitmap != null) {
+            if (!force && saved?.day == today.toString() && saved?.editorial == (key != null) && saved?.policyVersion == 1 && _state.value.bitmap != null) {
                 _state.update { it.copy(status = WallpaperStatus.Ready) }
                 return@withLock
             }
@@ -127,7 +127,7 @@ class DailyWallpaperRepository @Inject constructor(
                 if (prefs.loadWallpaperAccessKey() != key || !prefs.wallpaperPreferences.first().enabled) return@withLock
                 val filename = "image-${photo.id.replace(Regex("[^a-zA-Z0-9_-]"), "")}.jpg"
                 AtomicFile(File(directory, filename)).writeSafely(bytes)
-                val selected = SavedWallpaper(today.toString(), photo, filename, key != null)
+                val selected = SavedWallpaper(today.toString(), photo, filename, key != null, policyVersion = 1)
                 record.writeSafely(json.encodeToString(selected).encodeToByteArray())
                 saved = selected
                 _state.update { it.copy(photo = photo, bitmap = bitmap, day = selected.day, status = WallpaperStatus.Ready) }
@@ -178,7 +178,7 @@ class DailyWallpaperRepository @Inject constructor(
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
         if (bounds.outWidth !in 1..8192 || bounds.outHeight !in 1..8192) return null
         val options = BitmapFactory.Options().apply {
-            while (maxOf(bounds.outWidth, bounds.outHeight) / inSampleSize.coerceAtLeast(1) > 2048) inSampleSize = inSampleSize.coerceAtLeast(1) * 2
+            while (maxOf(bounds.outWidth, bounds.outHeight) / inSampleSize.coerceAtLeast(1) > 3072) inSampleSize = inSampleSize.coerceAtLeast(1) * 2
         }
         return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
     }

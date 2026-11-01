@@ -32,12 +32,12 @@ internal fun isWallpaperUrl(value: String, host: String): Boolean = value.toHttp
 } == true
 
 internal val CuratedWallpapers = listOf(
-    WallpaperPhoto("VowIFDxogG4", "Luca Bravo", "https://unsplash.com/@lucabravo", "https://unsplash.com/photos/VowIFDxogG4", "https://images.unsplash.com/photo-1470770903676-69b98201ea1c"),
-    WallpaperPhoto("sp-p7uuT0tw", "Sebastian Unrau", "https://unsplash.com/@sebastian_unrau", "https://unsplash.com/photos/sp-p7uuT0tw", "https://images.unsplash.com/photo-1448375240586-882707db888b"),
-    WallpaperPhoto("_v-EHHKKW3w", "Adrian Infernus", "https://unsplash.com/@adrian_infernus", "https://unsplash.com/photos/_v-EHHKKW3w", "https://images.unsplash.com/photo-1543871645-b3be1624a0fc"),
-    WallpaperPhoto("qfcBVgqJ_1E", "Ricardo Gomez Angel", "https://unsplash.com/@rgaleriacom", "https://unsplash.com/photos/qfcBVgqJ_1E", "https://images.unsplash.com/photo-1527749561912-77dfac6274db"),
-    WallpaperPhoto("zp_iEPfwvw0", "Wolfgang Hasselmann", "https://unsplash.com/@wolfgang_hasselmann", "https://unsplash.com/photos/zp_iEPfwvw0", "https://images.unsplash.com/photo-1716492444249-e5a6981daf58"),
-    WallpaperPhoto("dJVU4jXV1Q8", "Sebastian Unrau", "https://unsplash.com/@sebastian_unrau", "https://unsplash.com/photos/dJVU4jXV1Q8", "https://images.unsplash.com/photo-1440847899694-90043f91c7f9")
+    WallpaperPhoto("2KXEb_8G5vo", "kazuend", "https://unsplash.com/@kazuend", "https://unsplash.com/photos/2KXEb_8G5vo", "https://images.unsplash.com/photo-1436891620584-47fd0e565afb"),
+    WallpaperPhoto("mPnxwQBtUZE", "Casey Horner", "https://unsplash.com/@mischievous_penguins", "https://unsplash.com/photos/mPnxwQBtUZE", "https://images.unsplash.com/photo-1515825838458-f2a94b20105a"),
+    WallpaperPhoto("mpGsMCn3oHE", "Federico Bottos", "https://unsplash.com/@landscapeplaces", "https://unsplash.com/photos/mpGsMCn3oHE", "https://images.unsplash.com/photo-1519068261745-b3f8ecd6b8d9"),
+    WallpaperPhoto("eCohyQiC_qg", "Earth", "https://unsplash.com/@earth", "https://unsplash.com/photos/eCohyQiC_qg", "https://images.unsplash.com/photo-1522092787785-60123fde65c4"),
+    WallpaperPhoto("hOhlYhAiizc", "Daniela Kokina", "https://unsplash.com/@danielakokina", "https://unsplash.com/photos/hOhlYhAiizc", "https://images.unsplash.com/photo-1615729947596-a598e5de0ab3"),
+    WallpaperPhoto("Kol2ib6ehQE", "Karina Vorozheeva", "https://unsplash.com/@_k_arinn", "https://unsplash.com/photos/Kol2ib6ehQE", "https://images.unsplash.com/photo-1526336179256-1347bdb255ee")
 )
 
 internal fun selectEditorialWallpaper(data: JsonArray, date: LocalDate, currentId: String? = null,
@@ -45,7 +45,9 @@ internal fun selectEditorialWallpaper(data: JsonArray, date: LocalDate, currentI
     val candidates = data.mapNotNull { value ->
         runCatching {
             val photo = value.jsonObject
-            require(photo["width"]!!.jsonPrimitive.int >= photo["height"]!!.jsonPrimitive.int)
+            val width = photo["width"]!!.jsonPrimitive.int
+            val height = photo["height"]!!.jsonPrimitive.int
+            require(width > 0 && height > 0)
             val user = photo["user"]!!.jsonObject
             WallpaperPhoto(photo["id"]!!.jsonPrimitive.content, user["name"]!!.jsonPrimitive.content,
                 user["links"]!!.jsonObject["html"]!!.jsonPrimitive.content,
@@ -54,8 +56,9 @@ internal fun selectEditorialWallpaper(data: JsonArray, date: LocalDate, currentI
                 photo["links"]!!.jsonObject["download_location"]!!.jsonPrimitive.content).also {
                 require(it.id.matches(Regex("[A-Za-z0-9_-]{1,128}")) && it.photographer.isNotBlank())
                 require(isWallpaperUrl(it.imageUrl, "images.unsplash.com") && isWallpaperUrl(it.photoUrl, "unsplash.com") && isWallpaperUrl(it.profileUrl, "unsplash.com") && isWallpaperUrl(it.downloadUrl!!, "api.unsplash.com"))
-            }
+            } to (height > width)
         }.getOrNull()
     }
-    return chooseWallpaper(candidates, date, currentId, changePhoto, avoidRepeat)
+    val portraits = candidates.filter { it.second }
+    return chooseWallpaper((portraits.ifEmpty { candidates }).map { it.first }, date, currentId, changePhoto, avoidRepeat)
 }
