@@ -11,9 +11,12 @@ enum class GitHubWidgetSize { SMALL, MEDIUM, LARGE }
 data class GitHubWidget(
     val kind: GitHubWidgetKind,
     val repositoryId: Long? = null,
-    val size: GitHubWidgetSize = GitHubWidgetSize.MEDIUM
+    val size: GitHubWidgetSize = GitHubWidgetSize.MEDIUM,
+    val calendarScale: Float? = null
 ) {
     val key: String get() = if (kind == GitHubWidgetKind.REPOSITORY) "repo:$repositoryId" else kind.name
+    val effectiveCalendarScale: Float get() = calendarScale?.takeIf { it.isFinite() }?.coerceIn(0.42f, 1.6f)
+        ?: when (size) { GitHubWidgetSize.SMALL -> 0.83f; GitHubWidgetSize.MEDIUM -> 1f; GitHubWidgetSize.LARGE -> 1.33f }
 }
 
 @Serializable
@@ -32,7 +35,11 @@ fun GitHubDashboardLayout.normalized(ownerId: Long): GitHubDashboardLayout {
         if (widget.kind == GitHubWidgetKind.REPOSITORY) (widget.repositoryId ?: 0L) > 0L
         else widget.repositoryId == null
     }.distinctBy { it.key }.take(40).map { widget ->
-        if (widget.kind !in setOf(GitHubWidgetKind.REPOSITORY, GitHubWidgetKind.CALENDAR)) widget.copy(size = GitHubWidgetSize.MEDIUM) else widget
+        when (widget.kind) {
+            GitHubWidgetKind.CALENDAR -> widget.copy(calendarScale = widget.calendarScale?.takeIf { it.isFinite() }?.coerceIn(0.42f, 1.6f))
+            GitHubWidgetKind.REPOSITORY -> widget.copy(calendarScale = null)
+            else -> widget.copy(size = GitHubWidgetSize.MEDIUM, calendarScale = null)
+        }
     }.toList()
     return copy(widgets = valid)
 }
