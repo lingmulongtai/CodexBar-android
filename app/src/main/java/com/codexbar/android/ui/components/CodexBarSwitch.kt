@@ -11,8 +11,6 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.absoluteOffset
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
@@ -62,7 +60,7 @@ fun CodexBarSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifie
     val green = if (profile.isDark) Color(0xFF30D158) else Color(0xFF34C759)
     val grey = if (profile.isDark) Color(0xFF555563) else Color(0xFFB8BBC6)
     Box(
-        modifier.size(64.dp, 48.dp)
+        modifier.size(56.dp, 48.dp)
             .then(if (focused) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
             .toggleable(checked, enabled = enabled, role = Role.Switch, interactionSource = interaction,
                 indication = null, onValueChange = onCheckedChange)
@@ -77,7 +75,7 @@ fun CodexBarSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifie
                     },
                     onDrag = { change, _ ->
                         change.consume()
-                        dragPosition = glassSwitchPosition(from, change.position.x - startX, 32.dp.toPx(), rtl)
+                        dragPosition = glassSwitchPosition(from, change.position.x - startX, 22.dp.toPx(), rtl)
                     },
                     onDragEnd = {
                         val next = dragPosition?.let { it > 0.5f }
@@ -90,7 +88,7 @@ fun CodexBarSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifie
         contentAlignment = Alignment.Center
     ) {
         val track = lerp(grey, green, position.coerceIn(0f, 1f))
-        Box(Modifier.size(60.dp, 26.dp).graphicsLayer { alpha = if (enabled) 1f else 0.38f }
+        Box(Modifier.size(50.dp, 26.dp).graphicsLayer { alpha = if (enabled) 1f else 0.38f }
             .background(track, CircleShape)) {
             val visual = if (rtl) 1f - position else position
             GlassSurface(
@@ -99,11 +97,11 @@ fun CodexBarSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifie
                 rim = Color.White.copy(alpha = 0.95f), blurRadius = 2.dp,
                 refraction = 0.45f + lift * 0.35f, elevation = 2.dp,
                 modifier = Modifier.align(AbsoluteAlignment.TopLeft).size(24.dp)
-                    .absoluteOffset { IntOffset((2.dp.toPx() + 32.dp.toPx() * visual).roundToInt(), 1.dp.roundToPx()) }
-                    .graphicsLayer { scaleX = 1f + lift * 0.80f; scaleY = 1f + lift * 0.30f }
+                    .absoluteOffset { IntOffset((2.dp.toPx() + 22.dp.toPx() * visual).roundToInt(), 1.dp.roundToPx()) }
+                    .graphicsLayer { scaleX = 1f + lift * 0.20f; scaleY = 1f + lift * 0.20f }
             ) {
                 // The lifted lens reveals the colored track beneath it, as in Glisse.
-                Box(Modifier.fillMaxWidth(0.90f).height(18.dp)
+                Box(Modifier.size(18.dp)
                     .background(track.copy(alpha = lift * 0.55f), CircleShape))
             }
         }

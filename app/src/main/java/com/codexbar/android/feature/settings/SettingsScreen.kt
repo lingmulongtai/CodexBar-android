@@ -2480,13 +2480,13 @@ private fun NotificationsSection(
             Slider(
                 value = durationMinutes.toFloat(),
                 onValueChange = { value ->
-                    val minutes = ((value / 15f).roundToInt() * 15)
+                    val minutes = ((value / 5f).roundToInt() * 5)
                         .coerceIn(15, 180)
                         .toLong()
                     onDurationChange(minutes)
                 },
                 valueRange = 15f..180f,
-                steps = 10,
+                steps = 32,
                 enabled = !isMonitoring
             )
             Text(
