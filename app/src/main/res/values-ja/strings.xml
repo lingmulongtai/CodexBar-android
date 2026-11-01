@@ -655,4 +655,5 @@
     <string name="github_dashboard_no_repos">表示できるリポジトリがありません。GitHub App をインストールして共有先を選択してください。</string>
     <string name="github_dashboard_private">非公開</string>
     <string name="github_dashboard_public">公開</string>
+    <string name="github_dashboard_manage_access">共有するリポジトリを選ぶ</string>
 </resources>

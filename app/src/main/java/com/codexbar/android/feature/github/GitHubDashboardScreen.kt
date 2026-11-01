@@ -18,8 +18,9 @@ import com.codexbar.android.R
 import com.codexbar.android.ui.components.*
 
 /** Client IDs identify public GitHub Apps; they are not client secrets. */
-private const val DEFAULT_GITHUB_APP_CLIENT_ID = ""
+private const val DEFAULT_GITHUB_APP_CLIENT_ID = "Iv23li5qbXjbIOCe5g6i"
 private const val GITHUB_DEVICE_URL = "https://github.com/login/device"
+private const val GITHUB_INSTALL_URL = "https://github.com/apps/codexbar-android-dashboard/installations/new"
 
 @Composable
 internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltViewModel()) {
@@ -58,6 +59,7 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
                         Text(profile.name ?: profile.login, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         Text("@" + profile.login, style = MaterialTheme.typography.bodyMedium)
                         Text(stringResource(R.string.github_dashboard_public_count, profile.publicRepos), style = MaterialTheme.typography.bodySmall)
+                        CodexBarTextButton(onClick = { open(GITHUB_INSTALL_URL) }) { Text(stringResource(R.string.github_dashboard_manage_access)) }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             CodexBarOutlinedButton(onClick = viewModel::refresh, enabled = !state.loading) { Text(stringResource(R.string.action_refresh)) }
                             CodexBarOutlinedButton(onClick = viewModel::signOut) { Text(stringResource(R.string.github_dashboard_sign_out)) }

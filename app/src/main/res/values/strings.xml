@@ -657,4 +657,5 @@
     <string name="github_dashboard_no_repos">No accessible repositories. Install the GitHub App and choose repositories to share.</string>
     <string name="github_dashboard_private">Private</string>
     <string name="github_dashboard_public">Public</string>
+    <string name="github_dashboard_manage_access">Choose shared repositories</string>
 </resources>
