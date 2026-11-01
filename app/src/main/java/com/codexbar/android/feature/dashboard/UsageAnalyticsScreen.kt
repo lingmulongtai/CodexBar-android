@@ -1,8 +1,6 @@
 package com.codexbar.android.feature.dashboard
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -111,8 +109,8 @@ private fun AnalyticsContent(
             transitionSpec = {
                 val forward = (targetState.ordinal > initialState.ordinal) != rtl
                 val direction = if (forward) 1 else -1
-                (slideInHorizontally(tween(260)) { it / 4 * direction } + fadeIn(tween(200))) togetherWith
-                    (slideOutHorizontally(tween(260)) { -it / 4 * direction } + fadeOut(tween(200)))
+                slideInHorizontally(tween(260)) { it / 4 * direction } togetherWith
+                    slideOutHorizontally(tween(260)) { -it / 4 * direction }
             },
             label = "trends_page"
         ) { visiblePage ->

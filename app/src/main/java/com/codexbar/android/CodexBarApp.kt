@@ -2,9 +2,6 @@ package com.codexbar.android
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -40,7 +37,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -53,6 +52,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.ui.components.ResetNotificationPermissionSetup
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -65,6 +65,7 @@ import com.codexbar.android.feature.settings.ConnectionsScreen
 import com.codexbar.android.feature.settings.SettingsScreen
 import com.codexbar.android.feature.settings.SettingsViewModel
 import com.codexbar.android.core.domain.model.AppThemeStyle
+import com.codexbar.android.ui.components.LocalTopLevelSlideDirection
 import com.codexbar.android.ui.components.LocalBottomChromeInset
 import com.codexbar.android.ui.components.LocalGlassCardBackdrop
 import com.codexbar.android.ui.components.glassBackdropSource
@@ -134,6 +135,17 @@ fun CodexBarApp(
         configuration.resetNotificationEnabled && (configuration.desktop.services.isNotEmpty() || configuration.serviceStates.values.any { it.isConnected }))
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentEntry?.destination?.route ?: initialDestination
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    var slideDirection by remember { mutableStateOf(0) }
+    DisposableEffect(navController, rtl) {
+        var previousRoute = navController.currentDestination?.route
+        val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
+            slideDirection = topLevelSlideDirection(previousRoute, destination.route, rtl)
+            previousRoute = destination.route
+        }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
+    }
     var initialDestinationHandled by rememberSaveable { mutableStateOf(false) }
     var lastTrendsRoute by rememberSaveable {
         mutableStateOf(if (initialDestination == SpendRoute) SpendRoute else HistoryRoute)
@@ -229,6 +241,7 @@ fun CodexBarApp(
                     WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                 CompositionLocalProvider(
                     LocalBottomChromeInset provides bottomInset,
+                    LocalTopLevelSlideDirection provides slideDirection,
                     LocalGlassCardBackdrop provides cardBackdrop,
                     LocalWallpaperState provides wallpaper
                 ) {
@@ -276,27 +289,14 @@ private fun AppNavHost(
     onTrendsPageChange: (UsageAnalyticsPage) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     NavHost(
         navController = navController,
         startDestination = DashboardRoute,
         modifier = modifier.clipToBounds(),
-        enterTransition = {
-            val direction = topLevelSlideDirection(initialState.destination.route, targetState.destination.route, rtl)
-            if (direction == 0) EnterTransition.None else slideInHorizontally(tween(280)) { it * direction }
-        },
-        exitTransition = {
-            val direction = topLevelSlideDirection(initialState.destination.route, targetState.destination.route, rtl)
-            if (direction == 0) ExitTransition.None else slideOutHorizontally(tween(280)) { -it * direction }
-        },
-        popEnterTransition = {
-            val direction = topLevelSlideDirection(initialState.destination.route, targetState.destination.route, rtl)
-            if (direction == 0) EnterTransition.None else slideInHorizontally(tween(280)) { it * direction }
-        },
-        popExitTransition = {
-            val direction = topLevelSlideDirection(initialState.destination.route, targetState.destination.route, rtl)
-            if (direction == 0) ExitTransition.None else slideOutHorizontally(tween(280)) { -it * direction }
-        }
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None }
     ) {
         composable(DashboardRoute) {
             val navigateToConnections = {
