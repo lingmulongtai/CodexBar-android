@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material3.CircularProgressIndicator
@@ -67,7 +68,8 @@ internal fun DashboardHeader(
     title: String = stringResource(R.string.app_name),
     showMark: Boolean = true,
     onStartReorder: (() -> Unit)? = null,
-    onFinishReorder: (() -> Unit)? = null
+    onFinishReorder: (() -> Unit)? = null,
+    onOpenSettings: (() -> Unit)? = null
 ) {
     val profile = LocalCodexBarThemeProfile.current
     if (profile.style == AppThemeStyle.LIQUID_GLASS) {
@@ -80,7 +82,15 @@ internal fun DashboardHeader(
                     style = MaterialTheme.typography.bodyMedium, color = headerSecondary,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
-        }, actions = { DashboardOrderAction(onStartReorder, onFinishReorder) })
+        }, actions = {
+            DashboardOrderAction(onStartReorder, onFinishReorder)
+            onOpenSettings?.let { open ->
+                IconButton(onClick = open) {
+                    Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.settings_title),
+                        tint = Color.White.copy(alpha = 0.85f))
+                }
+            }
+        })
         return
     }
     Row(

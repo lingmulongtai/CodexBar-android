@@ -310,13 +310,15 @@ private fun AppNavHost(
                 DashboardScreen(
                     viewModel = dashboardViewModel,
                     onNavigateToConnections = navigateToConnections,
+                    onNavigateToSettings = { navController.navigate(SettingsRoute) { launchSingleTop = true } },
                     initialSelectedService = initialDashboardService,
                     onInitialSelectionConsumed = onDashboardServiceConsumed
                 )
             } else if (dashboardPreviewSnapshot != null) {
                 DashboardPreviewScreen(
                     snapshot = dashboardPreviewSnapshot,
-                    onNavigateToConnections = navigateToConnections
+                    onNavigateToConnections = navigateToConnections,
+                    onNavigateToSettings = { navController.navigate(SettingsRoute) { launchSingleTop = true } }
                 )
             }
         }

@@ -83,6 +83,7 @@ private const val TwoPaneMinWidthDp = 720f
 @Composable
 fun DashboardScreen(
     onNavigateToConnections: () -> Unit,
+    onNavigateToSettings: () -> Unit = {},
     initialSelectedService: AiService? = null,
     onInitialSelectionConsumed: () -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel()
@@ -101,6 +102,7 @@ fun DashboardScreen(
         refresh = refresh,
         onRefresh = viewModel::refresh,
         onNavigateToConnections = onNavigateToConnections,
+        onNavigateToSettings = onNavigateToSettings,
         initialSelectedService = initialSelectedService,
         onInitialSelectionConsumed = onInitialSelectionConsumed,
         providerOrder = providerOrder,
@@ -112,7 +114,8 @@ fun DashboardScreen(
 @Composable
 fun DashboardPreviewScreen(
     snapshot: QuotaPresentationSnapshot,
-    onNavigateToConnections: () -> Unit = {}
+    onNavigateToConnections: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
     var order by remember { mutableStateOf(emptyList<AiService>()) }
     DashboardContent(
@@ -121,7 +124,8 @@ fun DashboardPreviewScreen(
         uiState = DashboardUiState.Content(snapshot),
         refresh = DashboardRefreshState(),
         onRefresh = {},
-        onNavigateToConnections = onNavigateToConnections
+        onNavigateToConnections = onNavigateToConnections,
+        onNavigateToSettings = onNavigateToSettings
     )
 }
 
@@ -132,6 +136,7 @@ private fun DashboardContent(
     refresh: DashboardRefreshState,
     onRefresh: () -> Unit,
     onNavigateToConnections: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     initialSelectedService: AiService? = null,
     onInitialSelectionConsumed: () -> Unit = {},
     providerOrder: List<AiService> = emptyList(),
@@ -174,7 +179,8 @@ private fun DashboardContent(
                 title = if (glass) title else stringResource(R.string.app_name),
                 showMark = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() } < 600.dp,
                 onStartReorder = if (services.size > 1) ({ showOnlyAttention = false; reordering = true }) else null,
-                onFinishReorder = if (reordering) ({ reordering = false }) else null
+                onFinishReorder = if (reordering) ({ reordering = false }) else null,
+                onOpenSettings = onNavigateToSettings
             )
         }) { headerHeight ->
             // The pull gesture starts a refresh; progress is shown in place, never over the content.
