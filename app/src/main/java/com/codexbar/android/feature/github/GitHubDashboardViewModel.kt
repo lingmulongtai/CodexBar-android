@@ -20,7 +20,8 @@ import com.codexbar.android.core.security.EncryptedPrefsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.IOException
 import java.net.UnknownHostException
-import java.net.ConnectException
+import java.net.SocketException
+import java.io.EOFException
 import java.net.SocketTimeoutException
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -390,7 +391,7 @@ internal fun GitHubTokenResponse.toContributionsToken(clientId: String): GitHubD
 }
 
 internal fun IOException.retryableDevicePoll(): Boolean = when (this) {
-    is UnknownHostException, is ConnectException, is SocketTimeoutException -> true
+    is UnknownHostException, is SocketException, is SocketTimeoutException, is EOFException -> true
     is GitHubDashboardException -> status == 429 || status in 500..599
     else -> false
 }
