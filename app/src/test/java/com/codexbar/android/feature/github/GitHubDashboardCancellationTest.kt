@@ -5,6 +5,7 @@ import com.codexbar.android.core.network.github.GitHubDashboardApi
 import com.codexbar.android.core.network.github.GitHubHttpResponse
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
@@ -32,6 +33,8 @@ class GitHubDashboardCancellationTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
             val prefs = mock(EncryptedPrefsManager::class.java)
+            `when`(prefs.gitHubDashboardRevision).thenReturn(MutableStateFlow(0L))
+            `when`(prefs.currentGitHubDashboardRevision()).thenReturn(0L)
             `when`(prefs.loadGitHubDashboardSession()).thenReturn(
                 GitHubDashboardSession("client", "access", "refresh", Long.MAX_VALUE)
             )
@@ -50,11 +53,68 @@ class GitHubDashboardCancellationTest {
         }
     }
 
+    @Test fun `global credential removal cancels pending authorization`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val reply = CompletableDeferred<GitHubHttpResponse>()
+        try {
+            val prefs = mock(EncryptedPrefsManager::class.java)
+            val revisions = MutableStateFlow(0L)
+            `when`(prefs.gitHubDashboardRevision).thenReturn(revisions)
+            `when`(prefs.currentGitHubDashboardRevision()).thenReturn(0L)
+            val api = GitHubDashboardApi(Json { ignoreUnknownKeys = true }) { request ->
+                if (request.url.encodedPath.startsWith("/apps/")) GitHubHttpResponse(200,
+                    """{"client_id":"client-id","slug":"codexbar-android-dashboard","owner":{"login":"lingmulongtai"}}""")
+                else if (request.url.encodedPath.endsWith("/device/code")) GitHubHttpResponse(200,
+                    """{"device_code":"secret","user_code":"ABCD-1234","verification_uri":"https://github.com/login/device","expires_in":900,"interval":5}""")
+                else withContext(NonCancellable) { reply.await() }
+            }
+            val vm = GitHubDashboardViewModel(api, prefs)
+            runCurrent(); vm.signIn(); runCurrent(); advanceTimeBy(5001); runCurrent()
+            revisions.value = 1L
+            runCurrent()
+            reply.complete(GitHubHttpResponse(200, """{"access_token":"access","refresh_token":"refresh","expires_in":28800}"""))
+            runCurrent()
+            assertEquals(0, mockingDetails(prefs).invocations.count { it.method.name == "saveGitHubDashboardSessionIfRevision" })
+            assertNull(vm.state.value.userCode)
+            assertNull(vm.state.value.profile)
+        } finally {
+            reply.cancel()
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test fun `global credential removal clears a loaded profile`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val prefs = mock(EncryptedPrefsManager::class.java)
+            val revisions = MutableStateFlow(0L)
+            `when`(prefs.gitHubDashboardRevision).thenReturn(revisions)
+            `when`(prefs.loadGitHubDashboardSession()).thenReturn(
+                GitHubDashboardSession("client", "access", "refresh", Long.MAX_VALUE))
+            val api = GitHubDashboardApi(Json { ignoreUnknownKeys = true }) { request ->
+                when (request.url.encodedPath) {
+                    "/user" -> GitHubHttpResponse(200, """{"login":"example","public_repos":1}""")
+                    "/user/repos" -> GitHubHttpResponse(200, "[]")
+                    else -> throw java.io.IOException("optional data unavailable")
+                }
+            }
+            val vm = GitHubDashboardViewModel(api, prefs)
+            runCurrent()
+            assertEquals("example", vm.state.value.profile?.login)
+            revisions.value = 1L
+            runCurrent()
+            assertNull(vm.state.value.profile)
+            assertFalse(vm.state.value.hasStoredSession)
+        } finally { Dispatchers.resetMain() }
+    }
+
     @Test fun `sign out cannot be undone by a late device authorization`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val reply = CompletableDeferred<GitHubHttpResponse>()
         try {
             val prefs = mock(EncryptedPrefsManager::class.java)
+            `when`(prefs.gitHubDashboardRevision).thenReturn(MutableStateFlow(0L))
+            `when`(prefs.currentGitHubDashboardRevision()).thenReturn(0L)
             val api = GitHubDashboardApi(Json { ignoreUnknownKeys = true }) { request ->
                 if (request.url.encodedPath.startsWith("/apps/")) GitHubHttpResponse(200, """{"client_id":"client-id","slug":"codexbar-android-dashboard","owner":{"login":"lingmulongtai"}}""")
                 else if (request.url.encodedPath.endsWith("/device/code")) GitHubHttpResponse(200,
@@ -72,7 +132,7 @@ class GitHubDashboardCancellationTest {
             reply.complete(GitHubHttpResponse(200, """{"access_token":"access","refresh_token":"refresh","expires_in":28800}"""))
             runCurrent()
             verify(prefs).deleteGitHubDashboardSession()
-            assertEquals(0, mockingDetails(prefs).invocations.count { it.method.name == "saveGitHubDashboardSession" })
+            assertEquals(0, mockingDetails(prefs).invocations.count { it.method.name == "saveGitHubDashboardSessionIfRevision" })
             assertNull(vm.state.value.profile)
             assertNull(vm.state.value.userCode)
         } finally {

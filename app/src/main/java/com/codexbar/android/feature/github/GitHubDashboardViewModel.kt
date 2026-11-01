@@ -57,7 +57,20 @@ internal class GitHubDashboardViewModel @Inject constructor(
     private var refreshJob: Job? = null
     private var signOutJob: Job? = null
 
-    init { refresh() }
+    init {
+        viewModelScope.launch {
+            var previous: Long? = null
+            prefs.gitHubDashboardRevision.collect { revision ->
+                if (previous != null && previous != revision) {
+                    loginJob?.cancel()
+                    refreshJob?.cancel()
+                    _state.value = GitHubDashboardState()
+                }
+                previous = revision
+            }
+        }
+        refresh()
+    }
 
     fun signIn() {
         if (loginJob?.isActive == true || signOutJob?.isActive == true) return
@@ -65,6 +78,7 @@ internal class GitHubDashboardViewModel @Inject constructor(
             refreshJob?.cancelAndJoin()
             _state.update { it.copy(loading = true, userCode = null, error = null) }
             try {
+                val revision = prefs.currentGitHubDashboardRevision()
                 val clientId = api.clientId()
                 val challenge = api.start(clientId)
                 _state.update { it.copy(userCode = challenge.userCode) }
@@ -81,7 +95,10 @@ internal class GitHubDashboardViewModel @Inject constructor(
                         null -> {
                             val session = token.toSession(clientId)
                             currentCoroutineContext().ensureActive()
-                            prefs.saveGitHubDashboardSession(session)
+                            if (!prefs.saveGitHubDashboardSessionIfRevision(session, revision)) {
+                                _state.value = GitHubDashboardState()
+                                return@launch
+                            }
                             _state.update { it.copy(hasStoredSession = true) }
                             completed = true
                             break

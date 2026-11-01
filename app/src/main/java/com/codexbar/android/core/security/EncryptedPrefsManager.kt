@@ -324,8 +324,23 @@ class EncryptedPrefsManager @Inject constructor(
         updateCache()
     }
 
-    suspend fun saveGitHubDashboardSession(session: GitHubDashboardSession) {
-        dataStore.edit { it.putEncryptedString(GITHUB_DASHBOARD_SESSION, Json.encodeToString(session)) }
+    /** Revision changes atomically whenever dashboard credentials are removed. */
+    val gitHubDashboardRevision = dataStore.data
+        .map { it[GITHUB_DASHBOARD_REVISION] ?: 0L }
+        .distinctUntilChanged()
+        .catch { emit(Long.MIN_VALUE) }
+
+    suspend fun currentGitHubDashboardRevision(): Long = dataStore.data.first()[GITHUB_DASHBOARD_REVISION] ?: 0L
+
+    suspend fun saveGitHubDashboardSessionIfRevision(session: GitHubDashboardSession, expectedRevision: Long): Boolean {
+        var saved = false
+        dataStore.edit { prefs ->
+            if ((prefs[GITHUB_DASHBOARD_REVISION] ?: 0L) == expectedRevision) {
+                prefs.putEncryptedString(GITHUB_DASHBOARD_SESSION, Json.encodeToString(session))
+                saved = true
+            }
+        }
+        return saved
     }
 
     suspend fun loadGitHubDashboardSession(): GitHubDashboardSession? {
@@ -349,13 +364,17 @@ class EncryptedPrefsManager @Inject constructor(
     }
 
     suspend fun deleteGitHubDashboardSession() {
-        dataStore.edit { it.remove(stringPreferencesKey(GITHUB_DASHBOARD_SESSION)) }
+        dataStore.edit { prefs ->
+            prefs.remove(stringPreferencesKey(GITHUB_DASHBOARD_SESSION))
+            prefs[GITHUB_DASHBOARD_REVISION] = (prefs[GITHUB_DASHBOARD_REVISION] ?: 0L) + 1L
+        }
     }
 
     suspend fun deleteAllCredentials() {
         dataStore.edit { prefs ->
             prefs.remove(stringPreferencesKey("wallpaper_access_key"))
             prefs.remove(stringPreferencesKey(GITHUB_DASHBOARD_SESSION))
+            prefs[GITHUB_DASHBOARD_REVISION] = (prefs[GITHUB_DASHBOARD_REVISION] ?: 0L) + 1L
             AiService.entries.forEach { prefs.removeServiceEntries(it) }
             prefs.removeCodexTelemetryEntries()
             prefs.asMap().keys.filter { it.name.startsWith(DESKTOP_PREFIX) }.forEach { key ->
@@ -691,6 +710,7 @@ class EncryptedPrefsManager @Inject constructor(
         const val SECURE_DATASTORE_BACKUP_PATH = "datastore/$SECURE_DATASTORE_NAME.preferences_pb"
 
         private const val GITHUB_DASHBOARD_SESSION = "LOCAL_GITHUB_DASHBOARD_SESSION"
+        private val GITHUB_DASHBOARD_REVISION = longPreferencesKey("LOCAL_GITHUB_DASHBOARD_REVISION")
         private const val CODEX_TELEMETRY_PREFIX = "LOCAL_CODEX_TELEMETRY_"
         private const val DESKTOP_PREFIX = "LOCAL_WINDOWS_BRIDGE_"
 
