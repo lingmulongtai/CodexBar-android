@@ -1,6 +1,13 @@
 package com.codexbar.android.feature.dashboard
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -18,6 +25,7 @@ import com.codexbar.android.ui.components.CodexBarOutlinedButton as OutlinedButt
 import com.codexbar.android.ui.components.CodexBarPanel
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,15 +33,21 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
@@ -41,6 +55,7 @@ import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.ui.components.WallpaperFooter
+import com.codexbar.android.ui.components.glassTabPosition
 import com.codexbar.android.ui.components.LocalBottomChromeInset
 import com.codexbar.android.ui.components.GlassSurface
 import com.codexbar.android.ui.components.LocalGlassCardBackdrop
@@ -55,6 +70,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Currency
+import kotlin.math.roundToInt
 
 enum class UsageAnalyticsPage { History, Spend }
 
@@ -140,23 +156,70 @@ private fun TrendsTabs(page: UsageAnalyticsPage, onPageChange: (UsageAnalyticsPa
                     shape = SegmentedButtonDefaults.itemShape(index, pages.size)) { Text(stringResource(label)) }
             }
         }
-        AppThemeStyle.LIQUID_GLASS -> GlassSurface(
-            backdrop = LocalGlassCardBackdrop.current,
-            shape = CircleShape,
-            tint = colors.onSurface.copy(alpha = 0.06f),
-            fallback = colors.surfaceContainerHigh,
-            rim = Color.White.copy(alpha = if (profile.isDark) 0.16f else 0.50f),
-            modifier = modifier.fillMaxWidth(),
-            blurRadius = 4.dp,
-            elevation = 0.dp
-        ) {
-            Row(Modifier.fillMaxWidth().padding(3.dp).selectableGroup()) {
-                pages.forEach { (entry, label) ->
-                    val selected = page == entry
-                    Box(Modifier.weight(1f).height(36.dp).clip(CircleShape)
-                        .background(if (selected) profile.cardColor.copy(alpha = 0.90f) else Color.Transparent)
-                        .selectable(selected = selected, onClick = { onPageChange(entry) }, role = Role.Tab), contentAlignment = Alignment.Center) {
-                        Text(stringResource(label), style = MaterialTheme.typography.labelLarge, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium)
+        AppThemeStyle.LIQUID_GLASS -> {
+            val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+            val haptic = LocalHapticFeedback.current
+            val latestChange by rememberUpdatedState(onPageChange)
+            val latestPage by rememberUpdatedState(page)
+            val selectedIndex = pages.indexOfFirst { it.first == page }.coerceAtLeast(0)
+            var dragPosition by remember { mutableStateOf<Float?>(null) }
+            val settled by animateFloatAsState(dragPosition ?: selectedIndex.toFloat(),
+                if (dragPosition != null) snap() else spring(stiffness = 500f), label = "trends_tab_position")
+            val lift by animateFloatAsState(if (dragPosition != null) 1f else 0f,
+                spring(dampingRatio = 0.65f, stiffness = 500f), label = "trends_tab_lift")
+            GlassSurface(
+                backdrop = LocalGlassCardBackdrop.current,
+                shape = CircleShape,
+                tint = colors.onSurface.copy(alpha = 0.06f),
+                fallback = colors.surfaceContainerHigh,
+                rim = Color.White.copy(alpha = if (profile.isDark) 0.16f else 0.50f),
+                modifier = modifier.fillMaxWidth(), blurRadius = 4.dp, elevation = 0.dp
+            ) {
+                BoxWithConstraints(Modifier.fillMaxWidth().padding(3.dp).height(36.dp).selectableGroup()
+                    .pointerInput(pages.size, rtl) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { point ->
+                                dragPosition = glassTabPosition(point.x, size.width.toFloat(), pages.size, rtl)
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            },
+                            onDrag = { change, _ ->
+                                change.consume()
+                                dragPosition = glassTabPosition(change.position.x, size.width.toFloat(), pages.size, rtl)
+                            },
+                            onDragEnd = {
+                                val target = dragPosition?.roundToInt()?.let { pages.getOrNull(it)?.first }
+                                dragPosition = null
+                                if (target != null && target != latestPage) latestChange(target)
+                            },
+                            onDragCancel = { dragPosition = null }
+                        )
+                    }) {
+                    val cell = maxWidth / pages.size
+                    val logical = dragPosition ?: settled
+                    val visual = if (rtl) pages.lastIndex - logical else logical
+                    GlassSurface(
+                        backdrop = LocalGlassCardBackdrop.current, shape = CircleShape,
+                        tint = profile.cardColor.copy(alpha = 0.80f), fallback = profile.cardColor,
+                        rim = Color.White.copy(alpha = if (profile.isDark) 0.30f else 0.65f),
+                        blurRadius = 2.dp, refraction = 0.5f + lift * 0.3f, elevation = lift.dp * 4,
+                        modifier = Modifier.align(AbsoluteAlignment.TopLeft).width(cell).fillMaxHeight()
+                            .absoluteOffset { IntOffset((cell.toPx() * visual).roundToInt(), 0) }
+                            .graphicsLayer { scaleX = 1f + lift * 0.04f; scaleY = 1f + lift * 0.10f }
+                    ) {}
+                    Row(Modifier.fillMaxSize()) {
+                        pages.forEachIndexed { index, (entry, label) ->
+                            val highlighted = index == (dragPosition?.roundToInt() ?: selectedIndex)
+                            val interaction = remember { MutableInteractionSource() }
+                            val focused by interaction.collectIsFocusedAsState()
+                            Box(Modifier.weight(1f).fillMaxHeight()
+                                .then(if (focused) Modifier.border(2.dp, colors.primary, CircleShape) else Modifier)
+                                .clip(CircleShape)
+                                .selectable(selected = page == entry, onClick = { onPageChange(entry) }, role = Role.Tab,
+                                    interactionSource = interaction, indication = null), contentAlignment = Alignment.Center) {
+                                Text(stringResource(label), style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = if (highlighted) FontWeight.Bold else FontWeight.Medium)
+                            }
+                        }
                     }
                 }
             }
