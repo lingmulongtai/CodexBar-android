@@ -75,7 +75,13 @@ jobs:
           npm audit --omit=dev
 
       - name: Verify release tag matches APK version
-        run: bash scripts/verify-release-version.sh
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] && [ "$GITHUB_REF_TYPE" != tag ]; then
+            version_name="$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle.kts)"
+            GITHUB_REF_NAME="v$version_name" bash scripts/verify-release-version.sh
+          else
+            bash scripts/verify-release-version.sh
+          fi
 
       - name: Verify release smoke checks
         run: bash scripts/test-release-smoke.sh
@@ -154,6 +160,15 @@ jobs:
             printf '::error::Release APK signer does not match the pinned production certificate.\n'
             exit 1
           fi
+
+      - name: Save signed APK for manual diagnostics
+        if: github.event_name == 'workflow_dispatch' && github.ref_type != 'tag'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: signed-apk-diagnostics
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Release build resources before emulator startup
         run: ./gradlew --stop

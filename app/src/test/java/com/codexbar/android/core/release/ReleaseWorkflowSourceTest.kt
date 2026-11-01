@@ -71,6 +71,20 @@ class ReleaseWorkflowSourceTest {
     }
 
     @Test
+    fun `manual diagnostics retain signed apk without publishing a release`() {
+        val workflow = File(repoDir, ".github/workflows/release.yml").readText()
+        val upload = workflow.substringAfter("- name: Save signed APK for manual diagnostics")
+            .substringBefore("- name: Release build resources before emulator startup")
+        assertTrue(upload.contains("github.event_name == 'workflow_dispatch' && github.ref_type != 'tag'"))
+        assertTrue(upload.contains("path: app/build/outputs/apk/release/*.apk"))
+        assertTrue(upload.contains("retention-days: 1"))
+        assertTrue(workflow.indexOf("- name: Verify release signing identity") <
+            workflow.indexOf("- name: Save signed APK for manual diagnostics"))
+        val publish = workflow.substringAfter("- name: Publish GitHub Release")
+        assertTrue(publish.contains("if: github.ref_type == 'tag'"))
+    }
+
+    @Test
     fun `release runner stops build daemons before emulator startup`() {
         val workflow = File(repoDir, ".github/workflows/release.yml").readText()
         val cleanup = workflow.substringAfter("- name: Release build resources before emulator startup")
