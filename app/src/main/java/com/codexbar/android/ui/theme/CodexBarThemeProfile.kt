@@ -35,7 +35,7 @@ data class CodexBarThemeProfile(
 
 val LocalCodexBarThemeProfile = staticCompositionLocalOf {
     CodexBarThemeProfile(
-        style = AppThemeStyle.MATERIAL_3,
+        style = AppThemeStyle.LIQUID_GLASS,
         isDark = false,
         backgroundBrush = SolidColor(Color.Transparent),
         navigationContainerColor = Color.Transparent,
@@ -48,7 +48,7 @@ val LocalCodexBarThemeProfile = staticCompositionLocalOf {
         goodColor = null,
         warningColor = Color(0xFF8A4D00),
         criticalColor = Color(0xFFBA1A1A),
-        floatingNavigation = false
+        floatingNavigation = true
     )
 }
 

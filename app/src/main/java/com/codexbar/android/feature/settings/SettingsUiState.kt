@@ -16,7 +16,7 @@ data class SettingsUiState(
     val isMonitoring: Boolean = false,
     val monitoringDurationMinutes: Long = 60L,
     val monitoringRemainingMinutes: Long? = null,
-    val appThemeStyle: AppThemeStyle = AppThemeStyle.MATERIAL_3,
+    val appThemeStyle: AppThemeStyle = AppThemeStyle.LIQUID_GLASS,
     val privacySettings: PrivacySettings = PrivacySettings(),
     val showDeleteConfirmDialog: Boolean = false,
     val disconnectConfirmService: AiService? = null,

@@ -484,12 +484,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setAppThemeStyle(style: AppThemeStyle) {
-        _uiState.update { it.copy(appThemeStyle = style) }
-        viewModelScope.launch {
-            prefsManager.setAppThemeStyle(style)
-        }
-    }
+
 
     fun showDeleteConfirmDialog() {
         _uiState.update { it.copy(showDeleteConfirmDialog = true) }

@@ -24,7 +24,7 @@ import com.codexbar.android.core.domain.model.AppThemeStyle
 fun CodexBarTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
-    style: AppThemeStyle = AppThemeStyle.MATERIAL_3,
+    style: AppThemeStyle = AppThemeStyle.LIQUID_GLASS,
     content: @Composable () -> Unit
 ) {
     val useDarkTheme = darkTheme

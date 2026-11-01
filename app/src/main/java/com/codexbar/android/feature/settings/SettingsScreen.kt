@@ -19,8 +19,6 @@ import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -120,7 +118,6 @@ import com.codexbar.android.core.security.ConnectionHealth
 import com.codexbar.android.core.workmanager.RefreshIntervalPolicy
 import com.codexbar.android.ui.components.ProviderIcon
 import com.codexbar.android.ui.theme.providerVisualStyle
-import com.codexbar.android.ui.components.BrandGlyph
 import com.codexbar.android.ui.components.WallpaperFooter
 import com.codexbar.android.ui.components.LocalBottomChromeInset
 import com.codexbar.android.ui.components.ThemedTopBar
@@ -218,11 +215,6 @@ fun SettingsScreen(
                     .padding(top = if (LocalCodexBarThemeProfile.current.style == AppThemeStyle.LIQUID_GLASS) 8.dp else 0.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                SettingsSectionHeader(
-                    title = stringResource(R.string.settings_monitoring_title),
-                    description = stringResource(R.string.settings_monitoring_description)
-                )
-
                 NotificationsSection(
                     persistentEnabled = uiState.persistentNotificationEnabled,
                     resetEnabled = uiState.resetNotificationEnabled,
@@ -283,17 +275,7 @@ fun SettingsScreen(
                     TextButton(onClick = { viewModel.setRefreshInterval(15L) }) { Text(stringResource(R.string.reset_enable_background_refresh)) }
                 }
 
-                SettingsSectionHeader(
-                    title = stringResource(R.string.settings_preferences_title),
-                    description = stringResource(R.string.settings_preferences_description)
-                )
-
-                ThemeStyleSection(
-                    selectedStyle = uiState.appThemeStyle,
-                    onStyleSelected = viewModel::setAppThemeStyle
-                )
-
-                if (uiState.appThemeStyle == AppThemeStyle.LIQUID_GLASS) WallpaperSettingsSection()
+                WallpaperSettingsSection()
 
                 LanguageSection(
                     selectedLanguage = selectedLanguage,
@@ -413,11 +395,6 @@ fun ConnectionsScreen(
                     .padding(top = if (LocalCodexBarThemeProfile.current.style == AppThemeStyle.LIQUID_GLASS) 8.dp else 0.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                SettingsSectionHeader(
-                    title = stringResource(R.string.connections_manage_title),
-                    description = stringResource(R.string.connections_manage_description)
-                )
-
                 ConnectionSummaryCard(
                     connectedCount = connectedCount,
                     totalCount = AiService.entries.size
@@ -579,149 +556,6 @@ private fun startClaudePairingScan(
             }
     }.onFailure {
         onFailure()
-    }
-}
-
-@Composable
-private fun ThemeStyleSection(
-    selectedStyle: AppThemeStyle,
-    onStyleSelected: (AppThemeStyle) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.theme_style_title),
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(
-                text = stringResource(R.string.theme_style_description),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                AppThemeStyle.entries.forEach { style ->
-                    ThemeStyleOption(
-                        style = style,
-                        selected = style == selectedStyle,
-                        onClick = { onStyleSelected(style) },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ThemeStyleOption(
-    style: AppThemeStyle,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        onClick = onClick,
-        modifier = modifier,
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = if (selected) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
-        ),
-        border = BorderStroke(
-            width = if (selected) 2.dp else 1.dp,
-            color = if (selected) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.outlineVariant
-            }
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                BrandGlyph(style, Modifier.size(32.dp))
-                Spacer(modifier = Modifier.weight(1f))
-                if (selected) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = stringResource(R.string.theme_style_selected),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-            Text(
-                text = stringResource(style.titleResource()),
-                style = MaterialTheme.typography.labelLarge
-            )
-            Text(
-                text = stringResource(style.descriptionResource()),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                minLines = 2
-            )
-        }
-    }
-}
-
-@StringRes
-private fun AppThemeStyle.titleResource(): Int = when (this) {
-    AppThemeStyle.MATERIAL_3 -> R.string.theme_style_material_3
-    AppThemeStyle.LIQUID_GLASS -> R.string.theme_style_liquid_glass
-}
-
-@StringRes
-private fun AppThemeStyle.descriptionResource(): Int = when (this) {
-    AppThemeStyle.MATERIAL_3 -> R.string.theme_style_material_3_description
-    AppThemeStyle.LIQUID_GLASS -> R.string.theme_style_liquid_glass_description
-}
-
-@Composable
-private fun SettingsSectionHeader(
-    title: String,
-    description: String
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth().then(
-            if (LocalCodexBarThemeProfile.current.style == AppThemeStyle.LIQUID_GLASS)
-                Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.86f), RoundedCornerShape(22.dp)).padding(16.dp)
-            else Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp)
-        ),
-        verticalArrangement = Arrangement.spacedBy(7.dp)
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 

@@ -28,7 +28,7 @@ class ConnectionNavigationSourceTest {
         val source = sourceFile("feature/settings/SettingsScreen.kt")
         val settingsStart = source.indexOf("fun SettingsScreen(")
         val connectionsStart = source.indexOf("fun ConnectionsScreen(")
-        val helperStart = source.indexOf("private fun SettingsSectionHeader(")
+        val helperStart = source.indexOf("private fun ConnectionSummaryCard(")
         val settings = source.substring(settingsStart, connectionsStart)
         val connections = source.substring(connectionsStart, helperStart)
 

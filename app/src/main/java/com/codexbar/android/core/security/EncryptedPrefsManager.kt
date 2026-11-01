@@ -72,7 +72,7 @@ class EncryptedPrefsManager @Inject constructor(
     @Volatile
     private var cachedSettings = CachedSettings()
 
-    private val _appThemeStyle = MutableStateFlow(AppThemeStyle.MATERIAL_3)
+    private val _appThemeStyle = MutableStateFlow(AppThemeStyle.LIQUID_GLASS)
     val appThemeStyle: StateFlow<AppThemeStyle> = _appThemeStyle.asStateFlow()
 
     @Volatile
@@ -390,7 +390,7 @@ class EncryptedPrefsManager @Inject constructor(
 
     suspend fun setAppThemeStyle(style: AppThemeStyle) {
         dataStore.edit { prefs ->
-            prefs[KEY_APP_THEME_STYLE] = style.name
+            prefs[KEY_APP_THEME_STYLE] = AppThemeStyle.fromStoredValue(style.name).name
         }
         updateCache()
     }
@@ -650,7 +650,7 @@ class EncryptedPrefsManager @Inject constructor(
         val refreshIntervalMinutes: Long = DEFAULT_REFRESH_INTERVAL_MINUTES,
         val persistentNotificationEnabled: Boolean = true,
         val resetNotificationEnabled: Boolean = true,
-        val appThemeStyle: AppThemeStyle = AppThemeStyle.MATERIAL_3,
+        val appThemeStyle: AppThemeStyle = AppThemeStyle.LIQUID_GLASS,
         val privacySettings: PrivacySettings = FAIL_CLOSED_PRIVACY_SETTINGS
     )
 
