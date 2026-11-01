@@ -15,6 +15,12 @@ import okhttp3.Callback
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import java.time.Instant
+import java.time.ZoneId
 import okhttp3.Response
 
 @Serializable
@@ -122,6 +128,28 @@ internal class GitHubDashboardApi internal constructor(
 
     private suspend fun repositoryPage(token: String, page: Int): List<GitHubRepository> =
         json.decodeFromString(successful(get("https://api.github.com/user/repos?per_page=100&sort=updated&page=$page", token)))
+
+    suspend fun contributions(token: String, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): GitHubContributions {
+        val today = now.atZone(zone).toLocalDate()
+        val week = today.minusDays((today.dayOfWeek.value - 1).toLong())
+        fun start(date: java.time.LocalDate) = date.atStartOfDay(zone).toInstant().toString()
+        val variables = buildJsonObject {
+            put("today", start(today))
+            put("week", start(week))
+            put("month", start(today.withDayOfMonth(1)))
+            put("year", start(today.withDayOfYear(1)))
+            put("end", now.toString())
+        }
+        val body = buildJsonObject { put("query", GITHUB_CONTRIBUTIONS_QUERY); put("variables", variables) }
+            .toString().toRequestBody("application/json; charset=utf-8".toMediaType())
+        val request = Request.Builder().url("https://api.github.com/graphql")
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .header("Authorization", "Bearer $token").post(body).build()
+        val result = json.decodeFromString<GitHubContributionsResponse>(successful(execute(request)))
+        val viewer = result.data?.viewer ?: throw IOException("GitHub contributions are unavailable")
+        return GitHubContributions(viewer, partial = result.errors.isNotEmpty())
+    }
 
     private suspend fun post(url: String, fields: Map<String, String>): GitHubHttpResponse {
         val form = FormBody.Builder().apply { fields.forEach { (name, value) -> add(name, value) } }.build()
