@@ -16,8 +16,8 @@ android {
         applicationId = "com.codexbar.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 42
-        versionName = "0.13.3"
+        versionCode = 43
+        versionName = "0.14.0"
 
         val contributionsClientId = providers.environmentVariable("CODEXBAR_GITHUB_CONTRIBUTIONS_CLIENT_ID").orNull.orEmpty()
         require(contributionsClientId.isEmpty() || contributionsClientId.matches(Regex("[A-Za-z0-9._-]{1,128}")))
