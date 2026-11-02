@@ -10,6 +10,11 @@ class GitHubProfileExtrasTest {
         assertNull(safeGitHubBadgeImageUrl("https://github.githubassets.com.evil/yolo-default-ab12.png"))
         assertNull(safeGitHubBadgeImageUrl("http://github.githubassets.com/images/modules/profile/achievements/yolo-default-ab12.png"))
     }
+    @Test fun `current GitHub assets path is accepted and parsed`() {
+        val url = "https://github.githubassets.com/assets/pull-shark-silver-0643f87ac9fd.png"
+        assertEquals(url, safeGitHubBadgeImageUrl(url))
+        assertEquals(listOf(GitHubPublicBadge("pull-shark", 3, url)), parseGitHubBadges("achievement=pull-shark&amp;tab=achievements $url"))
+    }
     @Test fun `badge requires public link and trusted image and keeps highest tier`() {
         val prefix = "https://github.githubassets.com/images/modules/profile/achievements/"
         val html = "achievement=pull-shark ${prefix}pull-shark-default-ab12.png ${prefix}pull-shark-silver-ab12.png " +

@@ -9,12 +9,12 @@ internal data class GitHubProfileExtras(val badges: List<GitHubPublicBadge> = em
     val mergedPullRequests: Int? = null)
 
 internal fun safeGitHubBadgeImageUrl(value: String?): String? = value?.takeIf {
-    it.matches(Regex("""https://github\.githubassets\.com/images/modules/profile/achievements/[a-z-]+-(default|bronze|silver|gold)-[a-fA-F0-9]+\.png"""))
+    it.matches(Regex("""https://github\.githubassets\.com/(?:images/modules/profile/achievements|assets)/[a-z-]+-(default|bronze|silver|gold)-[a-fA-F0-9]+\.png"""))
 }
 
 internal fun parseGitHubBadges(html: String): List<GitHubPublicBadge> {
     val known = setOf("pull-shark", "starstruck", "pair-extraordinaire", "galaxy-brain", "quickdraw", "yolo", "public-sponsor")
-    return Regex("""https://github\.githubassets\.com/images/modules/profile/achievements/([a-z-]+)-(default|bronze|silver|gold)-[a-fA-F0-9]+\.png""")
+    return Regex("""https://github\.githubassets\.com/(?:images/modules/profile/achievements|assets)/([a-z-]+)-(default|bronze|silver|gold)-[a-fA-F0-9]+\.png""")
         .findAll(html).mapNotNull { match ->
             val slug = match.groupValues[1]
             if (slug !in known || !html.contains("achievement=$slug")) null else GitHubPublicBadge(slug,
