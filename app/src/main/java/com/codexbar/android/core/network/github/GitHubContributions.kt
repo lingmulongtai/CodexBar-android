@@ -5,12 +5,15 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 
 internal const val GITHUB_CONTRIBUTIONS_QUERY = """
-query DashboardContributions(${'$'}today: DateTime!, ${'$'}week: DateTime!, ${'$'}month: DateTime!, ${'$'}year: DateTime!, ${'$'}end: DateTime!) {
+query DashboardContributions(${'$'}today: DateTime!, ${'$'}week: DateTime!, ${'$'}month: DateTime!, ${'$'}year: DateTime!, ${'$'}rolling: DateTime!, ${'$'}end: DateTime!) {
   viewer {
     isDeveloperProgramMember
     today: contributionsCollection(from: ${'$'}today, to: ${'$'}end) { totalCommitContributions }
     week: contributionsCollection(from: ${'$'}week, to: ${'$'}end) { totalCommitContributions }
     month: contributionsCollection(from: ${'$'}month, to: ${'$'}end) { totalCommitContributions }
+    rolling: contributionsCollection(from: ${'$'}rolling, to: ${'$'}end) {
+      contributionCalendar { totalContributions weeks { contributionDays { date contributionCount contributionLevel } } }
+    }
     year: contributionsCollection(from: ${'$'}year, to: ${'$'}end) {
       totalCommitContributions totalIssueContributions totalPullRequestContributions
       totalPullRequestReviewContributions restrictedContributionsCount
@@ -33,7 +36,8 @@ internal data class GitHubContributionViewer(
     val today: GitHubContributionCollection? = null,
     val week: GitHubContributionCollection? = null,
     val month: GitHubContributionCollection? = null,
-    val year: GitHubContributionCollection? = null
+    val year: GitHubContributionCollection? = null,
+    val rolling: GitHubContributionCollection? = null
 )
 @Serializable
 internal data class GitHubContributionCollection(

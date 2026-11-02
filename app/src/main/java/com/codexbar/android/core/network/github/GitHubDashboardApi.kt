@@ -150,6 +150,31 @@ internal class GitHubDashboardApi internal constructor(
         return GitHubRepositories(collected.values.toList(), complete = false)
     }
 
+    suspend fun profileExtras(login: String): GitHubProfileExtras {
+        require(login.matches(Regex("[A-Za-z0-9-]{1,39}")))
+        val badges = try {
+            val html = successful(execute(Request.Builder().url("https://github.com/$login?tab=achievements")
+                .header("Accept", "text/html").build()))
+            parseGitHubBadges(html)
+        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (_: Exception) { emptyList() }
+        val stack = try {
+            val payload = json.parseToJsonElement(successful(get("https://api.github.com/repos/$login/$login/readme", null)))
+                as kotlinx.serialization.json.JsonObject
+            val encoded = (payload["content"] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty()
+            val readme = java.util.Base64.getMimeDecoder().decode(encoded).decodeToString()
+            parseGitHubStack(readme)
+        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (_: Exception) { emptyList<String>() to emptyList<String>() }
+        val merged = try {
+            val payload = json.parseToJsonElement(successful(get(
+                "https://api.github.com/search/issues?q=author:$login+is:pr+is:merged&per_page=1", null))) as kotlinx.serialization.json.JsonObject
+            (payload["total_count"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull()
+        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (_: Exception) { null }
+        return GitHubProfileExtras(badges, badges.isNotEmpty(), stack.first, stack.second, merged)
+    }
+
     suspend fun contributions(token: String, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): GitHubContributions {
         val today = now.atZone(zone).toLocalDate()
         val week = today.minusDays((today.dayOfWeek.value - 1).toLong())
@@ -159,6 +184,7 @@ internal class GitHubDashboardApi internal constructor(
             put("week", start(week))
             put("month", start(today.withDayOfMonth(1)))
             put("year", start(today.withDayOfYear(1)))
+            put("rolling", start(today.minusDays(364)))
             put("end", now.toString())
         }
         val result = json.decodeFromString<GitHubContributionsResponse>(graphQl(token, GITHUB_CONTRIBUTIONS_QUERY, variables))
