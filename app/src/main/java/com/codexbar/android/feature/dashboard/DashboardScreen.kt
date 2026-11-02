@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
+import com.codexbar.android.LocalTopLevelSwipeEnabled
 import com.codexbar.android.core.domain.model.AcquisitionMode
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppThemeStyle
@@ -83,6 +84,7 @@ private const val TwoPaneMinWidthDp = 720f
 @Composable
 fun DashboardScreen(
     onNavigateToConnections: () -> Unit,
+    onNavigateToSettings: () -> Unit = {},
     initialSelectedService: AiService? = null,
     onInitialSelectionConsumed: () -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel()
@@ -101,6 +103,7 @@ fun DashboardScreen(
         refresh = refresh,
         onRefresh = viewModel::refresh,
         onNavigateToConnections = onNavigateToConnections,
+        onNavigateToSettings = onNavigateToSettings,
         initialSelectedService = initialSelectedService,
         onInitialSelectionConsumed = onInitialSelectionConsumed,
         providerOrder = providerOrder,
@@ -112,7 +115,8 @@ fun DashboardScreen(
 @Composable
 fun DashboardPreviewScreen(
     snapshot: QuotaPresentationSnapshot,
-    onNavigateToConnections: () -> Unit = {}
+    onNavigateToConnections: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
     var order by remember { mutableStateOf(emptyList<AiService>()) }
     DashboardContent(
@@ -121,7 +125,8 @@ fun DashboardPreviewScreen(
         uiState = DashboardUiState.Content(snapshot),
         refresh = DashboardRefreshState(),
         onRefresh = {},
-        onNavigateToConnections = onNavigateToConnections
+        onNavigateToConnections = onNavigateToConnections,
+        onNavigateToSettings = onNavigateToSettings
     )
 }
 
@@ -132,6 +137,7 @@ private fun DashboardContent(
     refresh: DashboardRefreshState,
     onRefresh: () -> Unit,
     onNavigateToConnections: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     initialSelectedService: AiService? = null,
     onInitialSelectionConsumed: () -> Unit = {},
     providerOrder: List<AiService> = emptyList(),
@@ -143,6 +149,11 @@ private fun DashboardContent(
     var expandedServiceName by rememberSaveable { mutableStateOf<String?>(null) }
     var showOnlyAttention by rememberSaveable { mutableStateOf(false) }
     var reordering by rememberSaveable { mutableStateOf(false) }
+    val swipeEnabled = LocalTopLevelSwipeEnabled.current
+    androidx.compose.runtime.DisposableEffect(reordering, selectedServiceName, swipeEnabled) {
+        swipeEnabled?.value = !reordering && selectedServiceName == null
+        onDispose { swipeEnabled?.value = true }
+    }
     BackHandler(enabled = reordering) { reordering = false }
     val snapshot = (uiState as? DashboardUiState.Content)?.snapshot
     val services = snapshot?.services.orEmpty()
@@ -174,7 +185,8 @@ private fun DashboardContent(
                 title = if (glass) title else stringResource(R.string.app_name),
                 showMark = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() } < 600.dp,
                 onStartReorder = if (services.size > 1) ({ showOnlyAttention = false; reordering = true }) else null,
-                onFinishReorder = if (reordering) ({ reordering = false }) else null
+                onFinishReorder = if (reordering) ({ reordering = false }) else null,
+                onOpenSettings = onNavigateToSettings
             )
         }) { headerHeight ->
             // The pull gesture starts a refresh; progress is shown in place, never over the content.

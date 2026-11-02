@@ -31,7 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Speed
-import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Code
 import com.codexbar.android.feature.dashboard.UsageAnalyticsPage
 import com.codexbar.android.feature.dashboard.UsageAnalyticsScreen
 import androidx.compose.material3.MaterialTheme
@@ -62,6 +62,8 @@ import androidx.navigation.compose.rememberNavController
 import com.codexbar.android.feature.dashboard.DashboardScreen
 import com.codexbar.android.feature.dashboard.DashboardPreviewScreen
 import com.codexbar.android.feature.dashboard.DashboardViewModel
+import com.codexbar.android.feature.github.GitHubDashboardScreen
+import com.codexbar.android.feature.github.GitHubDashboardViewModel
 import com.codexbar.android.feature.settings.ConnectionsScreen
 import com.codexbar.android.feature.settings.SettingsScreen
 import com.codexbar.android.feature.settings.SettingsViewModel
@@ -81,6 +83,7 @@ private const val ConnectionsRoute = "connections"
 private const val HistoryRoute = "history"
 private const val SpendRoute = "spend"
 private const val SettingsRoute = "settings"
+private const val GitHubRoute = "github"
 private const val ExpandedNavigationMinWidthDp = 600f
 
 private enum class AppDestination(
@@ -106,10 +109,10 @@ private enum class AppDestination(
         labelRes = R.string.connections_title,
         icon = Icons.Rounded.Link
     ),
-    Settings(
-        route = SettingsRoute,
-        labelRes = R.string.settings_title,
-        icon = Icons.Rounded.Tune
+    GitHub(
+        route = GitHubRoute,
+        labelRes = R.string.github_dashboard_title,
+        icon = Icons.Rounded.Code
     )
 }
 
@@ -137,8 +140,10 @@ fun CodexBarApp(
         configuration.resetNotificationEnabled && (configuration.desktop.services.isNotEmpty() || configuration.serviceStates.values.any { it.isConnected }))
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentEntry?.destination?.route ?: initialDestination
+    val githubViewModel: GitHubDashboardViewModel = hiltViewModel()
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     var slideDirection by remember { mutableStateOf(0) }
+    val topLevelSwipeEnabled = remember { mutableStateOf(true) }
     DisposableEffect(navController, rtl) {
         var previousRoute = navController.currentDestination?.route
         val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
@@ -156,7 +161,7 @@ fun CodexBarApp(
     LaunchedEffect(initialDestination, initialDestinationHandled) {
         if (!initialDestinationHandled) {
             initialDestinationHandled = true
-            if (initialDestination in setOf(ConnectionsRoute, SettingsRoute, HistoryRoute, SpendRoute)) {
+            if (initialDestination in setOf(ConnectionsRoute, SettingsRoute, HistoryRoute, SpendRoute, GitHubRoute)) {
                 navController.navigate(initialDestination) {
                     launchSingleTop = true
                 }
@@ -208,6 +213,7 @@ fun CodexBarApp(
             onScreenPrivacyChanged = onScreenPrivacyChanged,
             settingsViewModel = settingsViewModel,
             dashboardViewModel = dashboardViewModel,
+            githubViewModel = githubViewModel,
             dashboardPreviewSnapshot = dashboardPreviewSnapshot,
             trendsPage = if (lastTrendsRoute == SpendRoute) UsageAnalyticsPage.Spend else UsageAnalyticsPage.History,
             onTrendsPageChange = { page -> lastTrendsRoute = if (page == UsageAnalyticsPage.Spend) SpendRoute else HistoryRoute },
@@ -245,19 +251,23 @@ fun CodexBarApp(
                 CompositionLocalProvider(
                     LocalBottomChromeInset provides bottomInset,
                     LocalTopLevelSlideDirection provides slideDirection,
+                    LocalTopLevelSwipeEnabled provides topLevelSwipeEnabled,
                     LocalGlassHeaderHeight provides headerHeight,
                     LocalGlassCardBackdrop provides cardBackdrop,
                     LocalWallpaperState provides wallpaper
                 ) {
                     Box(Modifier.fillMaxSize().glassBackdropSource(backdrop)) {
                         LiquidGlassWallpaper(wallpaper)
-                        navHost(Modifier.fillMaxSize())
+                        navHost(Modifier.fillMaxSize().topLevelSwipe(currentRoute, rtl, topLevelSwipeEnabled.value) {
+                            navController.navigateTopLevel(it)
+                        })
                     }
                 }
                 GlassNavigationBar(
                     entries = entries,
                     backdrop = backdrop,
-                    onRefresh = dashboardViewModel?.let { model -> { model.refresh() } },
+                    onRefresh = if (currentRoute == GitHubRoute) ({ githubViewModel.refresh() })
+                        else dashboardViewModel?.let { model -> { model.refresh() } },
                     modifier = Modifier.align(Alignment.BottomCenter)
                 )
             }
@@ -288,11 +298,13 @@ private fun AppNavHost(
     onScreenPrivacyChanged: (Boolean) -> Unit,
     settingsViewModel: SettingsViewModel,
     dashboardViewModel: DashboardViewModel?,
+    githubViewModel: GitHubDashboardViewModel,
     dashboardPreviewSnapshot: QuotaPresentationSnapshot?,
     trendsPage: UsageAnalyticsPage,
     onTrendsPageChange: (UsageAnalyticsPage) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val openSettings = { navController.navigate(SettingsRoute) { launchSingleTop = true } }
     NavHost(
         navController = navController,
         startDestination = DashboardRoute,
@@ -310,13 +322,15 @@ private fun AppNavHost(
                 DashboardScreen(
                     viewModel = dashboardViewModel,
                     onNavigateToConnections = navigateToConnections,
+                    onNavigateToSettings = openSettings,
                     initialSelectedService = initialDashboardService,
                     onInitialSelectionConsumed = onDashboardServiceConsumed
                 )
             } else if (dashboardPreviewSnapshot != null) {
                 DashboardPreviewScreen(
                     snapshot = dashboardPreviewSnapshot,
-                    onNavigateToConnections = navigateToConnections
+                    onNavigateToConnections = navigateToConnections,
+                    onNavigateToSettings = openSettings
                 )
             }
         }
@@ -330,7 +344,8 @@ private fun AppNavHost(
                 onGeminiPairingConsumed = onGeminiPairingConsumed,
                 initialCodexTelemetryPairingUri = initialCodexTelemetryPairingUri,
                 onCodexTelemetryPairingConsumed = onCodexTelemetryPairingConsumed,
-                viewModel = settingsViewModel
+                viewModel = settingsViewModel,
+                onOpenSettings = openSettings
             )
         }
         composable(HistoryRoute) {
@@ -339,7 +354,8 @@ private fun AppNavHost(
                 onConnections = { navController.navigateTopLevel(ConnectionsRoute) },
                 preview = dashboardPreviewSnapshot,
                 model = dashboardViewModel,
-                onPageChange = onTrendsPageChange
+                onPageChange = onTrendsPageChange,
+                onOpenSettings = openSettings
             )
         }
         composable(SpendRoute) {
@@ -348,15 +364,17 @@ private fun AppNavHost(
                 onConnections = { navController.navigateTopLevel(ConnectionsRoute) },
                 preview = dashboardPreviewSnapshot,
                 model = dashboardViewModel,
-                onPageChange = onTrendsPageChange
+                onPageChange = onTrendsPageChange,
+                onOpenSettings = openSettings
             )
         }
+        composable(GitHubRoute) { GitHubDashboardScreen(viewModel = githubViewModel, onOpenSettings = openSettings) }
         composable(SettingsRoute) {
             SettingsScreen(
                 onNavigateBack = {
-                    navController.navigateTopLevel(DashboardRoute)
+                    if (!navController.popBackStack()) navController.navigateTopLevel(DashboardRoute)
                 },
-                showBackButton = false,
+                showBackButton = true,
                 onScreenPrivacyChanged = onScreenPrivacyChanged,
                 viewModel = settingsViewModel
             )
@@ -369,7 +387,8 @@ internal fun topLevelSlideDirection(from: String?, to: String?, rtl: Boolean): I
         DashboardRoute -> 0
         HistoryRoute, SpendRoute -> 1
         ConnectionsRoute -> 2
-        SettingsRoute -> 3
+        GitHubRoute -> 3
+        SettingsRoute -> 4
         else -> -1
     }
     val start = index(from)

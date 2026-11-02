@@ -52,6 +52,7 @@ import com.codexbar.android.ui.components.WallpaperFooter
 import com.codexbar.android.ui.components.LocalBottomChromeInset
 import com.codexbar.android.ui.components.ProviderIcon
 import com.codexbar.android.ui.components.ThemedTopBar
+import com.codexbar.android.ui.components.AppSettingsAction
 import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 import com.codexbar.android.ui.theme.PlexMonoFamily
 import com.codexbar.android.ui.theme.providerVisualStyle
@@ -70,14 +71,15 @@ fun UsageAnalyticsScreen(
     onConnections: () -> Unit,
     preview: QuotaPresentationSnapshot? = null,
     model: DashboardViewModel? = null,
-    onPageChange: (UsageAnalyticsPage) -> Unit = {}
+    onPageChange: (UsageAnalyticsPage) -> Unit = {},
+    onOpenSettings: (() -> Unit)? = null
 ) {
-    if (preview != null || model == null) { AnalyticsContent(page, preview, DashboardRefreshState(), {}, onConnections, onPageChange); return }
+    if (preview != null || model == null) { AnalyticsContent(page, preview, DashboardRefreshState(), {}, onConnections, onPageChange, onOpenSettings); return }
     val state by model.uiState.collectAsStateWithLifecycle()
     val refresh by model.refreshState.collectAsStateWithLifecycle()
     val localeTag = LocalConfiguration.current.locales[0].toLanguageTag()
     LaunchedEffect(Unit) { model.refreshIfStale(localeTag) }
-    AnalyticsContent(page, (state as? DashboardUiState.Content)?.snapshot, refresh, model::refresh, onConnections, onPageChange)
+    AnalyticsContent(page, (state as? DashboardUiState.Content)?.snapshot, refresh, model::refresh, onConnections, onPageChange, onOpenSettings)
 }
 
 @Composable
@@ -87,13 +89,15 @@ private fun AnalyticsContent(
     refresh: DashboardRefreshState,
     onRefresh: () -> Unit,
     onConnections: () -> Unit,
-    onPageChange: (UsageAnalyticsPage) -> Unit
+    onPageChange: (UsageAnalyticsPage) -> Unit,
+    onOpenSettings: (() -> Unit)?
 ) {
     val profile = LocalCodexBarThemeProfile.current
     GlassHeaderOverlay(header = {
         Column {
             ThemedTopBar(title = stringResource(R.string.navigation_trends), actions = {
                 if (!profile.floatingNavigation) RefreshStatusButton(refresh, snapshot?.generatedAt, onRefresh, Modifier.padding(end = 8.dp))
+                onOpenSettings?.let { AppSettingsAction(it) }
             })
             // Keep the selector attached to the header while content slides underneath both.
             CompositionLocalProvider(LocalGlassCardBackdrop provides LocalGlassHeaderBackdrop.current) {

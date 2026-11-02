@@ -18,6 +18,10 @@ import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.domain.model.CodexTelemetryCredential
 import com.codexbar.android.core.domain.model.Credential
 import com.codexbar.android.core.domain.model.DesktopBridgeCredential
+import com.codexbar.android.core.domain.model.GitHubContributionsSession
+import com.codexbar.android.core.domain.model.GitHubDashboardSession
+import com.codexbar.android.core.domain.model.GitHubDashboardLayout
+import com.codexbar.android.core.domain.model.normalized
 import com.codexbar.android.core.domain.model.AcquisitionMode
 import com.codexbar.android.core.domain.model.AcquisitionSettings
 import com.codexbar.android.core.network.desktop.DesktopBridgePairing
@@ -49,6 +53,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 private const val SECURE_DATASTORE_NAME = "codexbar_secure_prefs"
 private const val DEFAULT_REFRESH_INTERVAL_MINUTES = 30L
@@ -321,9 +327,106 @@ class EncryptedPrefsManager @Inject constructor(
         updateCache()
     }
 
+    /** Revision changes atomically whenever dashboard credentials are removed. */
+    val gitHubDashboardRevision = dataStore.data
+        .map { it[GITHUB_DASHBOARD_REVISION] ?: 0L }
+        .distinctUntilChanged()
+        .catch { emit(Long.MIN_VALUE) }
+
+    suspend fun currentGitHubDashboardRevision(): Long = dataStore.data.first()[GITHUB_DASHBOARD_REVISION] ?: 0L
+
+    suspend fun saveGitHubDashboardSessionIfRevision(session: GitHubDashboardSession, expectedRevision: Long): Boolean {
+        var saved = false
+        dataStore.edit { prefs ->
+            if ((prefs[GITHUB_DASHBOARD_REVISION] ?: 0L) == expectedRevision) {
+                prefs.putEncryptedString(GITHUB_DASHBOARD_SESSION, Json.encodeToString(session))
+                saved = true
+            }
+        }
+        return saved
+    }
+
+    suspend fun loadGitHubDashboardSession(): GitHubDashboardSession? {
+        val value = readPreferencesOrNull()?.getEncryptedString(GITHUB_DASHBOARD_SESSION) ?: return null
+        return runCatching { Json.decodeFromString<GitHubDashboardSession>(value) }.getOrNull()
+    }
+
+    /** Never restore a rotated session after a concurrent sign-out or account change. */
+    suspend fun replaceGitHubDashboardSession(expectedRefreshToken: String, session: GitHubDashboardSession): Boolean {
+        var replaced = false
+        dataStore.edit { prefs ->
+            val current = prefs.getEncryptedString(GITHUB_DASHBOARD_SESSION)?.let {
+                runCatching { Json.decodeFromString<GitHubDashboardSession>(it) }.getOrNull()
+            }
+            if (current?.refreshToken == expectedRefreshToken) {
+                prefs.putEncryptedString(GITHUB_DASHBOARD_SESSION, Json.encodeToString(session))
+                replaced = true
+            }
+        }
+        return replaced
+    }
+
+    suspend fun loadGitHubDashboardLayout(ownerId: Long): GitHubDashboardLayout {
+        val value = readPreferencesOrNull()?.getEncryptedString(GITHUB_DASHBOARD_LAYOUT)
+        return value?.let { runCatching { Json.decodeFromString<GitHubDashboardLayout>(it) }.getOrNull() }
+            ?.normalized(ownerId) ?: GitHubDashboardLayout.default(ownerId)
+    }
+
+    /** Compare the revision and active session inside the same transaction as the write. */
+    suspend fun saveGitHubDashboardLayoutIfCurrent(layout: GitHubDashboardLayout, revision: Long,
+        expectedRefreshToken: String): Boolean {
+        var saved = false
+        dataStore.edit { prefs ->
+            val current = prefs.getEncryptedString(GITHUB_DASHBOARD_SESSION)?.let {
+                runCatching { Json.decodeFromString<GitHubDashboardSession>(it) }.getOrNull()
+            }
+            if ((prefs[GITHUB_DASHBOARD_REVISION] ?: 0L) == revision && current?.refreshToken == expectedRefreshToken) {
+                prefs.putEncryptedString(GITHUB_DASHBOARD_LAYOUT, Json.encodeToString(layout.normalized(layout.ownerId)))
+                saved = true
+            }
+        }
+        return saved
+    }
+
+    suspend fun loadGitHubContributionsSession(): GitHubContributionsSession? {
+        val value = readPreferencesOrNull()?.getEncryptedString(GITHUB_CONTRIBUTIONS_SESSION) ?: return null
+        return runCatching { Json.decodeFromString<GitHubContributionsSession>(value) }.getOrNull()
+    }
+
+    suspend fun saveGitHubContributionsSessionIfCurrent(session: GitHubContributionsSession, revision: Long,
+        expectedAppRefreshToken: String, expectedContributionsRefreshToken: String? = null): Boolean {
+        var saved = false
+        dataStore.edit { prefs ->
+            val app = prefs.getEncryptedString(GITHUB_DASHBOARD_SESSION)?.let {
+                runCatching { Json.decodeFromString<GitHubDashboardSession>(it) }.getOrNull()
+            }
+            val old = prefs.getEncryptedString(GITHUB_CONTRIBUTIONS_SESSION)?.let {
+                runCatching { Json.decodeFromString<GitHubContributionsSession>(it) }.getOrNull()
+            }
+            if ((prefs[GITHUB_DASHBOARD_REVISION] ?: 0L) == revision && app?.refreshToken == expectedAppRefreshToken &&
+                (expectedContributionsRefreshToken == null || old?.token?.refreshToken == expectedContributionsRefreshToken)) {
+                prefs.putEncryptedString(GITHUB_CONTRIBUTIONS_SESSION, Json.encodeToString(session))
+                saved = true
+            }
+        }
+        return saved
+    }
+
+    suspend fun deleteGitHubDashboardSession() {
+        dataStore.edit { prefs ->
+            prefs.remove(stringPreferencesKey(GITHUB_DASHBOARD_SESSION))
+            prefs.remove(stringPreferencesKey(GITHUB_CONTRIBUTIONS_SESSION))
+            prefs[GITHUB_DASHBOARD_REVISION] = (prefs[GITHUB_DASHBOARD_REVISION] ?: 0L) + 1L
+        }
+    }
+
     suspend fun deleteAllCredentials() {
         dataStore.edit { prefs ->
+            prefs.remove(stringPreferencesKey(GITHUB_DASHBOARD_LAYOUT))
             prefs.remove(stringPreferencesKey("wallpaper_access_key"))
+            prefs.remove(stringPreferencesKey(GITHUB_DASHBOARD_SESSION))
+            prefs.remove(stringPreferencesKey(GITHUB_CONTRIBUTIONS_SESSION))
+            prefs[GITHUB_DASHBOARD_REVISION] = (prefs[GITHUB_DASHBOARD_REVISION] ?: 0L) + 1L
             AiService.entries.forEach { prefs.removeServiceEntries(it) }
             prefs.removeCodexTelemetryEntries()
             prefs.asMap().keys.filter { it.name.startsWith(DESKTOP_PREFIX) }.forEach { key ->
@@ -658,6 +761,10 @@ class EncryptedPrefsManager @Inject constructor(
         const val SECURE_PREFS_NAME = SECURE_DATASTORE_NAME
         const val SECURE_DATASTORE_BACKUP_PATH = "datastore/$SECURE_DATASTORE_NAME.preferences_pb"
 
+        private const val GITHUB_CONTRIBUTIONS_SESSION = "LOCAL_GITHUB_CONTRIBUTIONS_SESSION"
+        private const val GITHUB_DASHBOARD_LAYOUT = "LOCAL_GITHUB_DASHBOARD_LAYOUT"
+        private const val GITHUB_DASHBOARD_SESSION = "LOCAL_GITHUB_DASHBOARD_SESSION"
+        private val GITHUB_DASHBOARD_REVISION = longPreferencesKey("LOCAL_GITHUB_DASHBOARD_REVISION")
         private const val CODEX_TELEMETRY_PREFIX = "LOCAL_CODEX_TELEMETRY_"
         private const val DESKTOP_PREFIX = "LOCAL_WINDOWS_BRIDGE_"
 

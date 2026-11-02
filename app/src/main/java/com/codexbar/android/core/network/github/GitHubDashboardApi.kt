@@ -1,0 +1,235 @@
+package com.codexbar.android.core.network.github
+
+import com.codexbar.android.core.domain.model.GitHubDashboardSession
+import java.io.IOException
+import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.FormBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import java.time.Instant
+import java.time.ZoneId
+import okhttp3.Response
+
+@Serializable
+internal data class GitHubAppInfo(@kotlinx.serialization.SerialName("client_id") val clientId: String,
+    val slug: String, val owner: GitHubAppOwner)
+@Serializable
+internal data class GitHubAppOwner(val login: String)
+
+@Serializable
+internal data class GitHubDeviceCode(
+    @kotlinx.serialization.SerialName("device_code") val deviceCode: String,
+    @kotlinx.serialization.SerialName("user_code") val userCode: String,
+    @kotlinx.serialization.SerialName("verification_uri") val verificationUri: String,
+    @kotlinx.serialization.SerialName("expires_in") val expiresIn: Long,
+    val interval: Long = 5
+) { override fun toString(): String = "GitHubDeviceCode(redacted)" }
+
+@Serializable
+internal data class GitHubTokenResponse(
+    @kotlinx.serialization.SerialName("access_token") val accessToken: String? = null,
+    @kotlinx.serialization.SerialName("refresh_token") val refreshToken: String? = null,
+    @kotlinx.serialization.SerialName("expires_in") val expiresIn: Long? = null,
+    val error: String? = null,
+    val scope: String? = null,
+    @kotlinx.serialization.SerialName("token_type") val tokenType: String? = null
+) { override fun toString(): String = "GitHubTokenResponse(redacted)" }
+
+@Serializable
+internal data class GitHubProfile(
+    val login: String,
+    val name: String? = null,
+    @kotlinx.serialization.SerialName("public_repos") val publicRepos: Int = 0,
+    @kotlinx.serialization.SerialName("avatar_url") val avatarUrl: String? = null,
+    val bio: String? = null,
+    val location: String? = null,
+    val email: String? = null,
+    val followers: Int = 0,
+    val following: Int = 0,
+    val id: Long? = null
+)
+
+@Serializable
+internal data class GitHubRepository(val id: Long,
+    @kotlinx.serialization.SerialName("full_name") val fullName: String,
+    @kotlinx.serialization.SerialName("private") val isPrivate: Boolean = false,
+    @kotlinx.serialization.SerialName("html_url") val htmlUrl: String,
+    val description: String? = null,
+    @kotlinx.serialization.SerialName("stargazers_count") val stars: Int = 0,
+    @kotlinx.serialization.SerialName("updated_at") val updatedAt: String? = null,
+    @kotlinx.serialization.SerialName("pushed_at") val pushedAt: String? = null,
+    val language: String? = null)
+
+internal data class GitHubRepositories(val items: List<GitHubRepository>, val complete: Boolean)
+
+internal data class GitHubHttpResponse(val status: Int, val body: String)
+
+/** Fixed GitHub endpoints, no redirects, and no credential logging. */
+@Singleton
+internal class GitHubDashboardApi internal constructor(
+    private val json: Json,
+    private val execute: suspend (Request) -> GitHubHttpResponse
+) {
+    @Inject constructor(json: Json) : this(json, ::executeGitHubRequest)
+
+    /** GitHub publishes App client IDs; resolve ours without embedding a fixed identifier. */
+    suspend fun clientId(): String {
+        val app = json.decodeFromString<GitHubAppInfo>(successful(get("https://api.github.com/apps/codexbar-android-dashboard", null)))
+        if (app.slug != "codexbar-android-dashboard" || app.owner.login != "lingmulongtai" ||
+            !app.clientId.matches(Regex("[A-Za-z0-9._-]{1,128}"))) throw IOException("Invalid GitHub App identifier")
+        return app.clientId
+    }
+
+    suspend fun start(clientId: String): GitHubDeviceCode = startDeviceFlow(clientId, "offline_access")
+
+    suspend fun startContributions(clientId: String): GitHubDeviceCode = startDeviceFlow(clientId, "read:user offline_access")
+
+    private suspend fun startDeviceFlow(clientId: String, scope: String): GitHubDeviceCode {
+        require(clientId.matches(Regex("[A-Za-z0-9._-]{1,128}")))
+        val response = post("https://github.com/login/device/code", mapOf("client_id" to clientId, "scope" to scope))
+        val code = json.decodeFromString<GitHubDeviceCode>(successful(response))
+        if (code.verificationUri != "https://github.com/login/device" ||
+            !code.userCode.matches(Regex("[A-Z0-9-]{4,32}")) ||
+            code.deviceCode.isBlank() || code.expiresIn !in 1..1800 || code.interval !in 1..120) throw IOException("Invalid GitHub device response")
+        return code
+    }
+
+    suspend fun poll(clientId: String, deviceCode: String): GitHubTokenResponse =
+        json.decodeFromString(successful(post("https://github.com/login/oauth/access_token", mapOf(
+            "client_id" to clientId, "device_code" to deviceCode,
+            "grant_type" to "urn:ietf:params:oauth:grant-type:device_code"))))
+
+    suspend fun refresh(session: GitHubDashboardSession): GitHubTokenResponse =
+        json.decodeFromString(successful(post("https://github.com/login/oauth/access_token", mapOf(
+            "client_id" to session.clientId, "refresh_token" to session.refreshToken, "grant_type" to "refresh_token"))))
+
+    suspend fun profile(token: String): GitHubProfile =
+        json.decodeFromString(successful(get("https://api.github.com/user", token)))
+
+    suspend fun repositories(token: String): List<GitHubRepository> = repositoryPage(token, 1)
+
+    /** GitHub App permissions limit results to repositories shared with the installation. */
+    suspend fun allRepositories(token: String): GitHubRepositories {
+        val collected = LinkedHashMap<Long, GitHubRepository>()
+        var duplicate = false
+        for (page in 1..20) {
+            val batch = repositoryPage(token, page)
+            batch.forEach { if (collected.put(it.id, it) != null) duplicate = true }
+            if (batch.size < 100) return GitHubRepositories(collected.values.toList(), complete = !duplicate)
+        }
+        return GitHubRepositories(collected.values.toList(), complete = false)
+    }
+
+    private suspend fun repositoryPage(token: String, page: Int): List<GitHubRepository> =
+        json.decodeFromString(successful(get("https://api.github.com/user/repos?per_page=100&sort=updated&page=$page", token)))
+
+    /** Starred repositories exposed publicly on the user's GitHub profile. */
+    suspend fun starred(login: String): GitHubRepositories {
+        require(login.matches(Regex("[A-Za-z0-9-]{1,39}")))
+        val collected = LinkedHashMap<Long, GitHubRepository>()
+        var duplicate = false
+        for (page in 1..20) {
+            val batch: List<GitHubRepository> = json.decodeFromString(successful(
+                get("https://api.github.com/users/$login/starred?per_page=100&page=$page", null)))
+            batch.forEach { if (collected.put(it.id, it) != null) duplicate = true }
+            if (batch.size < 100) return GitHubRepositories(collected.values.toList(), complete = !duplicate)
+        }
+        return GitHubRepositories(collected.values.toList(), complete = false)
+    }
+
+    suspend fun contributions(token: String, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): GitHubContributions {
+        val today = now.atZone(zone).toLocalDate()
+        val week = today.minusDays((today.dayOfWeek.value - 1).toLong())
+        fun start(date: java.time.LocalDate) = date.atStartOfDay(zone).toInstant().toString()
+        val variables = buildJsonObject {
+            put("today", start(today))
+            put("week", start(week))
+            put("month", start(today.withDayOfMonth(1)))
+            put("year", start(today.withDayOfYear(1)))
+            put("end", now.toString())
+        }
+        val result = json.decodeFromString<GitHubContributionsResponse>(graphQl(token, GITHUB_CONTRIBUTIONS_QUERY, variables))
+        val viewer = result.data?.viewer ?: throw IOException("GitHub contributions are unavailable")
+        return GitHubContributions(viewer, partial = result.errors.isNotEmpty())
+    }
+
+    suspend fun repositoryActivity(token: String, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): GitHubRepositoryActivity {
+        val firstDay = now.atZone(zone).toLocalDate().withDayOfYear(1).atStartOfDay(zone).toInstant()
+        val variables = buildJsonObject { put("year", firstDay.toString()); put("end", now.toString()) }
+        val result = json.decodeFromString<GitHubActivityResponse>(graphQl(token, GITHUB_ACTIVITY_QUERY, variables))
+        val collection = result.data?.viewer?.year ?: throw IOException("GitHub repository activity is unavailable")
+        return collection.toActivity(partial = result.errors.isNotEmpty())
+    }
+
+    private suspend fun graphQl(token: String, query: String, variables: kotlinx.serialization.json.JsonObject): String {
+        val body = buildJsonObject { put("query", query); put("variables", variables) }
+            .toString().toRequestBody("application/json; charset=utf-8".toMediaType())
+        val request = Request.Builder().url("https://api.github.com/graphql")
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .header("Authorization", "Bearer $token").post(body).build()
+        return successful(execute(request))
+    }
+
+    private suspend fun post(url: String, fields: Map<String, String>): GitHubHttpResponse {
+        val form = FormBody.Builder().apply { fields.forEach { (name, value) -> add(name, value) } }.build()
+        return execute(Request.Builder().url(url).header("Accept", "application/json").post(form).build())
+    }
+
+    private suspend fun get(url: String, token: String?): GitHubHttpResponse = execute(
+        Request.Builder().url(url).header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .apply { if (token != null) header("Authorization", "Bearer $token") }.build())
+
+    private fun successful(response: GitHubHttpResponse): String {
+        if (response.status !in 200..299) throw GitHubDashboardException(response.status)
+        return response.body
+    }
+}
+
+internal class GitHubDashboardException(val status: Int) : IOException("GitHub request failed ($status)")
+
+private val githubClient = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false)
+    .callTimeout(20, TimeUnit.SECONDS).build()
+
+private suspend fun executeGitHubRequest(request: Request): GitHubHttpResponse = suspendCancellableCoroutine { continuation ->
+    val call = githubClient.newCall(request)
+    continuation.invokeOnCancellation { call.cancel() }
+    call.enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) { if (continuation.isActive) continuation.resumeWithException(e) }
+        override fun onResponse(call: Call, response: Response) {
+            val result = runCatching {
+                response.use {
+                    val body = it.body ?: throw IOException("Missing GitHub response")
+                    if (body.contentLength() > 1024 * 1024) throw IOException("GitHub response too large")
+                    val bytes = body.byteStream().use { input ->
+                        val out = java.io.ByteArrayOutputStream()
+                        val buffer = ByteArray(8192)
+                        while (true) {
+                            val n = input.read(buffer)
+                            if (n < 0) break
+                            if (out.size() + n > 1024 * 1024) throw IOException("GitHub response too large")
+                            out.write(buffer, 0, n)
+                        }
+                        out.toByteArray()
+                    }
+                    GitHubHttpResponse(it.code, bytes.decodeToString())
+                }
+            }
+            if (continuation.isActive) continuation.resumeWith(result)
+        }
+    })
+}
