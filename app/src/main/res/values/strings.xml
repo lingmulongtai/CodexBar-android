@@ -753,4 +753,7 @@
     <string name="github_achievements_progress">IN PROGRESS</string>
     <string name="github_stack_missing">Add skillicons.dev icons to your public profile README to show your authored stack here.</string>
     <string name="github_stack_learning">Learning</string>
+    <string name="github_calendar_rolling_total">%,d in the last year</string>
+    <string name="github_calendar_less">Less</string>
+    <string name="github_calendar_more">More</string>
 </resources>

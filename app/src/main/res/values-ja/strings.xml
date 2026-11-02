@@ -751,4 +751,7 @@
     <string name="github_achievements_progress">進行中</string>
     <string name="github_stack_missing">公開プロフィールの README にある skillicons.dev の技術一覧を表示します。</string>
     <string name="github_stack_learning">学習中</string>
+    <string name="github_calendar_rolling_total">直近1年 · %,d 件</string>
+    <string name="github_calendar_less">少</string>
+    <string name="github_calendar_more">多</string>
 </resources>
