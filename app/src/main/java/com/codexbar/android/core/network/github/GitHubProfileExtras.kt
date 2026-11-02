@@ -32,7 +32,7 @@ internal fun parseGitHubStack(readme: String): Pair<List<String>, List<String>> 
 
 internal data class GitHubCalendarStats(val total: Int, val activeDays: Int, val days: Int,
     val bestDay: GitHubContributionDay?, val longestStreak: Int, val currentStreak: Int,
-    val busiestWeekday: Int?, val monthly: List<Pair<YearMonth, Int>>)
+    val busiestWeekday: Int?, val monthly: List<Pair<YearMonth, Int>>, val busiestWeekdayAverage: Double?)
 
 internal fun GitHubContributionCalendar.statistics(today: LocalDate): GitHubCalendarStats {
     val dated = weeks.flatMap { it.contributionDays }.mapNotNull { day ->
@@ -52,5 +52,6 @@ internal fun GitHubContributionCalendar.statistics(today: LocalDate): GitHubCale
         .maxByOrNull { (_, entries) -> entries.sumOf { it.second.contributionCount }.toDouble() / entries.size }?.key
     val monthly = dated.groupBy { YearMonth.from(it.first) }.toSortedMap().map { (month, entries) -> month to entries.sumOf { it.second.contributionCount } }
     return GitHubCalendarStats(dated.sumOf { it.second.contributionCount }, dated.count { it.second.contributionCount > 0 }, dated.size,
-        dated.maxByOrNull { it.second.contributionCount }?.second, longest, current, weekday, monthly)
+        dated.maxByOrNull { it.second.contributionCount }?.second, longest, current, weekday, monthly,
+        weekday?.let { value -> dated.filter { it.first.dayOfWeek.value == value }.map { it.second.contributionCount }.average() })
 }

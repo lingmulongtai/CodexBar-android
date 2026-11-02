@@ -756,4 +756,6 @@
     <string name="github_calendar_rolling_total">%,d in the last year</string>
     <string name="github_calendar_less">Less</string>
     <string name="github_calendar_more">More</string>
+    <string name="github_achievements_summary">Public profile</string>
+    <string name="github_stats_average_value">avg %.1f / day</string>
 </resources>

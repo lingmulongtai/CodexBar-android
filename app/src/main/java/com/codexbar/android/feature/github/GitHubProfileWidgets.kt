@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.codexbar.android.R
 import com.codexbar.android.core.network.github.*
 import com.codexbar.android.ui.components.CodexBarCard
@@ -72,16 +73,20 @@ internal fun GitHubStatsWidget(calendar: GitHubContributionCalendar?) {
             Triple(stringResource(R.string.github_stats_current), "${stats.currentStreak}", days),
             Triple(stringResource(R.string.github_stats_active), "${stats.activeDays} / ${stats.days}", days),
             Triple(stringResource(R.string.github_stats_weekday), stats.busiestWeekday?.let {
-                DayOfWeek.of(it).getDisplayName(TextStyle.SHORT, Locale.getDefault()) } ?: "—", stringResource(R.string.github_stats_daily_average)))
+                DayOfWeek.of(it).getDisplayName(TextStyle.SHORT, Locale.getDefault()) } ?: "—", stats.busiestWeekdayAverage?.let { stringResource(R.string.github_stats_average_value, it) } ?: "—"))
         values.chunked(2).forEach { row -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             row.forEach { (label, value, detail) -> StatTile(label, value, detail, Modifier.weight(1f)) }
         } }
         Text(stringResource(R.string.github_stats_monthly), style = MaterialTheme.typography.labelMedium)
         val months = stats.monthly
         val max = months.maxOfOrNull { it.second }?.coerceAtLeast(1) ?: 1
-        Row(Modifier.fillMaxWidth().height(84.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
-            months.forEach { (_, value) -> Box(Modifier.weight(1f).height((value.toFloat() / max * 84).coerceAtLeast(2f).dp)
-                .background(Brush.verticalGradient(listOf(Ice, Color(0xFF387BFF))), RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))) }
+        Row(Modifier.fillMaxWidth().height(106.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
+            months.forEach { (_, value) -> Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(if (value >= 1000) "%.1fk".format(value / 1000f) else "$value", fontSize = 8.sp, maxLines = 1)
+                Spacer(Modifier.height(4.dp))
+                Box(Modifier.fillMaxWidth().height((value.toFloat() / max * 84).coerceAtLeast(2f).dp)
+                    .background(Brush.verticalGradient(listOf(Ice, Color(0xFF387BFF))), RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp)))
+            } }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             months.forEach { (month, _) -> Text("${month.monthValue}", Modifier.weight(1f), style = MaterialTheme.typography.labelSmall,
@@ -139,7 +144,9 @@ internal fun GitHubAchievementsWidget(extras: GitHubProfileExtras?, calendar: Gi
                     else badge?.let { 1f }, if (badge == null) Color(0xFF9CA8BC) else if (badge.tier == 4) Gold else Ice,
                     badge?.imageUrl, modifier = Modifier.weight(1f).fillMaxHeight())
             }
-            if (row.size == 1) Spacer(Modifier.weight(1f))
+            if (row.size == 1) AchievementTile(stringResource(R.string.github_achievements_summary),
+                "${extras?.badges?.size ?: 0} / 7", stringResource(R.string.github_achievements_public),
+                extras?.badges?.size?.div(7f), Ice, modifier = Modifier.weight(1f).fillMaxHeight())
         } }
         Text(stringResource(R.string.github_achievements_local), style = MaterialTheme.typography.labelLarge)
         if (calendar == null) Text(stringResource(R.string.github_profile_unavailable)) else {
@@ -217,8 +224,8 @@ private fun techIcon(id: String): Triple<Int?, Color, String> = when (id) {
     "docker" -> Triple(R.drawable.ic_tech_docker, Ice, "Docker")
     "raspberrypi" -> Triple(R.drawable.ic_tech_raspberrypi, Color(0xFFFF91BC), "RPi")
     "linux" -> Triple(R.drawable.ic_tech_linux, Gold, "Linux")
-    "vscode" -> Triple(null, Ice, "VS Code")
-    "matlab" -> Triple(null, Gold, "MATLAB")
+    "vscode" -> Triple(R.drawable.ic_tech_vscode, Ice, "VS Code")
+    "matlab" -> Triple(R.drawable.ic_tech_matlab, Gold, "MATLAB")
     else -> Triple(null, Ice, id)
 }
 
@@ -240,9 +247,10 @@ internal fun GitHubPortraitWidget(profile: GitHubProfile?) {
                 for (row in 0 until rows) for (col in 0 until columns) {
                     val color = pixels?.get((col * pixels.width / columns).coerceAtMost(pixels.width-1),
                         (row * pixels.height / rows).coerceAtMost(pixels.height-1))
-                    val light = color?.let { .2126f*it.red + .7152f*it.green + .0722f*it.blue } ?: .15f
+                    val raw = color?.let { .2126f*it.red + .7152f*it.green + .0722f*it.blue } ?: 0f
+                    val light = kotlin.math.sqrt((raw * 3f).coerceIn(0f, 1f))
                     val glyph = " .:-=+*#%@"[(light * 9).toInt().coerceIn(0,9)]
-                    paint.color = lerp(Color(0xFF5B8CFF), Ice, row.toFloat()/rows).copy(alpha = .25f + light*.75f).toArgb()
+                    paint.color = lerp(Color(0xFF5B8CFF), Ice, row.toFloat()/rows).copy(alpha = .45f + light*.55f).toArgb()
                     canvas.nativeCanvas.drawText(glyph.toString(), col * stepX, (row+1)*stepY, paint)
                 }
             }

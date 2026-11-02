@@ -754,4 +754,6 @@
     <string name="github_calendar_rolling_total">直近1年 · %,d 件</string>
     <string name="github_calendar_less">少</string>
     <string name="github_calendar_more">多</string>
+    <string name="github_achievements_summary">公開プロフィール</string>
+    <string name="github_stats_average_value">平均 %.1f 件 / 日</string>
 </resources>

@@ -5,6 +5,23 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class GitHubProfileExtrasTest {
+    @Test fun `profile extras use tokenless fixed public endpoints`() = kotlinx.coroutines.test.runTest {
+        val seen = mutableListOf<String>()
+        val api = GitHubDashboardApi(kotlinx.serialization.json.Json { ignoreUnknownKeys = true }) { request ->
+            assertNull(request.header("Authorization"))
+            seen += request.url.host
+            GitHubHttpResponse(200, when {
+                request.url.host == "github.com" -> "achievement=yolo https://github.githubassets.com/assets/yolo-default-be0bbff04951.png"
+                request.url.encodedPath.endsWith("/readme") -> """{"content":"aHR0cHM6Ly9za2lsbGljb25zLmRldi9pY29ucz9pPWtvdGxpbg=="}"""
+                else -> """{"total_count":394}"""
+            })
+        }
+        val extras = api.profileExtras("demo-dev")
+        assertEquals(listOf("kotlin"), extras.stack)
+        assertEquals("yolo", extras.badges.single().slug)
+        assertEquals(394, extras.mergedPullRequests)
+        assertEquals(listOf("github.com", "api.github.com", "api.github.com"), seen)
+    }
     @Test fun `badge image accepts only fixed HTTPS asset path`() {
         assertNotNull(safeGitHubBadgeImageUrl("https://github.githubassets.com/images/modules/profile/achievements/yolo-default-ab12.png"))
         assertNull(safeGitHubBadgeImageUrl("https://github.githubassets.com.evil/yolo-default-ab12.png"))
