@@ -21,6 +21,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.HorizontalAlignmentLine
+import androidx.compose.ui.layout.AlignmentLine
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -30,6 +33,11 @@ import kotlin.math.roundToInt
 val LocalTopLevelSlideDirection = staticCompositionLocalOf { 0 }
 val LocalGlassHeaderHeight = staticCompositionLocalOf<Animatable<Float, AnimationVector1D>?> { null }
 val LocalGlassHeaderNaturalHeight = staticCompositionLocalOf<(Int) -> Unit> { {} }
+internal val NaturalGlassHeaderHeight = HorizontalAlignmentLine(::maxOf)
+internal val VisibleGlassHeaderHeight = HorizontalAlignmentLine(::maxOf)
+
+internal fun stableHeaderContentTop(natural: Int, visible: Int, total: Int): Int =
+    natural.coerceAtLeast(0) + (total - visible).coerceAtLeast(0)
 
 /** Records the wallpaper and scrolling content without recording the header that samples them. */
 @Composable
@@ -41,33 +49,26 @@ fun GlassHeaderOverlay(
     val backdrop = rememberGlassBackdrop()
     val wallpaper = LocalGlassCardBackdrop.current
     val density = LocalDensity.current
-    val initialHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 72.dp + initialExtraHeight
-    var measuredHeight by remember { mutableStateOf<Dp?>(null) }
-    var naturalHeight by remember { mutableIntStateOf(0) }
-    var extraHeight by remember { mutableIntStateOf(0) }
-    val sharedHeight = LocalGlassHeaderHeight.current
     val direction = LocalTopLevelSlideDirection.current
     val offset = remember { Animatable(direction.toFloat()) }
     LaunchedEffect(offset) { offset.animateTo(0f, tween(260)) }
-    Box(Modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxSize().glassBackdropSource(backdrop, wallpaper)) {
-            Box(Modifier.fillMaxSize().offset {
-                IntOffset((offset.value * 36.dp.toPx()).roundToInt(), 0)
-            }) {
-                val contentHeight = if (naturalHeight > 0) with(density) { (naturalHeight + extraHeight).toDp() }
-                    else measuredHeight ?: initialHeight
-                content(contentHeight)
+    SubcomposeLayout(Modifier.fillMaxSize()) { constraints ->
+        val top = subcompose("header") {
+            CompositionLocalProvider(LocalGlassHeaderBackdrop provides backdrop) { Box { header() } }
+        }.single().measure(constraints.copy(minHeight = 0))
+        val natural = top[NaturalGlassHeaderHeight].takeUnless { it == AlignmentLine.Unspecified } ?: top.height
+        val visible = top[VisibleGlassHeaderHeight].takeUnless { it == AlignmentLine.Unspecified } ?: top.height
+        val contentTop = with(density) { stableHeaderContentTop(natural, visible, top.height).toDp() }
+        val body = subcompose("body") {
+            Box(Modifier.fillMaxSize().glassBackdropSource(backdrop, wallpaper)) {
+                Box(Modifier.fillMaxSize().offset {
+                    IntOffset((offset.value * 36.dp.toPx()).roundToInt(), 0)
+                }) { content(contentTop) }
             }
-        }
-        CompositionLocalProvider(
-            LocalGlassHeaderBackdrop provides backdrop,
-            LocalGlassHeaderNaturalHeight provides { naturalHeight = it }
-        ) {
-            Box(Modifier.align(Alignment.TopCenter).onSizeChanged {
-                measuredHeight = with(density) { it.height.toDp() }
-                val visibleHeight = sharedHeight?.value?.takeIf { value -> value > 0f }?.roundToInt() ?: naturalHeight
-                if (visibleHeight > 0) extraHeight = (it.height - visibleHeight).coerceAtLeast(0)
-            }) { header() }
+        }.single().measure(constraints)
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            body.place(0, 0)
+            top.place(0, 0)
         }
     }
 }

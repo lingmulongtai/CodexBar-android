@@ -1,6 +1,10 @@
 package com.codexbar.android.debug
 
 import android.os.Bundle
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import com.codexbar.android.feature.github.LocalGitHubDashboardOverride
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
@@ -116,11 +120,14 @@ class ScreenshotActivity : AppCompatActivity() {
                 dynamicColor = false,
                 style = style
             ) {
+                val githubDemo = remember { if (intent.getBooleanExtra("github_demo", false)) mutableStateOf(gitHubDemoData(intent.getStringExtra("github_section"))) else null }
+                CompositionLocalProvider(LocalGitHubDashboardOverride provides githubDemo) {
                 CodexBarApp(
                     initialDestination = intent.getStringExtra("destination") ?: "dashboard",
                     dashboardPreviewSnapshot = snapshot,
                     onScreenPrivacyChanged = {}
                 )
+                }
             }
         }
     }

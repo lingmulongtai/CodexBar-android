@@ -90,11 +90,8 @@ fun GlassPageHeader(
 ) {
     val shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
     val sharedHeight = LocalGlassHeaderHeight.current
-    val direction = LocalTopLevelSlideDirection.current
     var naturalHeight by remember { mutableIntStateOf(0) }
     val onNaturalHeight = LocalGlassHeaderNaturalHeight.current
-    val contentAlpha = remember { Animatable(if (direction == 0) 1f else 0f) }
-    LaunchedEffect(contentAlpha) { contentAlpha.animateTo(1f, tween(200)) }
     LaunchedEffect(sharedHeight, naturalHeight) {
         if (sharedHeight != null && naturalHeight > 0) {
             if (sharedHeight.value <= 0f) sharedHeight.snapTo(naturalHeight.toFloat())
@@ -123,20 +120,22 @@ fun GlassPageHeader(
                 Modifier.fillMaxWidth().clipToBounds().layout { measurable, constraints ->
                     val child = measurable.measure(constraints.copy(minHeight = 0))
                     val animated = sharedHeight?.value?.takeIf { it > 0f }?.roundToInt() ?: child.height
-                    layout(child.width, constraints.constrainHeight(animated)) { child.placeRelative(0, 0) }
+                    val visible = constraints.constrainHeight(animated)
+                    layout(child.width, visible, mapOf(NaturalGlassHeaderHeight to child.height,
+                        VisibleGlassHeaderHeight to visible)) { child.placeRelative(0, 0) }
                 }.onSizeChanged { naturalHeight = it.height; onNaturalHeight(it.height) }
                     .statusBarsPadding().heightIn(min = 72.dp)
                     .padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Box(Modifier.graphicsLayer { alpha = contentAlpha.value }) { navigationIcon() }
+                Box { navigationIcon() }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                     subtitle?.invoke()
                 }
-                Row(Modifier.graphicsLayer { alpha = contentAlpha.value }) { actions() }
+                Row { actions() }
             }
         }
     }

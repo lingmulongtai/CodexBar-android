@@ -9,6 +9,7 @@ import com.codexbar.android.core.domain.model.GitHubDashboardSession
 import com.codexbar.android.core.domain.model.GitHubDashboardLayout
 import com.codexbar.android.core.domain.model.GitHubWidget
 import com.codexbar.android.core.domain.model.normalized
+import com.codexbar.android.core.network.github.GitHubProfileExtras
 import com.codexbar.android.core.network.github.GitHubContributions
 import com.codexbar.android.core.network.github.GitHubRepositoryActivity
 import com.codexbar.android.core.network.github.GitHubDashboardApi
@@ -51,6 +52,7 @@ internal data class GitHubDashboardState(
     val profile: GitHubProfile? = null,
     val layout: GitHubDashboardLayout? = null,
     val widgetSaveError: Boolean = false,
+    val profileExtras: GitHubProfileExtras? = null,
     val repositories: List<GitHubRepository> = emptyList(),
     val repositoriesComplete: Boolean = false,
     val starred: List<GitHubRepository>? = null,
@@ -279,11 +281,12 @@ internal class GitHubDashboardViewModel @Inject constructor(
                     }
                     privateToken = valid
                 }
-                val (contributions, activity, starred) = coroutineScope {
+                val (contributions, activity, starred, profileExtras) = coroutineScope {
+                    val extras = async { optionalGitHubData { api.profileExtras(profile.login) } }
                     val contributions = async { optionalGitHubData { api.contributions(privateToken ?: session.accessToken) } }
                     val activity = async { optionalGitHubData { api.repositoryActivity(session.accessToken) } }
                     val starred = async { optionalGitHubData { api.starred(profile.login) } }
-                    Triple(contributions.await(), activity.await(), starred.await())
+                    GitHubFetchedData(contributions.await(), activity.await(), starred.await(), extras.await())
                 }
                 currentCoroutineContext().ensureActive()
                 if (prefs.loadGitHubDashboardSession()?.refreshToken != session.refreshToken) {
@@ -291,7 +294,7 @@ internal class GitHubDashboardViewModel @Inject constructor(
                     return@launch
                 }
                 val safeStars = starred?.items?.filter { isGitHubRepositoryUrl(it.htmlUrl, it.fullName) }
-                _state.update { it.copy(loading = false, contributions = contributions,
+                _state.update { it.copy(loading = false, contributions = contributions, profileExtras = profileExtras,
                     privateContributionsConnected = privateToken != null && contributions != null,
                     contributionsUnavailable = contributions == null, repositoryActivity = activity,
                     starred = safeStars, starredComplete = starred?.complete == true && safeStars?.size == starred.items.size) }
@@ -361,6 +364,9 @@ internal class GitHubDashboardViewModel @Inject constructor(
         }
     }
 }
+
+private data class GitHubFetchedData(val contributions: GitHubContributions?, val activity: GitHubRepositoryActivity?,
+    val starred: com.codexbar.android.core.network.github.GitHubRepositories?, val extras: GitHubProfileExtras?)
 
 private suspend fun <T> optionalGitHubData(block: suspend () -> T): T? = try { block() }
 catch (cancelled: CancellationException) { throw cancelled }

@@ -1,0 +1,64 @@
+package com.codexbar.android.core.network.github
+
+import java.time.LocalDate
+import org.junit.Assert.*
+import org.junit.Test
+
+class GitHubProfileExtrasTest {
+    @Test fun `profile extras use tokenless fixed public endpoints`() = kotlinx.coroutines.test.runTest {
+        val seen = mutableListOf<String>()
+        val api = GitHubDashboardApi(kotlinx.serialization.json.Json { ignoreUnknownKeys = true }) { request ->
+            assertNull(request.header("Authorization"))
+            seen += request.url.host
+            GitHubHttpResponse(200, when {
+                request.url.host == "github.com" -> "achievement=yolo https://github.githubassets.com/assets/yolo-default-be0bbff04951.png"
+                request.url.encodedPath.endsWith("/readme") -> """{"content":"aHR0cHM6Ly9za2lsbGljb25zLmRldi9pY29ucz9pPWtvdGxpbg=="}"""
+                else -> """{"total_count":394}"""
+            })
+        }
+        val extras = api.profileExtras("demo-dev")
+        assertEquals(listOf("kotlin"), extras.stack)
+        assertEquals("yolo", extras.badges.single().slug)
+        assertEquals(394, extras.mergedPullRequests)
+        assertEquals(listOf("github.com", "api.github.com", "api.github.com"), seen)
+    }
+    @Test fun `badge image accepts only fixed HTTPS asset path`() {
+        assertNotNull(safeGitHubBadgeImageUrl("https://github.githubassets.com/images/modules/profile/achievements/yolo-default-ab12.png"))
+        assertNull(safeGitHubBadgeImageUrl("https://github.githubassets.com.evil/yolo-default-ab12.png"))
+        assertNull(safeGitHubBadgeImageUrl("http://github.githubassets.com/images/modules/profile/achievements/yolo-default-ab12.png"))
+    }
+    @Test fun `current GitHub assets path is accepted and parsed`() {
+        val url = "https://github.githubassets.com/assets/pull-shark-silver-0643f87ac9fd.png"
+        assertEquals(url, safeGitHubBadgeImageUrl(url))
+        assertEquals(listOf(GitHubPublicBadge("pull-shark", 3, url)), parseGitHubBadges("achievement=pull-shark&amp;tab=achievements $url"))
+    }
+    @Test fun `badge requires public link and trusted image and keeps highest tier`() {
+        val prefix = "https://github.githubassets.com/images/modules/profile/achievements/"
+        val html = "achievement=pull-shark ${prefix}pull-shark-default-ab12.png ${prefix}pull-shark-silver-ab12.png " +
+            "${prefix}yolo-default-ab12.png achievement=evil https://evil.example/yolo-gold-ab12.png"
+        assertEquals(listOf(GitHubPublicBadge("pull-shark", 3, "${prefix}pull-shark-silver-ab12.png")), parseGitHubBadges(html))
+        assertTrue(parseGitHubBadges("unavailable").isEmpty())
+    }
+    @Test fun `stack is authored and learning comes only from second icon list`() {
+        val (stack, learning) = parseGitHubStack("![stack](https://skillicons.dev/icons?theme=dark&i=python,ts,python) " +
+            "<img src=\"https://skillicons.dev/icons?i=swift,java\">")
+        assertEquals(listOf("python", "ts"), stack)
+        assertEquals(listOf("swift", "java"), learning)
+        assertEquals(emptyList<String>() to emptyList<String>(), parseGitHubStack("Java developer"))
+    }
+    @Test fun `rolling stats handle zeros missing dates and current day without inventing activity`() {
+        val today = LocalDate.of(2026, 11, 2)
+        val calendar = GitHubContributionCalendar(999, listOf(GitHubContributionWeek(listOf(
+            GitHubContributionDay("2026-10-28", 4), GitHubContributionDay("2026-10-29", 2),
+            GitHubContributionDay("2026-10-31", 3), GitHubContributionDay("2026-11-01", 5),
+            GitHubContributionDay("2026-11-02", 0), GitHubContributionDay("2026-11-03", 100),
+            GitHubContributionDay("2025-01-01", 100), GitHubContributionDay("invalid", 20)))))
+        val stats = calendar.statistics(today)
+        assertEquals(14, stats.total)
+        assertEquals(4, stats.activeDays)
+        assertEquals(2, stats.longestStreak)
+        assertEquals(2, stats.currentStreak)
+        assertEquals("2026-11-01", stats.bestDay?.date)
+        assertEquals(listOf(9, 5), stats.monthly.map { it.second })
+    }
+}

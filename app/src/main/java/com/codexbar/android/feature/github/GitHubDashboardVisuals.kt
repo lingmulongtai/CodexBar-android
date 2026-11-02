@@ -10,6 +10,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.ui.graphics.nativeCanvas
+import java.time.format.TextStyle
+import java.util.Locale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -23,6 +30,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.toArgb
 import com.codexbar.android.R
 import com.codexbar.android.core.domain.model.GitHubWidgetKind
 import com.codexbar.android.core.network.github.GitHubContributionCalendar
@@ -65,7 +74,7 @@ internal fun GitHubContributionCards(data: GitHubContributions?, unavailable: Bo
             if (data.partial) Text(stringResource(R.string.github_profile_partial), style = MaterialTheme.typography.bodySmall)
         }
     }
-    if (kind == null || kind == GitHubWidgetKind.CALENDAR) viewer.year?.contributionCalendar?.let { ContributionCalendarCard(it, selectedDay, onSelectDay, calendarScale) }
+    if (kind == null || kind == GitHubWidgetKind.CALENDAR) (viewer.rolling?.contributionCalendar ?: viewer.year?.contributionCalendar)?.let { ContributionCalendarCard(it, selectedDay, onSelectDay, calendarScale) }
     if (kind == null || kind == GitHubWidgetKind.ACTIVITY) viewer.year?.let { year ->
         val values = listOf(year.totalCommitContributions, year.totalIssueContributions,
             year.totalPullRequestContributions, year.totalPullRequestReviewContributions)
@@ -107,51 +116,81 @@ private fun ContributionCalendarCard(calendar: GitHubContributionCalendar, selec
     val dark = LocalCodexBarThemeProfile.current.isDark
     val density = LocalDensity.current
     val stepDp = 12.dp * scale.coerceIn(0.42f, 1.6f)
-    val cellDp = stepDp * 0.75f
     val step = with(density) { stepDp.toPx() }
-    val cell = with(density) { cellDp.toPx() }
+    val cell = step * .75f
+    val labelsHeight = with(density) { 18.dp.toPx() }
     val days = remember(calendar) {
         calendar.weeks.map { week -> week.contributionDays.mapNotNull { day ->
             runCatching { LocalDate.parse(day.date).dayOfWeek.value % 7 to day }.getOrNull()
         } }
     }
-    val empty = if (dark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.12f)
-    val colors = listOf(empty, Color(0xFF176C3A), Color(0xFF239A4F), Color(0xFF36C867), Color(0xFF54E887))
-    val description = stringResource(R.string.github_profile_calendar_total, calendar.totalContributions)
+    val identity = calendar.weeks.firstOrNull()?.contributionDays?.firstOrNull()?.date
+    var entered by rememberSaveable(identity) { mutableStateOf(false) }
+    val appearance = remember(identity) { Animatable(if (entered) 1f else 0f) }
+    LaunchedEffect(identity) {
+        if (!entered) { entered = true; appearance.animateTo(1f, tween(2200, easing = LinearEasing)) }
+    }
+    val empty = if (dark) Color.White.copy(alpha = .10f) else Color.Black.copy(alpha = .1f)
+    val colors = listOf(empty, Color(0xFF345AA3), Color(0xFF347DF0), Color(0xFF59B7FC), Color(0xFF9EE7FF))
+    val description = stringResource(R.string.github_calendar_rolling_total, calendar.totalContributions)
+    val textColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val monthPaint = remember { android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG) }
+    monthPaint.color = textColor.toArgb()
+    monthPaint.textSize = with(density) { 10.sp.toPx() }
     CodexBarCard(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(stringResource(R.string.github_profile_calendar), style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(description, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Text(description, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
                 if (selected != null) Text(stringResource(R.string.github_profile_calendar_selected, selected.date.drop(5).replace('-', '/'), selected.contributionCount),
                     style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
             }
             if (days.isNotEmpty()) {
                 val scroll = rememberScrollState(initial = Int.MAX_VALUE)
                 Box(Modifier.fillMaxWidth().horizontalScroll(scroll)) {
-                    Canvas(Modifier.width(stepDp * calendar.weeks.size).height(stepDp * 7)
+                    Canvas(Modifier.width(stepDp * calendar.weeks.size).height(stepDp * 7 + 18.dp)
                         .semantics { contentDescription = description }
                         .pointerInput(days, step) {
                             detectTapGestures { offset ->
                                 val week = (offset.x / step).toInt()
-                                val day = (offset.y / step).toInt()
-                                onSelect(days.getOrNull(week)?.firstOrNull { it.first == day }?.second)
+                                val day = ((offset.y - labelsHeight) / step).toInt()
+                                onSelect(if (offset.y < labelsHeight) null else days.getOrNull(week)?.firstOrNull { it.first == day }?.second)
                             }
                         }) {
-                        days.forEachIndexed { week, entries -> entries.forEach { (dayIndex, day) ->
-                            val level = when (day.contributionLevel) {
-                                "FIRST_QUARTILE" -> 1; "SECOND_QUARTILE" -> 2
-                                "THIRD_QUARTILE" -> 3; "FOURTH_QUARTILE" -> 4; else -> 0
+                        var lastMonth = -1
+                        var lastLabelX = -1000f
+                        days.forEachIndexed { week, entries ->
+                            val month = entries.firstOrNull()?.second?.date?.let { runCatching { LocalDate.parse(it).month }.getOrNull() }
+                            if (month != null && month.value != lastMonth && week * step - lastLabelX > 26.dp.toPx()) {
+                                drawContext.canvas.nativeCanvas.drawText(month.getDisplayName(TextStyle.SHORT, Locale.getDefault()), week * step, labelsHeight * .7f, monthPaint)
+                                lastMonth = month.value; lastLabelX = week * step
                             }
-                            val topLeft = Offset(week * step, dayIndex * step)
-                            drawRoundRect(colors[level], topLeft = topLeft,
-                                size = Size(cell, cell), cornerRadius = CornerRadius(3.dp.toPx()))
-                            if (selected?.date == day.date) drawRoundRect(Color.White, topLeft = topLeft,
-                                size = Size(cell, cell), cornerRadius = CornerRadius(3.dp.toPx()),
-                                style = Stroke(width = 1.5.dp.toPx()))
-                        } }
+                            entries.forEach { (dayIndex, day) ->
+                                val level = when (day.contributionLevel) {
+                                    "FIRST_QUARTILE" -> 1; "SECOND_QUARTILE" -> 2
+                                    "THIRD_QUARTILE" -> 3; "FOURTH_QUARTILE" -> 4; else -> 0
+                                }
+                                val delay = week.toFloat() / days.size * .72f
+                                val p = ((appearance.value - delay) / .28f).coerceIn(0f, 1f)
+                                val bounce = if (p < .7f) .2f + p / .7f * .95f else 1.15f - (p-.7f)/.3f * .15f
+                                val side = cell * bounce
+                                val topLeft = Offset(week * step + (cell-side)/2, labelsHeight + dayIndex * step + (cell-side)/2)
+                                val radius = CornerRadius(minOf(side/3, 2.dp.toPx()))
+                                drawRoundRect(colors[level].copy(alpha = colors[level].alpha * p), topLeft = topLeft,
+                                    size = Size(side, side), cornerRadius = radius)
+                                if (selected?.date == day.date) drawRoundRect(Color.White, topLeft = topLeft,
+                                    size = Size(side, side), cornerRadius = radius, style = Stroke(width = 1.5.dp.toPx()))
+                            }
+                        }
                     }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Text(stringResource(R.string.github_calendar_less), style = MaterialTheme.typography.labelSmall)
+                    Spacer(Modifier.width(6.dp))
+                    colors.forEach { color -> Box(Modifier.padding(end = 3.dp).size(8.dp).background(color, RoundedCornerShape(2.dp))) }
+                    Spacer(Modifier.width(3.dp))
+                    Text(stringResource(R.string.github_calendar_more), style = MaterialTheme.typography.labelSmall)
                 }
             }
         }

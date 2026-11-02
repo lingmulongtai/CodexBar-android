@@ -37,7 +37,7 @@ internal fun safeGitHubAvatarUrl(value: String?): String? {
 private val avatarClient = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false)
     .callTimeout(15, TimeUnit.SECONDS).build()
 
-private fun loadAvatar(url: String): ImageBitmap? {
+internal fun loadGitHubImage(url: String): ImageBitmap? {
     return try {
         avatarClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
             if (!response.isSuccessful) return null
@@ -67,7 +67,7 @@ private fun loadAvatar(url: String): ImageBitmap? {
 internal fun GitHubAvatar(url: String?, login: String, modifier: Modifier = Modifier) {
     val safeUrl = safeGitHubAvatarUrl(url)
     val image by produceState<ImageBitmap?>(initialValue = null, key1 = safeUrl) {
-        value = if (safeUrl == null) null else withContext(Dispatchers.IO) { loadAvatar(safeUrl) }
+        value = if (safeUrl == null) null else withContext(Dispatchers.IO) { loadGitHubImage(safeUrl) }
     }
     Box(modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center) {
