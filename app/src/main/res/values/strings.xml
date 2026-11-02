@@ -731,4 +731,5 @@
     <string name="github_dashboard_retrying">Connection interrupted. Retrying…</string>
     <string name="github_widgets_edit">Edit</string>
     <string name="github_profile_period_title_all">All commits</string>
+    <string name="github_widgets_pinned">Pinned repositories</string>
 </resources>

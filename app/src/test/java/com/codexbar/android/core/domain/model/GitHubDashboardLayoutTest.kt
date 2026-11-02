@@ -9,9 +9,18 @@ class GitHubDashboardLayoutTest {
     @Test fun `layout round trip keeps pinned repository size and order`() {
         val layout = GitHubDashboardLayout(10, listOf(
             GitHubWidget(GitHubWidgetKind.CALENDAR, size = GitHubWidgetSize.LARGE),
-            GitHubWidget(GitHubWidgetKind.REPOSITORY, 42, GitHubWidgetSize.SMALL),
+            GitHubWidget(GitHubWidgetKind.PINNED_REPOSITORIES, repositoryIds = listOf(42)),
             GitHubWidget(GitHubWidgetKind.COMMITS)))
         assertEquals(layout, Json.decodeFromString<GitHubDashboardLayout>(Json.encodeToString(layout)).normalized(10))
+    }
+    @Test fun `legacy pins migrate to one ordered group with existing container`() {
+        val old = GitHubDashboardLayout(10, listOf(GitHubWidget(GitHubWidgetKind.CALENDAR),
+            GitHubWidget(GitHubWidgetKind.REPOSITORY, 8), GitHubWidget(GitHubWidgetKind.REPOSITORY, 3),
+            GitHubWidget(GitHubWidgetKind.PINNED_REPOSITORIES, repositoryIds = listOf(8, 5, -1))))
+        val migrated = old.normalized(10)
+        assertEquals(listOf(GitHubWidgetKind.CALENDAR, GitHubWidgetKind.PINNED_REPOSITORIES), migrated.widgets.map { it.kind })
+        assertEquals(listOf(8L, 3L, 5L), migrated.widgets.last().repositoryIds)
+        assertEquals(migrated, migrated.normalized(10))
     }
     @Test fun `calendar scale is continuous bounded and survives persistence`() {
         val widget = GitHubWidget(GitHubWidgetKind.CALENDAR, calendarScale = 0.47f)
@@ -26,6 +35,6 @@ class GitHubDashboardLayoutTest {
         assertEquals(GitHubDashboardLayout.default(11), old.normalized(11))
         val broken = GitHubDashboardLayout(10, listOf(GitHubWidget(GitHubWidgetKind.REPOSITORY, 0),
             GitHubWidget(GitHubWidgetKind.REPOSITORY, 42), GitHubWidget(GitHubWidgetKind.REPOSITORY, 42)))
-        assertEquals(listOf(GitHubWidget(GitHubWidgetKind.REPOSITORY, 42)), broken.normalized(10).widgets)
+        assertEquals(listOf(GitHubWidget(GitHubWidgetKind.PINNED_REPOSITORIES, repositoryIds = listOf(42))), broken.normalized(10).widgets)
     }
 }

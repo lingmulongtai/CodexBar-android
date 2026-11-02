@@ -55,7 +55,7 @@ import com.codexbar.android.ui.components.*
 
 private const val GITHUB_DEVICE_URL = "https://github.com/login/device"
 
-private enum class GitHubPage { Profile, Repositories, Starred, Widgets }
+private enum class GitHubPage { Profile, Repositories, Starred, Widgets, Pins }
 internal enum class RepositorySort { Updated, Pushed, Stars, Name, Commits, Contributions }
 
 @Composable
@@ -73,7 +73,7 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
     val widgetDrag = rememberGitHubWidgetDragReorder(dashboardGrid, dashboardWidgets, viewModel::updateWidgets)
     val swipeEnabled = LocalTopLevelSwipeEnabled.current
     DisposableEffect(page, editingWidgets, swipeEnabled) {
-        if (page == GitHubPage.Widgets || editingWidgets) swipeEnabled?.value = false
+        if ((page == GitHubPage.Widgets || page == GitHubPage.Pins) || editingWidgets) swipeEnabled?.value = false
         onDispose { swipeEnabled?.value = true }
     }
     LaunchedEffect(state.profile) { if (state.profile == null) { page = GitHubPage.Profile; editingWidgets = false } }
@@ -85,7 +85,7 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
         GitHubPage.Profile -> stringResource(R.string.github_dashboard_title)
         GitHubPage.Repositories -> stringResource(R.string.github_profile_repositories)
         GitHubPage.Starred -> stringResource(R.string.github_profile_starred)
-        GitHubPage.Widgets -> stringResource(R.string.github_widgets_title)
+        GitHubPage.Widgets, GitHubPage.Pins -> stringResource(R.string.github_widgets_title)
     }
     Box(Modifier.fillMaxSize().pointerInput(Unit) {
         awaitEachGesture {
@@ -158,6 +158,8 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
                                     GitHubContributionCards(state.contributions, state.contributionsUnavailable, state.loading,
                                         selectedDay = selectedDay, onSelectDay = { selectedDay = it }, kind = widget.kind, calendarScale = widget.effectiveCalendarScale,
                                         privateContributionsConnected = state.privateContributionsConnected)
+                                GitHubWidgetKind.PINNED_REPOSITORIES -> GitHubPinnedGroup(widget, state.repositories,
+                                    onManage = { page = GitHubPage.Pins }, open = ::open)
                                 GitHubWidgetKind.REPOSITORY -> {
                                     val repo = state.repositories.find { it.id == widget.repositoryId }
                                     if (repo != null) GitHubPinnedRepository(repo, widget.size, ::open)
@@ -180,9 +182,9 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
                 }
                 item(span = { GridItemSpan(maxLineSpan) }) { WallpaperFooter() }
             }
-        } else if (page == GitHubPage.Widgets) {
+        } else if (page == GitHubPage.Widgets || page == GitHubPage.Pins) {
             GitHubWidgetPicker(state = state, headerHeight = headerHeight, onChange = viewModel::updateWidgets,
-                onAdded = { page = GitHubPage.Profile })
+                onAdded = { page = GitHubPage.Profile }, selectPins = page == GitHubPage.Pins)
         } else {
             val entries = if (page == GitHubPage.Starred) state.starred else state.repositories
             val shown = remember(entries, sort, state.repositoryActivity) {

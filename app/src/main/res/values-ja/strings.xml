@@ -729,4 +729,5 @@
     <string name="github_dashboard_retrying">通信が途切れたため再接続中…</string>
     <string name="github_widgets_edit">編集</string>
     <string name="github_profile_period_title_all">すべてのコミット</string>
+    <string name="github_widgets_pinned">ピン留めリポジトリ</string>
 </resources>

@@ -116,13 +116,12 @@ private fun IconButtonGlass(onClick: () -> Unit, modifier: Modifier, description
 
 @Composable
 internal fun GitHubWidgetPicker(state: GitHubDashboardState, headerHeight: Dp,
-    onChange: (List<GitHubWidget>) -> Unit, onAdded: () -> Unit) {
+    onChange: (List<GitHubWidget>) -> Unit, onAdded: () -> Unit, selectPins: Boolean = false) {
     val widgets = state.layout?.widgets.orEmpty()
-    var searching by remember { mutableStateOf(false) }
+    var searching by remember { mutableStateOf(selectPins) }
     var search by remember { mutableStateOf("") }
     val available = remember(state.repositories, widgets, search) {
-        val pinned = widgets.mapNotNull { it.repositoryId }.toSet()
-        state.repositories.filter { it.id !in pinned && it.fullName.contains(search.trim(), ignoreCase = true) }.take(100)
+        state.repositories.filter { it.fullName.contains(search.trim(), ignoreCase = true) }.take(100)
     }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp,
         top = headerHeight + 8.dp, bottom = LocalBottomChromeInset.current + 32.dp),
@@ -131,7 +130,7 @@ internal fun GitHubWidgetPicker(state: GitHubDashboardState, headerHeight: Dp,
             item { CodexBarButton(onClick = { searching = true }, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.github_widgets_add_repository))
             } }
-            val missing = listOf(GitHubWidgetKind.PROFILE, GitHubWidgetKind.COMMITS, GitHubWidgetKind.CALENDAR, GitHubWidgetKind.ACTIVITY)
+            val missing = listOf(GitHubWidgetKind.PROFILE, GitHubWidgetKind.COMMITS, GitHubWidgetKind.CALENDAR, GitHubWidgetKind.ACTIVITY, GitHubWidgetKind.PINNED_REPOSITORIES)
                 .filter { kind -> widgets.none { it.kind == kind } }
             items(missing, key = { it.name }) { kind ->
                 CodexBarCard(onClick = { onChange(widgets + GitHubWidget(kind)); onAdded() }, modifier = Modifier.fillMaxWidth()) {
@@ -139,6 +138,7 @@ internal fun GitHubWidgetPicker(state: GitHubDashboardState, headerHeight: Dp,
                         GitHubWidgetKind.PROFILE -> R.string.github_widgets_profile
                         GitHubWidgetKind.COMMITS -> R.string.github_widgets_commits
                         GitHubWidgetKind.CALENDAR -> R.string.github_widgets_calendar
+                        GitHubWidgetKind.PINNED_REPOSITORIES -> R.string.github_widgets_pinned
                         else -> R.string.github_widgets_activity
                     }), modifier = Modifier.padding(18.dp), style = MaterialTheme.typography.titleMedium)
                 }
@@ -148,11 +148,17 @@ internal fun GitHubWidgetPicker(state: GitHubDashboardState, headerHeight: Dp,
                 label = { Text(stringResource(R.string.github_widgets_search)) }, singleLine = true) }
             if (available.isEmpty()) item { Text(stringResource(R.string.github_widgets_no_results)) }
             items(available, key = { it.id }) { repo ->
-                CodexBarCard(onClick = { onChange(widgets + GitHubWidget(GitHubWidgetKind.REPOSITORY, repo.id)); onAdded() },
+                val pins = widgets.firstOrNull { it.kind == GitHubWidgetKind.PINNED_REPOSITORIES }
+                val selected = repo.id in pins?.repositoryIds.orEmpty()
+                CodexBarCard(onClick = {
+                    val ids = if (selected) pins!!.repositoryIds - repo.id else pins?.repositoryIds.orEmpty() + repo.id
+                    val group = (pins ?: GitHubWidget(GitHubWidgetKind.PINNED_REPOSITORIES)).copy(repositoryIds = ids)
+                    onChange(if (pins == null) widgets + group else widgets.map { if (it.key == pins.key) group else it })
+                },
                     modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(repo.fullName, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.github_widgets_add))
+                        Icon(if (selected) Icons.Rounded.Remove else Icons.Rounded.Add, contentDescription = stringResource(if (selected) R.string.github_widgets_remove else R.string.github_widgets_add))
                     }
                 }
             }
