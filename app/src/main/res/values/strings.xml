@@ -732,4 +732,25 @@
     <string name="github_widgets_edit">Edit</string>
     <string name="github_profile_period_title_all">All commits</string>
     <string name="github_widgets_pinned">Pinned repositories</string>
+    <string name="github_widgets_stats">Year in review</string>
+    <string name="github_widgets_achievements">Achievements</string>
+    <string name="github_widgets_stack">Tech stack</string>
+    <string name="github_widgets_portrait">Portrait</string>
+    <string name="github_stats_days">days</string>
+    <string name="github_stats_contributions">Contributions</string>
+    <string name="github_stats_last_year">in the last 365 days</string>
+    <string name="github_stats_best_day">Best day</string>
+    <string name="github_stats_longest">Longest streak</string>
+    <string name="github_stats_current">Current streak</string>
+    <string name="github_stats_active">Active days</string>
+    <string name="github_stats_weekday">Busiest weekday</string>
+    <string name="github_stats_daily_average">by daily average</string>
+    <string name="github_stats_monthly">Contributions by month</string>
+    <string name="github_achievements_public">GitHub badges</string>
+    <string name="github_achievements_local">Local · from activity data</string>
+    <string name="github_achievements_not_shown">NOT SHOWN</string>
+    <string name="github_achievements_unavailable">UNAVAILABLE</string>
+    <string name="github_achievements_progress">IN PROGRESS</string>
+    <string name="github_stack_missing">Add skillicons.dev icons to your public profile README to show your authored stack here.</string>
+    <string name="github_stack_learning">Learning</string>
 </resources>

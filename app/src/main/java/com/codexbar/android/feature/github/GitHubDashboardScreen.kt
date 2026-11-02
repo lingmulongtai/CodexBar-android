@@ -53,6 +53,8 @@ import com.codexbar.android.core.network.github.GitHubRepository
 import com.codexbar.android.core.network.github.GitHubRepositoryActivity
 import com.codexbar.android.ui.components.*
 
+internal val LocalGitHubDashboardOverride = staticCompositionLocalOf<MutableState<GitHubDashboardState>?> { null }
+
 private const val GITHUB_DEVICE_URL = "https://github.com/login/device"
 
 private enum class GitHubPage { Profile, Repositories, Starred, Widgets, Pins }
@@ -61,7 +63,13 @@ internal enum class RepositorySort { Updated, Pushed, Stars, Name, Commits, Cont
 @Composable
 internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltViewModel(),
     onOpenSettings: (() -> Unit)? = null) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
+    val actualState by viewModel.state.collectAsStateWithLifecycle()
+    val demo = if (BuildConfig.IS_DEBUG) LocalGitHubDashboardOverride.current else null
+    val state = demo?.value ?: actualState
+    fun updateWidgets(widgets: List<com.codexbar.android.core.domain.model.GitHubWidget>) {
+        if (demo != null) demo.value = state.copy(layout = state.layout?.copy(widgets = widgets))
+        else viewModel.updateWidgets(widgets)
+    }
     val uri = LocalUriHandler.current
     var browserError by remember { mutableStateOf(false) }
     var page by rememberSaveable { mutableStateOf(GitHubPage.Profile) }
@@ -70,7 +78,7 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
     var editingWidgets by rememberSaveable { mutableStateOf(false) }
     val dashboardGrid = rememberLazyGridState()
     val dashboardWidgets = state.layout?.widgets.orEmpty()
-    val widgetDrag = rememberGitHubWidgetDragReorder(dashboardGrid, dashboardWidgets, viewModel::updateWidgets)
+    val widgetDrag = rememberGitHubWidgetDragReorder(dashboardGrid, dashboardWidgets, ::updateWidgets)
     val swipeEnabled = LocalTopLevelSwipeEnabled.current
     DisposableEffect(page, editingWidgets, swipeEnabled) {
         if ((page == GitHubPage.Widgets || page == GitHubPage.Pins) || editingWidgets) swipeEnabled?.value = false
@@ -131,17 +139,17 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
                         GitHubWidgetFrame(widget = widget, editing = editingWidgets, drag = widgetDrag,
                             modifier = Modifier.fillMaxWidth(),
                             onResize = { size ->
-                                viewModel.state.value.layout?.widgets?.let { list ->
-                                    viewModel.updateWidgets(list.map { if (it.key == widget.key) it.copy(size = size) else it })
+                                state.layout?.widgets?.let { list ->
+                                    updateWidgets(list.map { if (it.key == widget.key) it.copy(size = size) else it })
                                 }
                             },
                             onCalendarScale = { scale ->
-                                viewModel.state.value.layout?.widgets?.let { list ->
-                                    viewModel.updateWidgets(list.map { if (it.key == widget.key) it.copy(calendarScale = scale) else it })
+                                state.layout?.widgets?.let { list ->
+                                    updateWidgets(list.map { if (it.key == widget.key) it.copy(calendarScale = scale) else it })
                                 }
                             },
-                            onRemove = { viewModel.state.value.layout?.widgets?.let { list ->
-                                viewModel.updateWidgets(list.filterNot { it.key == widget.key })
+                            onRemove = { state.layout?.widgets?.let { list ->
+                                updateWidgets(list.filterNot { it.key == widget.key })
                             } }) {
                             when (widget.kind) {
                                 GitHubWidgetKind.PROFILE -> GitHubProfileCard(profile, state,
@@ -158,6 +166,10 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
                                     GitHubContributionCards(state.contributions, state.contributionsUnavailable, state.loading,
                                         selectedDay = selectedDay, onSelectDay = { selectedDay = it }, kind = widget.kind, calendarScale = widget.effectiveCalendarScale,
                                         privateContributionsConnected = state.privateContributionsConnected)
+                                GitHubWidgetKind.STATS -> GitHubStatsWidget(state.contributions?.viewer?.rolling?.contributionCalendar)
+                                GitHubWidgetKind.ACHIEVEMENTS -> GitHubAchievementsWidget(state.profileExtras, state.contributions?.viewer?.rolling?.contributionCalendar)
+                                GitHubWidgetKind.STACK -> GitHubStackWidget(state.profileExtras)
+                                GitHubWidgetKind.PORTRAIT -> GitHubPortraitWidget(profile)
                                 GitHubWidgetKind.PINNED_REPOSITORIES -> GitHubPinnedGroup(widget, state.repositories,
                                     onManage = { page = GitHubPage.Pins }, open = ::open)
                                 GitHubWidgetKind.REPOSITORY -> {
@@ -183,7 +195,7 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
                 item(span = { GridItemSpan(maxLineSpan) }) { WallpaperFooter() }
             }
         } else if (page == GitHubPage.Widgets || page == GitHubPage.Pins) {
-            GitHubWidgetPicker(state = state, headerHeight = headerHeight, onChange = viewModel::updateWidgets,
+            GitHubWidgetPicker(state = state, headerHeight = headerHeight, onChange = ::updateWidgets,
                 onAdded = { page = GitHubPage.Profile }, selectPins = page == GitHubPage.Pins)
         } else {
             val entries = if (page == GitHubPage.Starred) state.starred else state.repositories

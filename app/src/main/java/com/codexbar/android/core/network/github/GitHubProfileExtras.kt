@@ -8,6 +8,10 @@ internal data class GitHubProfileExtras(val badges: List<GitHubPublicBadge> = em
     val badgesAvailable: Boolean = false, val stack: List<String> = emptyList(), val learning: List<String> = emptyList(),
     val mergedPullRequests: Int? = null)
 
+internal fun safeGitHubBadgeImageUrl(value: String?): String? = value?.takeIf {
+    it.matches(Regex("""https://github\.githubassets\.com/images/modules/profile/achievements/[a-z-]+-(default|bronze|silver|gold)-[a-fA-F0-9]+\.png"""))
+}
+
 internal fun parseGitHubBadges(html: String): List<GitHubPublicBadge> {
     val known = setOf("pull-shark", "starstruck", "pair-extraordinaire", "galaxy-brain", "quickdraw", "yolo", "public-sponsor")
     return Regex("""https://github\.githubassets\.com/images/modules/profile/achievements/([a-z-]+)-(default|bronze|silver|gold)-[a-fA-F0-9]+\.png""")

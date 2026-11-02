@@ -730,4 +730,25 @@
     <string name="github_widgets_edit">編集</string>
     <string name="github_profile_period_title_all">すべてのコミット</string>
     <string name="github_widgets_pinned">ピン留めリポジトリ</string>
+    <string name="github_widgets_stats">年間の活動統計</string>
+    <string name="github_widgets_achievements">実績</string>
+    <string name="github_widgets_stack">技術スタック</string>
+    <string name="github_widgets_portrait">ポートレート</string>
+    <string name="github_stats_days">日</string>
+    <string name="github_stats_contributions">コントリビューション</string>
+    <string name="github_stats_last_year">直近365日</string>
+    <string name="github_stats_best_day">最多の日</string>
+    <string name="github_stats_longest">最長の連続日数</string>
+    <string name="github_stats_current">現在の連続日数</string>
+    <string name="github_stats_active">活動日数</string>
+    <string name="github_stats_weekday">最も活発な曜日</string>
+    <string name="github_stats_daily_average">日平均で比較</string>
+    <string name="github_stats_monthly">月別のコントリビューション</string>
+    <string name="github_achievements_public">GitHub の公開バッジ</string>
+    <string name="github_achievements_local">ローカル実績 · 活動データから集計</string>
+    <string name="github_achievements_not_shown">非表示</string>
+    <string name="github_achievements_unavailable">取得できません</string>
+    <string name="github_achievements_progress">進行中</string>
+    <string name="github_stack_missing">公開プロフィールの README にある skillicons.dev の技術一覧を表示します。</string>
+    <string name="github_stack_learning">学習中</string>
 </resources>

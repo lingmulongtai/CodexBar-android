@@ -3,7 +3,8 @@ package com.codexbar.android.core.domain.model
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class GitHubWidgetKind { PROFILE, COMMITS, CALENDAR, ACTIVITY, REPOSITORY, PINNED_REPOSITORIES }
+enum class GitHubWidgetKind { PROFILE, COMMITS, CALENDAR, ACTIVITY, REPOSITORY, PINNED_REPOSITORIES,
+    STATS, ACHIEVEMENTS, STACK, PORTRAIT }
 @Serializable
 enum class GitHubWidgetSize { SMALL, MEDIUM, LARGE }
 

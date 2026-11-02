@@ -130,7 +130,7 @@ internal fun GitHubWidgetPicker(state: GitHubDashboardState, headerHeight: Dp,
             item { CodexBarButton(onClick = { searching = true }, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.github_widgets_add_repository))
             } }
-            val missing = listOf(GitHubWidgetKind.PROFILE, GitHubWidgetKind.COMMITS, GitHubWidgetKind.CALENDAR, GitHubWidgetKind.ACTIVITY, GitHubWidgetKind.PINNED_REPOSITORIES)
+            val missing = listOf(GitHubWidgetKind.PROFILE, GitHubWidgetKind.COMMITS, GitHubWidgetKind.CALENDAR, GitHubWidgetKind.ACTIVITY, GitHubWidgetKind.PINNED_REPOSITORIES, GitHubWidgetKind.STATS, GitHubWidgetKind.ACHIEVEMENTS, GitHubWidgetKind.STACK, GitHubWidgetKind.PORTRAIT)
                 .filter { kind -> widgets.none { it.kind == kind } }
             items(missing, key = { it.name }) { kind ->
                 CodexBarCard(onClick = { onChange(widgets + GitHubWidget(kind)); onAdded() }, modifier = Modifier.fillMaxWidth()) {
@@ -139,6 +139,10 @@ internal fun GitHubWidgetPicker(state: GitHubDashboardState, headerHeight: Dp,
                         GitHubWidgetKind.COMMITS -> R.string.github_widgets_commits
                         GitHubWidgetKind.CALENDAR -> R.string.github_widgets_calendar
                         GitHubWidgetKind.PINNED_REPOSITORIES -> R.string.github_widgets_pinned
+                        GitHubWidgetKind.STATS -> R.string.github_widgets_stats
+                        GitHubWidgetKind.ACHIEVEMENTS -> R.string.github_widgets_achievements
+                        GitHubWidgetKind.STACK -> R.string.github_widgets_stack
+                        GitHubWidgetKind.PORTRAIT -> R.string.github_widgets_portrait
                         else -> R.string.github_widgets_activity
                     }), modifier = Modifier.padding(18.dp), style = MaterialTheme.typography.titleMedium)
                 }
