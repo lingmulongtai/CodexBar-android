@@ -12,9 +12,9 @@ Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT
 
 <p align="center"><sub>Demo quota data is shown in screenshots. No account credentials are included.</sub></p>
 
-## Latest release — v0.14.0
+## Latest release — v0.15.0
 
-v0.14.0 adds a customizable **GitHub dashboard** with profile activity, a contribution calendar, repository shortcuts, and a separate read-only authorization for private contributions. Liquid Glass navigation, header actions, and device-code sign-in have also been refined. Install **CodexBar-Android-v0.14.0.apk** over the existing app; version code **43** uses the pinned production signing identity. **Shared PC history, spend and remote settings require Windows v0.71.0 or later.** [Release notes and verification](docs/releases/v0.14.0.md) · [Glass design decisions](docs/liquid-glass-design-contract.md)
+v0.15.0 expands the **GitHub dashboard** with native glass Achievements, Year in review, Tech stack and Portrait widgets, an animated rolling contribution calendar, and a two-column Pinned repository group. Existing individual pins migrate in order. The settings action stays visible across tabs, and page transitions keep a fixed vertical position. Install **CodexBar-Android-v0.15.0.apk** over the existing app; version code **44** uses the pinned production signing identity. **Shared PC history, spend and remote settings require Windows v0.71.0 or later.** [Release notes and verification](docs/releases/v0.15.0.md) · [Profile widget behavior](docs/github-profile-widgets.md) · [Glass design decisions](docs/liquid-glass-design-contract.md)
 
 ![Tablet PC spend dashboard with synthetic data](docs/images/mobile-dashboard/tablet-spend.png)
 
@@ -22,7 +22,7 @@ v0.14.0 adds a customizable **GitHub dashboard** with profile activity, a contri
 
 Liquid Glass supports long-press-and-slide tabs and switches, native glass sliders, daily Unsplash photography, and consistent settings, connection and analytics controls. The default six-photo rotation needs no key; optional personal Editorial keys are encrypted on the device. [Photography and privacy](docs/daily-wallpaper.md) · [Input verification](docs/liquid-glass-glisse.md)
 
-History and Spend share a **Trends** tab. The GitHub tab shows profile activity, a contribution calendar and repository shortcuts; available private data depends on the account and granted permissions. [Release notes](docs/releases/v0.14.0.md)
+History and Spend share a **Trends** tab. The GitHub tab shows profile activity, a contribution calendar and repository shortcuts; available private data depends on the account and granted permissions. [Release notes](docs/releases/v0.15.0.md)
 
 <p align="center">
   <img src="docs/images/releases/v0.14.0/usage-dark.png" width="250" alt="Liquid Glass usage dashboard, dark appearance" />
@@ -30,6 +30,16 @@ History and Spend share a **Trends** tab. The GitHub tab shows profile activity,
 </p>
 
 <p align="center"><sub>Android API 36 emulator captures of the real Compose screens with synthetic data; these are not physical-device acceptance results.</sub></p>
+
+## GitHub profile widgets
+
+Add profile widgets from **GitHub → Edit → +**. Group favorite repositories in a two-column Pinned widget; legacy individual pins migrate automatically. Public badges and authored tech stacks use public profile data without sending account tokens. Annual statistics and the animated calendar cover the last 365 days, while the commit-period cards keep their calendar-period meaning.
+
+<p align="center">
+  <img src="docs/images/releases/v0.15.0/github-achievements.png" width="250" alt="GitHub achievements in native glass, demo data" />
+  <img src="docs/images/releases/v0.15.0/github-statistics.png" width="250" alt="Rolling annual contribution statistics and calendar, demo data" />
+  <img src="docs/images/releases/v0.15.0/github-pinned.png" width="250" alt="Two-column pinned repositories, demo data" />
+</p>
 
 ## Windows usage sharing
 
@@ -190,7 +200,7 @@ Claude does not expose a supported third-party Android device-code flow for this
 
 1. Install Claude Code using [Anthropic's current setup instructions](https://code.claude.com/docs/en/setup), complete browser sign-in, then finish the first-run and folder-trust prompts from `~/.codexbar/claude-workspace` as described in the [companion setup guide](companion/claude/README.md).
 2. Enter `/usage` and confirm that **Current session** appears.
-3. Download `CodexBar-Claude-Companion-v0.14.0.zip` from the same Release as the APK and extract it.
+3. Download `CodexBar-Claude-Companion-v0.15.0.zip` from the same Release as the APK and extract it.
 4. On Windows, run `start-windows.cmd`. On macOS or Linux, run `chmod +x start-macos-linux.sh` once and then `./start-macos-linux.sh`.
 5. Keep the phone and computer on the same trusted Wi-Fi, or use the [Tailscale setup](companion/claude/README.md#connect-across-networks-with-tailscale) for different networks. If the computer firewall prompts, permit Node.js on private networks only. In Claude under **Connections**, tap **Scan QR securely in CodexBar** and scan the displayed QR inside the app. Do not use the system camera. If Google Play services cannot open the scanner, paste the `CBCLAUDE1...` pairing code, then tap **Pair & verify Claude companion**.
 
@@ -216,7 +226,7 @@ Do not extract bearer tokens from browser DevTools unless you are debugging loca
 
 #### Optional private Codex telemetry companion
 
-OpenAI's subscription quota response does not contain local Codex CLI context-window or token-count history. To add those insights without uploading session content, install `CodexBar-Codex-Telemetry-Companion-v0.14.0.zip` from the same GitHub Release as the app:
+OpenAI's subscription quota response does not contain local Codex CLI context-window or token-count history. To add those insights without uploading session content, install `CodexBar-Codex-Telemetry-Companion-v0.15.0.zip` from the same GitHub Release as the app:
 
 1. Install Node.js 20 or newer on the computer where Codex CLI or Codex desktop stores `~/.codex/sessions`.
 2. Extract the companion archive. On Windows, run `start-windows.cmd`; on macOS or Linux, run `./start-macos-linux.sh`.
@@ -227,7 +237,7 @@ The scanner is bounded to recent session files and reads only `token_count` plus
 
 ### Antigravity
 
-Download `CodexBar-Antigravity-Companion-v0.14.0.zip` from the same Release as the APK. The Windows [Antigravity companion](companion/antigravity/README.md) reads model quotas and reset times from the running, signed-in Antigravity IDE. In **Connections → Antigravity**, scan its private QR with the in-app scanner. This account usage is separate from Gemini CLI and Claude subscriptions.
+Download `CodexBar-Antigravity-Companion-v0.15.0.zip` from the same Release as the APK. The Windows [Antigravity companion](companion/antigravity/README.md) reads model quotas and reset times from the running, signed-in Antigravity IDE. In **Connections → Antigravity**, scan its private QR with the in-app scanner. This account usage is separate from Gemini CLI and Claude subscriptions.
 
 Keep Antigravity open and the PC awake. The optional tray resident starts at sign-in and recovers after a crash. For different networks, connect the phone and PC to Tailscale and pair using the PC's `100.x` address on port `43824`. Google credentials, conversations and files stay on the PC. Only explicitly reported model quotas are shown; weekly limits and credit balances are not inferred. These internal IDE endpoints may change after an Antigravity update.
 
@@ -264,7 +274,7 @@ gemini
 ```
 
 2. Launch the official CLI from `~/.codexbar/gemini-workspace`, complete Google's sign-in and folder-trust prompts, verify `/model` shows usage limits, then exit it. Create that workspace first if needed.
-3. Download `CodexBar-Gemini-Companion-v0.14.0.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
+3. Download `CodexBar-Gemini-Companion-v0.15.0.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
 4. On Windows, double-click `start-windows.cmd`. On macOS or Linux, run `./start-macos-linux.sh`. The first launch installs only the versions pinned in `package-lock.json`.
 5. Keep the phone and computer on the same trusted Wi-Fi. If the computer firewall prompts, permit private networks only.
 6. Scan the displayed QR code with the phone and choose CodexBar, or paste the complete `codexbar://gemini-pair?...` value into the Gemini card.
