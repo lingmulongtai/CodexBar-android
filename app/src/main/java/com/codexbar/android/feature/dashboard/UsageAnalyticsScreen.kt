@@ -1,10 +1,6 @@
 package com.codexbar.android.feature.dashboard
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -13,6 +9,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material3.*
 import com.codexbar.android.ui.components.CodexBarFilterChip as FilterChip
 import com.codexbar.android.ui.components.CodexBarTextButton as TextButton
@@ -42,6 +42,11 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
 import com.codexbar.android.LocalPageActive
+import com.codexbar.android.LocalTopLevelSwipeEnabled
+import com.codexbar.android.animateContinuouslyToPage
+import com.codexbar.android.core.domain.model.AiService
+import com.codexbar.android.ui.components.rememberProviderDragReorder
+import com.codexbar.android.ui.components.providerDragReorder
 import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
@@ -75,13 +80,21 @@ fun UsageAnalyticsScreen(
     onPageChange: (UsageAnalyticsPage) -> Unit = {},
     onOpenSettings: (() -> Unit)? = null
 ) {
-    if (preview != null || model == null) { AnalyticsContent(page, preview, DashboardRefreshState(), {}, onConnections, onPageChange, onOpenSettings); return }
+    if (preview != null || model == null) {
+        var savedOrder by rememberSaveable { mutableStateOf(emptyList<String>()) }
+        val order = savedOrder.mapNotNull { name -> AiService.entries.firstOrNull { it.name == name } }
+        AnalyticsContent(page, preview, DashboardRefreshState(), {}, onConnections, onPageChange, onOpenSettings,
+            order, { savedOrder = it.map(AiService::name) })
+        return
+    }
     val state by model.uiState.collectAsStateWithLifecycle()
     val refresh by model.refreshState.collectAsStateWithLifecycle()
+    val providerOrder by model.trendsProviderOrder.collectAsStateWithLifecycle()
     val localeTag = LocalConfiguration.current.locales[0].toLanguageTag()
     val active = LocalPageActive.current
     LaunchedEffect(active, localeTag) { if (active) model.refreshIfStale(localeTag) }
-    AnalyticsContent(page, (state as? DashboardUiState.Content)?.snapshot, refresh, model::refresh, onConnections, onPageChange, onOpenSettings)
+    AnalyticsContent(page, (state as? DashboardUiState.Content)?.snapshot, refresh, model::refresh,
+        onConnections, onPageChange, onOpenSettings, providerOrder, model::setTrendsProviderOrder)
 }
 
 @Composable
@@ -92,13 +105,28 @@ private fun AnalyticsContent(
     onRefresh: () -> Unit,
     onConnections: () -> Unit,
     onPageChange: (UsageAnalyticsPage) -> Unit,
-    onOpenSettings: (() -> Unit)?
+    onOpenSettings: (() -> Unit)?,
+    providerOrder: List<AiService>,
+    onProviderOrderChange: (List<AiService>) -> Unit
 ) {
     val profile = LocalCodexBarThemeProfile.current
+    var reordering by rememberSaveable { mutableStateOf(false) }
+    val active = LocalPageActive.current
+    BackHandler(active && reordering) { reordering = false }
+    val swipeEnabled = LocalTopLevelSwipeEnabled.current
+    DisposableEffect(reordering, swipeEnabled) {
+        swipeEnabled?.value = !reordering
+        onDispose { swipeEnabled?.value = true }
+    }
+    val services = DashboardProviderOrder.apply(snapshot?.services.orEmpty(), providerOrder) { it.service }
+    val pager = rememberPagerState(initialPage = page.ordinal) { UsageAnalyticsPage.entries.size }
+    LaunchedEffect(page) { pager.animateContinuouslyToPage(page.ordinal) }
     GlassHeaderOverlay(header = {
         Column {
             ThemedTopBar(title = stringResource(R.string.navigation_trends), actions = {
                 if (!profile.floatingNavigation) RefreshStatusButton(refresh, snapshot?.generatedAt, onRefresh, Modifier.padding(end = 8.dp))
+                DashboardOrderAction(if (services.size > 1) ({ reordering = true }) else null,
+                    if (reordering) ({ reordering = false }) else null)
                 onOpenSettings?.let { AppSettingsAction(it) }
             })
             // Keep the selector attached to the header while content slides underneath both.
@@ -108,24 +136,19 @@ private fun AnalyticsContent(
         }
     }, initialExtraHeight = 56.dp) { headerHeight ->
         val stateHolder = rememberSaveableStateHolder()
-        val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-        AnimatedContent(
-            targetState = page,
-            modifier = Modifier.fillMaxSize(),
-            transitionSpec = {
-                val forward = (targetState.ordinal > initialState.ordinal) != rtl
-                val direction = if (forward) 1 else -1
-                slideInHorizontally(tween(260)) { it / 4 * direction } togetherWith
-                    slideOutHorizontally(tween(260)) { -it / 4 * direction }
-            },
-            label = "trends_page"
-        ) { visiblePage ->
+        HorizontalPager(pager, Modifier.fillMaxSize(), userScrollEnabled = false, beyondViewportPageCount = 1,
+            key = { UsageAnalyticsPage.entries[it].name }) { pageIndex ->
+            val visiblePage = UsageAnalyticsPage.entries[pageIndex]
             stateHolder.SaveableStateProvider(visiblePage.name) {
-                val services = snapshot?.services.orEmpty()
                 val rows = services.filter { if (visiblePage == UsageAnalyticsPage.Spend) it.desktopSpend != null else it.metrics.isNotEmpty() }
+                val order = rows.map { it.service }
+                val grid = rememberLazyGridState()
+                val drag = rememberProviderDragReorder(grid, order) { edited ->
+                    onProviderOrderChange(DashboardProviderOrder.reorder(providerOrder, services.map { it.service }, edited))
+                }
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     val columns = minOf(rows.size.coerceAtLeast(1), (maxWidth / 340.dp).toInt().coerceAtLeast(1))
-                    LazyVerticalGrid(columns = GridCells.Fixed(columns), modifier = Modifier.fillMaxSize(),
+                    LazyVerticalGrid(columns = GridCells.Fixed(columns), state = grid, modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = headerHeight + 12.dp, bottom = 16.dp + LocalBottomChromeInset.current),
                         verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
@@ -141,12 +164,17 @@ private fun AnalyticsContent(
                                 }
                             }
                         }
+                        if (reordering) item(key = "order-hint", span = { GridItemSpan(maxLineSpan) }) {
+                            SectionHeader(rows.size, true, providerOrder.isNotEmpty(), { onProviderOrderChange(emptyList()) })
+                        }
                         items(rows, key = { it.service.name }) { service ->
-                            CodexBarPanel(shape = MaterialTheme.shapes.large, color = profile.cardColor, border = BorderStroke(1.dp, profile.cardBorderColor)) {
+                            CodexBarPanel(modifier = Modifier.animateItem().providerDragReorder(drag, service.service, order),
+                                shape = MaterialTheme.shapes.large, color = profile.cardColor, border = BorderStroke(1.dp, profile.cardBorderColor)) {
                                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                         ProviderIcon(service.service, Modifier.size(28.dp))
-                                        Text(service.service.displayName, style = MaterialTheme.typography.titleLarge)
+                                        Text(service.service.displayName, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                                        if (reordering) Icon(Icons.Rounded.DragHandle, stringResource(R.string.provider_order_action))
                                     }
                                     if (visiblePage == UsageAnalyticsPage.History) ProviderHistory(service) else ProviderSpend(service)
                                 }
