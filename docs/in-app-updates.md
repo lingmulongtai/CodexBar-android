@@ -27,3 +27,11 @@ Local checks completed 514 tests: 512 passed and two explicit opt-in Windows int
 Separate controlled debug fixtures exercised progress, cancellation, visible network failure/retry, persisted READY state after a process restart, install-source permission and the actual Android installer. A debug-signed fixture labeled 0.17.0/code46 successfully replaced the test app and preserved a private test marker. That fixture is not a public v0.17.0 release or proof of an official signed release update. No physical-device verification is claimed.
 
 Read-only upstream main checked at `1811d1fe032fd4a80240fd6bc5d04cee649a0afb`; there were no upstream-only changes to incorporate or defer. Work started from released main `e189251` (v0.16.0). Existing accounts, connections, release signer and acquisition modes are preserved.
+
+## v0.16.3 recovery and optimized-build acceptance
+
+v0.16.1 and v0.16.2 production APKs have no `OverwritingInputMerger.<init>()V`. Android logs `WM-InputMerger` / `NoSuchMethodException` before the downloader starts, and the UI falls back to UNAVAILABLE. The release pipeline previously cold-started the app but did not test this optimized Worker path. The earlier debug Worker proof did not establish production behavior.
+
+The fix explicitly keeps public no-argument constructors of InputMerger subclasses, as required by [R8 full mode reflection rules](https://developer.android.com/topic/performance/app-optimization/full-mode). `scripts/verify-release-workmanager.py` now checks the finished APK DEX. The production-signed `verify_update` workflow-dispatch mode is branch-only, forces version 0.0.0/code1, and never publishes. Its completed APK is version-checked before use so a disposable emulator can exercise the real update UI against the public stable release with matching signers. No production test hook or relaxed verification is shipped.
+
+Affected installations need one manual APK update to v0.16.3 without uninstalling or clearing data. Repeating Retry in the broken old binary cannot restore its removed constructor.
