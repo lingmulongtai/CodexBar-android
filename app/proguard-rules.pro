@@ -41,6 +41,11 @@
 -keep class * extends dagger.hilt.android.internal.managers.ViewComponentManager$FragmentContextWrapper { *; }
 
 # ===== WorkManager =====
+# WorkManager constructs input mergers by class name and a no-argument constructor.
+# R8 full mode keeps the class through the library rules, but not that constructor.
+-keep class * extends androidx.work.InputMerger {
+    public <init>();
+}
 -keep class * extends androidx.work.Worker { *; }
 -keep class * extends androidx.work.ListenableWorker {
     public <init>(android.content.Context, androidx.work.WorkerParameters);
