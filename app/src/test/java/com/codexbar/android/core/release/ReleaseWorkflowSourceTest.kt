@@ -10,6 +10,22 @@ class ReleaseWorkflowSourceTest {
         .first { File(it, "gradle/libs.versions.toml").isFile }
 
     @Test
+    fun `updater verification is manual branch only and never publishes a test version`() {
+        val workflow = File(repoDir, ".github/workflows/release.yml").readText()
+        val build = workflow.substringAfter("- name: Build signed release artifacts")
+            .substringBefore("- name: Verify release signing identity")
+        assertTrue(workflow.contains("verify_update:"))
+        assertTrue(build.contains("test \"\$GITHUB_EVENT_NAME\" = 'workflow_dispatch'"))
+        assertTrue(build.contains("test \"\$GITHUB_REF_TYPE\" = 'branch'"))
+        assertTrue(build.contains("android.defaultConfig.versionName = \"0.0.0\""))
+        assertTrue(build.contains("android.defaultConfig.versionCode = 1"))
+        assertTrue(workflow.contains("python scripts/verify-release-workmanager.py"))
+        val publish = workflow.substringAfter("- name: Publish GitHub Release")
+        assertTrue(publish.contains("if: github.ref_type == 'tag'"))
+        assertTrue(workflow.contains("retention-days: 1"))
+    }
+
+    @Test
     fun `tagged releases require versioned notes and publish as stable latest`() {
         val workflow = File(repoDir, ".github/workflows/release.yml").readText()
 
