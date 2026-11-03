@@ -37,6 +37,7 @@ fun CodexBarSlider(value: Float, onValueChange: (Float) -> Unit, modifier: Modif
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val dragged by interaction.collectIsDraggedAsState()
+    GlassLiftHaptics(enabled && (pressed || dragged))
     val lift by animateFloatAsState(if (pressed || dragged) 1f else 0f, spring(dampingRatio = 0.89f, stiffness = 2000f), label = "slider_lift")
     var rawValue by remember(valueRange, steps) { mutableFloatStateOf(value) }
     val interacting = pressed || dragged

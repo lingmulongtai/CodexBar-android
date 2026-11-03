@@ -17,6 +17,7 @@ data class SettingsUiState(
     val monitoringDurationMinutes: Long = 60L,
     val monitoringRemainingMinutes: Long? = null,
     val appThemeStyle: AppThemeStyle = AppThemeStyle.LIQUID_GLASS,
+    val hapticFeedbackEnabled: Boolean = true,
     val privacySettings: PrivacySettings = PrivacySettings(),
     val showDeleteConfirmDialog: Boolean = false,
     val disconnectConfirmService: AiService? = null,

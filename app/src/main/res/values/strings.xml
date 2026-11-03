@@ -806,4 +806,6 @@
     <string name="update_error_storage">There is not enough storage, or the update file could not be saved.</string>
     <string name="update_error_unavailable">A verified update is unavailable. Check for updates again.</string>
     <string name="update_install_preparing">Preparing the Android installer…</string>
+    <string name="haptic_feedback_title">Haptic feedback</string>
+    <string name="haptic_feedback_description">Light feedback when glass controls lift or tabs are pressed.</string>
 </resources>

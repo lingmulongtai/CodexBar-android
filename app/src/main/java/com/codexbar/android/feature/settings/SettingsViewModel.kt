@@ -128,6 +128,7 @@ class SettingsViewModel @Inject constructor(
                     monitoringDurationMinutes = monitoringSessionStore.preferredDurationMinutes(),
                     monitoringRemainingMinutes = monitoringSession?.remainingMinutes(),
                     appThemeStyle = prefsManager.appThemeStyle.value,
+                    hapticFeedbackEnabled = prefsManager.getHapticFeedbackEnabled(),
                     privacySettings = prefsManager.getPrivacySettings()
                 )
             }
@@ -449,6 +450,11 @@ class SettingsViewModel @Inject constructor(
             prefsManager.setResetNotificationEnabled(enabled)
             if (!enabled) notificationService.cancelResetNotifications()
         }
+    }
+
+    fun setHapticFeedbackEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(hapticFeedbackEnabled = enabled) }
+        viewModelScope.launch { prefsManager.setHapticFeedbackEnabled(enabled) }
     }
 
     fun setMonitoringDuration(minutes: Long) {

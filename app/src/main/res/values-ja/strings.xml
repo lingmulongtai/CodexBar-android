@@ -804,4 +804,6 @@
     <string name="update_error_storage">空き容量が足りないか、更新ファイルを保存できませんでした。</string>
     <string name="update_error_unavailable">安全に検証できる更新が見つかりません。更新を再確認してください。</string>
     <string name="update_install_preparing">Androidのインストール画面を準備中…</string>
+    <string name="haptic_feedback_title">操作時の振動</string>
+    <string name="haptic_feedback_description">タブの押下やガラスの浮き上がりに、軽い振動を加えます。</string>
 </resources>

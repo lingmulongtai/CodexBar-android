@@ -98,6 +98,8 @@ import com.codexbar.android.ui.components.rememberProviderDragReorder
 import com.codexbar.android.ui.components.providerDragReorder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -288,6 +290,20 @@ fun SettingsScreen(
                 }
 
                 WallpaperSettingsSection()
+
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(stringResource(R.string.haptic_feedback_title), style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.haptic_feedback_description), style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        com.codexbar.android.ui.components.CodexBarSwitch(uiState.hapticFeedbackEnabled,
+                            viewModel::setHapticFeedbackEnabled,
+                            modifier = Modifier.semantics { contentDescription = context.getString(R.string.haptic_feedback_title) })
+                    }
+                }
 
                 LanguageSection(
                     selectedLanguage = selectedLanguage,

@@ -53,6 +53,7 @@ fun CodexBarSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifie
     val focused by interaction.collectIsFocusedAsState()
     val pressed by interaction.collectIsPressedAsState()
     var dragPosition by remember { mutableStateOf<Float?>(null) }
+    GlassLiftHaptics(enabled && (pressed || dragPosition != null))
     var movement by remember { mutableFloatStateOf(0f) }
     var downX by remember { mutableFloatStateOf(0f) }
     var from by remember { mutableFloatStateOf(0f) }

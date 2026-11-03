@@ -76,6 +76,7 @@ import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.ui.components.BrandGlyph
 import com.codexbar.android.ui.components.GlassBackdrop
 import com.codexbar.android.ui.components.GlassSurface
+import com.codexbar.android.ui.components.GlassLiftHaptics
 import com.codexbar.android.ui.components.glassTabPosition
 import com.codexbar.android.ui.components.glassTabDragPosition
 import com.codexbar.android.ui.components.glassBackdropSource
@@ -222,6 +223,7 @@ private fun GlassTabRow(
     val lensBackdrop = rememberGlassBackdrop()
     var dragPosition by remember { mutableStateOf<Float?>(null) }
     var pressedIndex by remember { mutableStateOf<Int?>(null) }
+    GlassLiftHaptics(pressedIndex != null || dragPosition != null)
     var anchor by remember { mutableStateOf(0f) }
     var downX by remember { mutableStateOf(0f) }
     var movement by remember { mutableStateOf(0f) }

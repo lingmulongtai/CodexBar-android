@@ -160,6 +160,7 @@ fun CodexBarApp(
         }
     }
 
+    ProvideAppHaptics(configuration.preferencesLoaded && configuration.hapticFeedbackEnabled) {
     BoxWithConstraints(modifier.fillMaxSize().background(themeProfile.backgroundBrush)) {
         when {
             themeProfile.floatingNavigation -> {
@@ -202,6 +203,7 @@ fun CodexBarApp(
                 AppBottomBar(entries)
             }
         }
+    }
     }
 }
 
