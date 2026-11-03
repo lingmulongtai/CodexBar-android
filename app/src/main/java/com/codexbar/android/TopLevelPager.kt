@@ -5,11 +5,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
 internal val LocalTopLevelSwipeEnabled = staticCompositionLocalOf<MutableState<Boolean>?> { null }
 internal val LocalPageActive = staticCompositionLocalOf { true }
+internal val ProgrammaticPageScrollConnection = object : NestedScrollConnection {}
 
 internal data class PageLocation(val tab: Int = 0, val pane: Int = 0) {
     fun back(): PageLocation? = when {
@@ -44,6 +46,6 @@ internal suspend fun PagerState.animateContinuouslyToPage(page: Int) {
             animationSpec = tween((abs(pages) * 180).roundToInt().coerceIn(320, 600))) { position, _ ->
             consumed += scrollBy(position - consumed)
         }
-        scrollBy(distance - consumed)
+        scrollBy(getOffsetDistanceInPages(destination) * (layoutInfo.pageSize + layoutInfo.pageSpacing))
     }
 }

@@ -44,9 +44,11 @@ import com.codexbar.android.R
 import com.codexbar.android.LocalPageActive
 import com.codexbar.android.LocalTopLevelSwipeEnabled
 import com.codexbar.android.animateContinuouslyToPage
+import com.codexbar.android.ProgrammaticPageScrollConnection
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.ui.components.rememberProviderDragReorder
 import com.codexbar.android.ui.components.providerDragReorder
+import com.codexbar.android.ui.components.keepHorizontalScrollInPage
 import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
@@ -137,6 +139,7 @@ private fun AnalyticsContent(
     }, initialExtraHeight = 56.dp) { headerHeight ->
         val stateHolder = rememberSaveableStateHolder()
         HorizontalPager(pager, Modifier.fillMaxSize(), userScrollEnabled = false, beyondViewportPageCount = 1,
+            pageNestedScrollConnection = ProgrammaticPageScrollConnection,
             key = { UsageAnalyticsPage.entries[it].name }) { pageIndex ->
             val visiblePage = UsageAnalyticsPage.entries[pageIndex]
             stateHolder.SaveableStateProvider(visiblePage.name) {
@@ -168,7 +171,7 @@ private fun AnalyticsContent(
                             SectionHeader(rows.size, true, providerOrder.isNotEmpty(), { onProviderOrderChange(emptyList()) })
                         }
                         items(rows, key = { it.service.name }) { service ->
-                            CodexBarPanel(modifier = Modifier.animateItem().providerDragReorder(drag, service.service, order),
+                            CodexBarPanel(modifier = Modifier.providerDragReorder(drag, service.service, order),
                                 shape = MaterialTheme.shapes.large, color = profile.cardColor, border = BorderStroke(1.dp, profile.cardBorderColor)) {
                                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -215,7 +218,7 @@ private fun TrendsTabs(page: UsageAnalyticsPage, onPageChange: (UsageAnalyticsPa
 private fun ProviderHistory(service: ServiceQuotaPresentation) {
     var selected by rememberSaveable(service.service.name) { mutableStateOf(service.metrics.firstOrNull()?.id) }
     val metric = service.metrics.find { it.id == selected } ?: service.metrics.firstOrNull() ?: return
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(Modifier.keepHorizontalScrollInPage().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         service.metrics.forEach { entry -> FilterChip(selected = entry.id == metric.id, onClick = { selected = entry.id }, label = { Text(entry.label) }) }
     }
     QuotaGaugeBar(metric, showGuideLegend = true, goodColor = providerVisualStyle(service.service).accent)
@@ -257,7 +260,7 @@ private fun ProviderSpend(service: ServiceQuotaPresentation) {
     }
     Text(stringResource(R.string.analytics_period_total, periodLabel, spend.periodCost?.let { money(it, spend.currency) } ?: unknown), style = MaterialTheme.typography.bodySmall)
     Text((if (spend.tokensLowerBound) "≥ " else "") + (spend.thirtyDayTokens?.let(numbers::format) ?: unknown) + " " + stringResource(R.string.analytics_tokens), style = MaterialTheme.typography.titleMedium)
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(Modifier.keepHorizontalScrollInPage().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         FilterChip(selected = !tokens, onClick = { tokens = false }, label = { Text(stringResource(R.string.navigation_spend)) })
         FilterChip(selected = tokens, onClick = { tokens = true }, label = { Text(stringResource(R.string.analytics_tokens)) })
         FilterChip(selected = days == 7, onClick = { days = 7 }, label = { Text(stringResource(R.string.analytics_7_days)) })

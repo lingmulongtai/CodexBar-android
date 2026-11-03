@@ -144,10 +144,11 @@ fun CodexBarApp(
                         }
                     }
                     HorizontalPager(panes, Modifier.fillMaxSize(), userScrollEnabled = false,
+                        pageNestedScrollConnection = ProgrammaticPageScrollConnection,
                         beyondViewportPageCount = 1, key = { if (it == 0) "tabs" else if (it == 1) SettingsRoute else DeveloperSettingsRoute }) { pane ->
                         if (pane == 0) {
                             HorizontalPager(tabs, Modifier.fillMaxSize(), beyondViewportPageCount = 1,
-                                userScrollEnabled = panes.settledPage == 0 && swipeEnabled[tabs.currentPage].value,
+                                userScrollEnabled = panes.settledPage == 0 && !panes.isScrollInProgress && swipeEnabled[tabs.currentPage].value,
                                 key = { AppDestination.entries[it].route }) { tab ->
                                 screen(tab, panes.settledPage == 0 && !panes.isScrollInProgress &&
                                     tabs.settledPage == tab && !tabs.isScrollInProgress)

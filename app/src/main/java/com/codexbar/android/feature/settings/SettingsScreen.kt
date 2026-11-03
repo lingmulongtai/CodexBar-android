@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.horizontalScroll
+import com.codexbar.android.ui.components.keepHorizontalScrollInPage
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.KeyboardOptions
@@ -458,7 +459,7 @@ fun ConnectionsScreen(
                     val state = uiState.serviceStates[service] ?: ServiceCredentialState()
                     ServiceCredentialSection(
                         service = service,
-                        modifier = Modifier.animateItem().providerDragReorder(drag, service, visibleProviders),
+                        modifier = Modifier.providerDragReorder(drag, service, visibleProviders),
                         reordering = reordering,
                         state = state,
                         expanded = !reordering && expandedProviderName == service.name,
@@ -775,7 +776,7 @@ private fun ProviderDirectoryControls(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
+                    .keepHorizontalScrollInPage().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ProviderCategoryFilter.entries.forEach { option ->
