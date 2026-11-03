@@ -2,6 +2,11 @@ name: Android Release
 
 on:
   workflow_dispatch:
+    inputs:
+      verify_update:
+        description: 'Build a non-publishing, signed updater candidate (version 0.0.0/code 1)'
+        type: boolean
+        default: false
   push:
     tags:
       - 'v*'
@@ -75,10 +80,25 @@ jobs:
           npm audit --omit=dev
 
       - name: Verify release tag matches APK version
+        if: github.ref_type == 'tag'
         run: bash scripts/verify-release-version.sh
 
+      - name: Guard non-publishing updater verification
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          CODEXBAR_VERIFY_UPDATE: ${{ inputs.verify_update }}
+        run: |
+          set -euo pipefail
+          if [ "$CODEXBAR_VERIFY_UPDATE" = 'true' ]; then
+            test "$GITHUB_REF_TYPE" = 'branch'
+          else
+            test "$GITHUB_REF_TYPE" = 'tag'
+          fi
+
       - name: Verify release smoke checks
-        run: bash scripts/test-release-smoke.sh
+        run: |
+          bash scripts/test-release-smoke.sh
+          python scripts/test-release-workmanager.py
 
       - name: Build signed release artifacts
         env:
@@ -87,6 +107,7 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          CODEXBAR_VERIFY_UPDATE: ${{ inputs.verify_update }}
         run: |
           set -euo pipefail
           test -n "$ANDROID_KEYSTORE_BASE64"
@@ -104,7 +125,23 @@ jobs:
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
           chmod 600 "$keystore_path"
           export ANDROID_KEYSTORE_PATH="$keystore_path"
-          ./gradlew --dependency-verification=strict :app:assembleRelease :app:bundleRelease :app:generateReleaseSbom
+          if [ "$CODEXBAR_VERIFY_UPDATE" = 'true' ]; then
+            test "$GITHUB_EVENT_NAME" = 'workflow_dispatch'
+            test "$GITHUB_REF_TYPE" = 'branch'
+            cat > "$RUNNER_TEMP/updater-verification.init.gradle" <<'EOF'
+          allprojects {
+              plugins.withId("com.android.application") {
+                  androidComponents.finalizeDsl { android ->
+                      android.defaultConfig.versionName = "0.0.0"
+                      android.defaultConfig.versionCode = 1
+                  }
+              }
+          }
+          EOF
+            ./gradlew --dependency-verification=strict --init-script "$RUNNER_TEMP/updater-verification.init.gradle" :app:assembleRelease
+          else
+            ./gradlew --dependency-verification=strict :app:assembleRelease :app:bundleRelease :app:generateReleaseSbom
+          fi
 
       - name: Verify release signing identity
         run: |
@@ -156,8 +193,21 @@ jobs:
             exit 1
           fi
 
+      - name: Verify updater candidate version
+        if: github.event_name == 'workflow_dispatch' && inputs.verify_update
+        run: |
+          set -euo pipefail
+          aapt="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt2 -print | sort -V | tail -n 1)"
+          badging="$("$aapt" dump badging app/build/outputs/apk/release/app-release.apk)"
+          grep -Fq "name='com.codexbar.android'" <<< "$badging"
+          grep -Fq "versionCode='1'" <<< "$badging"
+          grep -Fq "versionName='0.0.0'" <<< "$badging"
+
       - name: Release build resources before emulator startup
         run: ./gradlew --stop
+
+      - name: Verify minified WorkManager reflection
+        run: python scripts/verify-release-workmanager.py app/build/outputs/apk/release/app-release.apk
 
       - name: Enable KVM access
         run: |
@@ -179,6 +229,14 @@ jobs:
           profile: pixel_6
           emulator-options: -no-window -gpu swangle -no-snapshot -noaudio -no-boot-anim
           script: sh .github/scripts/smoke-test-release.sh
+
+      - name: Save non-publishing updater verification APK
+        if: github.event_name == 'workflow_dispatch' && inputs.verify_update && github.ref_type == 'branch'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: updater-verification-${{ github.sha }}
+          path: app/build/outputs/apk/release/*.apk
+          retention-days: 1
 
       - name: Prepare release bundle
         if: github.ref_type == 'tag'
