@@ -3,9 +3,9 @@ package com.codexbar.android.core.update
 import android.content.Context
 import android.content.Intent
 import android.content.ClipData
-import android.net.Uri
 import androidx.core.content.FileProvider
 import androidx.work.*
+import com.codexbar.android.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.util.UUID
@@ -37,6 +37,9 @@ class UpdateDownloadRepository @Inject constructor(
     // This name is exclusively one root request with REPLACE; never append a chain.
     internal val state get() = workManager.getWorkInfosForUniqueWorkFlow(WORK_NAME).map { infos ->
         infos.singleOrNull()?.let { info ->
+            val version = info.tags.firstOrNull { it.startsWith(VERSION_TAG) }?.removePrefix(VERSION_TAG).orEmpty()
+            if (info.state.isFinished && version.isNotEmpty() && !isNewerStableVersion(version, BuildConfig.VERSION_NAME))
+                return@map UpdateDownloadState()
             val data = if (info.state.isFinished) info.outputData else info.progress
             val phase = when (info.state) {
                 WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED -> UpdateDownloadPhase.QUEUED
@@ -45,7 +48,7 @@ class UpdateDownloadRepository @Inject constructor(
                 WorkInfo.State.FAILED -> UpdateDownloadPhase.FAILED
                 WorkInfo.State.CANCELLED -> UpdateDownloadPhase.CANCELLED
             }
-            UpdateDownloadState(phase, info.id, info.tags.firstOrNull { it.startsWith(VERSION_TAG) }?.removePrefix(VERSION_TAG).orEmpty(),
+            UpdateDownloadState(phase, info.id, version,
                 data.getLong("received", 0), data.getLong("bytes", 0),
                 data.getString("failure")?.let { name -> UpdateFailure.entries.firstOrNull { it.name == name } })
         } ?: UpdateDownloadState()
