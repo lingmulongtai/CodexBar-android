@@ -782,5 +782,6 @@
     <string name="developer_glass_reach">歪みの範囲の倍率</string>
     <string name="developer_glass_reset_group">このグループを標準に戻す</string>
     <string name="developer_settings_reset_all">Dev設定をすべて標準に戻す</string>
-    <string name="developer_settings_save_failed">保存できませんでした。最後に保存した設定に戻しました。</string>
+    <string name="developer_settings_save_failed">保存できませんでした。この画面を閉じる前にもう一度保存してください。</string>
+    <string name="developer_settings_retry">もう一度保存</string>
 </resources>

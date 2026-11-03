@@ -26,7 +26,6 @@ import com.codexbar.android.ui.components.*
 internal fun DeveloperSettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val settings = LocalDeveloperSettings.current
-    val latestSettings by rememberUpdatedState(settings)
     val owner = remember { Any() }
     var group by remember { mutableStateOf(GlassSurfaceGroup.CONTAINERS) }
     val preview: (DeveloperSettings) -> Unit = { viewModel.previewDeveloperSettings(owner, it) }
@@ -53,7 +52,7 @@ internal fun DeveloperSettingsScreen(onBack: () -> Unit, viewModel: SettingsView
                     }
                     CodexBarSlider(settings.animationSpeed, { preview(settings.copy(animationSpeed = it)) }, Modifier.fillMaxWidth(),
                         enabled = state.preferencesLoaded, valueRange = AppAnimationSpeed.MIN..AppAnimationSpeed.MAX, steps = 10,
-                        onValueChangeFinished = { save(latestSettings) })
+                        onValueChangeFinished = { save(viewModel.developerSettings) })
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(.5f, 1f, 2f).forEach { value -> CodexBarFilterChip(settings.animationSpeed == value,
                             { save(settings.copy(animationSpeed = value)) }, label = { Text(stringResource(R.string.developer_speed_value, value)) }) }
@@ -89,7 +88,7 @@ internal fun DeveloperSettingsScreen(onBack: () -> Unit, viewModel: SettingsView
                             }
                             CodexBarSlider(value, { next -> preview(settings.withTuning(group, settings.tuning(group).withValue(parameter, next))) },
                                 Modifier.fillMaxWidth(), enabled = state.preferencesLoaded, valueRange = parameter.min..parameter.max,
-                                onValueChangeFinished = { save(latestSettings) })
+                                onValueChangeFinished = { save(viewModel.developerSettings) })
                         }
                     }
                     CodexBarOutlinedButton(onClick = { save(settings.withTuning(group, GlassTuning())) }) {
@@ -97,7 +96,10 @@ internal fun DeveloperSettingsScreen(onBack: () -> Unit, viewModel: SettingsView
                     }
                 }
             }
-            if (viewModel.developerSettingsSaveFailed) Text(stringResource(R.string.developer_settings_save_failed), color = MaterialTheme.colorScheme.error)
+            if (viewModel.developerSettingsSaveFailed) {
+                Text(stringResource(R.string.developer_settings_save_failed), color = MaterialTheme.colorScheme.error)
+                CodexBarOutlinedButton(onClick = { save(viewModel.developerSettings) }) { Text(stringResource(R.string.developer_settings_retry)) }
+            }
             CodexBarOutlinedButton(onClick = { save(DeveloperSettings()) }) { Text(stringResource(R.string.developer_settings_reset_all)) }
             WallpaperFooter()
         }

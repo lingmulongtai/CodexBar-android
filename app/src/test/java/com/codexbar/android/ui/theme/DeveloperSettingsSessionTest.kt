@@ -7,6 +7,11 @@ import org.junit.Test
 class DeveloperSettingsSessionTest {
     private val a = DeveloperSettings(animationSpeed = .5f)
     private val b = DeveloperSettings(animationSpeed = 2f)
+    @Test fun `initial disk settings still load after opening an untouched editor`() {
+        val session = DeveloperSettingsSession(); val owner = Any(); session.begin(owner)
+        session.receiveSaved(a); assertEquals(a, session.settings)
+        session.preview(owner, b); session.receiveSaved(a); assertEquals(b, session.settings)
+    }
     @Test fun `older save never replaces a newer active preview`() {
         val session = DeveloperSettingsSession(); val owner = Any(); session.begin(owner)
         val id = session.requestSave(owner, a)!!
@@ -20,6 +25,15 @@ class DeveloperSettingsSessionTest {
         assertEquals(a, session.settings)
         session.receiveSaved(a); session.completeSave(id, a, false)
         assertEquals(a, session.settings)
+    }
+    @Test fun `failed writes keep the draft retryable and restore saved values on leaving`() {
+        val session = DeveloperSettingsSession(); val owner = Any(); session.begin(owner)
+        val id = session.requestSave(owner, b)!!
+        session.completeSave(id, DeveloperSettings(), true)
+        assertTrue(session.saveFailed)
+        assertEquals(b, session.settings)
+        session.finish(owner)
+        assertEquals(DeveloperSettings(), session.settings)
     }
     @Test fun `stale completions and stale screen owners cannot overwrite the latest edit`() {
         val session = DeveloperSettingsSession(); val old = Any(); val current = Any(); session.begin(old)

@@ -82,6 +82,7 @@ class SettingsViewModel @Inject constructor(
     private val antigravityPairingMutex = Mutex()
     private val desktopConnection = DesktopBridgeConnection(viewModelScope, desktopPairingClient, prefsManager, quotaResetMonitor, connectionHealthStore, quotaHistoryStore, widgetPrefsManager, monitoringSessionStore, notificationService, appContext)
 
+    val developerSettings: DeveloperSettings get() = developerSettingsRuntime.settings
     val developerSettingsSaveFailed: Boolean get() = developerSettingsRuntime.saveFailed
     fun beginDeveloperSettingsPreview(owner: Any) = developerSettingsRuntime.beginPreview(owner)
     fun previewDeveloperSettings(owner: Any, value: DeveloperSettings) = developerSettingsRuntime.preview(owner, value)

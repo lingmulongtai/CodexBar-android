@@ -784,5 +784,6 @@
     <string name="developer_glass_reach">Bend reach multiplier</string>
     <string name="developer_glass_reset_group">Reset this group</string>
     <string name="developer_settings_reset_all">Reset all Dev settings</string>
-    <string name="developer_settings_save_failed">Could not save. The last saved settings have been restored.</string>
+    <string name="developer_settings_save_failed">Could not save. Try saving again before leaving this screen.</string>
+    <string name="developer_settings_retry">Save again</string>
 </resources>

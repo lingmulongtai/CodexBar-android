@@ -13,16 +13,17 @@ internal class DeveloperSettingsSession(initial: DeveloperSettings = DeveloperSe
         private set
     private var saved = settings
     private var owner: Any? = null
+    private var dirty = false
     private var generation = 0L
     private var pending: Pair<Long, DeveloperSettings>? = null
 
     fun receiveSaved(value: DeveloperSettings) {
         saved = value.normalized()
-        if (owner == null && pending == null) settings = saved
+        if ((owner == null || !dirty) && pending == null) settings = saved
     }
-    fun begin(token: Any) { owner = token }
+    fun begin(token: Any) { if (owner == null) dirty = false; owner = token }
     fun preview(token: Any, value: DeveloperSettings) {
-        if (owner === token) { settings = value.normalized(); saveFailed = false }
+        if (owner === token) { dirty = true; settings = value.normalized(); saveFailed = false }
     }
     fun requestSave(token: Any, value: DeveloperSettings): Long? {
         if (owner !== token) return null
@@ -41,6 +42,7 @@ internal class DeveloperSettingsSession(initial: DeveloperSettings = DeveloperSe
     fun finish(token: Any) {
         if (owner !== token) return
         owner = null
+        dirty = false
         settings = pending?.second ?: saved
     }
 }
