@@ -1,6 +1,7 @@
 package com.codexbar.android
 
 import android.app.Application
+import com.codexbar.android.ui.theme.DeveloperSettingsRuntime
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.codexbar.android.core.workmanager.WorkManagerInitializer
@@ -13,6 +14,8 @@ class CodexBarApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
+    @Inject lateinit var developerSettingsRuntime: DeveloperSettingsRuntime
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
@@ -20,6 +23,7 @@ class CodexBarApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        developerSettingsRuntime.install()
         WorkManagerInitializer.applySavedRefreshPolicyAsync(this)
     }
 }
