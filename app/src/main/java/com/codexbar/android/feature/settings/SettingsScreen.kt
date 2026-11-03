@@ -294,14 +294,15 @@ fun SettingsScreen(
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        val hapticLabel = stringResource(R.string.haptic_feedback_title)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(stringResource(R.string.haptic_feedback_title), style = MaterialTheme.typography.titleMedium)
+                            Text(hapticLabel, style = MaterialTheme.typography.titleMedium)
                             Text(stringResource(R.string.haptic_feedback_description), style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         com.codexbar.android.ui.components.CodexBarSwitch(uiState.hapticFeedbackEnabled,
                             viewModel::setHapticFeedbackEnabled,
-                            modifier = Modifier.semantics { contentDescription = context.getString(R.string.haptic_feedback_title) })
+                            modifier = Modifier.semantics { contentDescription = hapticLabel })
                     }
                 }
 
