@@ -17,6 +17,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,26 +51,35 @@ fun GlassHeaderOverlay(
     val backdrop = rememberGlassBackdrop()
     val wallpaper = LocalGlassCardBackdrop.current
     val density = LocalDensity.current
+    val pinned = LocalPinnedGlassHeader.current
+    val currentHeader = rememberUpdatedState(header)
+    if (pinned != null) DisposableEffect(pinned) {
+        pinned.content = { currentHeader.value() }
+        onDispose { pinned.content = null }
+    }
     val direction = LocalTopLevelSlideDirection.current
     val offset = remember { Animatable(direction.toFloat()) }
     LaunchedEffect(offset) { offset.animateTo(0f, tween(260)) }
     SubcomposeLayout(Modifier.fillMaxSize()) { constraints ->
         val top = subcompose("header") {
-            CompositionLocalProvider(LocalGlassHeaderBackdrop provides backdrop) { Box { header() } }
+            CompositionLocalProvider(
+                LocalGlassHeaderBackdrop provides backdrop,
+                LocalGlassHeaderHeight provides if (pinned != null) null else LocalGlassHeaderHeight.current
+            ) { Box { header() } }
         }.single().measure(constraints.copy(minHeight = 0))
         val natural = top[NaturalGlassHeaderHeight].takeUnless { it == AlignmentLine.Unspecified } ?: top.height
         val visible = top[VisibleGlassHeaderHeight].takeUnless { it == AlignmentLine.Unspecified } ?: top.height
         val contentTop = with(density) { stableHeaderContentTop(natural, visible, top.height).toDp() }
         val body = subcompose("body") {
-            Box(Modifier.fillMaxSize().glassBackdropSource(backdrop, wallpaper)) {
-                Box(Modifier.fillMaxSize().offset {
+            Box(Modifier.fillMaxSize().then(if (pinned == null) Modifier.glassBackdropSource(backdrop, wallpaper) else Modifier)) {
+                Box(Modifier.fillMaxSize().then(if (pinned == null) Modifier.offset {
                     IntOffset((offset.value * 36.dp.toPx()).roundToInt(), 0)
-                }) { content(contentTop) }
+                } else Modifier)) { content(contentTop) }
             }
         }.single().measure(constraints)
         layout(constraints.maxWidth, constraints.maxHeight) {
             body.place(0, 0)
-            top.place(0, 0)
+            if (pinned == null || pinned.content == null) top.place(0, 0)
         }
     }
 }
