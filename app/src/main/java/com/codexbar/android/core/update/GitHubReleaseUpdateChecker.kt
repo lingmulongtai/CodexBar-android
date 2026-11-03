@@ -16,7 +16,8 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 internal data class AvailableUpdate(
     val version: String,
     val downloadUrl: String,
-    val releasePageUrl: String
+    val releasePageUrl: String,
+    val artifact: UpdateArtifact? = null
 )
 
 internal sealed interface UpdateCheckResult {
@@ -65,20 +66,25 @@ class GitHubReleaseUpdateChecker internal constructor(
                         return@withContext UpdateCheckResult.UpToDate
 
                     val releasePageUrl = trustedReleaseUrl(release.htmlUrl) ?: LATEST_RELEASE_PAGE_URL
-                    val downloadUrl = listOf(
+                    val selectedAsset = listOf(
                         "CodexBar-Android-v${release.tagName.removePrefix("v")}.apk",
                         "app-release.apk"
                     ).firstNotNullOfOrNull { name ->
                         release.assets.firstNotNullOfOrNull { asset ->
-                            asset.browserDownloadUrl.takeIf {
-                                asset.name == name && trustedApkUrl(it, release.tagName, name)
-                            }
+                            asset.takeIf { asset.name == name && trustedApkUrl(asset.browserDownloadUrl, release.tagName, name) }
                         }
-                    } ?: releasePageUrl
+                    }
+                    val version = release.tagName.removePrefix("v")
+                    val artifact = selectedAsset?.let { asset ->
+                        UpdateArtifact(version, asset.browserDownloadUrl, asset.size,
+                            asset.digest.orEmpty().removePrefix("sha256:").lowercase())
+                            .takeIf { it.isTrusted() && asset.digest?.startsWith("sha256:") == true }
+                    }
                     UpdateCheckResult.Available(AvailableUpdate(
-                        version = release.tagName.removePrefix("v"),
-                        downloadUrl = downloadUrl,
-                        releasePageUrl = releasePageUrl
+                        version = version,
+                        downloadUrl = selectedAsset?.browserDownloadUrl ?: releasePageUrl,
+                        releasePageUrl = releasePageUrl,
+                        artifact = artifact
                     ))
                 }
             }
@@ -154,5 +160,7 @@ private data class GitHubReleasePayload(
 @Serializable
 private data class GitHubReleaseAsset(
     val name: String,
-    @SerialName("browser_download_url") val browserDownloadUrl: String
+    @SerialName("browser_download_url") val browserDownloadUrl: String,
+    val size: Long = 0,
+    val digest: String? = null
 )

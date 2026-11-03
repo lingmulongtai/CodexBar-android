@@ -28,6 +28,18 @@ class GitHubReleaseUpdateCheckerTest {
     }
 
     @Test
+    fun `in app download requires asset size and SHA256 metadata`() = runTest {
+        server.enqueue(releaseResponse("v0.3.0", TRUSTED_APK_URL, size = 1234, digest = "sha256:" + "a".repeat(64)))
+        server.enqueue(releaseResponse("v0.3.0", TRUSTED_APK_URL))
+        server.enqueue(releaseResponse("v0.3.0", TRUSTED_APK_URL, size = 1234, digest = "sha256:bad"))
+        val artifact = checker().checkForUpdate("0.2.1")?.artifact
+        assertEquals(1234L, artifact?.bytes)
+        assertEquals("a".repeat(64), artifact?.sha256)
+        assertNull(checker().checkForUpdate("0.2.1")?.artifact)
+        assertNull(checker().checkForUpdate("0.2.1")?.artifact)
+    }
+
+    @Test
     fun `newer stable release selects signed apk asset`() = runTest {
         server.enqueue(
             releaseResponse(
@@ -126,7 +138,9 @@ class GitHubReleaseUpdateCheckerTest {
     private fun releaseResponse(
         tag: String,
         assetUrl: String,
-        assetName: String = "app-release.apk"
+        assetName: String = "app-release.apk",
+        size: Long = 0,
+        digest: String? = null
     ): MockResponse {
         return MockResponse()
             .setResponseCode(200)
@@ -141,7 +155,9 @@ class GitHubReleaseUpdateCheckerTest {
                   "assets": [
                     {
                       "name": "$assetName",
-                      "browser_download_url": "$assetUrl"
+                      "browser_download_url": "$assetUrl",
+                      "size": $size,
+                      "digest": ${digest?.let { "\"$it\"" } ?: "null"}
                     }
                   ]
                 }
