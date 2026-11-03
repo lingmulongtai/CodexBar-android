@@ -121,7 +121,7 @@ internal fun DashboardHeader(
 }
 
 @Composable
-private fun DashboardOrderAction(onStart: (() -> Unit)?, onFinish: (() -> Unit)?) {
+internal fun DashboardOrderAction(onStart: (() -> Unit)?, onFinish: (() -> Unit)?) {
     AnimatedContent(
         targetState = onFinish != null,
         transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(140)) },

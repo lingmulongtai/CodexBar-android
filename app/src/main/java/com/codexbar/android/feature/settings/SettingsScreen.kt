@@ -18,6 +18,7 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -34,10 +35,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.horizontalScroll
+import com.codexbar.android.ui.components.keepHorizontalScrollInPage
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Login
@@ -78,14 +82,24 @@ import androidx.compose.material3.Text
 import com.codexbar.android.ui.components.CodexBarTextButton as TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import com.codexbar.android.LocalPageActive
+import com.codexbar.android.LocalTopLevelSwipeEnabled
+import com.codexbar.android.feature.dashboard.DashboardProviderOrder
+import com.codexbar.android.feature.dashboard.DashboardOrderAction
+import com.codexbar.android.feature.dashboard.SectionHeader
+import com.codexbar.android.ui.components.rememberProviderDragReorder
+import com.codexbar.android.ui.components.providerDragReorder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -277,6 +291,21 @@ fun SettingsScreen(
 
                 WallpaperSettingsSection()
 
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        val hapticLabel = stringResource(R.string.haptic_feedback_title)
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(hapticLabel, style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.haptic_feedback_description), style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        com.codexbar.android.ui.components.CodexBarSwitch(uiState.hapticFeedbackEnabled,
+                            viewModel::setHapticFeedbackEnabled,
+                            modifier = Modifier.semantics { contentDescription = hapticLabel })
+                    }
+                }
+
                 LanguageSection(
                     selectedLanguage = selectedLanguage,
                     onLanguageSelected = { language ->
@@ -331,18 +360,34 @@ fun ConnectionsScreen(
         mutableStateOf(ProviderCategoryFilter.ALL.name)
     }
     var expandedProviderName by rememberSaveable { mutableStateOf<String?>(null) }
+    var reordering by rememberSaveable { mutableStateOf(false) }
+    val providerOrder by viewModel.connectionProviderOrder.collectAsStateWithLifecycle()
+    val active = LocalPageActive.current
+    BackHandler(active && reordering) { reordering = false }
     val providerFilter = runCatching {
         ProviderConnectionFilter.valueOf(providerFilterName)
     }.getOrDefault(ProviderConnectionFilter.ALL)
     val providerCategory = runCatching {
         ProviderCategoryFilter.valueOf(providerCategoryName)
     }.getOrDefault(ProviderCategoryFilter.ALL)
-    val visibleProviders = filterProviders(
+    val matchingProviders = filterProviders(
         query = providerSearchQuery,
         filter = providerFilter,
         categoryFilter = providerCategory,
         serviceStates = uiState.serviceStates
     )
+    val allProviders = DashboardProviderOrder.apply(filterProviders("", ProviderConnectionFilter.ALL,
+        ProviderCategoryFilter.ALL, uiState.serviceStates), providerOrder) { it }
+    val visibleProviders = allProviders.filter { it in matchingProviders }
+    val grid = rememberLazyGridState()
+    val drag = rememberProviderDragReorder(grid, visibleProviders) { edited ->
+        viewModel.setConnectionProviderOrder(DashboardProviderOrder.reorder(providerOrder, allProviders, edited))
+    }
+    val swipeEnabled = LocalTopLevelSwipeEnabled.current
+    DisposableEffect(reordering, drag.dragging, swipeEnabled) {
+        swipeEnabled?.value = !reordering && drag.dragging == null
+        onDispose { swipeEnabled?.value = true }
+    }
     val connectedCount = uiState.serviceStates.values.count {
         it.isVerifiedConnected
     }
@@ -380,30 +425,34 @@ fun ConnectionsScreen(
                             }
                         }
                     },
-                    actions = { onOpenSettings?.let { com.codexbar.android.ui.components.AppSettingsAction(it) } }
+                    actions = {
+                        DashboardOrderAction(if (visibleProviders.size > 1) ({ reordering = true }) else null,
+                            if (reordering) ({ reordering = false }) else null)
+                        onOpenSettings?.let { com.codexbar.android.ui.components.AppSettingsAction(it) }
+                    }
                 )
             }
         }
     ) { headerHeight ->
         Box(modifier = Modifier.fillMaxSize()) {
-            Column(
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(1), state = grid,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .widthIn(max = 840.dp)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
-                    .padding(top = headerHeight + 8.dp),
+                    .fillMaxSize(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp,
+                    top = headerHeight + 8.dp, bottom = 32.dp + LocalBottomChromeInset.current),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                ConnectionSummaryCard(
+                item(key = "summary") { ConnectionSummaryCard(
                     connectedCount = connectedCount,
                     totalCount = AiService.entries.size
-                )
+                ) }
 
-                DesktopBridgeSettings(uiState, viewModel)
+                item(key = "desktop") { DesktopBridgeSettings(uiState, viewModel) }
 
-                ProviderDirectoryControls(
+                item(key = "directory") { ProviderDirectoryControls(
                     query = providerSearchQuery,
                     onQueryChange = { providerSearchQuery = it },
                     filter = providerFilter,
@@ -412,18 +461,25 @@ fun ConnectionsScreen(
                     onCategoryFilterChange = { providerCategoryName = it.name },
                     visibleCount = visibleProviders.size,
                     totalCount = AiService.entries.size
-                )
+                ) }
 
-                if (visibleProviders.isEmpty()) {
-                    ProviderDirectoryEmptyState()
+                if (reordering) item(key = "order-hint") {
+                    SectionHeader(visibleProviders.size, true, providerOrder.isNotEmpty(),
+                        { viewModel.setConnectionProviderOrder(emptyList()) })
                 }
 
-                visibleProviders.forEach { service ->
+                if (visibleProviders.isEmpty()) {
+                    item(key = "empty") { ProviderDirectoryEmptyState() }
+                }
+
+                items(visibleProviders, key = { it.name }) { service ->
                     val state = uiState.serviceStates[service] ?: ServiceCredentialState()
                     ServiceCredentialSection(
                         service = service,
+                        modifier = Modifier.providerDragReorder(drag, service, visibleProviders),
+                        reordering = reordering,
                         state = state,
-                        expanded = expandedProviderName == service.name,
+                        expanded = !reordering && expandedProviderName == service.name,
                         onToggleExpanded = {
                             expandedProviderName = if (expandedProviderName == service.name) {
                                 null
@@ -491,17 +547,16 @@ fun ConnectionsScreen(
                     )
                 }
 
-                DangerZoneSection(
+                item(key = "danger") { DangerZoneSection(
                     onDeleteAll = { viewModel.showDeleteConfirmDialog() }
-                )
+                ) }
 
-                WallpaperFooter()
-                Spacer(modifier = Modifier.height(32.dp + LocalBottomChromeInset.current))
+                item(key = "wallpaper-credit") { WallpaperFooter() }
             }
         }
     }
 
-    if (uiState.showDeleteConfirmDialog) {
+    if (active && uiState.showDeleteConfirmDialog) {
         DeleteConfirmDialog(
             onConfirm = {
                 viewModel.deleteAllCredentials()
@@ -511,7 +566,7 @@ fun ConnectionsScreen(
         )
     }
 
-    uiState.disconnectConfirmService?.let { service ->
+    uiState.disconnectConfirmService?.takeIf { active }?.let { service ->
         DisconnectConfirmDialog(
             service = service,
             onConfirm = { viewModel.disconnectService(service) },
@@ -738,7 +793,7 @@ private fun ProviderDirectoryControls(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
+                    .keepHorizontalScrollInPage().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ProviderCategoryFilter.entries.forEach { option ->
@@ -824,6 +879,8 @@ private fun ProviderCategory.labelRes(): Int = when (this) {
 @Composable
 private fun ServiceCredentialSection(
     service: AiService,
+    modifier: Modifier = Modifier,
+    reordering: Boolean = false,
     state: ServiceCredentialState,
     expanded: Boolean,
     onToggleExpanded: () -> Unit,
@@ -857,7 +914,7 @@ private fun ServiceCredentialSection(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = visualStyle.shape,
         colors = CardDefaults.cardColors(containerColor = visualStyle.container),
         border = BorderStroke(1.dp, visualStyle.accent.copy(alpha = 0.28f)),
@@ -870,7 +927,7 @@ private fun ServiceCredentialSection(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(onClick = onToggleExpanded),
+                    .clickable(enabled = !reordering, onClick = onToggleExpanded),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
@@ -932,13 +989,17 @@ private fun ServiceCredentialSection(
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(
-                    imageVector = if (expanded) {
+                    imageVector = if (reordering) {
+                        Icons.Rounded.DragHandle
+                    } else if (expanded) {
                         Icons.Rounded.ExpandLess
                     } else {
                         Icons.Rounded.ExpandMore
                     },
                     contentDescription = stringResource(
-                        if (expanded) {
+                        if (reordering) {
+                            R.string.provider_order_action
+                        } else if (expanded) {
                             R.string.action_collapse_provider
                         } else {
                             R.string.action_expand_provider

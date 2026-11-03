@@ -20,7 +20,7 @@ class ProviderDirectoryUiSourceTest {
         assertTrue(source.contains("ProviderConnectionFilter.entries.forEachIndexed"))
         assertTrue(source.contains("ProviderCategoryFilter.entries.forEach"))
         assertTrue(source.contains("var expandedProviderName by rememberSaveable"))
-        assertTrue(source.contains("expanded = expandedProviderName == service.name"))
+        assertTrue(source.contains("expanded = !reordering && expandedProviderName == service.name"))
         assertTrue(source.contains("if (expanded) {"))
     }
 

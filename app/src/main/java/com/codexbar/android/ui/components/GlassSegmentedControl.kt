@@ -46,6 +46,7 @@ fun GlassSegmentedControl(labels: List<String>, selected: Int, onSelect: (Int) -
     val lensBackdrop = rememberGlassBackdrop()
     var dragPosition by remember { mutableStateOf<Float?>(null) }
     var pressedIndex by remember { mutableStateOf<Int?>(null) }
+    GlassLiftHaptics(pressedIndex != null || dragPosition != null)
     var anchor by remember { mutableFloatStateOf(0f) }
     var downX by remember { mutableFloatStateOf(0f) }
     var movement by remember { mutableFloatStateOf(0f) }

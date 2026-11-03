@@ -29,7 +29,8 @@ class AppLanguageSourceTest {
         assertTrue(settingsViewModel.contains("language.apply()"))
         assertTrue(settingsViewModel.contains("refreshLocalizedSurfaces()"))
         assertTrue(settingsViewModel.contains("source = \"language_changed\""))
-        assertTrue(dashboard.contains("LaunchedEffect(Unit)"))
+        assertTrue(dashboard.contains("LaunchedEffect(active, localeTag)"))
+        assertTrue(dashboard.contains("if (active) viewModel.refreshIfStale(localeTag)"))
         assertTrue(japaneseResources.isFile)
         assertTrue(japaneseResources.readText().contains("アプリの言語"))
     }

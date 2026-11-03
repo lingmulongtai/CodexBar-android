@@ -68,6 +68,12 @@ class DashboardViewModel @Inject constructor(
 
     private val _providerOrder = MutableStateFlow(orderPrefs.load())
     val providerOrder: StateFlow<List<AiService>> = _providerOrder.asStateFlow()
+    private val _trendsProviderOrder = MutableStateFlow(orderPrefs.load(ProviderOrderScope.TRENDS))
+    val trendsProviderOrder: StateFlow<List<AiService>> = _trendsProviderOrder.asStateFlow()
+
+    fun setTrendsProviderOrder(order: List<AiService>) {
+        _trendsProviderOrder.value = orderPrefs.save(order, ProviderOrderScope.TRENDS)
+    }
 
     fun setProviderOrder(order: List<AiService>) {
         _providerOrder.value = orderPrefs.save(order)

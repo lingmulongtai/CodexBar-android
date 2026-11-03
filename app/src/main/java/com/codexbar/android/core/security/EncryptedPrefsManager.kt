@@ -503,6 +503,13 @@ class EncryptedPrefsManager @Inject constructor(
         updateCache()
     }
 
+    fun getHapticFeedbackEnabled(): Boolean = cachedSettings.hapticFeedbackEnabled
+
+    suspend fun setHapticFeedbackEnabled(enabled: Boolean) {
+        dataStore.edit { it[KEY_HAPTIC_FEEDBACK_ENABLED] = enabled }
+        updateCache()
+    }
+
     suspend fun setDeveloperSettings(settings: DeveloperSettings) {
         val safe = settings.normalized()
         dataStore.edit { it[KEY_DEVELOPER_SETTINGS] = developerJson.encodeToString(safe) }
@@ -602,6 +609,7 @@ class EncryptedPrefsManager @Inject constructor(
             persistentNotificationEnabled = prefs[KEY_NOTIFICATIONS_ENABLED] ?: true,
             resetNotificationEnabled = prefs[KEY_RESET_NOTIFICATIONS_ENABLED] ?: true,
             appThemeStyle = AppThemeStyle.fromStoredValue(prefs[KEY_APP_THEME_STYLE]),
+            hapticFeedbackEnabled = prefs[KEY_HAPTIC_FEEDBACK_ENABLED] ?: true,
             developerSettings = prefs[KEY_DEVELOPER_SETTINGS]?.let { stored ->
                 runCatching { developerJson.decodeFromString<DeveloperSettings>(stored).normalized() }.getOrNull()
             } ?: DeveloperSettings(),
@@ -769,6 +777,7 @@ class EncryptedPrefsManager @Inject constructor(
         val persistentNotificationEnabled: Boolean = true,
         val resetNotificationEnabled: Boolean = true,
         val appThemeStyle: AppThemeStyle = AppThemeStyle.LIQUID_GLASS,
+        val hapticFeedbackEnabled: Boolean = true,
         val developerSettings: DeveloperSettings = DeveloperSettings(),
         val privacySettings: PrivacySettings = FAIL_CLOSED_PRIVACY_SETTINGS
     )
@@ -789,6 +798,7 @@ class EncryptedPrefsManager @Inject constructor(
         private val KEY_RESET_NOTIFICATIONS_ENABLED = booleanPreferencesKey("reset_notifications_enabled")
         private val KEY_DEVELOPER_SETTINGS = stringPreferencesKey("developer_settings")
         private val KEY_APP_THEME_STYLE = stringPreferencesKey("app_theme_style")
+        private val KEY_HAPTIC_FEEDBACK_ENABLED = booleanPreferencesKey("haptic_feedback_enabled")
         private val KEY_PRIVACY_SCREEN_ENABLED = booleanPreferencesKey("privacy_screen_enabled")
         private val KEY_PRIVACY_LOCK_SCREEN_REDACTION_ENABLED =
             booleanPreferencesKey("privacy_lock_screen_redaction_enabled")

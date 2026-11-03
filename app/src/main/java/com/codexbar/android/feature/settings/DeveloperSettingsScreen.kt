@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
+import com.codexbar.android.LocalPageActive
 import com.codexbar.android.core.domain.model.*
 import com.codexbar.android.ui.components.*
 
@@ -30,9 +31,10 @@ internal fun DeveloperSettingsScreen(onBack: () -> Unit, viewModel: SettingsView
     var group by remember { mutableStateOf(GlassSurfaceGroup.CONTAINERS) }
     val preview: (DeveloperSettings) -> Unit = { viewModel.previewDeveloperSettings(owner, it) }
     val save: (DeveloperSettings) -> Unit = { viewModel.saveDeveloperSettings(owner, it) }
-    DisposableEffect(viewModel, owner) {
-        viewModel.beginDeveloperSettingsPreview(owner)
-        onDispose { viewModel.finishDeveloperSettingsPreview(owner) }
+    val active = LocalPageActive.current
+    DisposableEffect(viewModel, owner, active) {
+        if (active) viewModel.beginDeveloperSettingsPreview(owner)
+        onDispose { if (active) viewModel.finishDeveloperSettingsPreview(owner) }
     }
     GlassHeaderOverlay(header = {
         ThemedTopBar(stringResource(R.string.developer_settings_title), navigationIcon = {

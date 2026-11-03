@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
+import com.codexbar.android.ui.components.keepHorizontalScrollInPage
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -148,7 +149,7 @@ private fun ContributionCalendarCard(calendar: GitHubContributionCalendar, selec
             }
             if (days.isNotEmpty()) {
                 val scroll = rememberScrollState(initial = Int.MAX_VALUE)
-                Box(Modifier.fillMaxWidth().horizontalScroll(scroll)) {
+                Box(Modifier.fillMaxWidth().keepHorizontalScrollInPage().horizontalScroll(scroll)) {
                     Canvas(Modifier.width(stepDp * calendar.weeks.size).height(stepDp * 7 + 18.dp)
                         .semantics { contentDescription = description }
                         .pointerInput(days, step) {

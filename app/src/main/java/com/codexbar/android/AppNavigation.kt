@@ -76,6 +76,7 @@ import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.ui.components.BrandGlyph
 import com.codexbar.android.ui.components.GlassBackdrop
 import com.codexbar.android.ui.components.GlassSurface
+import com.codexbar.android.ui.components.GlassLiftHaptics
 import com.codexbar.android.ui.components.glassTabPosition
 import com.codexbar.android.ui.components.glassTabDragPosition
 import com.codexbar.android.ui.components.glassBackdropSource
@@ -156,7 +157,8 @@ internal fun GlassNavigationBar(
     entries: List<NavigationEntry>,
     backdrop: GlassBackdrop,
     onRefresh: (() -> Unit)?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    pagePosition: (() -> Float)? = null
 ) {
     val profile = LocalCodexBarThemeProfile.current
     val colors = MaterialTheme.colorScheme
@@ -173,7 +175,7 @@ internal fun GlassNavigationBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         GlassTabRow(entries, backdrop, glassTint, glassFallback, rim,
-            Modifier.weight(1f).height(GlassBarHeight))
+            Modifier.weight(1f).height(GlassBarHeight), pagePosition)
         if (onRefresh != null) {
             val refreshLabel = stringResource(R.string.action_refresh)
             val interaction = remember { MutableInteractionSource() }
@@ -210,7 +212,8 @@ internal fun GlassNavigationBar(
 @Composable
 private fun GlassTabRow(
     entries: List<NavigationEntry>, backdrop: GlassBackdrop, glassTint: Color,
-    glassFallback: Color, rim: Color, modifier: Modifier = Modifier
+    glassFallback: Color, rim: Color, modifier: Modifier = Modifier,
+    pagePosition: (() -> Float)? = null
 ) {
     if (entries.isEmpty()) return
     val profile = LocalCodexBarThemeProfile.current
@@ -220,6 +223,7 @@ private fun GlassTabRow(
     val lensBackdrop = rememberGlassBackdrop()
     var dragPosition by remember { mutableStateOf<Float?>(null) }
     var pressedIndex by remember { mutableStateOf<Int?>(null) }
+    GlassLiftHaptics(pressedIndex != null || dragPosition != null)
     var anchor by remember { mutableStateOf(0f) }
     var downX by remember { mutableStateOf(0f) }
     var movement by remember { mutableStateOf(0f) }
@@ -261,14 +265,15 @@ private fun GlassTabRow(
                     onDragEnd = {
                         val index = dragPosition?.roundToInt()
                         dragPosition = null
-                        latestEntries.getOrNull(index ?: -1)?.takeUnless { it.selected }?.onClick?.invoke()
+                        latestEntries.getOrNull(index ?: -1)?.onClick?.invoke()
                     },
                     onDragCancel = { dragPosition = null }
                 )
             }
     ) {
         val cell = (maxWidth - 8.dp) / entries.size
-        val logical = settledPosition
+        val logical = if (dragPosition != null || pagePosition == null) settledPosition
+            else pagePosition().coerceIn(0f, entries.lastIndex.toFloat())
         val visual = if (rtl) entries.lastIndex - logical else logical
         // Keep the source independent from the lens to avoid recording it recursively.
         Box(Modifier.fillMaxSize().glassBackdropSource(lensBackdrop)) {
