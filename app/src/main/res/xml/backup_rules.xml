@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
+    <exclude domain="file" path="updates/" />
     <exclude domain="sharedpref" path="codexbar_secure_prefs.xml" />
     <exclude domain="sharedpref" path="codexbar_token_refresh_state.xml" />
     <exclude domain="sharedpref" path="codexbar_connection_health.xml" />

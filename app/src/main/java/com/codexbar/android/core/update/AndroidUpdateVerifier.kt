@@ -9,9 +9,9 @@ import java.security.MessageDigest
 import javax.inject.Inject
 import dagger.hilt.android.qualifiers.ApplicationContext
 
-internal class AndroidUpdateVerifier @Inject constructor(@ApplicationContext private val context: Context) {
+class AndroidUpdateVerifier @Inject constructor(@ApplicationContext private val context: Context) {
     @Suppress("DEPRECATION")
-    fun verify(file: File, target: UpdateArtifact) {
+    internal fun verify(file: File, target: UpdateArtifact) {
         val flags = if (Build.VERSION.SDK_INT >= 28) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES
         val pm = context.packageManager
         val archive = pm.getPackageArchiveInfo(file.absolutePath, flags)

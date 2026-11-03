@@ -786,4 +786,24 @@
     <string name="developer_settings_reset_all">Reset all Dev settings</string>
     <string name="developer_settings_save_failed">Could not save. Try saving again before leaving this screen.</string>
     <string name="developer_settings_retry">Save again</string>
+
+    <string name="update_download_title">CodexBar update</string>
+    <string name="update_downloading">Downloading update…</string>
+    <string name="update_verifying">Checking file and signature…</string>
+    <string name="update_waiting">Preparing download / waiting for network…</string>
+    <string name="update_ready">Download verified. Ready to install.</string>
+    <string name="update_cancelled">Download cancelled.</string>
+    <string name="update_progress">%1$d%% · %2$s / %3$s</string>
+    <string name="update_install">Install update</string>
+    <string name="update_retry">Retry download</string>
+    <string name="update_background_continue">Close and continue</string>
+    <string name="update_permission_help">Android may ask you to allow updates from CodexBar. Your accounts and settings are kept when you update.</string>
+    <string name="update_error_network">The connection failed or timed out. Check your network and retry.</string>
+    <string name="update_error_integrity">The downloaded file is incomplete or failed verification. Download it again.</string>
+    <string name="update_error_package">This file is not a valid CodexBar update.</string>
+    <string name="update_error_version">This APK is not the selected newer version. Check for updates again.</string>
+    <string name="update_error_signer">This APK has a different signing certificate. A preview/debug build cannot be updated with the official APK.</string>
+    <string name="update_error_storage">There is not enough storage, or the update file could not be saved.</string>
+    <string name="update_error_unavailable">A verified update is unavailable. Check for updates again.</string>
+    <string name="update_install_preparing">Preparing the Android installer…</string>
 </resources>

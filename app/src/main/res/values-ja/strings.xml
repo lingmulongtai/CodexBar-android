@@ -784,4 +784,24 @@
     <string name="developer_settings_reset_all">Dev設定をすべて標準に戻す</string>
     <string name="developer_settings_save_failed">保存できませんでした。この画面を閉じる前にもう一度保存してください。</string>
     <string name="developer_settings_retry">もう一度保存</string>
+
+    <string name="update_download_title">CodexBarの更新</string>
+    <string name="update_downloading">更新をダウンロード中…</string>
+    <string name="update_verifying">ファイルと署名を確認中…</string>
+    <string name="update_waiting">ダウンロード準備中・通信を待っています…</string>
+    <string name="update_ready">確認が完了しました。インストールできます。</string>
+    <string name="update_cancelled">ダウンロードをキャンセルしました。</string>
+    <string name="update_progress">%1$d%% · %2$s / %3$s</string>
+    <string name="update_install">更新をインストール</string>
+    <string name="update_retry">ダウンロードを再試行</string>
+    <string name="update_background_continue">閉じて続ける</string>
+    <string name="update_permission_help">AndroidからCodexBarによる更新の許可を求められる場合があります。上書き更新でアカウントと設定を引き継ぎます。</string>
+    <string name="update_error_network">通信が切れたか、時間内に完了しませんでした。接続を確認して再試行してください。</string>
+    <string name="update_error_integrity">ファイルが不完全か、検証に失敗しました。もう一度ダウンロードしてください。</string>
+    <string name="update_error_package">このファイルは正しいCodexBarの更新ではありません。</string>
+    <string name="update_error_version">選択した新しいバージョンのAPKではありません。更新を再確認してください。</string>
+    <string name="update_error_signer">署名が一致しません。プレビュー・開発版には正式版APKを上書きできません。</string>
+    <string name="update_error_storage">空き容量が足りないか、更新ファイルを保存できませんでした。</string>
+    <string name="update_error_unavailable">安全に検証できる更新が見つかりません。更新を再確認してください。</string>
+    <string name="update_install_preparing">Androidのインストール画面を準備中…</string>
 </resources>
