@@ -492,7 +492,7 @@ private fun CardList(
 }
 
 @Composable
-private fun SectionHeader(
+internal fun SectionHeader(
     count: Int, reordering: Boolean, hasCustomOrder: Boolean,
     onResetOrder: () -> Unit, modifier: Modifier = Modifier
 ) {
