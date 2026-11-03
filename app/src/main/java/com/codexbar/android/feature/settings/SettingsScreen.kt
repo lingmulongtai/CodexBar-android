@@ -501,7 +501,7 @@ fun ConnectionsScreen(
         }
     }
 
-    if (uiState.showDeleteConfirmDialog) {
+    if (com.codexbar.android.LocalPageActive.current && uiState.showDeleteConfirmDialog) {
         DeleteConfirmDialog(
             onConfirm = {
                 viewModel.deleteAllCredentials()
@@ -511,7 +511,7 @@ fun ConnectionsScreen(
         )
     }
 
-    uiState.disconnectConfirmService?.let { service ->
+    uiState.disconnectConfirmService?.takeIf { com.codexbar.android.LocalPageActive.current }?.let { service ->
         DisconnectConfirmDialog(
             service = service,
             onConfirm = { viewModel.disconnectService(service) },

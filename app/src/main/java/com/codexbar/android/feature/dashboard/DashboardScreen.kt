@@ -64,6 +64,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
 import com.codexbar.android.LocalTopLevelSwipeEnabled
+import com.codexbar.android.LocalPageActive
 import com.codexbar.android.core.domain.model.AcquisitionMode
 import com.codexbar.android.core.domain.model.AiService
 import com.codexbar.android.core.domain.model.AppThemeStyle
@@ -94,8 +95,9 @@ fun DashboardScreen(
     val providerOrder by viewModel.providerOrder.collectAsStateWithLifecycle()
 
     val localeTag = LocalConfiguration.current.locales[0].toLanguageTag()
-    LaunchedEffect(Unit) {
-        viewModel.refreshIfStale(localeTag)
+    val active = LocalPageActive.current
+    LaunchedEffect(active, localeTag) {
+        if (active) viewModel.refreshIfStale(localeTag)
     }
 
     DashboardContent(
@@ -154,7 +156,8 @@ private fun DashboardContent(
         swipeEnabled?.value = !reordering && selectedServiceName == null
         onDispose { swipeEnabled?.value = true }
     }
-    BackHandler(enabled = reordering) { reordering = false }
+    val active = LocalPageActive.current
+    BackHandler(enabled = active && reordering) { reordering = false }
     val snapshot = (uiState as? DashboardUiState.Content)?.snapshot
     val services = snapshot?.services.orEmpty()
     val orderedServices = remember(services, providerOrder) {
@@ -317,7 +320,7 @@ private fun DashboardContent(
             }
         }
 
-        if (!useTwoPane) {
+        if (active && !useTwoPane) {
             explicitlySelectedService?.let { service ->
                 ServiceDetailSheet(
                     service = service,

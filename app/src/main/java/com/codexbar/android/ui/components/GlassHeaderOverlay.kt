@@ -2,15 +2,12 @@ package com.codexbar.android.ui.components
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -28,11 +25,8 @@ import androidx.compose.ui.layout.AlignmentLine
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import kotlin.math.roundToInt
 
-val LocalTopLevelSlideDirection = staticCompositionLocalOf { 0 }
 val LocalGlassHeaderHeight = staticCompositionLocalOf<Animatable<Float, AnimationVector1D>?> { null }
 val LocalGlassHeaderNaturalHeight = staticCompositionLocalOf<(Int) -> Unit> { {} }
 internal val NaturalGlassHeaderHeight = HorizontalAlignmentLine(::maxOf)
@@ -57,9 +51,6 @@ fun GlassHeaderOverlay(
         pinned.content = { currentHeader.value() }
         onDispose { pinned.content = null }
     }
-    val direction = LocalTopLevelSlideDirection.current
-    val offset = remember { Animatable(direction.toFloat()) }
-    LaunchedEffect(offset) { offset.animateTo(0f, tween(260)) }
     SubcomposeLayout(Modifier.fillMaxSize()) { constraints ->
         val top = subcompose("header") {
             CompositionLocalProvider(
@@ -72,9 +63,7 @@ fun GlassHeaderOverlay(
         val contentTop = with(density) { stableHeaderContentTop(natural, visible, top.height).toDp() }
         val body = subcompose("body") {
             Box(Modifier.fillMaxSize().then(if (pinned == null) Modifier.glassBackdropSource(backdrop, wallpaper) else Modifier)) {
-                Box(Modifier.fillMaxSize().then(if (pinned == null) Modifier.offset {
-                    IntOffset((offset.value * 36.dp.toPx()).roundToInt(), 0)
-                } else Modifier)) { content(contentTop) }
+                content(contentTop)
             }
         }.single().measure(constraints)
         layout(constraints.maxWidth, constraints.maxHeight) {

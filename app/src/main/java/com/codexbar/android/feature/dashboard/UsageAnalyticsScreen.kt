@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.R
+import com.codexbar.android.LocalPageActive
 import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
@@ -78,7 +79,8 @@ fun UsageAnalyticsScreen(
     val state by model.uiState.collectAsStateWithLifecycle()
     val refresh by model.refreshState.collectAsStateWithLifecycle()
     val localeTag = LocalConfiguration.current.locales[0].toLanguageTag()
-    LaunchedEffect(Unit) { model.refreshIfStale(localeTag) }
+    val active = LocalPageActive.current
+    LaunchedEffect(active, localeTag) { if (active) model.refreshIfStale(localeTag) }
     AnalyticsContent(page, (state as? DashboardUiState.Content)?.snapshot, refresh, model::refresh, onConnections, onPageChange, onOpenSettings)
 }
 

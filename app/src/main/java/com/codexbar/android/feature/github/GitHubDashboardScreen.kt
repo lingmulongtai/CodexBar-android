@@ -45,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.BuildConfig
 import com.codexbar.android.R
 import com.codexbar.android.LocalTopLevelSwipeEnabled
+import com.codexbar.android.LocalPageActive
 import com.codexbar.android.core.domain.model.GitHubWidgetKind
 import com.codexbar.android.core.domain.model.GitHubWidgetSize
 import com.codexbar.android.core.network.github.GitHubContributionDay
@@ -86,7 +87,7 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
     }
     LaunchedEffect(state.profile) { if (state.profile == null) { page = GitHubPage.Profile; editingWidgets = false } }
     fun open(url: String) { browserError = runCatching { uri.openUri(url) }.isFailure }
-    BackHandler(enabled = page != GitHubPage.Profile || editingWidgets) {
+    BackHandler(enabled = LocalPageActive.current && (page != GitHubPage.Profile || editingWidgets)) {
         if (page != GitHubPage.Profile) page = GitHubPage.Profile else editingWidgets = false
     }
     val title = when (page) {
