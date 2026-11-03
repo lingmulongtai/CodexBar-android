@@ -1,5 +1,6 @@
 package com.codexbar.android.ui.components
 
+import com.codexbar.android.core.domain.model.GlassSurfaceGroup
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.border
@@ -48,7 +49,7 @@ fun CodexBarPanel(modifier: Modifier = Modifier, shape: Shape = MaterialTheme.sh
     GlassSurface(if (depth == 0) LocalGlassCardBackdrop.current else null, shape,
         glassPanelTint(color, profile.cardColor, profile.isDark), if (depth == 0) color.compositeOver(profile.cardColor) else flat,
         Color.White.copy(alpha = if (profile.isDark) 0.18f else 0.70f), modifier.then(if (border != null) Modifier.border(border, shape) else Modifier),
-        blurRadius = 16.dp, refraction = 0.18f, elevation = if (depth == 0) 2.dp else 0.dp) {
+        tuningGroup = GlassSurfaceGroup.CONTAINERS, blurRadius = 16.dp, refraction = 0.18f, elevation = if (depth == 0) 2.dp else 0.dp) {
         CompositionLocalProvider(LocalContentColor provides contentColor, LocalGlassPanelDepth provides depth + 1, content = content)
     }
 }

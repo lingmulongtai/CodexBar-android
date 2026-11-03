@@ -1,5 +1,6 @@
 package com.codexbar.android.ui.components
 
+import com.codexbar.android.core.domain.model.GlassSurfaceGroup
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +40,7 @@ fun GlassCard(
     val selectedState = selected
     val depth = LocalGlassPanelDepth.current
     GlassSurface(
+        tuningGroup = GlassSurfaceGroup.CONTAINERS,
         backdrop = if (depth == 0) LocalGlassCardBackdrop.current else null,
         shape = shape,
         tint = profile.cardColor.copy(alpha = if (profile.isDark) 0.70f else 0.68f),

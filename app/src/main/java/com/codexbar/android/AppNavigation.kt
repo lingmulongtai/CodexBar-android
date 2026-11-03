@@ -1,5 +1,6 @@
 package com.codexbar.android
 
+import com.codexbar.android.core.domain.model.GlassSurfaceGroup
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -192,7 +193,7 @@ internal fun GlassNavigationBar(
                 contentAlignment = Alignment.Center
             ) {
                 GlassSurface(
-                    backdrop = backdrop, shape = CircleShape, tint = glassTint,
+            tuningGroup = GlassSurfaceGroup.NAVIGATION,                    backdrop = backdrop, shape = CircleShape, tint = glassTint,
                     fallback = glassFallback, rim = rim, blurRadius = 3.dp, refraction = 0f,
                     elevation = if (profile.isDark) 0.dp else 1.dp,
                     modifier = Modifier.size(40.dp).graphicsLayer { scaleX = scale; scaleY = scale }
@@ -272,6 +273,7 @@ private fun GlassTabRow(
         // Keep the source independent from the lens to avoid recording it recursively.
         Box(Modifier.fillMaxSize().glassBackdropSource(lensBackdrop)) {
             GlassSurface(backdrop, CircleShape, glassTint, glassFallback, rim,
+                tuningGroup = GlassSurfaceGroup.NAVIGATION,
                 modifier = Modifier.fillMaxSize(), blurRadius = 3.dp, refraction = 0f,
                 elevation = if (profile.isDark) 0.dp else 1.dp) {}
             Row(Modifier.fillMaxSize().padding(4.dp)) {
@@ -297,7 +299,7 @@ private fun GlassTabRow(
             }
         }
         GlassSurface(
-            backdrop = lensBackdrop, shape = CircleShape,
+            tuningGroup = GlassSurfaceGroup.NAVIGATION,            backdrop = lensBackdrop, shape = CircleShape,
             tint = if (profile.isDark) Color.White.copy(alpha = 0.145f * (1f - lift * 0.62f))
                 else Color.Black.copy(alpha = 0.10f * (1f - lift * 0.70f)),
             fallback = if (profile.isDark) Color.White.copy(alpha = 0.145f) else Color.Black.copy(alpha = 0.10f),
