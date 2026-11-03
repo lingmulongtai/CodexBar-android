@@ -14,6 +14,7 @@ import com.codexbar.android.ui.components.CodexBarTextButton as TextButton
 import com.codexbar.android.ui.components.CodexBarOutlinedButton as OutlinedButton
 import com.codexbar.android.ui.components.CodexBarButton as Button
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalContext
@@ -28,10 +29,10 @@ import com.codexbar.android.core.domain.model.AcquisitionMode
 @Composable
 internal fun DesktopBridgeSettings(state: SettingsUiState, viewModel: SettingsViewModel) {
     val context = LocalContext.current
-    var showPairing by remember { mutableStateOf(false) }
-    var showExceptions by remember { mutableStateOf(false) }
+    var showPairing by rememberSaveable { mutableStateOf(false) }
+    var showExceptions by rememberSaveable { mutableStateOf(false) }
     var showRemote by remember { mutableStateOf(false) }
-    if (showRemote && state.desktop.connected) DesktopRemoteSettingsDialog(state.desktop,
+    if (showRemote && state.desktop.connected && com.codexbar.android.LocalPageActive.current) DesktopRemoteSettingsDialog(state.desktop,
         viewModel::loadDesktopRemoteSettings, viewModel::updateDesktopRemoteSettings, { showRemote = false })
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
