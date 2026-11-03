@@ -45,4 +45,9 @@ class DashboardProviderOrderTest {
             DashboardProviderOrder.reorder(saved, displayed, listOf(GEMINI, CODEX)))
         assertEquals(displayed, DashboardProviderOrder.reorder(emptyList(), displayed, displayed))
     }
+
+    @Test fun `first edit of a filtered directory preserves unseen provider slots`() {
+        assertEquals(listOf(GEMINI, CLAUDE, COPILOT, CODEX),
+            DashboardProviderOrder.reorder(emptyList(), listOf(CODEX, CLAUDE, COPILOT, GEMINI), listOf(GEMINI, CODEX)))
+    }
 }

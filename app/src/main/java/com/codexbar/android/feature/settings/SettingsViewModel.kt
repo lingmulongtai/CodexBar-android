@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.content.Context
 import com.codexbar.android.R
+import com.codexbar.android.feature.dashboard.DashboardOrderPrefs
+import com.codexbar.android.feature.dashboard.ProviderOrderScope
 import com.codexbar.android.core.auth.AccountLinkManager
 import com.codexbar.android.core.auth.DeviceAuthSession
 import com.codexbar.android.core.data.QuotaHistoryStore
@@ -71,11 +73,18 @@ class SettingsViewModel @Inject constructor(
     private val widgetPrefsManager: WidgetPrefsManager,
     private val monitoringSessionStore: MonitoringSessionStore,
     private val notificationService: QuotaNotificationService,
+    private val orderPrefs: DashboardOrderPrefs,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+    private val _connectionProviderOrder = MutableStateFlow(orderPrefs.load(ProviderOrderScope.CONNECTIONS))
+    val connectionProviderOrder: StateFlow<List<AiService>> = _connectionProviderOrder.asStateFlow()
+
+    fun setConnectionProviderOrder(order: List<AiService>) {
+        _connectionProviderOrder.value = orderPrefs.save(order, ProviderOrderScope.CONNECTIONS)
+    }
     private var antigravityPairingJob: Job? = null
     private var languageChangeJob: Job? = null
     private var antigravityPairingGeneration = 0L

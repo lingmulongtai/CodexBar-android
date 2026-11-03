@@ -55,6 +55,7 @@ class AntigravityPairingCancellationTest {
                 mock(AccountLinkManager::class.java), mock(CodexTelemetryClient::class.java), mock(com.codexbar.android.core.network.desktop.DesktopBridgeClient::class.java),
                 prefs, org.mockito.Mockito.mock(com.codexbar.android.ui.theme.DeveloperSettingsRuntime::class.java), health, mock(QuotaHistoryStore::class.java), resetMonitor, mock(WidgetPrefsManager::class.java),
                 mock(MonitoringSessionStore::class.java), mock(QuotaNotificationService::class.java),
+                mock(com.codexbar.android.feature.dashboard.DashboardOrderPrefs::class.java),
                 mock(Context::class.java)
             )
             scopeJob = vm.viewModelScope.coroutineContext[Job]
