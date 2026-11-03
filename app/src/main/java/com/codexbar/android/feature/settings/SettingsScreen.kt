@@ -127,6 +127,7 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import kotlinx.coroutines.delay
+import com.codexbar.android.core.domain.model.AppAnimationSpeed
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -136,10 +137,12 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     showBackButton: Boolean = true,
     onScreenPrivacyChanged: (Boolean) -> Unit = {},
+    onOpenDeveloperSettings: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val animationSpeed = com.codexbar.android.ui.components.LocalDeveloperSettings.current.animationSpeed
     var notificationsAllowed by remember { mutableStateOf(context.canPostNotifications()) }
     var resetNotificationsAllowed by remember { mutableStateOf(context.canPostResetNotifications()) }
     var promotedUpdatesAllowed by remember { mutableStateOf(context.canPostPromotedNotifications()) }
@@ -278,11 +281,8 @@ fun SettingsScreen(
                     selectedLanguage = selectedLanguage,
                     onLanguageSelected = { language ->
                         selectedLanguage = language
-                        val motionScale = Settings.Global.getFloat(
-                            context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f
-                        ).coerceIn(0f, 2f)
                         val delayMillis = if (uiState.appThemeStyle == AppThemeStyle.LIQUID_GLASS)
-                            (200f * motionScale).toLong() else 0L
+                            AppAnimationSpeed.durationMillis(200, animationSpeed) else 0L
                         viewModel.setAppLanguage(language, delayMillis)
                     }
                 )
@@ -295,6 +295,12 @@ fun SettingsScreen(
                     }
                 )
 
+                com.codexbar.android.ui.components.CodexBarCard(onClick = onOpenDeveloperSettings, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(stringResource(R.string.developer_settings_title), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.developer_settings_summary), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
                 AppInfoSection()
                 WallpaperFooter()
                 Spacer(modifier = Modifier.height(32.dp + LocalBottomChromeInset.current))

@@ -1,5 +1,7 @@
 package com.codexbar.android.feature.settings
 
+import com.codexbar.android.core.domain.model.DeveloperSettings
+import com.codexbar.android.ui.theme.DeveloperSettingsRuntime
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.content.Context
@@ -62,6 +64,7 @@ class SettingsViewModel @Inject constructor(
     private val codexTelemetryClient: CodexTelemetryClient,
     private val desktopPairingClient: DesktopBridgeClient,
     private val prefsManager: EncryptedPrefsManager,
+    private val developerSettingsRuntime: DeveloperSettingsRuntime,
     private val connectionHealthStore: ConnectionHealthStore,
     private val quotaHistoryStore: QuotaHistoryStore,
     private val quotaResetMonitor: QuotaResetMonitor,
@@ -78,6 +81,12 @@ class SettingsViewModel @Inject constructor(
     private var antigravityPairingGeneration = 0L
     private val antigravityPairingMutex = Mutex()
     private val desktopConnection = DesktopBridgeConnection(viewModelScope, desktopPairingClient, prefsManager, quotaResetMonitor, connectionHealthStore, quotaHistoryStore, widgetPrefsManager, monitoringSessionStore, notificationService, appContext)
+
+    val developerSettingsSaveFailed: Boolean get() = developerSettingsRuntime.saveFailed
+    fun beginDeveloperSettingsPreview(owner: Any) = developerSettingsRuntime.beginPreview(owner)
+    fun previewDeveloperSettings(owner: Any, value: DeveloperSettings) = developerSettingsRuntime.preview(owner, value)
+    fun saveDeveloperSettings(owner: Any, value: DeveloperSettings) = developerSettingsRuntime.save(owner, value)
+    fun finishDeveloperSettingsPreview(owner: Any) = developerSettingsRuntime.finishPreview(owner)
 
     init {
         viewModelScope.launch {

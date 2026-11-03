@@ -65,6 +65,7 @@ import com.codexbar.android.feature.dashboard.DashboardViewModel
 import com.codexbar.android.feature.github.GitHubDashboardScreen
 import com.codexbar.android.feature.github.GitHubDashboardViewModel
 import com.codexbar.android.feature.settings.ConnectionsScreen
+import com.codexbar.android.feature.settings.DeveloperSettingsScreen
 import com.codexbar.android.feature.settings.SettingsScreen
 import com.codexbar.android.feature.settings.SettingsViewModel
 import com.codexbar.android.core.domain.model.AppThemeStyle
@@ -83,6 +84,7 @@ private const val ConnectionsRoute = "connections"
 private const val HistoryRoute = "history"
 private const val SpendRoute = "spend"
 private const val SettingsRoute = "settings"
+private const val DeveloperSettingsRoute = "developer-settings"
 private const val GitHubRoute = "github"
 private const val ExpandedNavigationMinWidthDp = 600f
 
@@ -161,7 +163,7 @@ fun CodexBarApp(
     LaunchedEffect(initialDestination, initialDestinationHandled) {
         if (!initialDestinationHandled) {
             initialDestinationHandled = true
-            if (initialDestination in setOf(ConnectionsRoute, SettingsRoute, HistoryRoute, SpendRoute, GitHubRoute)) {
+            if (initialDestination in setOf(DeveloperSettingsRoute, ConnectionsRoute, SettingsRoute, HistoryRoute, SpendRoute, GitHubRoute)) {
                 navController.navigate(initialDestination) {
                     launchSingleTop = true
                 }
@@ -369,6 +371,9 @@ private fun AppNavHost(
             )
         }
         composable(GitHubRoute) { GitHubDashboardScreen(viewModel = githubViewModel, onOpenSettings = openSettings) }
+        composable(DeveloperSettingsRoute) {
+            DeveloperSettingsScreen(onBack = { navController.popBackStack() }, viewModel = settingsViewModel)
+        }
         composable(SettingsRoute) {
             SettingsScreen(
                 onNavigateBack = {
@@ -376,6 +381,7 @@ private fun AppNavHost(
                 },
                 showBackButton = true,
                 onScreenPrivacyChanged = onScreenPrivacyChanged,
+                onOpenDeveloperSettings = { navController.navigate(DeveloperSettingsRoute) { launchSingleTop = true } },
                 viewModel = settingsViewModel
             )
         }
@@ -389,6 +395,7 @@ internal fun topLevelSlideDirection(from: String?, to: String?, rtl: Boolean): I
         ConnectionsRoute -> 2
         GitHubRoute -> 3
         SettingsRoute -> 4
+        DeveloperSettingsRoute -> 5
         else -> -1
     }
     val start = index(from)
