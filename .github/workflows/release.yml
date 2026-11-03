@@ -89,8 +89,11 @@ jobs:
           CODEXBAR_VERIFY_UPDATE: ${{ inputs.verify_update }}
         run: |
           set -euo pipefail
-          test "$CODEXBAR_VERIFY_UPDATE" = 'true'
-          test "$GITHUB_REF_TYPE" = 'branch'
+          if [ "$CODEXBAR_VERIFY_UPDATE" = 'true' ]; then
+            test "$GITHUB_REF_TYPE" = 'branch'
+          else
+            test "$GITHUB_REF_TYPE" = 'tag'
+          fi
 
       - name: Verify release smoke checks
         run: |
