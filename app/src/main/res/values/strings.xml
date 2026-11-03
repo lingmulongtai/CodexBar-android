@@ -10,7 +10,7 @@
     <string name="connections_summary">%1$d of %2$d providers connected</string>
     <string name="connections_summary_description">Credentials are validated before they are encrypted with Android Keystore and saved on this device.</string>
     <string name="update_available_title">Update available</string>
-    <string name="update_available_message">CodexBar %1$s is available. Download the signed APK from this project’s GitHub Release and install it over this version to keep your accounts and settings.</string>
+    <string name="update_available_message">CodexBar %1$s is available. Download and verify the update here, then confirm installation in Android. Your accounts and settings are kept.</string>
     <string name="action_download_update">Download update</string>
     <string name="action_later">Later</string>
     <string name="provider_search_label">Find a provider</string>
@@ -794,7 +794,7 @@
     <string name="update_ready">Download verified. Ready to install.</string>
     <string name="update_cancelled">Download cancelled.</string>
     <string name="update_progress">%1$d%% · %2$s / %3$s</string>
-    <string name="update_install">Install update</string>
+    <string name="update_install">Install %1$s</string>
     <string name="update_retry">Retry download</string>
     <string name="update_background_continue">Close and continue</string>
     <string name="update_permission_help">Android may ask you to allow updates from CodexBar. Your accounts and settings are kept when you update.</string>

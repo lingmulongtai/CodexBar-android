@@ -7,15 +7,11 @@ import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Text
-import com.codexbar.android.ui.components.CodexBarTextButton as TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.core.domain.model.AiService
@@ -23,6 +19,7 @@ import com.codexbar.android.core.icon.AppIconSwitcher
 import com.codexbar.android.core.security.EncryptedPrefsManager
 import com.codexbar.android.core.update.AvailableUpdate
 import com.codexbar.android.core.update.GitHubReleaseUpdateChecker
+import com.codexbar.android.feature.update.UpdateDownloadDialog
 import com.codexbar.android.ui.theme.CodexBarTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -70,33 +67,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 availableUpdate?.let { update ->
-                    AlertDialog(
-                        onDismissRequest = { availableUpdate = null },
-                        title = { Text(stringResource(R.string.update_available_title)) },
-                        text = {
-                            Text(
-                                stringResource(
-                                    R.string.update_available_message,
-                                    update.version
-                                )
-                            )
-                        },
-                        confirmButton = {
-                            TextButton(
-                                onClick = {
-                                    availableUpdate = null
-                                    openUpdateDownload(update)
-                                }
-                            ) {
-                                Text(stringResource(R.string.action_download_update))
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { availableUpdate = null }) {
-                                Text(stringResource(R.string.action_later))
-                            }
-                        }
-                    )
+                    UpdateDownloadDialog(update, onDismiss = { availableUpdate = null })
                 }
 
                 CodexBarApp(
@@ -152,18 +123,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun openUpdateDownload(update: AvailableUpdate) {
-        val urls = listOf(update.downloadUrl, update.releasePageUrl).distinct()
-        for (url in urls) {
-            val opened = runCatching {
-                startActivity(
-                    Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                        .addCategory(Intent.CATEGORY_BROWSABLE)
-                )
-            }.isSuccess
-            if (opened) return
-        }
-    }
+
 }
 
 internal fun startDestinationForHost(host: String?): String {

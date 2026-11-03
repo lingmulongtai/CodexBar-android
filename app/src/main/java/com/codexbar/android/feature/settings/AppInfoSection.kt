@@ -22,6 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codexbar.android.BuildConfig
 import com.codexbar.android.R
+import com.codexbar.android.feature.update.UpdateDownloadPanel
 import com.codexbar.android.core.update.UpdateCheckResult
 import com.codexbar.android.ui.components.CodexBarButton
 import com.codexbar.android.ui.components.CodexBarCard
@@ -61,13 +62,13 @@ internal fun AppInfoSection(viewModel: AppInfoViewModel = hiltViewModel()) {
             when (val result = state.result) {
                 is UpdateCheckResult.Available -> {
                     Text(stringResource(R.string.app_info_update_available, result.update.version))
-                    CodexBarButton(onClick = { open(result.update.downloadUrl) }) { Text(stringResource(R.string.action_download_update)) }
                 }
                 UpdateCheckResult.UpToDate -> Text(stringResource(R.string.app_info_up_to_date))
                 UpdateCheckResult.VersionNotComparable -> Text(stringResource(R.string.app_info_preview_version))
                 UpdateCheckResult.Unavailable -> Text(stringResource(R.string.app_info_update_unavailable), color = MaterialTheme.colorScheme.error)
                 null -> Unit
             }
+            UpdateDownloadPanel((state.result as? UpdateCheckResult.Available)?.update)
             if (browserError) Text(stringResource(R.string.app_info_browser_unavailable), color = MaterialTheme.colorScheme.error)
         }
     }

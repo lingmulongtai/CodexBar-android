@@ -10,7 +10,7 @@
     <string name="connections_summary">%1$d / %2$d 件を接続済み</string>
     <string name="connections_summary_description">認証情報は検証に成功した後、Android Keystoreで暗号化してこの端末に保存します。</string>
     <string name="update_available_title">アップデートがあります</string>
-    <string name="update_available_message">CodexBar %1$sを利用できます。このプロジェクトのGitHub Releaseから署名済みAPKをダウンロードし、現在のバージョンへ上書きインストールすると、アカウントと設定を保持できます。</string>
+    <string name="update_available_message">CodexBar %1$sを利用できます。この画面で更新をダウンロード・確認し、Androidでインストールを承認すると更新できます。アカウントと設定は引き継ぎます。</string>
     <string name="action_download_update">アップデートをダウンロード</string>
     <string name="action_later">後で</string>
     <string name="provider_search_label">プロバイダーを探す</string>
@@ -792,7 +792,7 @@
     <string name="update_ready">確認が完了しました。インストールできます。</string>
     <string name="update_cancelled">ダウンロードをキャンセルしました。</string>
     <string name="update_progress">%1$d%% · %2$s / %3$s</string>
-    <string name="update_install">更新をインストール</string>
+    <string name="update_install">%1$sをインストール</string>
     <string name="update_retry">ダウンロードを再試行</string>
     <string name="update_background_continue">閉じて続ける</string>
     <string name="update_permission_help">AndroidからCodexBarによる更新の許可を求められる場合があります。上書き更新でアカウントと設定を引き継ぎます。</string>
