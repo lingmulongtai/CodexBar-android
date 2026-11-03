@@ -13,6 +13,8 @@ class TopLevelSlideDirectionTest {
         assertEquals(-1, topLevelSlideDirection("settings", "dashboard", false))
         assertEquals(-1, topLevelSlideDirection("dashboard", "settings", true))
         assertEquals(1, topLevelSlideDirection("settings", "dashboard", true))
+        assertEquals(1, topLevelSlideDirection("settings", "developer-settings", false))
+        assertEquals(-1, topLevelSlideDirection("developer-settings", "settings", false))
         assertEquals(0, topLevelSlideDirection("history", "spend", false))
         assertEquals(0, topLevelSlideDirection("unknown", "dashboard", false))
     }

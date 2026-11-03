@@ -1,6 +1,7 @@
 package com.codexbar.android.core.security
 
 import android.content.Context
+import com.codexbar.android.core.domain.model.DeveloperSettings
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
@@ -71,12 +72,16 @@ class EncryptedPrefsManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val dataStore = context.secureDataStore
+    private val developerJson = Json { ignoreUnknownKeys = true }
     private val valueCipher = AndroidKeyStoreValueCipher()
     private val cacheMutex = Mutex()
     private val cacheScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Volatile
     private var cachedSettings = CachedSettings()
+
+    private val _developerSettings = MutableStateFlow(DeveloperSettings())
+    val developerSettings: StateFlow<DeveloperSettings> = _developerSettings.asStateFlow()
 
     private val _appThemeStyle = MutableStateFlow(AppThemeStyle.LIQUID_GLASS)
     val appThemeStyle: StateFlow<AppThemeStyle> = _appThemeStyle.asStateFlow()
@@ -498,6 +503,12 @@ class EncryptedPrefsManager @Inject constructor(
         updateCache()
     }
 
+    suspend fun setDeveloperSettings(settings: DeveloperSettings) {
+        val safe = settings.normalized()
+        dataStore.edit { it[KEY_DEVELOPER_SETTINGS] = developerJson.encodeToString(safe) }
+        updateCache()
+    }
+
     val wallpaperPreferences = dataStore.data.catch { error ->
         if (error is IOException) emit(emptyPreferences()) else throw error
     }.map { stored ->
@@ -591,6 +602,9 @@ class EncryptedPrefsManager @Inject constructor(
             persistentNotificationEnabled = prefs[KEY_NOTIFICATIONS_ENABLED] ?: true,
             resetNotificationEnabled = prefs[KEY_RESET_NOTIFICATIONS_ENABLED] ?: true,
             appThemeStyle = AppThemeStyle.fromStoredValue(prefs[KEY_APP_THEME_STYLE]),
+            developerSettings = prefs[KEY_DEVELOPER_SETTINGS]?.let { stored ->
+                runCatching { developerJson.decodeFromString<DeveloperSettings>(stored).normalized() }.getOrNull()
+            } ?: DeveloperSettings(),
             privacySettings = PrivacySettings(
                 screenPrivacyEnabled = prefs[KEY_PRIVACY_SCREEN_ENABLED] ?: true,
                 lockScreenRedactionEnabled = prefs[KEY_PRIVACY_LOCK_SCREEN_REDACTION_ENABLED] ?: true,
@@ -603,6 +617,7 @@ class EncryptedPrefsManager @Inject constructor(
     private fun updateCachedSettings(settings: CachedSettings) {
         cachedSettings = settings
         _appThemeStyle.value = settings.appThemeStyle
+        _developerSettings.value = settings.developerSettings
     }
 
     private fun readCredential(prefs: Preferences, service: AiService): Credential? {
@@ -754,6 +769,7 @@ class EncryptedPrefsManager @Inject constructor(
         val persistentNotificationEnabled: Boolean = true,
         val resetNotificationEnabled: Boolean = true,
         val appThemeStyle: AppThemeStyle = AppThemeStyle.LIQUID_GLASS,
+        val developerSettings: DeveloperSettings = DeveloperSettings(),
         val privacySettings: PrivacySettings = FAIL_CLOSED_PRIVACY_SETTINGS
     )
 
@@ -771,6 +787,7 @@ class EncryptedPrefsManager @Inject constructor(
         private val KEY_REFRESH_INTERVAL = longPreferencesKey("refresh_interval_minutes")
         private val KEY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         private val KEY_RESET_NOTIFICATIONS_ENABLED = booleanPreferencesKey("reset_notifications_enabled")
+        private val KEY_DEVELOPER_SETTINGS = stringPreferencesKey("developer_settings")
         private val KEY_APP_THEME_STYLE = stringPreferencesKey("app_theme_style")
         private val KEY_PRIVACY_SCREEN_ENABLED = booleanPreferencesKey("privacy_screen_enabled")
         private val KEY_PRIVACY_LOCK_SCREEN_REDACTION_ENABLED =

@@ -1,5 +1,6 @@
 package com.codexbar.android.ui.components
 
+import com.codexbar.android.core.domain.model.GlassSurfaceGroup
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -99,6 +100,7 @@ fun GlassPageHeader(
         }
     }
     GlassSurface(
+        tuningGroup = GlassSurfaceGroup.HEADER,
         backdrop = LocalGlassHeaderBackdrop.current ?: LocalGlassCardBackdrop.current,
         shape = shape,
         tint = Color.Transparent,

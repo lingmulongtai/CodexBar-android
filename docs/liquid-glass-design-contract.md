@@ -12,10 +12,17 @@ This document records the owner's direction for the Android interface. Liquid Gl
 
 ## Motion and controls
 
-- Bottom tabs keep the header and bottom navigation in place while the incoming content slides a short distance in the direction of travel. The shared header height smoothly expands or contracts between pages while the content stays at its destination vertical position. Header titles switch immediately. The persistent settings action stays visible without a tab-entry fade. Header measurement and body placement happen in the same frame, so changing header height cannot create diagonal page movement. Avoid empty frames, whole-screen fades and full-screen slides; preserve RTL, Back direction and reduced motion. History/Spend transitions also slide horizontally without duplicating or flashing the selector.
-- Tab and segmented selections support tap and drag, including a held drag, and cancellation must not commit. Reorder mode enters and exits with a gentle transition; service order and drag behavior remain unchanged. System reduced-motion settings must be respected.
+- Bottom tabs keep the header and bottom navigation in place while the incoming content slides a short distance in the direction of travel. The shared header height smoothly expands or contracts between pages while the content stays at its destination vertical position. Header titles switch immediately. The persistent settings action stays visible without a tab-entry fade. Header measurement and body placement happen in the same frame, so changing header height cannot create diagonal page movement. Avoid empty frames, whole-screen fades and full-screen slides; preserve RTL, Back direction and the app-owned Dev animation speed. History/Spend transitions also slide horizontally without duplicating or flashing the selector.
+- Tab and segmented selections support tap and drag, including a held drag, and cancellation must not commit. Reorder mode enters and exits with a gentle transition; service order and drag behavior remain unchanged. App-authored motion uses the saved Dev speed independently of Android animation-duration settings.
 - Follow Glisse proportions and pressed states for switches, sliders and the bottom tab bar. Slider movement is smooth while values snap to their specified step; persist on release where appropriate.
 - Refresh is a plain action in the bottom bar; refresh progress belongs in the header. Retain scroll position when navigating away and back.
+
+## Developer tuning
+
+- Settings → Dev settings provides an app-owned animation speed (0.25–3×, default 1×), independent of Android animator scale, including Android scale 0.
+- Four material groups (cards, header, tab bar, controls) can override frost, bend strength, dispersion, rim opacity, edge shine, saturation, tint opacity and bend reach. Inherited values preserve the existing component defaults exactly; reset restores inheritance.
+- Keep shapes, positions, corner radii and dimensions unchanged. Multiply bend/reach so pressed-only and zero-bend surfaces retain their behavior. Keep nested panels on their existing translucent fallback instead of sampling sharper wallpaper through a frosted parent.
+- Preview is immediate, saves happen on gesture completion, and leaving cancels only an uncommitted draft. Delayed saves must not overwrite newer previews.
 
 ## Content and validation
 

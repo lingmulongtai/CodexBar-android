@@ -1,6 +1,9 @@
 package com.codexbar.android.ui.theme
 
 import android.app.Activity
+import com.codexbar.android.CodexBarApplication
+import com.codexbar.android.core.domain.model.DeveloperSettings
+import com.codexbar.android.ui.components.LocalDeveloperSettings
 import android.content.Context
 import android.content.ContextWrapper
 import android.os.Build
@@ -43,7 +46,8 @@ fun CodexBarTheme(
     val profile = themeProfile(style, colorScheme, useDarkTheme)
     SystemBarAppearance(darkTheme = useDarkTheme, glassHeader = style == AppThemeStyle.LIQUID_GLASS)
 
-    CompositionLocalProvider(LocalCodexBarThemeProfile provides profile) {
+    val developer = (LocalContext.current.applicationContext as? CodexBarApplication)?.developerSettingsRuntime?.settings ?: DeveloperSettings()
+    CompositionLocalProvider(LocalCodexBarThemeProfile provides profile, LocalDeveloperSettings provides developer) {
         MaterialTheme(
             colorScheme = colorScheme,
             shapes = shapesFor(style),

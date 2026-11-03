@@ -14,7 +14,7 @@
 | Achievements | Public GitHub profile HTML: a badge link and matching trusted asset image are both required. Shows confirmed tier and public PR progress where known. A count below a confirmed badge's tier floor uses that known lower bound, marked `+`. Missing badges say not shown; failure to recognize any badge says unavailable. |
 | Local achievements | Derived from the rolling calendar: maximum daily activity, longest streak, annual total and active days. Explicitly separate from GitHub-awarded badges. |
 | Year in review | Last 365 days: contributions, best day, current/longest streak, active days, busiest weekday by average (including zero days), monthly totals. A zero so far today does not break yesterday's streak. |
-| Contribution calendar | Last 365 days, native Canvas, blue intensity steps, month labels, legend, selected-day outline. One staggered entrance animation per data identity, honoring the platform animation duration scale. Resizing does not restart it. |
+| Contribution calendar | Last 365 days, native Canvas, blue intensity steps, month labels, legend, selected-day outline. One staggered entrance animation per data identity, using the app-owned Dev animation speed. Resizing does not restart it. |
 | Tech stack | First public profile README `skillicons.dev` list; second list is learning. No guesses from repository languages. Bundled native vector icons with a text fallback for unknown technologies. |
 | Portrait | Avatar converted to a native ASCII-style rendering, without transmitting it to another service. |
 | Pinned repositories | Repository metadata already shared with this GitHub App. Existing individual pin widgets migrate into one ordered, deduplicated group; account ID isolation and unavailable saved IDs are preserved. |

@@ -1,6 +1,7 @@
 package com.codexbar.android.ui.components
 
 import android.os.Build
+import com.codexbar.android.core.domain.model.GlassSurfaceGroup
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
@@ -105,8 +106,15 @@ fun GlassSurface(
     saturation: Float = 1.12f,
     elevation: Dp = 10.dp,
     contentAlignment: Alignment = Alignment.Center,
+    tuningGroup: GlassSurfaceGroup = GlassSurfaceGroup.CONTROLS,
     content: @Composable BoxScope.() -> Unit
 ) {
+    val tuning = LocalDeveloperSettings.current.tuning(tuningGroup)
+    val material = tuning.resolve(GlassMaterial(blurRadius.value, refraction, dispersion, rim.alpha,
+        shaderRimShine, saturation, tint.alpha, bendReachScale))
+    val effectiveRim = rim.copy(alpha = material.rim)
+    val effectiveTint = tint.copy(alpha = material.tint)
+    val effectiveFallback = fallback.copy(alpha = tuning.tint ?: fallback.alpha)
     val blurLayer = rememberGraphicsLayer()
     val lens = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) GlassLens() else null
@@ -123,7 +131,7 @@ fun GlassSurface(
                 if (backdrop != null && position.coordinateRoot != null && position.coordinateRoot === backdrop.coordinateRoot && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     backdrop.generation
                     val offset = position.value - backdrop.originInRoot
-                    val radius = blurRadius.toPx()
+                    val radius = material.frost.dp.toPx()
                     val rounded = (outline as? Outline.Rounded)?.roundRect
                     val circularCorners = rounded == null || (
                         rounded.topLeftCornerRadius.x == rounded.topLeftCornerRadius.y &&
@@ -136,11 +144,11 @@ fun GlassSurface(
                             rounded.topLeftCornerRadius == rounded.bottomRightCornerRadius &&
                             rounded.topLeftCornerRadius == rounded.bottomLeftCornerRadius
                         )
-                    blurLayer.renderEffect = if (lens != null && Build.VERSION.SDK_INT >= 33 && refraction > 0f && outline !is Outline.Generic && circularCorners && (uniformCorners || allowAsymmetricCorners)) {
+                    blurLayer.renderEffect = if (lens != null && Build.VERSION.SDK_INT >= 33 && material.bend > 0f && outline !is Outline.Generic && circularCorners && (uniformCorners || allowAsymmetricCorners)) {
                         lens.effect(size.width, size.height,
                             rounded?.topLeftCornerRadius?.x ?: 0f, rounded?.topRightCornerRadius?.x ?: 0f,
                             rounded?.bottomRightCornerRadius?.x ?: 0f, rounded?.bottomLeftCornerRadius?.x ?: 0f,
-                            radius, refraction * bendReachScale, dispersion, shaderRimShine, saturation, density)
+                            radius, material.bend * material.reach, material.dispersion, material.shine, material.saturation, density)
                     } else if (radius > 0f) {
                         BlurEffect(radius, radius, TileMode.Clamp)
                     } else null
@@ -149,19 +157,19 @@ fun GlassSurface(
                     }
                     clipPath(path) {
                         drawLayer(blurLayer)
-                        drawRect(tint)
+                        drawRect(effectiveTint)
                     }
                 } else {
-                    drawPath(path, fallback)
+                    drawPath(path, effectiveFallback)
                 }
                 // Keep the highlight in the existing rim draw, without another gradient layer.
                 drawPath(
                     path = path,
                     brush = Brush.linearGradient(
-                        0f to rim,
-                        0.36f to rim.copy(alpha = rim.alpha * 0.22f),
-                        0.64f to rim.copy(alpha = rim.alpha * 0.12f),
-                        1f to rim.copy(alpha = rim.alpha * 0.65f),
+                        0f to effectiveRim,
+                        0.36f to effectiveRim.copy(alpha = effectiveRim.alpha * 0.22f),
+                        0.64f to effectiveRim.copy(alpha = effectiveRim.alpha * 0.12f),
+                        1f to effectiveRim.copy(alpha = effectiveRim.alpha * 0.65f),
                         start = Offset.Zero,
                         end = Offset(size.width, size.height)
                     ),

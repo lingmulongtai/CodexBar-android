@@ -19,7 +19,9 @@ class ConnectionNavigationSourceTest {
         assertTrue(app.contains("composable(ConnectionsRoute)"))
         assertTrue(app.contains("ConnectionsScreen("))
         assertTrue(app.contains("val settingsViewModel: SettingsViewModel = hiltViewModel()"))
-        assertTrue(app.split("viewModel = settingsViewModel").size == 3)
+        assertTrue(app.contains("composable(DeveloperSettingsRoute)"))
+        assertTrue(app.contains("DeveloperSettingsScreen("))
+        assertTrue(app.split("viewModel = settingsViewModel").size == 4)
         assertTrue(manifest.contains("<data android:host=\"connections\" />"))
     }
 

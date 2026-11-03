@@ -1,5 +1,6 @@
 package com.codexbar.android.feature.dashboard
 
+import com.codexbar.android.core.domain.model.GlassSurfaceGroup
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -95,7 +96,7 @@ fun ServiceDetailSheet(
                 tint = profile.cardColor.copy(alpha = if (profile.isDark) 0.56f else 0.58f),
                 fallback = profile.cardColor.copy(alpha = 0.94f),
                 rim = Color.White.copy(alpha = if (profile.isDark) 0.18f else 0.60f),
-                modifier = Modifier.fillMaxWidth(), blurRadius = 16.dp, refraction = 0.18f,
+                modifier = Modifier.fillMaxWidth(), tuningGroup = GlassSurfaceGroup.CONTAINERS, blurRadius = 16.dp, refraction = 0.18f,
                 allowAsymmetricCorners = true, elevation = 0.dp) {
                 CompositionLocalProvider(LocalGlassPanelDepth provides 1) {
                     Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState())
