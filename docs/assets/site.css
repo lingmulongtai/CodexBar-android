@@ -2455,3 +2455,7 @@ button {
     scrollbar-width: thin;
   }
 }
+
+/* Approved application artwork, shared by both brand links. */
+.brand-art { display: block; width: 34px; height: 34px; overflow: hidden; border-radius: 10px; flex: 0 0 auto; }
+.brand-art img { width: 130%; max-width: none; margin: -15%; }
