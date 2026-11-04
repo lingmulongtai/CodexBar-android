@@ -149,6 +149,8 @@ function selectTour(name) {
   const next = new Image();
   next.onload = () => {
     if (request !== imageRequest) return;
+    preview.srcset = next.srcset;
+    preview.sizes = next.sizes;
     preview.src = source;
     preview.style.visibility = "visible";
     preview.dataset.i18nAlt =
@@ -171,6 +173,8 @@ function selectTour(name) {
     panel.setAttribute("aria-busy", "false");
     renderText();
   };
+  next.srcset = `${media}${imageName}-270.webp 270w, ${media}${imageName}-405.webp 405w, ${source} 540w`;
+  next.sizes = "(max-width: 1024px) 210px, 240px";
   next.src = source;
 }
 tourButtons.forEach((button, index) => {

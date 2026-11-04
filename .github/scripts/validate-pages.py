@@ -34,6 +34,9 @@ class LandingPageParser(HTMLParser):
                 self.references.append((tag, value, line))
 
         if tag == "img":
+            for candidate in attributes.get("srcset", "").split(","):
+                if candidate.strip():
+                    self.references.append((tag, candidate.strip().split()[0], line))
             self.images.append((attributes, line))
 
         if tag == "script" and attributes.get("type") == "application/ld+json":
