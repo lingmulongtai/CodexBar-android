@@ -85,7 +85,7 @@
         description:
           "Win-CodexBar + Mobile Connectで取得します。Gemini CLIとは別の使用枠です。",
         steps: [
-          "Windowsの公式Geminiアプリにサインインする。",
+          "Windowsの公式Geminiアプリでサインインし、一度閉じる。",
           "Win-CodexBarの「Providers → Gemini Apps」で接続する。",
           "AndroidでWindowsとペアリングし、取得元にWindowsを選ぶ。",
         ],
@@ -95,7 +95,7 @@
         description:
           "Retrieve limits through Win-CodexBar + Mobile Connect. These are separate from Gemini CLI quotas.",
         steps: [
-          "Sign in to the official Gemini app on Windows.",
+          "Sign in to the official Gemini app on Windows, then close it once.",
           "Connect Gemini Apps under Providers in Win-CodexBar.",
           "Pair Android with Windows and select Windows acquisition.",
         ],
