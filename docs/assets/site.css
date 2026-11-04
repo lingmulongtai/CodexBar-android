@@ -23,6 +23,71 @@ html {
 .modal-open {
   overflow: hidden;
 }
+.button-outline-white {
+  border: 1px solid #a5cef9;
+  background: transparent;
+  color: white;
+}
+.transfer-dialog > p {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #435f79;
+}
+.transfer-dialog > img {
+  width: 240px;
+  margin: 24px auto;
+}
+.transfer-dialog label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 9px;
+}
+.transfer-dialog input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #9cb9d4;
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 13px;
+  color: #163650;
+  background: white;
+}
+.transfer-dialog > .button {
+  margin-top: 16px;
+}
+.transfer-dialog .copy-status {
+  min-height: 44px;
+  margin-bottom: 0;
+  font-size: 12px;
+  color: #224b6d;
+}
+.install-help {
+  max-width: 900px;
+  margin: 24px auto 0;
+}
+.install-help details {
+  border-bottom: 1px solid var(--line);
+  padding: 18px 0;
+}
+.install-help summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  min-height: 24px;
+}
+.install-help p {
+  color: #52667a;
+  font-size: 13px;
+  line-height: 1.9;
+  margin: 14px 0 0;
+}
+.faq-list .text-link {
+  display: inline-block;
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: #0860c8;
+}
 .preview-zoom {
   display: block;
   margin: 22px 0 0;

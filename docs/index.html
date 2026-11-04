@@ -695,6 +695,14 @@
                 data-release-download
                 ><span data-i18n="download.apk">APKをダウンロード</span
                 ><span aria-hidden="true">↓</span></a
+              ><button
+                type="button"
+                class="button button-outline-white"
+                data-open-transfer
+                data-i18n="transfer.open"
+                hidden
+              >
+                スマホで開く ↗</button
               ><a
                 class="download-notes"
                 href="https://github.com/lingmulongtai/CodexBar-android/releases/latest"
@@ -738,9 +746,28 @@
             </li>
           </ol>
         </div>
-        <p class="recovery-note" data-i18n="download.recovery">
-          0.16.1／0.16.2をご利用の方は、今回だけAPKを手動で上書きしてください。ブラウザーで取得が完了しない場合はGitHubアプリから。アンインストールやデータ削除は不要です。
-        </p>
+        <div class="install-help">
+          <details id="install-help">
+            <summary data-i18n="install.help">インストールできないとき</summary>
+            <p data-i18n="install.permission">
+              APKを開くブラウザーやファイルアプリに「この提供元のアプリを許可」を設定し、Androidのインストール画面で確認してください。インストール後、この許可はオフに戻せます。
+            </p>
+            <p data-i18n="install.conflict">
+              更新は既存アプリへの上書きで行います。競合エラーの場合は、同じ公式リリースを使っているか確認してください。データを消す操作の前に、GitHubで状況を相談できます。
+            </p>
+          </details>
+          <details>
+            <summary data-i18n="install.existing">
+              すでにCodexBarをお使いの方へ
+            </summary>
+            <p data-i18n="install.update">
+              通常の更新はアプリの設定からダウンロード・検証できます。初回インストール以外は、ブラウザーを経由する必要はありません。
+            </p>
+            <p data-i18n="download.recovery">
+              0.16.1／0.16.2をご利用の方は、今回だけAPKを手動で上書きしてください。ブラウザーで取得が完了しない場合はGitHubアプリから。アンインストールやデータ削除は不要です。
+            </p>
+          </details>
+        </div>
       </section>
       <section class="section faq-section shell" aria-labelledby="faq-title">
         <div class="faq-heading">
@@ -763,6 +790,9 @@
               companionやWindowsが必要なものもあります。Gemini
               AppsはWindows取得のみで、Gemini CLIとは別の項目です。
             </p>
+            <a class="text-link" href="#setup-guide" data-i18n="faq.setup"
+              >サービスを選んで手順を見る ↑</a
+            >
           </details>
           <details>
             <summary data-i18n="faq.private.q">
@@ -789,9 +819,71 @@
               いいえ。ローカルのトークン履歴とモデル単価などから計算する参考値です。サブスクリプション料金や実際の請求額とは異なります。取得できる履歴と内訳もサービスによって変わります。
             </p>
           </details>
+          <details>
+            <summary data-i18n="faq.support.q">うまく動かないときは？</summary>
+            <p data-i18n="faq.support.a">
+              バージョン、Androidのバージョン、操作手順、表示されたエラーを添えてGitHubで相談できます。ログインコードやトークンなどの認証情報は送らないでください。
+            </p>
+            <a
+              class="text-link"
+              href="https://github.com/lingmulongtai/CodexBar-android/issues/new/choose"
+              data-i18n="faq.support.link"
+              >GitHubで不具合を報告 ↗</a
+            >
+          </details>
         </div>
       </section>
     </main>
+    <dialog
+      class="site-dialog transfer-dialog"
+      id="transfer-dialog"
+      aria-labelledby="transfer-title"
+      aria-describedby="transfer-description"
+    >
+      <div class="dialog-heading">
+        <h2 id="transfer-title" data-i18n="transfer.title">
+          スマホでダウンロード
+        </h2>
+        <form method="dialog">
+          <button class="dialog-close" data-i18n="dialog.close">閉じる</button>
+        </form>
+      </div>
+      <p id="transfer-description" data-i18n="transfer.description">
+        スマホのカメラで読み取ると、このページのダウンロード欄が開きます。
+      </p>
+      <img
+        src="./assets/download-qr.png"
+        width="328"
+        height="328"
+        loading="lazy"
+        alt="スマホでダウンロードページを開くQRコード"
+        data-i18n-alt="image.qr"
+      />
+      <label for="transfer-url" data-i18n="transfer.url"
+        >ダウンロードページのURL</label
+      >
+      <input
+        id="transfer-url"
+        type="url"
+        readonly
+        value="https://lingmulongtai.github.io/CodexBar-android/#download"
+        dir="ltr"
+      />
+      <button
+        type="button"
+        class="button button-primary"
+        data-copy-url
+        data-i18n="transfer.copy"
+      >
+        リンクをコピー
+      </button>
+      <p
+        class="copy-status"
+        data-copy-status
+        role="status"
+        aria-live="polite"
+      ></p>
+    </dialog>
     <dialog
       class="site-dialog screenshot-dialog"
       id="screenshot-dialog"

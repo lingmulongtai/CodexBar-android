@@ -12,6 +12,35 @@
       { once: true },
     );
   }
+  const transfer = document.querySelector("#transfer-dialog");
+  const transferButton = document.querySelector("[data-open-transfer]");
+  const input = document.querySelector("#transfer-url");
+  const status = document.querySelector("[data-copy-status]");
+  if (transferButton && typeof transfer?.showModal === "function") {
+    transferButton.hidden = false;
+    transferButton.addEventListener("click", () => {
+      status.textContent = "";
+      open(transfer, transferButton);
+    });
+    document
+      .querySelector("[data-copy-url]")
+      .addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(input.value);
+          status.textContent =
+            document.documentElement.lang === "ja"
+              ? "リンクをコピーしました。"
+              : "Link copied.";
+        } catch {
+          input.focus();
+          input.select();
+          status.textContent =
+            document.documentElement.lang === "ja"
+              ? "URLを選択しました。端末のコピー操作でコピーしてください。"
+              : "URL selected. Use your device’s copy action to copy it.";
+        }
+      });
+  }
   const zoom = document.querySelector("[data-preview-zoom]");
   const dialog = document.querySelector("#screenshot-dialog");
   if (zoom && typeof dialog?.showModal === "function") {

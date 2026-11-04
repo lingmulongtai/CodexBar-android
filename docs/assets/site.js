@@ -259,6 +259,26 @@ document.querySelectorAll("[data-current-year]").forEach((element) => {
   element.textContent = String(new Date().getFullYear());
 });
 const english = {
+  "transfer.open": "Open on your phone ↗",
+  "transfer.title": "Download on your phone",
+  "transfer.description":
+    "Scan with your phone’s camera to open the download section of this page.",
+  "transfer.url": "Download page URL",
+  "transfer.copy": "Copy link",
+  "image.qr": "QR code to open the download page on your phone",
+  "install.help": "Trouble installing?",
+  "install.permission":
+    "Allow installs from the browser or file app opening the APK, then confirm in Android’s installation screen. You can turn this permission off again afterwards.",
+  "install.conflict":
+    "Install updates over your existing app. If Android reports a conflict, check that you are using the same official release. Ask on GitHub before taking any steps that delete your data.",
+  "install.existing": "Already using CodexBar?",
+  "install.update":
+    "Download and verify regular updates from the app’s settings. After your first install, you do not need to use a browser to update.",
+  "faq.setup": "Choose a service and see the steps ↑",
+  "faq.support.q": "Something not working?",
+  "faq.support.a":
+    "Include your app version, Android version, steps to reproduce, and the displayed error when reporting on GitHub. Do not share sign-in codes, tokens, or other credentials.",
+  "faq.support.link": "Report an issue on GitHub ↗",
   "dialog.close": "Close",
   "preview.zoom": "View full size ↗",
   "preview.title": "Inside the app",
