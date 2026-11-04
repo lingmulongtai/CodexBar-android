@@ -4,13 +4,13 @@
   "description": "AI usage intelligence for Android.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#090b15",
-  "theme_color": "#090b15",
+  "background_color": "#f4f7fb",
+  "theme_color": "#f4f7fb",
   "icons": [
     {
-      "src": "./favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "./assets/app-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
     }
   ]
