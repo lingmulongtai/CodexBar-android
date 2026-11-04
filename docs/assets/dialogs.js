@@ -1,4 +1,23 @@
 (() => {
+  document.querySelectorAll(".site-dialog").forEach((dialog) => {
+    dialog.addEventListener("keydown", (event) => {
+      if (event.key !== "Tab") return;
+      const controls = [
+        ...dialog.querySelectorAll(
+          "button:not([disabled]), input:not([disabled]), a[href], [tabindex='0']",
+        ),
+      ].filter((el) => el.getClientRects().length);
+      const first = controls[0],
+        last = controls.at(-1);
+      if (
+        (!event.shiftKey && document.activeElement === last) ||
+        (event.shiftKey && document.activeElement === first)
+      ) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      }
+    });
+  });
   function open(dialog, trigger) {
     if (!dialog || typeof dialog.showModal !== "function") return;
     dialog.showModal();
