@@ -141,6 +141,11 @@ function selectTour(name) {
   const source = `${media}${imageName}.webp`;
   const request = ++imageRequest;
   panel.setAttribute("aria-busy", "true");
+  preview.style.visibility = "hidden";
+  const zoom = document.querySelector("[data-preview-zoom]");
+  zoom.disabled = true;
+  document.querySelector(".preview-caption").dataset.i18n = "tour.loading";
+  renderText();
   const next = new Image();
   next.onload = () => {
     if (request !== imageRequest) return;
@@ -156,6 +161,7 @@ function selectTour(name) {
           : `image.${name}`;
     document.querySelector(".preview-caption").dataset.i18n = "tour.caption";
     panel.setAttribute("aria-busy", "false");
+    zoom.disabled = false;
     renderText();
   };
   next.onerror = () => {
@@ -253,6 +259,10 @@ document.querySelectorAll("[data-current-year]").forEach((element) => {
   element.textContent = String(new Date().getFullYear());
 });
 const english = {
+  "dialog.close": "Close",
+  "preview.zoom": "View full size ↗",
+  "preview.title": "Inside the app",
+  "tour.loading": "Loading preview…",
   "setup.choose": "Choose your service",
   "setup.githubLabel": "GitHub dashboard",
   "setup.details": "Full details on GitHub ↗",
@@ -390,6 +400,7 @@ const english = {
   "image.achievements": "GitHub achievement widgets (sample data)",
 };
 Object.assign(tourJapanese, {
+  "tour.loading": "プレビューを読み込み中…",
   "image.spend": "推定費用とモデル別の内訳（サンプルデータ）",
   "tour.error": "画像を読み込めませんでした。タブを選び直して再試行できます。",
   "image.trends": "使用量の履歴とグラフ（サンプルデータ）",

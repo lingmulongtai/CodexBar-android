@@ -16,8 +16,76 @@
   box-sizing: border-box;
 }
 html {
+  scrollbar-gutter: stable;
   scroll-behavior: smooth;
   scroll-padding-top: 112px;
+}
+.modal-open {
+  overflow: hidden;
+}
+.preview-zoom {
+  display: block;
+  margin: 22px 0 0;
+  min-height: 44px;
+  padding: 10px 0;
+  background: none;
+  color: #0860c8;
+  font-size: 13px;
+  font-weight: 600;
+}
+.preview-zoom:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+.site-dialog {
+  width: min(580px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 24px;
+  border: 1px solid #fff;
+  border-radius: 26px;
+  background: #f5f9ff;
+  color: #172432;
+  box-shadow: 0 24px 100px #081d4155;
+}
+.site-dialog::backdrop {
+  background: #092440a8;
+  backdrop-filter: blur(8px);
+}
+.dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.dialog-heading h2 {
+  font-size: 19px;
+  margin: 0;
+}
+.dialog-close {
+  min-height: 44px;
+  min-width: 64px;
+  padding: 10px 14px;
+  border-radius: 99px;
+  background: #e4edfa;
+  font-size: 13px;
+}
+.screenshot-dialog figure {
+  margin: 0;
+}
+.screenshot-dialog img {
+  width: auto;
+  max-width: 100%;
+  max-height: calc(100dvh - 190px);
+  margin: auto;
+  object-fit: contain;
+  border-radius: 15px;
+}
+.screenshot-dialog figcaption {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: #435f79;
 }
 body {
   margin: 0;

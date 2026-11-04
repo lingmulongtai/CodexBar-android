@@ -44,6 +44,7 @@
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="stylesheet" href="./assets/site.css?v=20261104" />
     <script src="./assets/setup.js?v=20261104q" defer></script>
+    <script src="./assets/dialogs.js?v=20261104q" defer></script>
     <script src="./assets/site.js?v=20261104q" defer></script>
     <script type="application/ld+json">
       {
@@ -406,6 +407,15 @@
                 費用
               </button>
             </div>
+            <button
+              type="button"
+              class="preview-zoom"
+              data-preview-zoom
+              data-i18n="preview.zoom"
+              hidden
+            >
+              拡大して見る ↗
+            </button>
             <a class="tour-link" href="#download"
               ><span data-i18n="tour.cta">自分のAndroidで使ってみる</span
               ><span aria-hidden="true">↗</span></a
@@ -782,6 +792,30 @@
         </div>
       </section>
     </main>
+    <dialog
+      class="site-dialog screenshot-dialog"
+      id="screenshot-dialog"
+      aria-labelledby="screenshot-title"
+    >
+      <div class="dialog-heading">
+        <h2 id="screenshot-title" data-i18n="preview.title">アプリの画面</h2>
+        <form method="dialog">
+          <button class="dialog-close" data-i18n="dialog.close">閉じる</button>
+        </form>
+      </div>
+      <figure>
+        <img
+          data-full-preview
+          alt="選択したアプリ画面（サンプルデータ）"
+          width="540"
+          height="1200"
+          loading="lazy"
+        />
+        <figcaption data-i18n="tour.caption">
+          エミュレーター画面・サンプルデータ
+        </figcaption>
+      </figure>
+    </dialog>
     <footer class="site-footer shell">
       <div class="footer-top">
         <a class="brand" href="#top"
