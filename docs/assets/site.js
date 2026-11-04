@@ -15,6 +15,12 @@ const japaneseAlt = new Map(
     element.alt,
   ]),
 );
+const japaneseLabels = new Map(
+  [...document.querySelectorAll("[data-i18n-aria-label]")].map((element) => [
+    element.dataset.i18nAriaLabel,
+    element.getAttribute("aria-label"),
+  ]),
+);
 let language = navigator.language.toLowerCase().startsWith("ja") ? "ja" : "en";
 try {
   const saved = localStorage.getItem("codexbar-site-language");
@@ -72,6 +78,14 @@ const tourJapanese = {
 };
 function renderText() {
   root.lang = language;
+  window.CodexBarSetup?.render(language);
+  document.querySelectorAll("[data-i18n-aria-label]").forEach((element) => {
+    const key = element.dataset.i18nAriaLabel;
+    element.setAttribute(
+      "aria-label",
+      language === "en" ? english[key] : japaneseLabels.get(key),
+    );
+  });
   document.querySelector("meta[name=description]").content =
     language === "en" ? english["meta.description"] : japaneseDescription;
   document.querySelectorAll("[data-i18n]").forEach((element) => {
@@ -127,9 +141,16 @@ function selectTour(name) {
   const source = `${media}${imageName}.webp`;
   const request = ++imageRequest;
   panel.setAttribute("aria-busy", "true");
+  preview.style.visibility = "hidden";
+  const zoom = document.querySelector("[data-preview-zoom]");
+  zoom.disabled = true;
+  document.querySelector(".preview-caption").dataset.i18n = "tour.loading";
+  renderText();
   const next = new Image();
   next.onload = () => {
     if (request !== imageRequest) return;
+    preview.srcset = next.srcset;
+    preview.sizes = next.sizes;
     preview.src = source;
     preview.style.visibility = "visible";
     preview.dataset.i18nAlt =
@@ -142,6 +163,7 @@ function selectTour(name) {
           : `image.${name}`;
     document.querySelector(".preview-caption").dataset.i18n = "tour.caption";
     panel.setAttribute("aria-busy", "false");
+    zoom.disabled = false;
     renderText();
   };
   next.onerror = () => {
@@ -151,6 +173,8 @@ function selectTour(name) {
     panel.setAttribute("aria-busy", "false");
     renderText();
   };
+  next.srcset = `${media}${imageName}-270.webp 270w, ${media}${imageName}-405.webp 405w, ${source} 540w`;
+  next.sizes = "(max-width: 1024px) 210px, 240px";
   next.src = source;
 }
 tourButtons.forEach((button, index) => {
@@ -228,9 +252,6 @@ try {
     document.querySelectorAll("[data-release-notes]").forEach((link) => {
       link.href = `${release}/tag/v${version}`;
     });
-    document
-      .querySelector(".release-label")
-      .setAttribute("aria-label", `v${version} · Android 8.0+`);
     document.querySelectorAll("[data-version]").forEach((element) => {
       element.textContent = `v${version}`;
     });
@@ -242,6 +263,40 @@ document.querySelectorAll("[data-current-year]").forEach((element) => {
   element.textContent = String(new Date().getFullYear());
 });
 const english = {
+  "transfer.open": "Open on your phone ↗",
+  "transfer.title": "Download on your phone",
+  "transfer.description":
+    "Scan with your phone’s camera to open the download section of this page.",
+  "transfer.url": "Download page URL",
+  "transfer.copy": "Copy link",
+  "image.qr": "QR code to open the download page on your phone",
+  "install.help": "Trouble installing?",
+  "install.permission":
+    "Allow installs from the browser or file app opening the APK, then confirm in Android’s installation screen. You can turn this permission off again afterwards.",
+  "install.conflict":
+    "Install updates over your existing app. If Android reports a conflict, check that you are using the same official release. Ask on GitHub before taking any steps that delete your data.",
+  "install.existing": "Already using CodexBar?",
+  "install.update":
+    "Download and verify regular updates from the app’s settings. After your first install, you do not need to use a browser to update.",
+  "faq.setup": "Choose a service and see the steps ↑",
+  "faq.support.q": "Something not working?",
+  "faq.support.a":
+    "Include your app version, Android version, steps to reproduce, and the displayed error when reporting on GitHub. Do not share sign-in codes, tokens, or other credentials.",
+  "faq.support.link": "Report an issue on GitHub ↗",
+  "dialog.close": "Close",
+  "preview.zoom": "View full size ↗",
+  "preview.title": "Inside the app",
+  "tour.loading": "Loading preview…",
+  "setup.choose": "Choose your service",
+  "setup.githubLabel": "GitHub dashboard",
+  "setup.details": "Full details on GitHub ↗",
+  "a11y.mainNav": "Main navigation",
+  "a11y.language": "Language",
+  "a11y.menu": "Menu",
+  "a11y.mobileNav": "Mobile navigation",
+  "a11y.screens": "App screens",
+  "a11y.appearance": "Preview appearance",
+  "a11y.trends": "Trends preview",
   "tab.history": "History",
   "tab.spend": "Spend",
   "image.spend": "Estimated usage costs and model breakdowns (sample data)",
@@ -250,7 +305,7 @@ const english = {
   skip: "Skip to content",
   "nav.features": "Explore",
   "nav.design": "The design",
-  "nav.connect": "Connect your PC",
+  "nav.connect": "Setup guide",
   "nav.download": "Get the app ↓",
   "hero.audience": "By a vibe coder. For vibe coders.",
   "hero.line1": "Vibe coding.",
@@ -308,18 +363,18 @@ const english = {
   "github.pinned": "Your go-to repositories, pinned.",
   "github.permissions":
     "Private information follows what you share and authorize. No repository write permissions requested.",
-  "connect.line1": "Running on your PC.",
-  "connect.line2": "Right here in your hand.",
+  "connect.line1": "Your phone.",
+  "connect.line2": "Your PC. Your choice.",
   "connect.description":
-    "Pair with Win-CodexBar + Mobile Connect. Bring PC quotas, local token history, and estimated costs to Android, alongside phone-based acquisition.",
+    "Choose phone-based sign-in or a local PC companion for each service. Pair with Windows to bring PC quotas, token history, and estimated costs into the same dashboard.",
   "connect.download": "Get the Windows app",
-  "connect.guide": "Connection guide ↗",
+  "connect.guide": "Windows setup guide ↗",
   "connect.note":
     "Shared history, costs, and settings require Windows v0.71.0+. Keep the PC running. Costs are estimates, not your bill.",
   "connect.tailscale": "Same Wi-Fi, or your Tailscale network.",
-  "privacy.local.title": "Your credentials stay on your device.",
+  "privacy.local.title": "Your connection, on your devices.",
   "privacy.local.description":
-    "Encrypted with Android Keystore. The app talks directly to service APIs.",
+    "Android connection details are encrypted with Keystore. CLI companions keep sign-in credentials on your PC and share only the necessary usage information.",
   "privacy.open.title": "Open, all the way through.",
   "privacy.open.description":
     "MIT licensed. Inspect the app and companion source on GitHub.",
@@ -369,6 +424,7 @@ const english = {
   "image.achievements": "GitHub achievement widgets (sample data)",
 };
 Object.assign(tourJapanese, {
+  "tour.loading": "プレビューを読み込み中…",
   "image.spend": "推定費用とモデル別の内訳（サンプルデータ）",
   "tour.error": "画像を読み込めませんでした。タブを選び直して再試行できます。",
   "image.trends": "使用量の履歴とグラフ（サンプルデータ）",

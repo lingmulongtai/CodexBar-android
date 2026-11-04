@@ -42,8 +42,10 @@
       content="CodexBarのLiquid GlassダッシュボードとGitHub画面（サンプルデータ）"
     />
     <meta name="twitter:card" content="summary_large_image" />
-    <link rel="stylesheet" href="./assets/site.css?v=20261104" />
-    <script src="./assets/site.js?v=20261104" defer></script>
+    <link rel="stylesheet" href="./assets/site.css?v=20261104q" />
+    <script src="./assets/setup.js?v=20261104q" defer></script>
+    <script src="./assets/dialogs.js?v=20261104q" defer></script>
+    <script src="./assets/site.js?v=20261104q" defer></script>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -63,23 +65,34 @@
     <a class="skip-link" href="#main" data-i18n="skip">本文へ移動</a>
     <header class="site-header">
       <div class="header-bar shell">
-        <a class="brand" href="#top" aria-label="CodexBar home"
+        <a class="brand" href="#top"
           ><span class="brand-art" aria-hidden="true"
             ><img
-              src="./assets/app-icon.png"
+              src="./assets/brand-96.webp"
+              srcset="./assets/brand-96.webp 96w, ./assets/brand-144.webp 144w"
+              sizes="48px"
               alt="CodexBar"
               width="192"
               height="192"
               fetchpriority="high" /></span
           ><span>CodexBar<small>for Android</small></span></a
         >
-        <nav class="desktop-nav" aria-label="Main navigation">
+        <nav
+          class="desktop-nav"
+          aria-label="メインナビゲーション"
+          data-i18n-aria-label="a11y.mainNav"
+        >
           <a href="#tour" data-i18n="nav.features">できること</a
           ><a href="#design" data-i18n="nav.design">デザイン</a
-          ><a href="#connect" data-i18n="nav.connect">PCとつなぐ</a>
+          ><a href="#connect" data-i18n="nav.connect">接続ガイド</a>
         </nav>
         <div class="header-actions">
-          <div class="language-switch" role="group" aria-label="Language">
+          <div
+            class="language-switch"
+            role="group"
+            aria-label="表示言語"
+            data-i18n-aria-label="a11y.language"
+          >
             <button type="button" data-language="ja" aria-pressed="true">
               JA</button
             ><button type="button" data-language="en" aria-pressed="false">
@@ -97,7 +110,8 @@
             type="button"
             aria-expanded="false"
             aria-controls="mobile-nav"
-            aria-label="Menu"
+            aria-label="メニュー"
+            data-i18n-aria-label="a11y.menu"
           >
             <span></span><span></span>
           </button>
@@ -105,12 +119,13 @@
         <nav
           id="mobile-nav"
           class="mobile-nav"
-          aria-label="Mobile navigation"
+          aria-label="モバイルナビゲーション"
+          data-i18n-aria-label="a11y.mobileNav"
           hidden
         >
           <a href="#tour" data-i18n="nav.features">できること</a
           ><a href="#design" data-i18n="nav.design">デザイン</a
-          ><a href="#connect" data-i18n="nav.connect">PCとつなぐ</a
+          ><a href="#connect" data-i18n="nav.connect">接続ガイド</a
           ><a href="#download" data-i18n="nav.download">ダウンロード ↓</a>
         </nav>
       </div>
@@ -122,7 +137,6 @@
           <div class="hero-copy">
             <a
               class="release-label"
-              aria-label="v0.16.3 · Android 8.0+"
               href="https://github.com/lingmulongtai/CodexBar-android/releases/latest"
               data-release-notes
               ><span class="status-dot" aria-hidden="true"></span
@@ -160,6 +174,12 @@
             <div class="phone hero-phone-back">
               <img
                 src="./assets/media/github.webp"
+                srcset="
+                  ./assets/media/github-270.webp 270w,
+                  ./assets/media/github-405.webp 405w,
+                  ./assets/media/github.webp     540w
+                "
+                sizes="(max-width: 640px) 230px, (max-width: 1024px) 270px, 300px"
                 alt="GitHubのプロフィールとコントリビューション（サンプルデータ）"
                 data-i18n-alt="image.github"
                 width="540"
@@ -170,6 +190,12 @@
             <div class="phone hero-phone-main">
               <img
                 src="./assets/media/usage-dark.webp"
+                srcset="
+                  ./assets/media/usage-dark-270.webp 270w,
+                  ./assets/media/usage-dark-405.webp 405w,
+                  ./assets/media/usage-dark.webp     540w
+                "
+                sizes="(max-width: 640px) 260px, (max-width: 1024px) 285px, 320px"
                 alt="Liquid GlassのAI使用量ダッシュボード（サンプルデータ）"
                 data-i18n-alt="image.usage"
                 width="540"
@@ -278,6 +304,12 @@
                 data-preview-image
                 data-i18n-alt="image.usage"
                 src="./assets/media/usage-dark.webp"
+                srcset="
+                  ./assets/media/usage-dark-270.webp 270w,
+                  ./assets/media/usage-dark-405.webp 405w,
+                  ./assets/media/usage-dark.webp     540w
+                "
+                sizes="(max-width: 640px) 260px, (max-width: 1024px) 285px, 320px"
                 alt="Liquid GlassのAI使用量ダッシュボード（サンプルデータ）"
                 width="540"
                 height="1200"
@@ -289,7 +321,12 @@
             >
           </div>
           <div class="tour-copy">
-            <div class="tour-tabs" role="tablist" aria-label="App screens">
+            <div
+              class="tour-tabs"
+              role="tablist"
+              aria-label="アプリの画面"
+              data-i18n-aria-label="a11y.screens"
+            >
               <button
                 type="button"
                 id="tour-tab-usage"
@@ -352,7 +389,8 @@
               class="appearance-switch"
               data-appearance-controls
               role="group"
-              aria-label="Preview appearance"
+              aria-label="プレビューの外観"
+              data-i18n-aria-label="a11y.appearance"
             >
               <button type="button" data-appearance="dark" aria-pressed="true">
                 Dark</button
@@ -368,7 +406,8 @@
               class="appearance-switch"
               data-trends-controls
               role="group"
-              aria-label="Trends preview"
+              aria-label="推移のプレビュー"
+              data-i18n-aria-label="a11y.trends"
               hidden
             >
               <button
@@ -388,6 +427,15 @@
                 費用
               </button>
             </div>
+            <button
+              type="button"
+              class="preview-zoom"
+              data-preview-zoom
+              data-i18n="preview.zoom"
+              hidden
+            >
+              拡大して見る ↗
+            </button>
             <a class="tour-link" href="#download"
               ><span data-i18n="tour.cta">自分のAndroidで使ってみる</span
               ><span aria-hidden="true">↗</span></a
@@ -424,6 +472,12 @@
               <div class="phone">
                 <img
                   src="./assets/media/usage-light.webp"
+                  srcset="
+                    ./assets/media/usage-light-270.webp 270w,
+                    ./assets/media/usage-light-405.webp 405w,
+                    ./assets/media/usage-light.webp     540w
+                  "
+                  sizes="(max-width: 640px) 210px, 245px"
                   alt="Liquid Glassのライト表示（サンプルデータ）"
                   data-i18n-alt="image.light"
                   width="540"
@@ -434,6 +488,12 @@
               <div class="phone">
                 <img
                   src="./assets/media/usage-dark.webp"
+                  srcset="
+                    ./assets/media/usage-dark-270.webp 270w,
+                    ./assets/media/usage-dark-405.webp 405w,
+                    ./assets/media/usage-dark.webp     540w
+                  "
+                  sizes="(max-width: 640px) 260px, (max-width: 1024px) 285px, 320px"
                   alt="Liquid Glassのダーク表示（サンプルデータ）"
                   data-i18n-alt="image.usage"
                   width="540"
@@ -510,6 +570,12 @@
             <div class="phone github-phone">
               <img
                 src="./assets/media/github-pinned.webp"
+                srcset="
+                  ./assets/media/github-pinned-270.webp 270w,
+                  ./assets/media/github-pinned-405.webp 405w,
+                  ./assets/media/github-pinned.webp     540w
+                "
+                sizes="(max-width: 640px) 250px, 285px"
                 alt="GitHubのPinnedリポジトリと技術スタック（サンプルデータ）"
                 data-i18n-alt="image.pinned"
                 width="540"
@@ -520,6 +586,12 @@
             <div class="github-inset">
               <img
                 src="./assets/media/github-achievements.webp"
+                srcset="
+                  ./assets/media/github-achievements-270.webp 270w,
+                  ./assets/media/github-achievements-405.webp 405w,
+                  ./assets/media/github-achievements.webp     540w
+                "
+                sizes="(max-width: 640px) 200px, 260px"
                 alt="GitHubの実績ウィジェット（サンプルデータ）"
                 data-i18n-alt="image.achievements"
                 width="540"
@@ -542,12 +614,11 @@
           <div class="connection-copy">
             <span class="eyebrow blue">BETTER TOGETHER</span>
             <h2 id="connect-title">
-              <span data-i18n="connect.line1">PCで動かして、</span
-              ><span data-i18n="connect.line2">手元で見渡す。</span>
+              <span data-i18n="connect.line1">スマホだけでも。</span
+              ><span data-i18n="connect.line2">PCと一緒でも。</span>
             </h2>
             <p data-i18n="connect.description">
-              Win-CodexBar + Mobile
-              Connectとペアリング。PC側の使用枠、ローカルのトークン履歴、推定費用もAndroidへ。スマホで取得するモードと切り替えられます。
+              サービスに合わせて、スマホでの取得とPC連携を選べます。Windowsとつなげば、PCの使用枠・トークン履歴・推定費用も手元へ。
             </p>
             <div class="connection-actions">
               <a
@@ -559,6 +630,7 @@
                 class="text-link"
                 href="https://github.com/lingmulongtai/Win-CodexBar-Mobile-Connect/blob/main/README.ja-JP.md"
                 data-i18n="connect.guide"
+                data-windows-guide
                 >接続ガイド ↗</a
               >
             </div>
@@ -567,49 +639,67 @@
               v0.71.0以降。PCの起動が必要です。費用は推定値で、請求額とは異なります。
             </p>
           </div>
-          <div
-            class="connection-diagram"
-            aria-label="Windows connects privately to Android"
-          >
-            <div class="diagram-device">
-              <svg viewBox="0 0 160 120" aria-hidden="true">
-                <rect x="14" y="12" width="132" height="84" rx="8" />
-                <path d="M60 110h40M80 96v14" />
-                <path
-                  class="diagram-chart"
-                  d="M42 68V54m25 14V40m26 28V28m26 40V46"
-                /></svg
-              ><strong>Windows</strong><span>Mobile Connect</span>
+          <div class="setup-card" id="setup-guide">
+            <div class="setup-controls" hidden>
+              <label for="setup-provider" data-i18n="setup.choose"
+                >使っているサービスを選ぶ</label
+              >
+              <select id="setup-provider" name="provider">
+                <option value="codex">Codex</option>
+                <option value="claude">Claude</option>
+                <option value="gemini-cli">Gemini CLI</option>
+                <option value="gemini-apps">Gemini Apps</option>
+                <option value="copilot">GitHub Copilot</option>
+                <option value="github" data-i18n="setup.githubLabel">
+                  GitHubダッシュボード
+                </option>
+              </select>
             </div>
-            <div class="connection-line" aria-hidden="true">
-              <i></i><span>↔</span><i></i>
-            </div>
-            <div class="diagram-device">
-              <span class="diagram-phone"
-                ><img
-                  src="./assets/app-icon.png"
-                  alt="CodexBar"
-                  width="192"
-                  height="192"
-                  loading="lazy" /></span
-              ><strong>Android</strong><span>CodexBar</span>
-            </div>
-            <div class="connection-badge">
-              <span class="status-dot" aria-hidden="true"></span
-              ><span data-i18n="connect.tailscale"
-                >同じWi-Fi、またはTailscaleで。</span
+            <div class="setup-profile-heading">
+              <h3 data-setup-name>Codex</h3>
+              <span class="setup-mode" data-setup-mode data-kind="phone"
+                >スマホだけ</span
               >
             </div>
+            <p class="setup-summary" data-setup-summary aria-live="polite">
+              使用枠はスマホだけで確認できます。PCのローカルトークン履歴は、追加のPC連携で表示します。
+            </p>
+            <ol class="setup-steps" data-setup-steps>
+              <li>「接続」からCodexを開き、アカウント接続を選ぶ。</li>
+              <li>
+                アプリのコードをコピーし、公式のサインイン画面で認可する。
+              </li>
+              <li>アプリに戻り、接続完了の表示を待つ。</li>
+            </ol>
+            <a
+              class="text-link"
+              data-setup-docs
+              href="https://github.com/lingmulongtai/CodexBar-android#device-code-sign-in-exact-flow"
+              data-i18n="setup.details"
+              >詳しい説明（GitHub）↗</a
+            >
+            <noscript
+              ><p class="fine-print">
+                ほかのサービスは
+                <a
+                  href="https://github.com/lingmulongtai/CodexBar-android#connecting-accounts"
+                  >接続ドキュメント</a
+                >をご覧ください。Claude・Gemini CLIはPC、Gemini
+                AppsはWindowsとの連携が必要です。
+              </p></noscript
+            >
           </div>
         </div>
       </section>
       <section class="privacy-strip shell" aria-label="Privacy and source">
         <div>
           <span class="privacy-icon" aria-hidden="true">◇</span>
-          <h3 data-i18n="privacy.local.title">認証情報は、あなたの端末に。</h3>
+          <h3 data-i18n="privacy.local.title">
+            接続情報は、あなたの端末で管理。
+          </h3>
           <p data-i18n="privacy.local.description">
-            Android
-            Keystoreで暗号化して保存。サービスのAPIと直接やりとりします。
+            スマホの接続情報はKeystoreで暗号化。CLI
+            companionは認証情報をPCに残し、使用量など必要な情報だけを共有します。
           </p>
         </div>
         <div>
@@ -649,6 +739,14 @@
                 data-release-download
                 ><span data-i18n="download.apk">APKをダウンロード</span
                 ><span aria-hidden="true">↓</span></a
+              ><button
+                type="button"
+                class="button button-outline-white"
+                data-open-transfer
+                data-i18n="transfer.open"
+                hidden
+              >
+                スマホで開く ↗</button
               ><a
                 class="download-notes"
                 href="https://github.com/lingmulongtai/CodexBar-android/releases/latest"
@@ -692,9 +790,28 @@
             </li>
           </ol>
         </div>
-        <p class="recovery-note" data-i18n="download.recovery">
-          0.16.1／0.16.2をご利用の方は、今回だけAPKを手動で上書きしてください。ブラウザーで取得が完了しない場合はGitHubアプリから。アンインストールやデータ削除は不要です。
-        </p>
+        <div class="install-help">
+          <details id="install-help">
+            <summary data-i18n="install.help">インストールできないとき</summary>
+            <p data-i18n="install.permission">
+              APKを開くブラウザーやファイルアプリに「この提供元のアプリを許可」を設定し、Androidのインストール画面で確認してください。インストール後、この許可はオフに戻せます。
+            </p>
+            <p data-i18n="install.conflict">
+              更新は既存アプリへの上書きで行います。競合エラーの場合は、同じ公式リリースを使っているか確認してください。データを消す操作の前に、GitHubで状況を相談できます。
+            </p>
+          </details>
+          <details>
+            <summary data-i18n="install.existing">
+              すでにCodexBarをお使いの方へ
+            </summary>
+            <p data-i18n="install.update">
+              通常の更新はアプリの設定からダウンロード・検証できます。初回インストール以外は、ブラウザーを経由する必要はありません。
+            </p>
+            <p data-i18n="download.recovery">
+              0.16.1／0.16.2をご利用の方は、今回だけAPKを手動で上書きしてください。ブラウザーで取得が完了しない場合はGitHubアプリから。アンインストールやデータ削除は不要です。
+            </p>
+          </details>
+        </div>
       </section>
       <section class="section faq-section shell" aria-labelledby="faq-title">
         <div class="faq-heading">
@@ -717,6 +834,9 @@
               companionやWindowsが必要なものもあります。Gemini
               AppsはWindows取得のみで、Gemini CLIとは別の項目です。
             </p>
+            <a class="text-link" href="#setup-guide" data-i18n="faq.setup"
+              >サービスを選んで手順を見る ↑</a
+            >
           </details>
           <details>
             <summary data-i18n="faq.private.q">
@@ -743,15 +863,103 @@
               いいえ。ローカルのトークン履歴とモデル単価などから計算する参考値です。サブスクリプション料金や実際の請求額とは異なります。取得できる履歴と内訳もサービスによって変わります。
             </p>
           </details>
+          <details>
+            <summary data-i18n="faq.support.q">うまく動かないときは？</summary>
+            <p data-i18n="faq.support.a">
+              バージョン、Androidのバージョン、操作手順、表示されたエラーを添えてGitHubで相談できます。ログインコードやトークンなどの認証情報は送らないでください。
+            </p>
+            <a
+              class="text-link"
+              href="https://github.com/lingmulongtai/CodexBar-android/issues/new/choose"
+              data-i18n="faq.support.link"
+              >GitHubで不具合を報告 ↗</a
+            >
+          </details>
         </div>
       </section>
     </main>
+    <dialog
+      class="site-dialog transfer-dialog"
+      id="transfer-dialog"
+      aria-labelledby="transfer-title"
+      aria-describedby="transfer-description"
+    >
+      <div class="dialog-heading">
+        <h2 id="transfer-title" data-i18n="transfer.title">
+          スマホでダウンロード
+        </h2>
+        <form method="dialog">
+          <button class="dialog-close" data-i18n="dialog.close">閉じる</button>
+        </form>
+      </div>
+      <p id="transfer-description" data-i18n="transfer.description">
+        スマホのカメラで読み取ると、このページのダウンロード欄が開きます。
+      </p>
+      <img
+        src="./assets/download-qr.png"
+        width="328"
+        height="328"
+        loading="lazy"
+        alt="スマホでダウンロードページを開くQRコード"
+        data-i18n-alt="image.qr"
+      />
+      <label for="transfer-url" data-i18n="transfer.url"
+        >ダウンロードページのURL</label
+      >
+      <input
+        id="transfer-url"
+        type="url"
+        readonly
+        value="https://lingmulongtai.github.io/CodexBar-android/#download"
+        dir="ltr"
+      />
+      <button
+        type="button"
+        class="button button-primary"
+        data-copy-url
+        data-i18n="transfer.copy"
+      >
+        リンクをコピー
+      </button>
+      <p
+        class="copy-status"
+        data-copy-status
+        role="status"
+        aria-live="polite"
+      ></p>
+    </dialog>
+    <dialog
+      class="site-dialog screenshot-dialog"
+      id="screenshot-dialog"
+      aria-labelledby="screenshot-title"
+    >
+      <div class="dialog-heading">
+        <h2 id="screenshot-title" data-i18n="preview.title">アプリの画面</h2>
+        <form method="dialog">
+          <button class="dialog-close" data-i18n="dialog.close">閉じる</button>
+        </form>
+      </div>
+      <figure>
+        <img
+          data-full-preview
+          alt="選択したアプリ画面（サンプルデータ）"
+          width="540"
+          height="1200"
+          loading="lazy"
+        />
+        <figcaption data-i18n="tour.caption">
+          エミュレーター画面・サンプルデータ
+        </figcaption>
+      </figure>
+    </dialog>
     <footer class="site-footer shell">
       <div class="footer-top">
         <a class="brand" href="#top"
           ><span class="brand-art" aria-hidden="true"
             ><img
-              src="./assets/app-icon.png"
+              src="./assets/brand-96.webp"
+              srcset="./assets/brand-96.webp 96w, ./assets/brand-144.webp 144w"
+              sizes="48px"
               alt="CodexBar"
               width="192"
               height="192"

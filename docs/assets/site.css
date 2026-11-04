@@ -16,8 +16,141 @@
   box-sizing: border-box;
 }
 html {
+  scrollbar-gutter: stable;
   scroll-behavior: smooth;
   scroll-padding-top: 112px;
+}
+.modal-open {
+  overflow: hidden;
+}
+.button-outline-white {
+  border: 1px solid #a5cef9;
+  background: transparent;
+  color: white;
+}
+.transfer-dialog > p {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #435f79;
+}
+.transfer-dialog > img {
+  width: 240px;
+  margin: 24px auto;
+}
+.transfer-dialog label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 9px;
+}
+.transfer-dialog input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #9cb9d4;
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 13px;
+  color: #163650;
+  background: white;
+}
+.transfer-dialog > .button {
+  margin-top: 16px;
+}
+.transfer-dialog .copy-status {
+  min-height: 44px;
+  margin-bottom: 0;
+  font-size: 12px;
+  color: #224b6d;
+}
+.install-help {
+  max-width: 900px;
+  margin: 24px auto 0;
+}
+.install-help details {
+  border-bottom: 1px solid var(--line);
+  padding: 18px 0;
+}
+.install-help summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  min-height: 24px;
+}
+.install-help p {
+  color: #52667a;
+  font-size: 13px;
+  line-height: 1.9;
+  margin: 14px 0 0;
+}
+.faq-list .text-link {
+  display: inline-block;
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: #0860c8;
+}
+.preview-zoom {
+  display: block;
+  margin: 22px 0 0;
+  min-height: 44px;
+  padding: 10px 0;
+  background: none;
+  color: #b5d9ff;
+  font-size: 13px;
+  font-weight: 600;
+}
+.preview-zoom:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+.site-dialog {
+  width: min(580px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 24px;
+  border: 1px solid #fff;
+  border-radius: 26px;
+  background: #f5f9ff;
+  color: #172432;
+  box-shadow: 0 24px 100px #081d4155;
+}
+.site-dialog::backdrop {
+  background: #092440a8;
+  backdrop-filter: blur(8px);
+}
+.dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.dialog-heading h2 {
+  font-size: 19px;
+  margin: 0;
+}
+.dialog-close {
+  min-height: 44px;
+  min-width: 64px;
+  padding: 10px 14px;
+  border-radius: 99px;
+  background: #e4edfa;
+  font-size: 13px;
+}
+.screenshot-dialog figure {
+  margin: 0;
+}
+.screenshot-dialog img {
+  width: auto;
+  max-width: 100%;
+  max-height: calc(100dvh - 190px);
+  margin: auto;
+  object-fit: contain;
+  border-radius: 15px;
+}
+.screenshot-dialog figcaption {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: #435f79;
 }
 body {
   margin: 0;
@@ -859,6 +992,76 @@ h2 > span {
   font-size: 11px;
   font-weight: 600;
   line-height: 1.8;
+}
+.setup-card {
+  align-self: start;
+  min-width: 0;
+  padding: 26px;
+  border: 1px solid #fff;
+  border-radius: 24px;
+  background: #ffffffb8;
+  box-shadow: 0 12px 36px #386b9a0a;
+}
+.setup-controls label {
+  display: block;
+  margin-bottom: 10px;
+  color: #435f79;
+  font-size: 12px;
+  font-weight: 600;
+}
+.setup-controls select {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 14px;
+  border: 1px solid #9cb9d4;
+  border-radius: 12px;
+  background: #f5f9ff;
+  color: #163650;
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+.setup-profile-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 24px 0 12px;
+}
+.setup-profile-heading h3 {
+  margin: 0;
+  font-size: 21px;
+}
+.setup-mode {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border-radius: 99px;
+  background: #e2f2ee;
+  color: #225d51;
+  font-size: 11px;
+  font-weight: 650;
+}
+.setup-mode[data-kind="pc"] {
+  background: #e6edfc;
+  color: #315a94;
+}
+.setup-summary,
+.setup-steps {
+  font-size: 13px;
+  line-height: 1.9;
+  color: #435f79;
+}
+.setup-steps {
+  padding-left: 20px;
+  margin: 18px 0;
+}
+.setup-steps li + li {
+  margin-top: 9px;
+}
+.setup-card > .text-link {
+  display: inline-block;
+  padding: 8px 0;
+  font-size: 12px;
 }
 .connection-diagram {
   position: relative;
@@ -1989,5 +2192,34 @@ html[lang="en"] .hero h1 > span:first-child {
   }
   .hero h1 > span:first-child {
     font-size: clamp(26px, 6.7vw, 32px);
+  }
+}
+
+/* Comfortable hit areas without enlarging the visual artwork. */
+.brand {
+  min-height: 44px;
+}
+.footer-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+}
+@media (max-width: 640px) {
+  .language-switch button {
+    min-height: 32px;
+    min-width: 29px;
+  }
+  .footer-links {
+    font-size: 11px;
+    gap: 9px 19px;
+  }
+  .footer-bottom {
+    font-size: 10px;
+  }
+  .fine-print {
+    font-size: 10px;
+  }
+  .hero-fine {
+    font-size: 10px;
   }
 }

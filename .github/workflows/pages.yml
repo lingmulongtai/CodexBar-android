@@ -6,12 +6,14 @@ on:
     paths:
       - 'docs/**'
       - '.github/scripts/validate-pages.py'
+      - '.github/site-checks/**'
       - '.github/workflows/pages.yml'
   pull_request:
     branches: [main]
     paths:
       - 'docs/**'
       - '.github/scripts/validate-pages.py'
+      - '.github/site-checks/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -33,10 +35,51 @@ jobs:
       - name: Validate GitHub Pages bundle
         run: python .github/scripts/validate-pages.py
 
+  browser:
+    name: Browser checks (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Set up Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: .github/site-checks/package-lock.json
+
+      - name: Install browser check dependencies
+        working-directory: .github/site-checks
+        run: npm ci
+
+      - name: Install browser
+        working-directory: .github/site-checks
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Verify visitor journeys and accessibility
+        working-directory: .github/site-checks
+        env:
+          SITE_BROWSER: ${{ matrix.browser }}
+        run: npm test
+
+      - name: Upload browser screenshots
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: site-${{ matrix.browser }}
+          path: output/playwright/*.png
+          if-no-files-found: ignore
+          retention-days: 7
+
   deploy:
     name: Deploy GitHub Pages
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    needs: validate
+    needs: [validate, browser]
     runs-on: ubuntu-latest
     permissions:
       contents: read
