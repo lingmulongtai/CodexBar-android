@@ -63,7 +63,7 @@
     <a class="skip-link" href="#main" data-i18n="skip">本文へ移動</a>
     <header class="site-header">
       <div class="header-bar shell">
-        <a class="brand" href="#top" aria-label="CodexBar home"
+        <a class="brand" href="#top"
           ><span class="brand-art" aria-hidden="true"
             ><img
               src="./assets/app-icon.png"
@@ -73,13 +73,22 @@
               fetchpriority="high" /></span
           ><span>CodexBar<small>for Android</small></span></a
         >
-        <nav class="desktop-nav" aria-label="Main navigation">
+        <nav
+          class="desktop-nav"
+          aria-label="メインナビゲーション"
+          data-i18n-aria-label="a11y.mainNav"
+        >
           <a href="#tour" data-i18n="nav.features">できること</a
           ><a href="#design" data-i18n="nav.design">デザイン</a
           ><a href="#connect" data-i18n="nav.connect">PCとつなぐ</a>
         </nav>
         <div class="header-actions">
-          <div class="language-switch" role="group" aria-label="Language">
+          <div
+            class="language-switch"
+            role="group"
+            aria-label="表示言語"
+            data-i18n-aria-label="a11y.language"
+          >
             <button type="button" data-language="ja" aria-pressed="true">
               JA</button
             ><button type="button" data-language="en" aria-pressed="false">
@@ -97,7 +106,8 @@
             type="button"
             aria-expanded="false"
             aria-controls="mobile-nav"
-            aria-label="Menu"
+            aria-label="メニュー"
+            data-i18n-aria-label="a11y.menu"
           >
             <span></span><span></span>
           </button>
@@ -105,7 +115,8 @@
         <nav
           id="mobile-nav"
           class="mobile-nav"
-          aria-label="Mobile navigation"
+          aria-label="モバイルナビゲーション"
+          data-i18n-aria-label="a11y.mobileNav"
           hidden
         >
           <a href="#tour" data-i18n="nav.features">できること</a
@@ -122,7 +133,6 @@
           <div class="hero-copy">
             <a
               class="release-label"
-              aria-label="v0.16.3 · Android 8.0+"
               href="https://github.com/lingmulongtai/CodexBar-android/releases/latest"
               data-release-notes
               ><span class="status-dot" aria-hidden="true"></span
@@ -289,7 +299,12 @@
             >
           </div>
           <div class="tour-copy">
-            <div class="tour-tabs" role="tablist" aria-label="App screens">
+            <div
+              class="tour-tabs"
+              role="tablist"
+              aria-label="アプリの画面"
+              data-i18n-aria-label="a11y.screens"
+            >
               <button
                 type="button"
                 id="tour-tab-usage"
@@ -352,7 +367,8 @@
               class="appearance-switch"
               data-appearance-controls
               role="group"
-              aria-label="Preview appearance"
+              aria-label="プレビューの外観"
+              data-i18n-aria-label="a11y.appearance"
             >
               <button type="button" data-appearance="dark" aria-pressed="true">
                 Dark</button
@@ -368,7 +384,8 @@
               class="appearance-switch"
               data-trends-controls
               role="group"
-              aria-label="Trends preview"
+              aria-label="推移のプレビュー"
+              data-i18n-aria-label="a11y.trends"
               hidden
             >
               <button

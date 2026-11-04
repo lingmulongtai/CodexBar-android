@@ -40,7 +40,11 @@ class ReleaseVersionConsistencyTest {
         assertTrue(readme.contains("CodexBar-Gemini-Companion-v$version.zip"))
         assertTrue(readme.contains("CodexBar-Codex-Telemetry-Companion-v$version.zip"))
         assertTrue(landingPage.contains("\"softwareVersion\": \"$version\""))
-        assertTrue(landingPage.contains("v$version · Android 8.0+"))
+        val displayedVersions = Regex("""<span\b[^>]*\bdata-version\b[^>]*>\s*v([^<]+)</span\s*>""")
+            .findAll(landingPage).map { it.groupValues[1].trim() }.toList()
+        assertTrue(displayedVersions.isNotEmpty())
+        displayedVersions.forEach { assertEquals(version, it) }
+        assertTrue(landingPage.contains("Android 8.0+"))
         val screenshots = File(repoDir, "docs/images/releases/v$version")
             .listFiles { file -> file.extension == "png" }
             .orEmpty()

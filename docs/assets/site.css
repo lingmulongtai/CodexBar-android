@@ -1991,3 +1991,32 @@ html[lang="en"] .hero h1 > span:first-child {
     font-size: clamp(26px, 6.7vw, 32px);
   }
 }
+
+/* Comfortable hit areas without enlarging the visual artwork. */
+.brand {
+  min-height: 44px;
+}
+.footer-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+}
+@media (max-width: 640px) {
+  .language-switch button {
+    min-height: 32px;
+    min-width: 29px;
+  }
+  .footer-links {
+    font-size: 11px;
+    gap: 9px 19px;
+  }
+  .footer-bottom {
+    font-size: 10px;
+  }
+  .fine-print {
+    font-size: 10px;
+  }
+  .hero-fine {
+    font-size: 10px;
+  }
+}

@@ -15,6 +15,12 @@ const japaneseAlt = new Map(
     element.alt,
   ]),
 );
+const japaneseLabels = new Map(
+  [...document.querySelectorAll("[data-i18n-aria-label]")].map((element) => [
+    element.dataset.i18nAriaLabel,
+    element.getAttribute("aria-label"),
+  ]),
+);
 let language = navigator.language.toLowerCase().startsWith("ja") ? "ja" : "en";
 try {
   const saved = localStorage.getItem("codexbar-site-language");
@@ -72,6 +78,13 @@ const tourJapanese = {
 };
 function renderText() {
   root.lang = language;
+  document.querySelectorAll("[data-i18n-aria-label]").forEach((element) => {
+    const key = element.dataset.i18nAriaLabel;
+    element.setAttribute(
+      "aria-label",
+      language === "en" ? english[key] : japaneseLabels.get(key),
+    );
+  });
   document.querySelector("meta[name=description]").content =
     language === "en" ? english["meta.description"] : japaneseDescription;
   document.querySelectorAll("[data-i18n]").forEach((element) => {
@@ -228,9 +241,6 @@ try {
     document.querySelectorAll("[data-release-notes]").forEach((link) => {
       link.href = `${release}/tag/v${version}`;
     });
-    document
-      .querySelector(".release-label")
-      .setAttribute("aria-label", `v${version} · Android 8.0+`);
     document.querySelectorAll("[data-version]").forEach((element) => {
       element.textContent = `v${version}`;
     });
@@ -242,6 +252,13 @@ document.querySelectorAll("[data-current-year]").forEach((element) => {
   element.textContent = String(new Date().getFullYear());
 });
 const english = {
+  "a11y.mainNav": "Main navigation",
+  "a11y.language": "Language",
+  "a11y.menu": "Menu",
+  "a11y.mobileNav": "Mobile navigation",
+  "a11y.screens": "App screens",
+  "a11y.appearance": "Preview appearance",
+  "a11y.trends": "Trends preview",
   "tab.history": "History",
   "tab.spend": "Spend",
   "image.spend": "Estimated usage costs and model breakdowns (sample data)",
