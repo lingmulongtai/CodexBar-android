@@ -96,8 +96,8 @@ function renderText() {
   });
   document.title =
     language === "en"
-      ? "CodexBar for Android — Less checking. More creating."
-      : "CodexBar for Android — つくる時間に、もっと余裕を。";
+      ? "CodexBar for Android — Vibe coding. Better flow."
+      : "CodexBar for Android — バイブコーディングを、もっと快適に。";
 }
 function selectTour(name) {
   const screen = tourScreens[name];
@@ -252,10 +252,11 @@ const english = {
   "nav.design": "The design",
   "nav.connect": "Connect your PC",
   "nav.download": "Get the app ↓",
-  "hero.line1": "Less checking.",
-  "hero.line2": "More creating.",
+  "hero.audience": "By a vibe coder. For vibe coders.",
+  "hero.line1": "Vibe coding.",
+  "hero.line2": "Better flow.",
   "hero.description":
-    "Codex, Claude, and the rest of your AI toolkit. See your quotas, resets, and pace at a glance. Keep your GitHub activity close, in one beautifully crafted Android app.",
+    "Codex, Claude, and your GitHub activity, together. Keep an eye on your AI quotas and resets, and spend more of your time turning ideas into something real.",
   "hero.download": "Get it for Android",
   "hero.explore": "Take a look inside",
   "hero.fine": "Free and open source. No ads. No trackers.",
