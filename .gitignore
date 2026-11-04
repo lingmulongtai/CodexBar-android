@@ -45,3 +45,7 @@ upstream-codexbar/
 
 # REQUIREMENTS (dev only)
 REQUIREMENTS.md
+
+# Local website browser diagnostics
+/.playwright-cli/
+/output/playwright/
