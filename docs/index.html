@@ -43,7 +43,8 @@
     />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="stylesheet" href="./assets/site.css?v=20261104" />
-    <script src="./assets/site.js?v=20261104" defer></script>
+    <script src="./assets/setup.js?v=20261104q" defer></script>
+    <script src="./assets/site.js?v=20261104q" defer></script>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -80,7 +81,7 @@
         >
           <a href="#tour" data-i18n="nav.features">できること</a
           ><a href="#design" data-i18n="nav.design">デザイン</a
-          ><a href="#connect" data-i18n="nav.connect">PCとつなぐ</a>
+          ><a href="#connect" data-i18n="nav.connect">接続ガイド</a>
         </nav>
         <div class="header-actions">
           <div
@@ -121,7 +122,7 @@
         >
           <a href="#tour" data-i18n="nav.features">できること</a
           ><a href="#design" data-i18n="nav.design">デザイン</a
-          ><a href="#connect" data-i18n="nav.connect">PCとつなぐ</a
+          ><a href="#connect" data-i18n="nav.connect">接続ガイド</a
           ><a href="#download" data-i18n="nav.download">ダウンロード ↓</a>
         </nav>
       </div>
@@ -559,12 +560,11 @@
           <div class="connection-copy">
             <span class="eyebrow blue">BETTER TOGETHER</span>
             <h2 id="connect-title">
-              <span data-i18n="connect.line1">PCで動かして、</span
-              ><span data-i18n="connect.line2">手元で見渡す。</span>
+              <span data-i18n="connect.line1">スマホだけでも。</span
+              ><span data-i18n="connect.line2">PCと一緒でも。</span>
             </h2>
             <p data-i18n="connect.description">
-              Win-CodexBar + Mobile
-              Connectとペアリング。PC側の使用枠、ローカルのトークン履歴、推定費用もAndroidへ。スマホで取得するモードと切り替えられます。
+              サービスに合わせて、スマホでの取得とPC連携を選べます。Windowsとつなげば、PCの使用枠・トークン履歴・推定費用も手元へ。
             </p>
             <div class="connection-actions">
               <a
@@ -576,6 +576,7 @@
                 class="text-link"
                 href="https://github.com/lingmulongtai/Win-CodexBar-Mobile-Connect/blob/main/README.ja-JP.md"
                 data-i18n="connect.guide"
+                data-windows-guide
                 >接続ガイド ↗</a
               >
             </div>
@@ -584,49 +585,67 @@
               v0.71.0以降。PCの起動が必要です。費用は推定値で、請求額とは異なります。
             </p>
           </div>
-          <div
-            class="connection-diagram"
-            aria-label="Windows connects privately to Android"
-          >
-            <div class="diagram-device">
-              <svg viewBox="0 0 160 120" aria-hidden="true">
-                <rect x="14" y="12" width="132" height="84" rx="8" />
-                <path d="M60 110h40M80 96v14" />
-                <path
-                  class="diagram-chart"
-                  d="M42 68V54m25 14V40m26 28V28m26 40V46"
-                /></svg
-              ><strong>Windows</strong><span>Mobile Connect</span>
+          <div class="setup-card" id="setup-guide">
+            <div class="setup-controls" hidden>
+              <label for="setup-provider" data-i18n="setup.choose"
+                >使っているサービスを選ぶ</label
+              >
+              <select id="setup-provider" name="provider">
+                <option value="codex">Codex</option>
+                <option value="claude">Claude</option>
+                <option value="gemini-cli">Gemini CLI</option>
+                <option value="gemini-apps">Gemini Apps</option>
+                <option value="copilot">GitHub Copilot</option>
+                <option value="github" data-i18n="setup.githubLabel">
+                  GitHubダッシュボード
+                </option>
+              </select>
             </div>
-            <div class="connection-line" aria-hidden="true">
-              <i></i><span>↔</span><i></i>
-            </div>
-            <div class="diagram-device">
-              <span class="diagram-phone"
-                ><img
-                  src="./assets/app-icon.png"
-                  alt="CodexBar"
-                  width="192"
-                  height="192"
-                  loading="lazy" /></span
-              ><strong>Android</strong><span>CodexBar</span>
-            </div>
-            <div class="connection-badge">
-              <span class="status-dot" aria-hidden="true"></span
-              ><span data-i18n="connect.tailscale"
-                >同じWi-Fi、またはTailscaleで。</span
+            <div class="setup-profile-heading">
+              <h3 data-setup-name>Codex</h3>
+              <span class="setup-mode" data-setup-mode data-kind="phone"
+                >スマホだけ</span
               >
             </div>
+            <p class="setup-summary" data-setup-summary aria-live="polite">
+              使用枠はスマホだけで確認できます。PCのローカルトークン履歴は、追加のPC連携で表示します。
+            </p>
+            <ol class="setup-steps" data-setup-steps>
+              <li>「接続」からCodexを開き、アカウント接続を選ぶ。</li>
+              <li>
+                アプリのコードをコピーし、公式のサインイン画面で認可する。
+              </li>
+              <li>アプリに戻り、接続完了の表示を待つ。</li>
+            </ol>
+            <a
+              class="text-link"
+              data-setup-docs
+              href="https://github.com/lingmulongtai/CodexBar-android#device-code-sign-in-exact-flow"
+              data-i18n="setup.details"
+              >詳しい説明（GitHub）↗</a
+            >
+            <noscript
+              ><p class="fine-print">
+                ほかのサービスは
+                <a
+                  href="https://github.com/lingmulongtai/CodexBar-android#connecting-accounts"
+                  >接続ドキュメント</a
+                >をご覧ください。Claude・Gemini CLIはPC、Gemini
+                AppsはWindowsとの連携が必要です。
+              </p></noscript
+            >
           </div>
         </div>
       </section>
       <section class="privacy-strip shell" aria-label="Privacy and source">
         <div>
           <span class="privacy-icon" aria-hidden="true">◇</span>
-          <h3 data-i18n="privacy.local.title">認証情報は、あなたの端末に。</h3>
+          <h3 data-i18n="privacy.local.title">
+            接続情報は、あなたの端末で管理。
+          </h3>
           <p data-i18n="privacy.local.description">
-            Android
-            Keystoreで暗号化して保存。サービスのAPIと直接やりとりします。
+            スマホの接続情報はKeystoreで暗号化。CLI
+            companionは認証情報をPCに残し、使用量など必要な情報だけを共有します。
           </p>
         </div>
         <div>

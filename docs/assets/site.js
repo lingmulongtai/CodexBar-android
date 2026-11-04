@@ -78,6 +78,7 @@ const tourJapanese = {
 };
 function renderText() {
   root.lang = language;
+  window.CodexBarSetup?.render(language);
   document.querySelectorAll("[data-i18n-aria-label]").forEach((element) => {
     const key = element.dataset.i18nAriaLabel;
     element.setAttribute(
@@ -252,6 +253,9 @@ document.querySelectorAll("[data-current-year]").forEach((element) => {
   element.textContent = String(new Date().getFullYear());
 });
 const english = {
+  "setup.choose": "Choose your service",
+  "setup.githubLabel": "GitHub dashboard",
+  "setup.details": "Full details on GitHub ↗",
   "a11y.mainNav": "Main navigation",
   "a11y.language": "Language",
   "a11y.menu": "Menu",
@@ -267,7 +271,7 @@ const english = {
   skip: "Skip to content",
   "nav.features": "Explore",
   "nav.design": "The design",
-  "nav.connect": "Connect your PC",
+  "nav.connect": "Setup guide",
   "nav.download": "Get the app ↓",
   "hero.audience": "By a vibe coder. For vibe coders.",
   "hero.line1": "Vibe coding.",
@@ -325,18 +329,18 @@ const english = {
   "github.pinned": "Your go-to repositories, pinned.",
   "github.permissions":
     "Private information follows what you share and authorize. No repository write permissions requested.",
-  "connect.line1": "Running on your PC.",
-  "connect.line2": "Right here in your hand.",
+  "connect.line1": "Your phone.",
+  "connect.line2": "Your PC. Your choice.",
   "connect.description":
-    "Pair with Win-CodexBar + Mobile Connect. Bring PC quotas, local token history, and estimated costs to Android, alongside phone-based acquisition.",
+    "Choose phone-based sign-in or a local PC companion for each service. Pair with Windows to bring PC quotas, token history, and estimated costs into the same dashboard.",
   "connect.download": "Get the Windows app",
-  "connect.guide": "Connection guide ↗",
+  "connect.guide": "Windows setup guide ↗",
   "connect.note":
     "Shared history, costs, and settings require Windows v0.71.0+. Keep the PC running. Costs are estimates, not your bill.",
   "connect.tailscale": "Same Wi-Fi, or your Tailscale network.",
-  "privacy.local.title": "Your credentials stay on your device.",
+  "privacy.local.title": "Your connection, on your devices.",
   "privacy.local.description":
-    "Encrypted with Android Keystore. The app talks directly to service APIs.",
+    "Android connection details are encrypted with Keystore. CLI companions keep sign-in credentials on your PC and share only the necessary usage information.",
   "privacy.open.title": "Open, all the way through.",
   "privacy.open.description":
     "MIT licensed. Inspect the app and companion source on GitHub.",

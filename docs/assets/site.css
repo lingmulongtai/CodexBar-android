@@ -860,6 +860,76 @@ h2 > span {
   font-weight: 600;
   line-height: 1.8;
 }
+.setup-card {
+  align-self: start;
+  min-width: 0;
+  padding: 26px;
+  border: 1px solid #fff;
+  border-radius: 24px;
+  background: #ffffffb8;
+  box-shadow: 0 12px 36px #386b9a0a;
+}
+.setup-controls label {
+  display: block;
+  margin-bottom: 10px;
+  color: #435f79;
+  font-size: 12px;
+  font-weight: 600;
+}
+.setup-controls select {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 14px;
+  border: 1px solid #9cb9d4;
+  border-radius: 12px;
+  background: #f5f9ff;
+  color: #163650;
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+.setup-profile-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 24px 0 12px;
+}
+.setup-profile-heading h3 {
+  margin: 0;
+  font-size: 21px;
+}
+.setup-mode {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border-radius: 99px;
+  background: #e2f2ee;
+  color: #225d51;
+  font-size: 11px;
+  font-weight: 650;
+}
+.setup-mode[data-kind="pc"] {
+  background: #e6edfc;
+  color: #315a94;
+}
+.setup-summary,
+.setup-steps {
+  font-size: 13px;
+  line-height: 1.9;
+  color: #435f79;
+}
+.setup-steps {
+  padding-left: 20px;
+  margin: 18px 0;
+}
+.setup-steps li + li {
+  margin-top: 9px;
+}
+.setup-card > .text-link {
+  display: inline-block;
+  padding: 8px 0;
+  font-size: 12px;
+}
 .connection-diagram {
   position: relative;
   display: flex;
