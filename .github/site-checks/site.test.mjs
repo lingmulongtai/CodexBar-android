@@ -94,9 +94,14 @@ async function language(page, value) {
 }
 async function previewReady(page, name) {
   await page.waitForFunction(
-    () =>
-      document.querySelector("#app-preview").getAttribute("aria-busy") ===
-      "false",
+    (requested) => {
+      const panel = document.querySelector("#app-preview");
+      const image = document.querySelector("[data-preview-image]");
+      return panel.getAttribute("aria-busy") === "false" &&
+        image.complete && image.naturalWidth > 0 &&
+        new RegExp(`${requested}(?:-\\d+)?\\.webp$`).test(image.currentSrc);
+    },
+    name,
   );
   assert.match(
     await page.locator("[data-preview-image]").evaluate((el) => el.currentSrc),
