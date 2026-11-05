@@ -158,6 +158,7 @@ for case in cases:
         gear = min(gears, key=lambda n: bounds(n)[1])
         rect = bounds(gear)
         pixel_width, pixel_height = capture(prefix + '-' + key)
+        assert (pixel_width, pixel_height) == (round(width*scale), round(height*scale)), 'Window size did not match the requested case'
         (args.output / (prefix + '-' + key + '.xml')).write_text(ET.tostring(current, encoding='unicode'), encoding='utf-8')
         assert any(bounds(n)[1] < 160*scale and bounds(n)[0] < pixel_width
                    for n in find(current, label)), f'{label} header did not become visible'
@@ -167,8 +168,14 @@ for case in cases:
             assert pixel_width - rect[2] <= allowance, f'Header narrowed on {label}: {rect}, window={pixel_width}'
     tap(copy['settings_title'], description=True)
     current = settled()
-    assert find(current, copy['settings_title']), 'Settings pane did not open'
-    capture(prefix + '-settings')
+    titles = [n for n in find(current, copy['settings_title']) if bounds(n)[1] < 160*scale]
+    assert titles, 'Settings header did not open'
+    title_rect = bounds(min(titles, key=lambda n: bounds(n)[1]))
+    if not args.baseline:
+        assert title_rect[0] <= (100 + max(0, width - 1440)/2)*scale, 'Settings header narrowed into a centered card'
+    settings_size = capture(prefix + '-settings')
+    assert settings_size == (round(width*scale), round(height*scale)), 'Settings window size did not match'
+    row['pages']['settings'] = {'title_bounds': title_rect, 'screen': settings_size}
     (args.output / (prefix + '-settings.xml')).write_text(ET.tostring(current, encoding='unicode'), encoding='utf-8')
     adb('shell', 'input', 'keyevent', 4)
     time.sleep(1)
