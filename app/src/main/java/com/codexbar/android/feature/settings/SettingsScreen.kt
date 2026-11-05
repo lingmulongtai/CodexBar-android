@@ -42,9 +42,8 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.*
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.runtime.key
+import com.codexbar.android.ui.components.SettingsColumns
 import com.codexbar.android.ui.components.AdaptivePageLayout
 import com.codexbar.android.ui.components.adaptiveCardColumns
 import com.codexbar.android.ui.components.pageContentWidth
@@ -227,15 +226,11 @@ fun SettingsScreen(
         BoxWithConstraints(modifier = Modifier.fillMaxSize().pageContentWidth(AdaptivePageLayout.formWidth)) {
             val columns = adaptiveCardColumns(maxWidth.value,
                 460f * androidx.compose.ui.platform.LocalDensity.current.fontScale.coerceAtLeast(1f), gapDp = 16f, maximum = 2)
-            LazyVerticalStaggeredGrid(
-                columns = StaggeredGridCells.Fixed(columns),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp,
-                    top = headerHeight + 8.dp, bottom = 32.dp + LocalBottomChromeInset.current),
-                verticalItemSpacing = 16.dp,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                item(key = "monitoring") { NotificationsSection(
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp).padding(top = headerHeight + 8.dp, bottom = 32.dp + LocalBottomChromeInset.current),
+                verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            SettingsColumns(columns, Modifier.fillMaxWidth()) {
+                key("monitoring") { NotificationsSection(
                     persistentEnabled = uiState.persistentNotificationEnabled,
                     resetEnabled = uiState.resetNotificationEnabled,
                     onResetToggle = { enabled ->
@@ -285,7 +280,7 @@ fun SettingsScreen(
                     onOpenPromotionSettings = { openPromotionSettings(context) }
                 ) }
 
-                item(key = "refresh") { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                key("refresh") { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 RefreshIntervalSection(
                     currentMinutes = uiState.refreshIntervalMinutes,
                     onIntervalChange = { viewModel.setRefreshInterval(it) }
@@ -297,9 +292,9 @@ fun SettingsScreen(
                 }
                 } }
 
-                item(key = "wallpaper") { WallpaperSettingsSection() }
+                key("wallpaper") { WallpaperSettingsSection() }
 
-                item(key = "haptics") {
+                key("haptics") {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -316,7 +311,7 @@ fun SettingsScreen(
                 }
                 }
 
-                item(key = "language") { LanguageSection(
+                key("language") { LanguageSection(
                     selectedLanguage = selectedLanguage,
                     onLanguageSelected = { language ->
                         selectedLanguage = language
@@ -326,7 +321,7 @@ fun SettingsScreen(
                     }
                 ) }
 
-                item(key = "privacy") { PrivacySection(
+                key("privacy") { PrivacySection(
                     settings = uiState.privacySettings,
                     onSettingsChange = { settings ->
                         viewModel.setPrivacySettings(settings)
@@ -334,7 +329,7 @@ fun SettingsScreen(
                     }
                 ) }
 
-                item(key = "developer") {
+                key("developer") {
                 com.codexbar.android.ui.components.CodexBarCard(onClick = onOpenDeveloperSettings, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(stringResource(R.string.developer_settings_title), style = MaterialTheme.typography.titleMedium)
@@ -342,8 +337,9 @@ fun SettingsScreen(
                     }
                 }
                 }
-                item(key = "about") { AppInfoSection() }
-                item(key = "credit", span = StaggeredGridItemSpan.FullLine) { WallpaperFooter() }
+                key("about") { AppInfoSection() }
+            }
+            WallpaperFooter()
             }
         }
     }
