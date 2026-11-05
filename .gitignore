@@ -49,3 +49,4 @@ REQUIREMENTS.md
 # Local website browser diagnostics
 /.playwright-cli/
 /output/playwright/
+/output/tablet/
