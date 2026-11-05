@@ -24,6 +24,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -41,6 +42,12 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import com.codexbar.android.ui.components.AdaptivePageLayout
+import com.codexbar.android.ui.components.adaptiveCardColumns
+import com.codexbar.android.ui.components.pageContentWidth
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -217,18 +224,18 @@ fun SettingsScreen(
             }
         }
     ) { headerHeight ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .widthIn(max = 840.dp)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
-                    .padding(top = headerHeight + 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+        BoxWithConstraints(modifier = Modifier.fillMaxSize().pageContentWidth(AdaptivePageLayout.formWidth)) {
+            val columns = adaptiveCardColumns(maxWidth.value,
+                460f * androidx.compose.ui.platform.LocalDensity.current.fontScale.coerceAtLeast(1f), gapDp = 16f, maximum = 2)
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Fixed(columns),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp,
+                    top = headerHeight + 8.dp, bottom = 32.dp + LocalBottomChromeInset.current),
+                verticalItemSpacing = 16.dp,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                NotificationsSection(
+                item(key = "monitoring") { NotificationsSection(
                     persistentEnabled = uiState.persistentNotificationEnabled,
                     resetEnabled = uiState.resetNotificationEnabled,
                     onResetToggle = { enabled ->
@@ -276,8 +283,9 @@ fun SettingsScreen(
                         openAppNotificationSettings(context)
                     },
                     onOpenPromotionSettings = { openPromotionSettings(context) }
-                )
+                ) }
 
+                item(key = "refresh") { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 RefreshIntervalSection(
                     currentMinutes = uiState.refreshIntervalMinutes,
                     onIntervalChange = { viewModel.setRefreshInterval(it) }
@@ -287,9 +295,11 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium)
                     TextButton(onClick = { viewModel.setRefreshInterval(15L) }) { Text(stringResource(R.string.reset_enable_background_refresh)) }
                 }
+                } }
 
-                WallpaperSettingsSection()
+                item(key = "wallpaper") { WallpaperSettingsSection() }
 
+                item(key = "haptics") {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -304,8 +314,9 @@ fun SettingsScreen(
                             modifier = Modifier.semantics { contentDescription = hapticLabel })
                     }
                 }
+                }
 
-                LanguageSection(
+                item(key = "language") { LanguageSection(
                     selectedLanguage = selectedLanguage,
                     onLanguageSelected = { language ->
                         selectedLanguage = language
@@ -313,25 +324,26 @@ fun SettingsScreen(
                             AppAnimationSpeed.durationMillis(200, animationSpeed) else 0L
                         viewModel.setAppLanguage(language, delayMillis)
                     }
-                )
+                ) }
 
-                PrivacySection(
+                item(key = "privacy") { PrivacySection(
                     settings = uiState.privacySettings,
                     onSettingsChange = { settings ->
                         viewModel.setPrivacySettings(settings)
                         onScreenPrivacyChanged(settings.screenPrivacyEnabled)
                     }
-                )
+                ) }
 
+                item(key = "developer") {
                 com.codexbar.android.ui.components.CodexBarCard(onClick = onOpenDeveloperSettings, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(stringResource(R.string.developer_settings_title), style = MaterialTheme.typography.titleMedium)
                         Text(stringResource(R.string.developer_settings_summary), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
-                AppInfoSection()
-                WallpaperFooter()
-                Spacer(modifier = Modifier.height(32.dp + LocalBottomChromeInset.current))
+                }
+                item(key = "about") { AppInfoSection() }
+                item(key = "credit", span = StaggeredGridItemSpan.FullLine) { WallpaperFooter() }
             }
         }
     }
@@ -432,25 +444,25 @@ fun ConnectionsScreen(
             }
         }
     ) { headerHeight ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize().pageContentWidth(AdaptivePageLayout.formWidth)) {
+            val columns = adaptiveCardColumns(maxWidth.value,
+                420f * androidx.compose.ui.platform.LocalDensity.current.fontScale.coerceAtLeast(1f), gapDp = 16f, maximum = 2)
             LazyVerticalGrid(
-                columns = GridCells.Fixed(1), state = grid,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .widthIn(max = 840.dp)
-                    .fillMaxSize(),
+                columns = GridCells.Fixed(columns), state = grid,
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp,
                     top = headerHeight + 8.dp, bottom = 32.dp + LocalBottomChromeInset.current),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                item(key = "summary") { ConnectionSummaryCard(
+                item(key = "summary", span = { GridItemSpan(maxLineSpan) }) { ConnectionSummaryCard(
                     connectedCount = connectedCount,
                     totalCount = AiService.entries.size
                 ) }
 
-                item(key = "desktop") { DesktopBridgeSettings(uiState, viewModel) }
+                item(key = "desktop", span = { GridItemSpan(maxLineSpan) }) { DesktopBridgeSettings(uiState, viewModel) }
 
-                item(key = "directory") { ProviderDirectoryControls(
+                item(key = "directory", span = { GridItemSpan(maxLineSpan) }) { ProviderDirectoryControls(
                     query = providerSearchQuery,
                     onQueryChange = { providerSearchQuery = it },
                     filter = providerFilter,
@@ -461,16 +473,18 @@ fun ConnectionsScreen(
                     totalCount = AiService.entries.size
                 ) }
 
-                if (reordering) item(key = "order-hint") {
+                if (reordering) item(key = "order-hint", span = { GridItemSpan(maxLineSpan) }) {
                     SectionHeader(visibleProviders.size, true, providerOrder.isNotEmpty(),
                         { viewModel.setConnectionProviderOrder(emptyList()) })
                 }
 
                 if (visibleProviders.isEmpty()) {
-                    item(key = "empty") { ProviderDirectoryEmptyState() }
+                    item(key = "empty", span = { GridItemSpan(maxLineSpan) }) { ProviderDirectoryEmptyState() }
                 }
 
-                items(visibleProviders, key = { it.name }) { service ->
+                items(visibleProviders, key = { it.name }, span = { service ->
+                    GridItemSpan(if (!reordering && expandedProviderName == service.name) maxLineSpan else 1)
+                }) { service ->
                     val state = uiState.serviceStates[service] ?: ServiceCredentialState()
                     ServiceCredentialSection(
                         service = service,
@@ -549,7 +563,7 @@ fun ConnectionsScreen(
                     onDeleteAll = { viewModel.showDeleteConfirmDialog() }
                 ) }
 
-                item(key = "wallpaper-credit") { WallpaperFooter() }
+                item(key = "wallpaper-credit", span = { GridItemSpan(maxLineSpan) }) { WallpaperFooter() }
             }
         }
     }

@@ -41,7 +41,7 @@ internal fun DeveloperSettingsScreen(onBack: () -> Unit, viewModel: SettingsView
             CodexBarIconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back)) }
         })
     }) { header ->
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+        Column(Modifier.fillMaxSize().pageContentWidth(AdaptivePageLayout.formWidth).verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp).padding(top = header + 8.dp, bottom = LocalBottomChromeInset.current + 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
             CodexBarCard(Modifier.fillMaxWidth()) {
