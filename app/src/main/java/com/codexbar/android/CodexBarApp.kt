@@ -162,6 +162,7 @@ fun CodexBarApp(
 
     ProvideAppHaptics(configuration.preferencesLoaded && configuration.hapticFeedbackEnabled) {
     BoxWithConstraints(modifier.fillMaxSize().background(themeProfile.backgroundBrush)) {
+        CompositionLocalProvider(com.codexbar.android.ui.components.LocalAppWindowHeight provides maxHeight) {
         when {
             themeProfile.floatingNavigation -> {
                 val wallpaperModel: DailyWallpaperViewModel = hiltViewModel()
@@ -202,6 +203,7 @@ fun CodexBarApp(
                 pages(Modifier.weight(1f).fillMaxWidth())
                 AppBottomBar(entries)
             }
+        }
         }
     }
     }

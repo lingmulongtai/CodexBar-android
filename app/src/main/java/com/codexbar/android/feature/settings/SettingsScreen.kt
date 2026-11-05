@@ -203,7 +203,6 @@ fun SettingsScreen(
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
                 ThemedTopBar(
                     title = stringResource(R.string.settings_title),
-                    modifier = Modifier.widthIn(max = 840.dp),
                     navigationIcon = {
                         if (showBackButton) {
                             IconButton(onClick = onNavigateBack) {
@@ -414,7 +413,6 @@ fun ConnectionsScreen(
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
                 ThemedTopBar(
                     title = stringResource(R.string.connections_title),
-                    modifier = Modifier.widthIn(max = 840.dp),
                     navigationIcon = {
                         if (showBackButton) {
                             IconButton(onClick = onNavigateBack) {
