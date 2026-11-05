@@ -77,20 +77,61 @@ hinge. Occluding hinges, tabletop posture, actual device graphics performance an
 the owner's final visual acceptance remain separate hardware checks. A failed or
 incomplete capture run must not be reported as a passed matrix.
 
-### Initial local verification, 2026-11-06
+### Completed local verification, 2026-11-06
 
 - Strict dependency verification, `:app:assembleDebug`, `:app:testDebugUnitTest`
   and `:app:lintDebug`: successful from a fresh local build directory.
 - 164 unit-test suites, 524 tests: 522 passed, 2 skipped, 0 failures, 0 errors.
 - Lint: 0 errors/fatal issues, 191 warnings. This task does not claim to resolve
   all pre-existing lint concerns.
-- Emulator captures are **not accepted visual evidence**. API 35 and API 36.1
-  fixtures with host/software rendering exhibited System UI or app ANR dialogs.
-  The pre-change main APK also exhibited the problem. Direct captures without UI
-  Automation were attempted and remained blocked by System UI ANR. The cause is
-  not established, so no complete size/language/theme/interaction matrix is
-  reported as passing. Actual-device fold posture and visual acceptance remain
-  unverified.
+- Debug v0.16.4/version code 49 passed **12 window/language/theme cases and 60
+  native screen captures**. Each case covers Usage, Trends, Connections, GitHub
+  and Settings, including Settings return. English dark appearance covers all
+  seven sizes above; Japanese covers 800×1280 and 1280×800; Japanese at 1.3× font
+  scale covers 840×720 and 1280×800; light appearance covers 1280×800. All use
+  synthetic data. Accepted runs contain no ANR overlay or new ANR event.
+- Focused interaction checks cover the visible pinned header while the keyboard
+  is open, keyboard dismissal on navigation, dock restoration, retained provider
+  search, two-column provider cards, full-width form expansion, cross-column
+  drag ordering and restoring automatic order. The span cache is invalidated
+  together with form expansion so the expanded card does not disappear.
+- Navigation checks pass all nine Settings return paths (selected tab, Back and
+  immediate Back from Trends, Connections and GitHub), plus holding adjacent
+  pages during a horizontal drag, reversing the drag and cancelling back to
+  Usage. The held-frame capture retains the same vertical page origin.
+- Website browser checks: all eight tests pass in each of Chromium, Firefox and
+  WebKit. The Firefox screenshot-tour check waits for the requested image to
+  finish decoding, in addition to waiting for the busy indicator to clear.
+
+### Emulator failure diagnosis and working configuration
+
+The initial captures were rejected because they contained System UI/app ANR
+dialogs. The pre-change main APK also exhibited the failure. Windows Application
+Error/Windows Error Reporting records subsequently established native QEMU
+access violations (`0xc0000005`) in emulator 36.2.11 and an isolated official
+37.2.13 on the software OpenGL ES path. Logs show that `-gpu swangle` selected
+`swiftshader_indirect`/SwiftShader on this Windows host. Updating the emulator
+alone did not resolve that path. There is no symbolized native stack, so the
+faulting instruction and a specific upstream defect are not established.
+
+The completed matrix uses the isolated official **37.2.13** binary, API 35,
+`-gpu host -feature -Vulkan`, NVIDIA RTX 4050/OpenGL ES 3.0, four virtual CPUs,
+4096 MB RAM and no snapshots. Its dedicated AVD has a 1280×800 physical buffer,
+160 dpi and 32-bit color; the driver changes the logical window size for each
+case. The installed SDK and unrelated AVDs are unchanged. This is a verified
+working configuration on this host, not a claim that all emulator graphics
+backends are fixed.
+
+A separate early Pixel Launcher ANR reported no focused window after input sent
+immediately following `sys.boot_completed`. The bootstrap now waits for System
+UI to draw before sending input and does not send the early unlock key event.
+The accepted matrix and interaction checks then completed without new ANRs or
+native emulator termination. The driver also rejects ANR-covered screenshots
+and stores failure diagnostics instead of accepting a fixed-delay capture.
+
+Representative captures are in [`images/releases/v0.16.4`](images/releases/v0.16.4).
+Physical fold/hinge posture, OEM cutouts, hardware graphics performance and
+tactile feedback remain unverified on real devices.
 
 Read-only upstream main checked at
 `1811d1fe032fd4a80240fd6bc5d04cee649a0afb`; no upstream-only changes were
