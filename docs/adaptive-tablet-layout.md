@@ -57,16 +57,18 @@ existing navigation/header source contracts. A debug APK exposes synthetic
 ScreenshotActivity data for captures without connecting real accounts.
 
 The emulator driver refuses physical devices and requires a dedicated CodexBar
-AVD. It records every tab, opens Settings, checks the header settings action is
-near the correct trailing edge, then returns to GitHub. Results and failure
-captures go into the requested output folder.
+AVD. It records the installed APK's identity, waits for stable UI hierarchies,
+rejects ANR overlays and new ANR events, records every tab, opens Settings,
+checks the header settings action is near the correct trailing edge, then
+verifies the GitHub header after returning. A capture without these checks is
+not accepted. Results, hierarchy XML and failure diagnostics go into the
+requested output folder. Configuration is applied once before initial app
+launch; tab changes and subsequent resizes exercise the retained app.
 
 ```powershell
 python scripts/verify-adaptive-layout.py --serial emulator-5582 --output output/tablet/en
 python scripts/verify-adaptive-layout.py --serial emulator-5582 --output output/tablet/ja --locale ja --case 800,1280 --case 1280,800
 python scripts/verify-adaptive-layout.py --serial emulator-5582 --output output/tablet/large-text --font-scale 1.3 --case 840,720 --case 1280,800
-# Alternative capture path when UI Automation is unavailable; inspect every image.
-python scripts/verify-adaptive-layout.py --serial emulator-5582 --output output/tablet/captures --capture-only
 ```
 
 The default matrix is 360×800, 600×900, 840×720, 800×1280, 1280×800,
@@ -75,7 +77,7 @@ hinge. Occluding hinges, tabletop posture, actual device graphics performance an
 the owner's final visual acceptance remain separate hardware checks. A failed or
 incomplete capture run must not be reported as a passed matrix.
 
-### Local verification, 2026-11-06
+### Initial local verification, 2026-11-06
 
 - Strict dependency verification, `:app:assembleDebug`, `:app:testDebugUnitTest`
   and `:app:lintDebug`: successful from a fresh local build directory.

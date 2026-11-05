@@ -20,7 +20,6 @@ parser.add_argument('--locale', choices=['en', 'ja'], default='en')
 parser.add_argument('--font-scale', type=float, default=1.0)
 parser.add_argument('--density', type=int, default=160)
 parser.add_argument('--baseline', action='store_true', help='Capture known old geometry without the regression assertion')
-parser.add_argument('--capture-only', action='store_true', help='Capture explicit demo destinations without UI Automation; requires visual review')
 parser.add_argument('--light', action='store_true', help='Capture the light theme')
 args = parser.parse_args()
 base = [args.adb, '-P', args.adb_port, '-s', args.serial]
@@ -37,10 +36,25 @@ def tree():
             continue
         root = ET.fromstring(adb('shell', 'cat', '/sdcard/codexbar-adaptive.xml'))
         (args.output / 'last-ui.xml').write_text(ET.tostring(root, encoding='unicode'), encoding='utf-8')
+        assert not any(n.get('resource-id') in ('android:id/aerr_close', 'android:id/aerr_wait')
+                       for n in root.iter('node')), 'Android ANR dialog is covering the app'
+        assert 'am_anr' not in adb('logcat', '-b', 'events', '-d', '-s', 'am_anr:V'), 'ANR occurred during this run'
         if any(n.get('package') == package for n in root.iter('node')):
             return root
         time.sleep(1)
     raise AssertionError('App is not visible')
+
+
+def settled():
+    previous = None
+    for _ in range(12):
+        root = tree()
+        signature = ET.tostring(root, encoding='unicode')
+        if signature == previous:
+            return root
+        previous = signature
+        time.sleep(.3)
+    raise AssertionError('UI hierarchy did not settle')
 
 def bounds(node):
     return list(map(int, re.findall(r'-?\d+', node.get('bounds'))))
@@ -59,6 +73,7 @@ def tap(text, description=False):
     time.sleep(.8)
 
 def capture(name):
+    assert 'am_anr' not in adb('logcat', '-b', 'events', '-d', '-s', 'am_anr:V'), 'ANR occurred before capture'
     data = subprocess.check_output(base + ['exec-out', 'screencap', '-p'], timeout=25)
     # Foldable AVDs can prefix a multiple-display warning on stdout.
     start = data.find(b'\x89PNG\r\n\x1a\n')
@@ -81,9 +96,16 @@ args.output.mkdir(parents=True, exist_ok=True)
 def failure_artifact(kind, error, traceback):
     (args.output / 'failure.txt').write_text(f'{kind.__name__}: {error}\n', encoding='utf-8')
     try:
-        capture('failure')
-        runtime = adb('logcat', '-d', '-t', '120', '-s', 'AndroidRuntime')
-        (args.output / 'failure-runtime.txt').write_text(runtime, encoding='utf-8')
+        # Failure captures intentionally bypass the success-path ANR guard.
+        data = subprocess.check_output(base + ['exec-out', 'screencap', '-p'], timeout=25)
+        start = data.find(b'\x89PNG\r\n\x1a\n')
+        if start >= 0:
+            (args.output / 'failure.png').write_bytes(data[start:])
+        for name, command in [('runtime', ['logcat', '-d', '-t', '2000']),
+                              ('events', ['logcat', '-b', 'events', '-d']),
+                              ('anr', ['shell', 'dumpsys', 'activity', 'lastanr']),
+                              ('windows', ['shell', 'dumpsys', 'window', 'windows'])]:
+            (args.output / f'failure-{name}.txt').write_text(adb(*command), encoding='utf-8')
     except Exception:
         pass
     sys.__excepthook__(kind, error, traceback)
@@ -92,33 +114,21 @@ copy = labels()
 cases = args.case or ['360,800', '600,900', '840,720', '800,1280', '1280,800', '1600,1000', '900,400']
 initial_width, initial_height = map(int, cases[0].split(','))
 initial_scale = args.density / 160
+# Configure once while the app is stopped; do not repeatedly cold-start every destination.
+adb('shell', 'am', 'force-stop', package)
 adb('shell', 'wm', 'size', f'{round(initial_width*initial_scale)}x{round(initial_height*initial_scale)}')
 adb('shell', 'wm', 'density', args.density)
 adb('shell', 'cmd', 'locale', 'set-app-locales', package, '--locales', args.locale)
 adb('shell', 'settings', 'put', 'system', 'font_scale', args.font_scale)
+adb('logcat', '-b', 'events', '-c')
+installed = adb('shell', 'pm', 'path', package).splitlines()[0].removeprefix('package:')
+(args.output / 'installed-apk.txt').write_text(adb('shell', 'sha256sum', installed) + '\n' +
+    adb('shell', 'dumpsys', 'package', package), encoding='utf-8')
 def launch(destination):
     adb('shell', 'am', 'start', '-S', '-W', '-n', package + '/.debug.ScreenshotActivity',
         '-f', '0x14000000', '--es', 'theme', 'LIQUID_GLASS', '--es', 'destination', destination,
         '--ez', 'dark_theme', 'false' if args.light else 'true',
         '--ez', 'seed_demo', 'true', '--ez', 'github_demo', 'true')
-
-if args.capture_only:
-    captures = []
-    for case in cases:
-        width, height = map(int, case.split(','))
-        scale = args.density / 160
-        adb('shell', 'wm', 'size', f'{round(width*scale)}x{round(height*scale)}')
-        adb('shell', 'wm', 'density', args.density)
-        for destination in ['dashboard', 'history', 'connections', 'github', 'settings']:
-            launch(destination)
-            time.sleep(3)
-            name = f'{width}x{height}-{args.locale}-{args.font_scale:g}-{destination}'
-            dimensions = capture(name)
-            captures.append({'case': case, 'locale': args.locale, 'font_scale': args.font_scale,
-                             'destination': destination, 'screen': dimensions, 'file': name + '.png'})
-            (args.output / 'captures.json').write_text(json.dumps(captures, ensure_ascii=False, indent=2), encoding='utf-8')
-            print('Captured', name, '(visual review required)', flush=True)
-    sys.exit(0)
 
 launch('dashboard')
 startup_deadline = time.monotonic() + 60
@@ -136,19 +146,19 @@ for case in cases:
     width, height = map(int, case.split(','))
     scale = args.density / 160
     adb('shell', 'wm', 'size', f'{round(width*scale)}x{round(height*scale)}')
-    adb('shell', 'wm', 'density', args.density)
-    time.sleep(2)
+    settled()
     prefix = f'{width}x{height}-{args.locale}-{args.font_scale:g}'
     row = {'case': case, 'locale': args.locale, 'font_scale': args.font_scale, 'pages': {}}
     for key in ['navigation_dashboard', 'navigation_trends', 'connections_title', 'github_dashboard_title']:
         label = copy[key]
         tap(label)
-        current = tree()
+        current = settled()
         gears = find(current, copy['settings_title'], description=True)
         assert gears, f'Settings action missing on {label}'
         gear = min(gears, key=lambda n: bounds(n)[1])
         rect = bounds(gear)
         pixel_width, pixel_height = capture(prefix + '-' + key)
+        (args.output / (prefix + '-' + key + '.xml')).write_text(ET.tostring(current, encoding='unicode'), encoding='utf-8')
         assert any(bounds(n)[1] < 160*scale and bounds(n)[0] < pixel_width
                    for n in find(current, label)), f'{label} header did not become visible'
         row['pages'][key] = {'settings_bounds': rect, 'screen': [pixel_width, pixel_height]}
@@ -156,12 +166,13 @@ for case in cases:
             allowance = (80 + max(0, width - 1440)/2)*scale
             assert pixel_width - rect[2] <= allowance, f'Header narrowed on {label}: {rect}, window={pixel_width}'
     tap(copy['settings_title'], description=True)
-    current = tree()
+    current = settled()
     assert find(current, copy['settings_title']), 'Settings pane did not open'
     capture(prefix + '-settings')
+    (args.output / (prefix + '-settings.xml')).write_text(ET.tostring(current, encoding='unicode'), encoding='utf-8')
     adb('shell', 'input', 'keyevent', 4)
     time.sleep(1)
-    assert find(tree(), 'GitHub'), 'Settings did not return to GitHub'
+    assert any(bounds(n)[1] < 160*scale for n in find(settled(), copy['github_dashboard_title'])), 'Settings did not return to GitHub header'
     results.append(row)
     (args.output / 'layout-results.json').write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding='utf-8')
     print('PASS', prefix, flush=True)
