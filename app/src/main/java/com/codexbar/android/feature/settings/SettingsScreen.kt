@@ -443,6 +443,8 @@ fun ConnectionsScreen(
         BoxWithConstraints(modifier = Modifier.fillMaxSize().pageContentWidth(AdaptivePageLayout.formWidth)) {
             val columns = adaptiveCardColumns(maxWidth.value,
                 420f * androidx.compose.ui.platform.LocalDensity.current.fontScale.coerceAtLeast(1f), gapDp = 16f, maximum = 2)
+            // Rebuild the span factory when expansion changes, invalidating its cached grid lines.
+            val expandedProvider = expandedProviderName.takeUnless { reordering }
             LazyVerticalGrid(
                 columns = GridCells.Fixed(columns), state = grid,
                 modifier = Modifier.fillMaxSize(),
@@ -479,7 +481,7 @@ fun ConnectionsScreen(
                 }
 
                 items(visibleProviders, key = { it.name }, span = { service ->
-                    GridItemSpan(if (!reordering && expandedProviderName == service.name) maxLineSpan else 1)
+                    GridItemSpan(if (expandedProvider == service.name) maxLineSpan else 1)
                 }) { service ->
                     val state = uiState.serviceStates[service] ?: ServiceCredentialState()
                     ServiceCredentialSection(
@@ -487,7 +489,7 @@ fun ConnectionsScreen(
                         modifier = Modifier.providerDragReorder(drag, service, visibleProviders),
                         reordering = reordering,
                         state = state,
-                        expanded = !reordering && expandedProviderName == service.name,
+                        expanded = expandedProvider == service.name,
                         onToggleExpanded = {
                             expandedProviderName = if (expandedProviderName == service.name) {
                                 null
