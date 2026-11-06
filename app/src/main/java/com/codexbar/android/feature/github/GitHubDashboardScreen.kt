@@ -122,7 +122,8 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
         if (page == GitHubPage.Profile || state.profile == null) {
             val profile = state.profile
             val widgets = dashboardWidgets
-            LazyVerticalGrid(columns = GridCells.Fixed(2), state = dashboardGrid, modifier = Modifier.fillMaxSize(),
+            LazyVerticalGrid(columns = GridCells.Fixed(2), state = dashboardGrid,
+                modifier = Modifier.fillMaxSize().pageContentWidth(AdaptivePageLayout.formWidth),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = headerHeight + 8.dp,
                     bottom = LocalBottomChromeInset.current + 32.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -203,7 +204,7 @@ internal fun GitHubDashboardScreen(viewModel: GitHubDashboardViewModel = hiltVie
             val shown = remember(entries, sort, state.repositoryActivity) {
                 sortRepositories(entries.orEmpty(), sort, state.repositoryActivity)
             }
-            LazyColumn(modifier = Modifier.fillMaxSize(),
+            LazyColumn(modifier = Modifier.fillMaxSize().pageContentWidth(AdaptivePageLayout.readingWidth),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = headerHeight + 8.dp,
                     bottom = LocalBottomChromeInset.current + 32.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {

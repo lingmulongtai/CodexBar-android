@@ -29,6 +29,8 @@ This document records the owner's direction for the Android interface. Liquid Gl
 
 ## Content and validation
 
+- Adapt to available window width, height and font scale using the [tablet layout contract](adaptive-tablet-layout.md). Header glass keeps the full usable width on every page; constrain only inner content. Short landscape windows keep readable single-pane content, and Settings forms retain their state when columns change. Keep the approved phone portrait styling.
+
 - Avoid redundant dark category banners such as “Connect AI providers” or “App settings”; keep actual settings and connection functions. The connection-count summary is translucent blue glass. The Usage services label is a centered, legible glass badge, while the Unsplash attribution retains its existing dark style.
 - Default buttons, including service refresh/connection management and safe QR scanning, use neutral Glisse-style glass with legible labels. Keep explicit semantic colors where requested.
 - Service details should use the same glass vocabulary as the rest of the app, including its outer surface and nested panels. Keep swipe-to-dismiss, Back, focus, text readability and actions intact.

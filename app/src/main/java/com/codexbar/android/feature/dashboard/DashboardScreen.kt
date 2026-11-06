@@ -72,6 +72,9 @@ import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.ui.components.CodexBarPanel
 import com.codexbar.android.ui.components.GlassHeaderOverlay
+import com.codexbar.android.ui.components.AdaptivePageLayout
+import com.codexbar.android.ui.components.adaptiveCardColumns
+import com.codexbar.android.ui.components.pageContentWidth
 import com.codexbar.android.ui.components.WallpaperFooter
 import com.codexbar.android.ui.components.LocalBottomChromeInset
 import com.codexbar.android.ui.components.providerDragReorder
@@ -79,7 +82,7 @@ import com.codexbar.android.ui.components.rememberProviderDragReorder
 import com.codexbar.android.ui.theme.CodexBarSpacing
 import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
 
-private const val TwoPaneMinWidthDp = 720f
+private const val TwoPaneMinWidthDp = 1120f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -152,10 +155,6 @@ private fun DashboardContent(
     var showOnlyAttention by rememberSaveable { mutableStateOf(false) }
     var reordering by rememberSaveable { mutableStateOf(false) }
     val swipeEnabled = LocalTopLevelSwipeEnabled.current
-    androidx.compose.runtime.DisposableEffect(reordering, selectedServiceName, swipeEnabled) {
-        swipeEnabled?.value = !reordering && selectedServiceName == null
-        onDispose { swipeEnabled?.value = true }
-    }
     val active = LocalPageActive.current
     BackHandler(enabled = active && reordering) { reordering = false }
     val snapshot = (uiState as? DashboardUiState.Content)?.snapshot
@@ -178,7 +177,12 @@ private fun DashboardContent(
     val updatedAt = snapshot?.generatedAt
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val useTwoPane = useTwoPaneDashboard(maxWidth.value)
+        val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
+        val useTwoPane = useTwoPaneDashboard(minOf(maxWidth, AdaptivePageLayout.overviewWidth).value, maxHeight.value, fontScale)
+        androidx.compose.runtime.DisposableEffect(reordering, selectedServiceName, useTwoPane, swipeEnabled) {
+            swipeEnabled?.value = !reordering && (useTwoPane || selectedServiceName == null)
+            onDispose { swipeEnabled?.value = true }
+        }
         GlassHeaderOverlay(header = {
             // On wide screens the navigation rail already carries the design's mark.
             DashboardHeader(
@@ -196,7 +200,7 @@ private fun DashboardContent(
             PullToRefreshBox(
                 isRefreshing = false,
                 onRefresh = onRefresh,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize().pageContentWidth()
             ) {
                 when (val state = uiState) {
                     is DashboardUiState.Loading -> {
@@ -267,11 +271,11 @@ private fun DashboardContent(
                                         hasCustomOrder = providerOrder.isNotEmpty(),
                                         onResetOrder = { onProviderOrderChange(emptyList()) },
                                         onReorder = reorder,
-                                        modifier = Modifier.weight(0.55f)
+                                        modifier = Modifier.weight(1f)
                                     )
                                     Box(
                                         modifier = Modifier
-                                            .weight(0.45f)
+                                            .width((AdaptivePageLayout.detailWidthDp * fontScale).dp)
                                             .fillMaxHeight()
                                             .padding(
                                                 start = CodexBarSpacing.small,
@@ -368,7 +372,7 @@ private fun CardList(
             AppThemeStyle.MATERIAL_3 -> 300.dp
             AppThemeStyle.LIQUID_GLASS -> 340.dp
         }
-        val columns = ((maxWidth - 32.dp) / cardMinWidth).toInt().coerceIn(1, 3)
+        val columns = adaptiveCardColumns(maxWidth.value, cardMinWidth.value * LocalDensity.current.fontScale.coerceAtLeast(1f))
         // A single column groups the providers into one list; wider grids use separate cards.
         val grouped = columns == 1
         val cardSpacing: Dp = when {
@@ -595,6 +599,8 @@ private fun EmptyState(onOpenConnections: () -> Unit, modifier: Modifier = Modif
     }
 }
 
-internal fun useTwoPaneDashboard(widthDp: Float): Boolean {
-    return widthDp >= TwoPaneMinWidthDp
+internal fun useTwoPaneDashboard(widthDp: Float, heightDp: Float, fontScale: Float = 1f): Boolean {
+    val scale = fontScale.coerceAtLeast(1f)
+    val minimumWidth = maxOf(TwoPaneMinWidthDp, (340f * 2 + AdaptivePageLayout.detailWidthDp) * scale + 44f)
+    return widthDp >= minimumWidth && heightDp >= 600f * scale.coerceAtMost(1.3f)
 }

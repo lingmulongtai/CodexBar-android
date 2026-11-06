@@ -90,6 +90,7 @@ fun GlassPageHeader(
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     val shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
+    val compactHeight = LocalAppWindowHeight.current < 480.dp
     val sharedHeight = LocalGlassHeaderHeight.current
     var naturalHeight by remember { mutableIntStateOf(0) }
     val onNaturalHeight = LocalGlassHeaderNaturalHeight.current
@@ -119,15 +120,16 @@ fun GlassPageHeader(
         )))
         CompositionLocalProvider(LocalContentColor provides Color.White) {
             Row(
-                Modifier.fillMaxWidth().clipToBounds().layout { measurable, constraints ->
+                Modifier.pageContentWidth().clipToBounds().layout { measurable, constraints ->
                     val child = measurable.measure(constraints.copy(minHeight = 0))
                     val animated = sharedHeight?.value?.takeIf { it > 0f }?.roundToInt() ?: child.height
                     val visible = constraints.constrainHeight(animated)
                     layout(child.width, visible, mapOf(NaturalGlassHeaderHeight to child.height,
                         VisibleGlassHeaderHeight to visible)) { child.placeRelative(0, 0) }
                 }.onSizeChanged { naturalHeight = it.height; onNaturalHeight(it.height) }
-                    .statusBarsPadding().heightIn(min = 72.dp)
-                    .padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 16.dp),
+                    .statusBarsPadding().heightIn(min = if (compactHeight) 56.dp else 72.dp)
+                    .padding(start = 20.dp, end = 12.dp, top = if (compactHeight) 6.dp else 12.dp,
+                        bottom = if (compactHeight) 8.dp else 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {

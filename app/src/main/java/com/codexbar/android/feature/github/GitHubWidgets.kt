@@ -123,7 +123,7 @@ internal fun GitHubWidgetPicker(state: GitHubDashboardState, headerHeight: Dp,
     val available = remember(state.repositories, widgets, search) {
         state.repositories.filter { it.fullName.contains(search.trim(), ignoreCase = true) }.take(100)
     }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp,
+    LazyColumn(Modifier.fillMaxSize().pageContentWidth(AdaptivePageLayout.readingWidth), contentPadding = PaddingValues(start = 16.dp, end = 16.dp,
         top = headerHeight + 8.dp, bottom = LocalBottomChromeInset.current + 32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (!searching) {

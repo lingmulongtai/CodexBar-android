@@ -54,6 +54,8 @@ import com.codexbar.android.core.presentation.QuotaPresentationSnapshot
 import com.codexbar.android.core.presentation.ServiceQuotaPresentation
 import com.codexbar.android.ui.components.GlassSegmentedControl
 import com.codexbar.android.ui.components.GlassHeaderOverlay
+import com.codexbar.android.ui.components.adaptiveCardColumns
+import com.codexbar.android.ui.components.pageContentWidth
 import com.codexbar.android.ui.components.LocalGlassCardBackdrop
 import com.codexbar.android.ui.components.LocalGlassHeaderBackdrop
 import com.codexbar.android.ui.components.WallpaperFooter
@@ -133,7 +135,7 @@ private fun AnalyticsContent(
             })
             // Keep the selector attached to the header while content slides underneath both.
             CompositionLocalProvider(LocalGlassCardBackdrop provides LocalGlassHeaderBackdrop.current) {
-                TrendsTabs(page, onPageChange, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+                TrendsTabs(page, onPageChange, Modifier.pageContentWidth().padding(horizontal = 16.dp, vertical = 4.dp))
             }
         }
     }, initialExtraHeight = 56.dp) { headerHeight ->
@@ -149,8 +151,9 @@ private fun AnalyticsContent(
                 val drag = rememberProviderDragReorder(grid, order) { edited ->
                     onProviderOrderChange(DashboardProviderOrder.reorder(providerOrder, services.map { it.service }, edited))
                 }
-                BoxWithConstraints(Modifier.fillMaxSize()) {
-                    val columns = minOf(rows.size.coerceAtLeast(1), (maxWidth / 340.dp).toInt().coerceAtLeast(1))
+                BoxWithConstraints(Modifier.fillMaxSize().pageContentWidth()) {
+                    val columns = minOf(rows.size.coerceAtLeast(1), adaptiveCardColumns(maxWidth.value,
+                        340f * androidx.compose.ui.platform.LocalDensity.current.fontScale.coerceAtLeast(1f), gapDp = 16f))
                     LazyVerticalGrid(columns = GridCells.Fixed(columns), state = grid, modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = headerHeight + 12.dp, bottom = 16.dp + LocalBottomChromeInset.current),
                         verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {

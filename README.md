@@ -12,9 +12,11 @@ Monitor AI service quotas from your Android device. Track Claude, Codex (ChatGPT
 
 <p align="center"><sub>Demo quota data is shown in screenshots. No account credentials are included.</sub></p>
 
-## Latest release — v0.16.3
+## Latest release — v0.16.4
 
-v0.16.3 fixes **release-only background task initialization**, which prevented the in-app updater in v0.16.1/v0.16.2 from starting. The optimized APK now explicitly retains WorkManager’s reflective constructor, and the release pipeline checks the actual DEX before publication. **For this recovery update, download CodexBar-Android-v0.16.3.apk with the GitHub app and install over the existing app once; do not uninstall.** Version code **48** keeps the production signer and saved data. Continuous pages, provider ordering, optional haptics and existing companions remain available. **Shared PC history, spend and remote settings require Windows v0.71.0 or later.** [Release notes and verification](docs/releases/v0.16.3.md) · [In-app updates](docs/in-app-updates.md)
+v0.16.4 improves **tablet, landscape and resizable-window layouts**. Headers stay full width on every page; Usage chooses readable overview/detail panes using width, height and font scale; Connections and Settings use adaptive columns. Continuous pages, provider ordering, optional haptics, saved connections and existing companions remain available. Version code **49** keeps the production signer and saved data. [Release notes and verification](docs/releases/v0.16.4.md) · [Adaptive layout](docs/adaptive-tablet-layout.md)
+
+**Recovery from v0.16.1/v0.16.2:** those optimized APKs cannot start their own updater. Download **CodexBar-Android-v0.16.4.apk** with the GitHub app and install over the existing app once; do not uninstall. The WorkManager constructor fix from v0.16.3 remains enforced by release checks. **Shared PC history, spend and remote settings require Windows v0.71.0 or later.** [In-app updates](docs/in-app-updates.md)
 
 ![Tablet PC spend dashboard with synthetic data](docs/images/mobile-dashboard/tablet-spend.png)
 
@@ -22,7 +24,7 @@ v0.16.3 fixes **release-only background task initialization**, which prevented t
 
 Liquid Glass supports long-press-and-slide tabs and switches, native glass sliders, daily Unsplash photography, and consistent settings, connection and analytics controls. The default six-photo rotation needs no key; optional personal Editorial keys are encrypted on the device. [Photography and privacy](docs/daily-wallpaper.md) · [Input verification](docs/liquid-glass-glisse.md)
 
-History and Spend share a **Trends** tab. The GitHub tab shows profile activity, a contribution calendar and repository shortcuts; available private data depends on the account and granted permissions. [Release notes](docs/releases/v0.16.3.md)
+History and Spend share a **Trends** tab. The GitHub tab shows profile activity, a contribution calendar and repository shortcuts; available private data depends on the account and granted permissions. [Release notes](docs/releases/v0.16.4.md)
 
 <p align="center">
   <img src="docs/images/releases/v0.14.0/usage-dark.png" width="250" alt="Liquid Glass usage dashboard, dark appearance" />
@@ -200,7 +202,7 @@ Claude does not expose a supported third-party Android device-code flow for this
 
 1. Install Claude Code using [Anthropic's current setup instructions](https://code.claude.com/docs/en/setup), complete browser sign-in, then finish the first-run and folder-trust prompts from `~/.codexbar/claude-workspace` as described in the [companion setup guide](companion/claude/README.md).
 2. Enter `/usage` and confirm that **Current session** appears.
-3. Download `CodexBar-Claude-Companion-v0.16.3.zip` from the same Release as the APK and extract it.
+3. Download `CodexBar-Claude-Companion-v0.16.4.zip` from the same Release as the APK and extract it.
 4. On Windows, run `start-windows.cmd`. On macOS or Linux, run `chmod +x start-macos-linux.sh` once and then `./start-macos-linux.sh`.
 5. Keep the phone and computer on the same trusted Wi-Fi, or use the [Tailscale setup](companion/claude/README.md#connect-across-networks-with-tailscale) for different networks. If the computer firewall prompts, permit Node.js on private networks only. In Claude under **Connections**, tap **Scan QR securely in CodexBar** and scan the displayed QR inside the app. Do not use the system camera. If Google Play services cannot open the scanner, paste the `CBCLAUDE1...` pairing code, then tap **Pair & verify Claude companion**.
 
@@ -226,7 +228,7 @@ Do not extract bearer tokens from browser DevTools unless you are debugging loca
 
 #### Optional private Codex telemetry companion
 
-OpenAI's subscription quota response does not contain local Codex CLI context-window or token-count history. To add those insights without uploading session content, install `CodexBar-Codex-Telemetry-Companion-v0.16.3.zip` from the same GitHub Release as the app:
+OpenAI's subscription quota response does not contain local Codex CLI context-window or token-count history. To add those insights without uploading session content, install `CodexBar-Codex-Telemetry-Companion-v0.16.4.zip` from the same GitHub Release as the app:
 
 1. Install Node.js 20 or newer on the computer where Codex CLI or Codex desktop stores `~/.codex/sessions`.
 2. Extract the companion archive. On Windows, run `start-windows.cmd`; on macOS or Linux, run `./start-macos-linux.sh`.
@@ -237,7 +239,7 @@ The scanner is bounded to recent session files and reads only `token_count` plus
 
 ### Antigravity
 
-Download `CodexBar-Antigravity-Companion-v0.16.3.zip` from the same Release as the APK. The Windows [Antigravity companion](companion/antigravity/README.md) reads model quotas and reset times from the running, signed-in Antigravity IDE. In **Connections → Antigravity**, scan its private QR with the in-app scanner. This account usage is separate from Gemini CLI and Claude subscriptions.
+Download `CodexBar-Antigravity-Companion-v0.16.4.zip` from the same Release as the APK. The Windows [Antigravity companion](companion/antigravity/README.md) reads model quotas and reset times from the running, signed-in Antigravity IDE. In **Connections → Antigravity**, scan its private QR with the in-app scanner. This account usage is separate from Gemini CLI and Claude subscriptions.
 
 Keep Antigravity open and the PC awake. The optional tray resident starts at sign-in and recovers after a crash. For different networks, connect the phone and PC to Tailscale and pair using the PC's `100.x` address on port `43824`. Google credentials, conversations and files stay on the PC. Only explicitly reported model quotas are shown; weekly limits and credit balances are not inferred. These internal IDE endpoints may change after an Antigravity update.
 
@@ -274,7 +276,7 @@ gemini
 ```
 
 2. Launch the official CLI from `~/.codexbar/gemini-workspace`, complete Google's sign-in and folder-trust prompts, verify `/model` shows usage limits, then exit it. Create that workspace first if needed.
-3. Download `CodexBar-Gemini-Companion-v0.16.3.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
+3. Download `CodexBar-Gemini-Companion-v0.16.4.zip` from this repository's Release and extract it. Do not run a companion archive from another source.
 4. On Windows, double-click `start-windows.cmd`. On macOS or Linux, run `./start-macos-linux.sh`. The first launch installs only the versions pinned in `package-lock.json`.
 5. Keep the phone and computer on the same trusted Wi-Fi. If the computer firewall prompts, permit private networks only.
 6. Scan the displayed QR code with the phone and choose CodexBar, or paste the complete `codexbar://gemini-pair?...` value into the Gemini card.

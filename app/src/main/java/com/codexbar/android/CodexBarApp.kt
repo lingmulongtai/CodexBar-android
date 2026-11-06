@@ -19,6 +19,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -83,10 +87,14 @@ fun CodexBarApp(
     val tabs = rememberPagerState(initialPage = initial.tab) { AppDestination.entries.size }
     val panes = rememberPagerState(initialPage = initial.pane) { 3 }
     val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     var navigation by remember { mutableStateOf<Job?>(null) }
     var navigationRequest by remember { mutableStateOf<Pair<Long, PageLocation>?>(null) }
     var navigationGeneration by remember { mutableLongStateOf(0L) }
     fun navigate(location: PageLocation) {
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
         navigation?.cancel()
         val request = ++navigationGeneration to location
         navigationRequest = request
@@ -160,8 +168,11 @@ fun CodexBarApp(
         }
     }
 
+    val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     ProvideAppHaptics(configuration.preferencesLoaded && configuration.hapticFeedbackEnabled) {
-    BoxWithConstraints(modifier.fillMaxSize().background(themeProfile.backgroundBrush)) {
+    BoxWithConstraints(modifier.fillMaxSize().background(themeProfile.backgroundBrush)
+        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)).imePadding()) {
+        CompositionLocalProvider(com.codexbar.android.ui.components.LocalAppWindowHeight provides maxHeight) {
         when {
             themeProfile.floatingNavigation -> {
                 val wallpaperModel: DailyWallpaperViewModel = hiltViewModel()
@@ -179,7 +190,8 @@ fun CodexBarApp(
                 val backdrop = rememberGlassBackdrop()
                 val cardBackdrop = rememberGlassBackdrop()
                 Box(Modifier.fillMaxSize().glassBackdropSource(cardBackdrop)) { LiquidGlassWallpaper(wallpaper) }
-                val bottomInset = GlassBarHeight + GlassBarMargin * 2 + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                val bottomInset = if (keyboardVisible) 0.dp else
+                    GlassBarHeight + GlassBarMargin * 2 + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                 CompositionLocalProvider(LocalBottomChromeInset provides bottomInset,
                     LocalGlassCardBackdrop provides cardBackdrop, LocalWallpaperState provides wallpaper) {
                     Box(Modifier.fillMaxSize().glassBackdropSource(backdrop)) {
@@ -187,7 +199,7 @@ fun CodexBarApp(
                         pages(Modifier.fillMaxSize())
                     }
                 }
-                GlassNavigationBar(entries, backdrop,
+                if (!keyboardVisible) GlassNavigationBar(entries, backdrop,
                     onRefresh = if (tabs.currentPage == 3 && panes.currentPage == 0) ({ githubViewModel.refresh() })
                         else dashboardViewModel?.let { model -> { model.refresh() } },
                     modifier = Modifier.align(Alignment.BottomCenter),
@@ -200,8 +212,9 @@ fun CodexBarApp(
             }
             else -> Column(Modifier.fillMaxSize()) {
                 pages(Modifier.weight(1f).fillMaxWidth())
-                AppBottomBar(entries)
+                if (!keyboardVisible) AppBottomBar(entries)
             }
+        }
         }
     }
     }
