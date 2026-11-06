@@ -38,6 +38,11 @@ jobs:
   browser:
     name: Browser checks (${{ matrix.browser }})
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      # Match the pinned Playwright package; browsers and OS dependencies are included.
+      image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:2f05f8a734509a7b3f26a912639488ee08f58a7b292d14d62271bcff9038768f
+      options: --ipc=host --init
     strategy:
       fail-fast: false
       matrix:
@@ -56,10 +61,6 @@ jobs:
       - name: Install browser check dependencies
         working-directory: .github/site-checks
         run: npm ci
-
-      - name: Install browser
-        working-directory: .github/site-checks
-        run: npx playwright install --with-deps ${{ matrix.browser }}
 
       - name: Verify visitor journeys and accessibility
         working-directory: .github/site-checks

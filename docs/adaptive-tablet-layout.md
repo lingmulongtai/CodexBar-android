@@ -102,6 +102,11 @@ incomplete capture run must not be reported as a passed matrix.
 - Website browser checks: all eight tests pass in each of Chromium, Firefox and
   WebKit. The Firefox screenshot-tour check waits for the requested image to
   finish decoding, in addition to waiting for the busy indicator to clear.
+  A prior CI run spent about 48 minutes fetching Ubuntu packages from the Azure
+  archive mirror before starting browser tests. Browser jobs now use the official
+  Playwright 1.64.1 Noble image, pinned by registry digest and matching the locked
+  npm dependency, with browsers and system dependencies already installed. The
+  same three browser suites remain required; each job has a 15-minute bound.
 
 ### Emulator failure diagnosis and working configuration
 
