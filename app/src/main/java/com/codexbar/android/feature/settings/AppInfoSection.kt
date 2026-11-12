@@ -3,10 +3,18 @@ package com.codexbar.android.feature.settings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Android
+import androidx.compose.material.icons.rounded.DesktopWindows
+import androidx.compose.material.icons.rounded.NewReleases
+import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -14,8 +22,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -46,14 +57,34 @@ internal fun AppInfoSection(viewModel: AppInfoViewModel = hiltViewModel()) {
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(stringResource(R.string.app_info_title), style = MaterialTheme.typography.titleMedium)
-            Text(stringResource(R.string.app_info_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE),
-                style = MaterialTheme.typography.bodyMedium)
-            CodexBarOutlinedButton(onClick = { open(ANDROID_PROJECT) }) { Text(stringResource(R.string.app_info_android_project)) }
-            CodexBarOutlinedButton(onClick = { open(WINDOWS_PROJECT) }) { Text(stringResource(R.string.app_info_windows_project)) }
-            CodexBarOutlinedButton(onClick = { open(RELEASES) }) { Text(stringResource(R.string.app_info_releases)) }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painter = painterResource(R.drawable.codexbar_icon_monochrome),
+                    contentDescription = null,
+                    modifier = Modifier.size(44.dp).graphicsLayer {
+                        // The adaptive icon glyph has a transparent safe margin around the mark.
+                        scaleX = 1.45f
+                        scaleY = 1.45f
+                    },
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(stringResource(R.string.app_info_title), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.app_info_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE),
+                        style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            CodexBarOutlinedButton(onClick = { open(ANDROID_PROJECT) }) {
+                SettingsIconLabel(stringResource(R.string.app_info_android_project), Icons.Rounded.Android)
+            }
+            CodexBarOutlinedButton(onClick = { open(WINDOWS_PROJECT) }) {
+                SettingsIconLabel(stringResource(R.string.app_info_windows_project), Icons.Rounded.DesktopWindows)
+            }
+            CodexBarOutlinedButton(onClick = { open(RELEASES) }) {
+                SettingsIconLabel(stringResource(R.string.app_info_releases), Icons.Rounded.NewReleases)
+            }
             CodexBarButton(onClick = viewModel::checkForUpdates, enabled = !state.checking) {
-                Text(stringResource(R.string.app_info_check_updates))
+                SettingsIconLabel(stringResource(R.string.app_info_check_updates), Icons.Rounded.SystemUpdate)
             }
             if (state.checking) {
                 CircularProgressIndicator(modifier = Modifier.padding(4.dp))

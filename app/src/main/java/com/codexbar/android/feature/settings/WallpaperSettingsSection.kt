@@ -6,6 +6,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -54,7 +57,8 @@ fun WallpaperSettingsSection(model: DailyWallpaperViewModel = hiltViewModel()) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(stringResource(R.string.wallpaper_title), style = MaterialTheme.typography.titleMedium)
+                    SettingsIconLabel(stringResource(R.string.wallpaper_title), Icons.Rounded.Wallpaper,
+                        MaterialTheme.typography.titleMedium)
                     Text(stringResource(R.string.wallpaper_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 CodexBarSwitch(state.preferences.enabled, { enabled ->
@@ -78,7 +82,7 @@ fun WallpaperSettingsSection(model: DailyWallpaperViewModel = hiltViewModel()) {
                 }
             }
             CodexBarOutlinedButton(onClick = { model.refresh(true) }, enabled = state.preferences.enabled && state.status != WallpaperStatus.Updating) {
-                Text(stringResource(R.string.wallpaper_refresh))
+                SettingsIconLabel(stringResource(R.string.wallpaper_refresh), Icons.Rounded.Refresh)
             }
             CodexBarTextButton(onClick = { showApi = !showApi }) { Text(stringResource(R.string.wallpaper_api_settings)) }
             if (failed) Text(stringResource(R.string.wallpaper_key_invalid), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)

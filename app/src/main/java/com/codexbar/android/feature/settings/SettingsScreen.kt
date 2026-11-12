@@ -60,7 +60,15 @@ import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Vibration
+import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -107,6 +115,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -300,7 +309,7 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         val hapticLabel = stringResource(R.string.haptic_feedback_title)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(hapticLabel, style = MaterialTheme.typography.titleMedium)
+                            SettingsIconLabel(hapticLabel, Icons.Rounded.Vibration, MaterialTheme.typography.titleMedium)
                             Text(stringResource(R.string.haptic_feedback_description), style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -330,12 +339,16 @@ fun SettingsScreen(
                 ) }
 
                 key("developer") {
-                com.codexbar.android.ui.components.CodexBarCard(onClick = onOpenDeveloperSettings, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(stringResource(R.string.developer_settings_title), style = MaterialTheme.typography.titleMedium)
-                        Text(stringResource(R.string.developer_settings_summary), style = MaterialTheme.typography.bodyMedium)
+                    Card(onClick = onOpenDeveloperSettings, modifier = Modifier.fillMaxWidth()) {
+                        Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(stringResource(R.string.developer_settings_title), style = MaterialTheme.typography.titleMedium)
+                                Text(stringResource(R.string.developer_settings_summary), style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
                     }
-                }
                 }
                 key("about") { AppInfoSection() }
             }
@@ -702,10 +715,8 @@ private fun LanguageSection(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = stringResource(R.string.language_title),
-                style = MaterialTheme.typography.titleMedium
-            )
+            SettingsIconLabel(stringResource(R.string.language_title), Icons.Rounded.Language,
+                MaterialTheme.typography.titleMedium)
             Text(
                 text = stringResource(R.string.language_description),
                 style = MaterialTheme.typography.bodySmall,
@@ -2198,10 +2209,8 @@ private fun RefreshIntervalSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(
-                        text = stringResource(R.string.background_refresh_title),
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                    SettingsIconLabel(stringResource(R.string.background_refresh_title), Icons.Rounded.Refresh,
+                        MaterialTheme.typography.titleMedium)
                     Text(
                         text = if (automaticRefresh) {
                             stringResource(
@@ -2302,10 +2311,8 @@ private fun NotificationsSection(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = stringResource(R.string.notifications_title),
-                style = MaterialTheme.typography.titleLarge
-            )
+            SettingsIconLabel(stringResource(R.string.notifications_title), Icons.Rounded.Notifications,
+                MaterialTheme.typography.titleLarge)
             Text(
                 text = stringResource(R.string.notifications_description),
                 style = MaterialTheme.typography.bodySmall,
@@ -2342,13 +2349,14 @@ private fun NotificationsSection(
                     color = MaterialTheme.colorScheme.error
                 )
                 TextButton(onClick = onOpenNotificationSettings) {
-                    Text(stringResource(R.string.action_open_notification_settings))
+                    SettingsIconLabel(stringResource(R.string.action_open_notification_settings), Icons.AutoMirrored.Rounded.OpenInNew)
                 }
             }
 
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(stringResource(R.string.notifications_reset_title), style = MaterialTheme.typography.titleMedium)
+                    SettingsIconLabel(stringResource(R.string.notifications_reset_title), Icons.Rounded.NotificationsActive,
+                        MaterialTheme.typography.titleMedium)
                     Text(stringResource(R.string.notifications_reset_description), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -2566,13 +2574,12 @@ private fun PrivacySection(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = stringResource(R.string.privacy_title),
-                style = MaterialTheme.typography.titleMedium
-            )
+            SettingsIconLabel(stringResource(R.string.privacy_title), Icons.Rounded.Security,
+                MaterialTheme.typography.titleMedium)
 
             PrivacyToggle(
                 title = stringResource(R.string.privacy_screen_title),
+                icon = Icons.Rounded.VisibilityOff,
                 subtitle = stringResource(R.string.privacy_screen_description),
                 checked = settings.screenPrivacyEnabled,
                 onCheckedChange = {
@@ -2581,6 +2588,7 @@ private fun PrivacySection(
             )
             PrivacyToggle(
                 title = stringResource(R.string.privacy_lock_screen_title),
+                icon = Icons.Rounded.Lock,
                 subtitle = stringResource(R.string.privacy_lock_screen_description),
                 checked = settings.lockScreenRedactionEnabled,
                 onCheckedChange = {
@@ -2589,6 +2597,7 @@ private fun PrivacySection(
             )
             PrivacyToggle(
                 title = stringResource(R.string.privacy_notification_title),
+                icon = Icons.Rounded.Notifications,
                 subtitle = stringResource(R.string.privacy_notification_description),
                 checked = settings.notificationRedactionEnabled,
                 onCheckedChange = {
@@ -2604,10 +2613,11 @@ private fun PrivacySection(
                     openAppNotificationSettings(context)
                 }
             }) {
-                Text(stringResource(R.string.privacy_lock_screen_system_settings))
+                SettingsIconLabel(stringResource(R.string.privacy_lock_screen_system_settings), Icons.AutoMirrored.Rounded.OpenInNew)
             }
             PrivacyToggle(
                 title = stringResource(R.string.privacy_widget_title),
+                icon = Icons.Rounded.Widgets,
                 subtitle = stringResource(R.string.privacy_widget_description),
                 checked = settings.widgetRedactionEnabled,
                 onCheckedChange = {
@@ -2621,6 +2631,7 @@ private fun PrivacySection(
 @Composable
 private fun PrivacyToggle(
     title: String,
+    icon: ImageVector,
     subtitle: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
@@ -2631,10 +2642,7 @@ private fun PrivacyToggle(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium
-            )
+            SettingsIconLabel(title, icon, MaterialTheme.typography.bodyMedium)
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,

@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
@@ -222,17 +223,17 @@ private fun GlassTabRow(
     val latestEntries by rememberUpdatedState(entries)
     val lensBackdrop = rememberGlassBackdrop()
     var dragPosition by remember { mutableStateOf<Float?>(null) }
-    var pressedIndex by remember { mutableStateOf<Int?>(null) }
-    GlassLiftHaptics(pressedIndex != null || dragPosition != null)
+    var selectedTabPressed by remember { mutableStateOf(false) }
+    val lifted = selectedTabPressed || dragPosition != null
+    GlassLiftHaptics(lifted)
     var anchor by remember { mutableStateOf(0f) }
     var downX by remember { mutableStateOf(0f) }
-    var movement by remember { mutableStateOf(0f) }
     val selectedIndex = entries.indexOfFirst { it.selected }.coerceAtLeast(0)
-    val target = dragPosition ?: pressedIndex?.toFloat() ?: selectedIndex.toFloat()
+    val target = dragPosition ?: selectedIndex.toFloat()
     val settledPosition by animateFloatAsState(target,
         spring(dampingRatio = if (dragPosition != null) 0.94f else 0.92f,
             stiffness = if (dragPosition != null) 2500f else 1024f), label = "glass_tab_position")
-    val lift by animateFloatAsState(if (dragPosition != null || pressedIndex != null) 1f else 0f,
+    val lift by animateFloatAsState(if (lifted) 1f else 0f,
         spring(dampingRatio = 0.92f, stiffness = 676f), label = "glass_tab_lift")
     val selectedColor = if (profile.isDark) Color(0xFF0091FF) else Color(0xFF0088FF)
     BoxWithConstraints(
@@ -242,23 +243,19 @@ private fun GlassTabRow(
                     val down = awaitFirstDown(requireUnconsumed = false)
                     val inset = 4.dp.toPx()
                     downX = down.position.x
-                    pressedIndex = glassTabPosition(down.position.x - inset, size.width - 2 * inset,
+                    val index = glassTabPosition(downX - inset, size.width - 2 * inset,
                         latestEntries.size, rtl).roundToInt()
-                    try { waitForUpOrCancellation() } finally { pressedIndex = null }
+                    anchor = index.toFloat()
+                    selectedTabPressed = latestEntries[index].selected
+                    try { waitForUpOrCancellation() } finally { selectedTabPressed = false }
                 }
             }
             .pointerInput(entries.size, rtl) {
                 detectHorizontalDragGestures(
-                    onDragStart = {
-                        val inset = 4.dp.toPx()
-                        anchor = glassTabPosition(downX - inset, size.width - 2 * inset,
-                            latestEntries.size, rtl).roundToInt().toFloat()
-                        movement = 0f
-                        dragPosition = anchor
-                    },
+                    onDragStart = { dragPosition = anchor },
                     onHorizontalDrag = { change, _ ->
                         change.consume()
-                        movement = change.position.x - downX
+                        val movement = change.position.x - downX
                         val slot = (size.width - 8.dp.toPx()) / latestEntries.size
                         dragPosition = glassTabDragPosition(anchor, movement, slot, latestEntries.size, rtl)
                     },
@@ -275,6 +272,7 @@ private fun GlassTabRow(
         val logical = if (dragPosition != null || pagePosition == null) settledPosition
             else pagePosition().coerceIn(0f, entries.lastIndex.toFloat())
         val visual = if (rtl) entries.lastIndex - logical else logical
+        val liftHeight = 16.dp * lift
         // Keep the source independent from the lens to avoid recording it recursively.
         Box(Modifier.fillMaxSize().glassBackdropSource(lensBackdrop)) {
             GlassSurface(backdrop, CircleShape, glassTint, glassFallback, rim,
@@ -283,7 +281,7 @@ private fun GlassTabRow(
                 elevation = if (profile.isDark) 0.dp else 1.dp) {}
             Row(Modifier.fillMaxSize().padding(4.dp)) {
                 entries.forEachIndexed { index, entry ->
-                    val highlighted = index == (dragPosition?.roundToInt() ?: pressedIndex ?: selectedIndex)
+                    val highlighted = index == (dragPosition?.roundToInt() ?: selectedIndex)
                     val tint = if (highlighted) selectedColor else colors.onSurface
                     val interaction = remember { MutableInteractionSource() }
                     val focused by interaction.collectIsFocusedAsState()
@@ -311,13 +309,14 @@ private fun GlassTabRow(
             rim = Color.White.copy(alpha = if (profile.isDark) 0.18f else 0.45f),
             blurRadius = 0.1.dp, refraction = 0.55f * lift, elevation = lift.dp * if (profile.isDark) 0 else 7,
             modifier = Modifier.align(AbsoluteAlignment.TopLeft)
-                .width(cell + 24.dp * lift)
-                .height((GlassBarHeight - 8.dp) * (1f + lift * (16f / 52f)))
                 .absoluteOffset {
-                    val extraHeight = (GlassBarHeight - 8.dp).toPx() * lift * (16f / 52f)
                     IntOffset((4.dp.toPx() + cell.toPx() * visual - 12.dp.toPx() * lift).roundToInt(),
-                        (4.dp.toPx() - extraHeight / 2f).roundToInt())
+                        (4.dp.toPx() - liftHeight.toPx() / 2f).roundToInt())
                 }
+                .width(cell + 24.dp * lift)
+                // Let the lens draw past both edges of the tab row while it lifts.
+                .wrapContentHeight(Alignment.Top, unbounded = true)
+                .height(GlassBarHeight - 8.dp + liftHeight)
         ) {}
     }
 }
