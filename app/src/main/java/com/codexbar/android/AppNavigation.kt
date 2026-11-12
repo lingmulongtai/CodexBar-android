@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
@@ -72,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.lerp
 import com.codexbar.android.core.domain.model.AppThemeStyle
 import com.codexbar.android.ui.components.BrandGlyph
 import com.codexbar.android.ui.components.GlassBackdrop
@@ -222,17 +224,18 @@ private fun GlassTabRow(
     val latestEntries by rememberUpdatedState(entries)
     val lensBackdrop = rememberGlassBackdrop()
     var dragPosition by remember { mutableStateOf<Float?>(null) }
-    var pressedIndex by remember { mutableStateOf<Int?>(null) }
-    GlassLiftHaptics(pressedIndex != null || dragPosition != null)
+    var pressedPosition by remember { mutableStateOf<Float?>(null) }
+    val pressedIndex = pressedPosition?.roundToInt()
+    val lifted = pressedPosition != null || dragPosition != null
+    GlassLiftHaptics(lifted)
     var anchor by remember { mutableStateOf(0f) }
     var downX by remember { mutableStateOf(0f) }
-    var movement by remember { mutableStateOf(0f) }
     val selectedIndex = entries.indexOfFirst { it.selected }.coerceAtLeast(0)
-    val target = dragPosition ?: pressedIndex?.toFloat() ?: selectedIndex.toFloat()
+    val target = dragPosition ?: pressedPosition ?: selectedIndex.toFloat()
     val settledPosition by animateFloatAsState(target,
         spring(dampingRatio = if (dragPosition != null) 0.94f else 0.92f,
             stiffness = if (dragPosition != null) 2500f else 1024f), label = "glass_tab_position")
-    val lift by animateFloatAsState(if (dragPosition != null || pressedIndex != null) 1f else 0f,
+    val lift by animateFloatAsState(if (lifted) 1f else 0f,
         spring(dampingRatio = 0.92f, stiffness = 676f), label = "glass_tab_lift")
     val selectedColor = if (profile.isDark) Color(0xFF0091FF) else Color(0xFF0088FF)
     BoxWithConstraints(
@@ -242,23 +245,20 @@ private fun GlassTabRow(
                     val down = awaitFirstDown(requireUnconsumed = false)
                     val inset = 4.dp.toPx()
                     downX = down.position.x
-                    pressedIndex = glassTabPosition(down.position.x - inset, size.width - 2 * inset,
-                        latestEntries.size, rtl).roundToInt()
-                    try { waitForUpOrCancellation() } finally { pressedIndex = null }
+                    val position = glassTabPosition(downX - inset, size.width - 2 * inset,
+                        latestEntries.size, rtl)
+                    val index = position.roundToInt()
+                    anchor = if (latestEntries[index].selected) index.toFloat() else position
+                    pressedPosition = anchor
+                    try { waitForUpOrCancellation() } finally { pressedPosition = null }
                 }
             }
             .pointerInput(entries.size, rtl) {
                 detectHorizontalDragGestures(
-                    onDragStart = {
-                        val inset = 4.dp.toPx()
-                        anchor = glassTabPosition(downX - inset, size.width - 2 * inset,
-                            latestEntries.size, rtl).roundToInt().toFloat()
-                        movement = 0f
-                        dragPosition = anchor
-                    },
+                    onDragStart = { dragPosition = anchor },
                     onHorizontalDrag = { change, _ ->
                         change.consume()
-                        movement = change.position.x - downX
+                        val movement = change.position.x - downX
                         val slot = (size.width - 8.dp.toPx()) / latestEntries.size
                         dragPosition = glassTabDragPosition(anchor, movement, slot, latestEntries.size, rtl)
                     },
@@ -272,9 +272,12 @@ private fun GlassTabRow(
             }
     ) {
         val cell = (maxWidth - 8.dp) / entries.size
-        val logical = if (dragPosition != null || pagePosition == null) settledPosition
-            else pagePosition().coerceIn(0f, entries.lastIndex.toFloat())
+        val logical = pagePosition?.let {
+            // Ease between pager tracking and the touch position as the lens lifts and settles.
+            lerp(it().coerceIn(0f, entries.lastIndex.toFloat()), settledPosition, lift.coerceIn(0f, 1f))
+        } ?: settledPosition
         val visual = if (rtl) entries.lastIndex - logical else logical
+        val liftHeight = 16.dp * lift
         // Keep the source independent from the lens to avoid recording it recursively.
         Box(Modifier.fillMaxSize().glassBackdropSource(lensBackdrop)) {
             GlassSurface(backdrop, CircleShape, glassTint, glassFallback, rim,
@@ -311,13 +314,14 @@ private fun GlassTabRow(
             rim = Color.White.copy(alpha = if (profile.isDark) 0.18f else 0.45f),
             blurRadius = 0.1.dp, refraction = 0.55f * lift, elevation = lift.dp * if (profile.isDark) 0 else 7,
             modifier = Modifier.align(AbsoluteAlignment.TopLeft)
-                .width(cell + 24.dp * lift)
-                .height((GlassBarHeight - 8.dp) * (1f + lift * (16f / 52f)))
                 .absoluteOffset {
-                    val extraHeight = (GlassBarHeight - 8.dp).toPx() * lift * (16f / 52f)
                     IntOffset((4.dp.toPx() + cell.toPx() * visual - 12.dp.toPx() * lift).roundToInt(),
-                        (4.dp.toPx() - extraHeight / 2f).roundToInt())
+                        (4.dp.toPx() - liftHeight.toPx() / 2f).roundToInt())
                 }
+                .width(cell + 24.dp * lift)
+                // Let the lens draw past both edges of the tab row while it lifts.
+                .wrapContentHeight(Alignment.Top, unbounded = true)
+                .height(GlassBarHeight - 8.dp + liftHeight)
         ) {}
     }
 }
