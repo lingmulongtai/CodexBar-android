@@ -330,12 +330,12 @@ fun SettingsScreen(
                 ) }
 
                 key("developer") {
-                com.codexbar.android.ui.components.CodexBarCard(onClick = onOpenDeveloperSettings, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(stringResource(R.string.developer_settings_title), style = MaterialTheme.typography.titleMedium)
-                        Text(stringResource(R.string.developer_settings_summary), style = MaterialTheme.typography.bodyMedium)
+                    Card(onClick = onOpenDeveloperSettings, modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(stringResource(R.string.developer_settings_title), style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.developer_settings_summary), style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
-                }
                 }
                 key("about") { AppInfoSection() }
             }
