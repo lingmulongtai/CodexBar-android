@@ -203,7 +203,8 @@ fun CodexBarApp(
                     onRefresh = if (tabs.currentPage == 3 && panes.currentPage == 0) ({ githubViewModel.refresh() })
                         else dashboardViewModel?.let { model -> { model.refresh() } },
                     modifier = Modifier.align(Alignment.BottomCenter),
-                    pagePosition = { tabs.currentPage + tabs.currentPageOffsetFraction })
+                    pagePosition = { tabs.currentPage + tabs.currentPageOffsetFraction },
+                    requestedTab = { navigationRequest?.second?.tab })
             }
             useExpandedNavigation(maxWidth.value) -> Row(Modifier.fillMaxSize()) {
                 AppNavigationRail(entries)
