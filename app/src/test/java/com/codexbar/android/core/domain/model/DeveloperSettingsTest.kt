@@ -15,12 +15,19 @@ class DeveloperSettingsTest {
         assertEquals(.25f, AppAnimationSpeed.normalize(0f), 0f)
         assertEquals(3f, AppAnimationSpeed.normalize(10f), 0f)
     }
-    @Test fun `saved settings retain independent groups and reset exactly to inherited defaults`() {
+    @Test fun `containers use the tuned default when no container settings are stored`() {
+        val expected = GlassTuning(frost = 8f, bend = .7f, dispersion = .3f, shine = .15f, saturation = 1.4f, tint = .2f, reach = 1f)
+        assertEquals(expected, DeveloperSettings().tuning(GlassSurfaceGroup.CONTAINERS))
+        assertEquals(expected, Json.decodeFromString<DeveloperSettings>("{}").tuning(GlassSurfaceGroup.CONTAINERS))
+        assertEquals(expected, Json.decodeFromString<DeveloperSettings>("""{"animationSpeed":2}""").containers)
+    }
+    @Test fun `saved settings retain independent groups and reset only the selected group`() {
         val saved = DeveloperSettings(animationSpeed = 2f, containers = GlassTuning(frost = 0f, tint = .3f), header = GlassTuning(rim = .5f))
         assertEquals(saved, Json.decodeFromString<DeveloperSettings>(Json.encodeToString(saved)).normalized())
+        assertEquals(GlassTuning(), Json.decodeFromString<DeveloperSettings>("""{"containers":{}}""").containers)
         assertEquals(GlassTuning(), saved.tuning(GlassSurfaceGroup.CONTROLS))
-        assertEquals(GlassTuning(), saved.withTuning(GlassSurfaceGroup.CONTAINERS, GlassTuning()).containers)
-        assertEquals(DeveloperSettings(), Json.decodeFromString<DeveloperSettings>("{}"))
+        assertEquals(saved.copy(containers = DeveloperSettings().containers), saved.resetTuning(GlassSurfaceGroup.CONTAINERS))
+        assertEquals(saved.copy(header = GlassTuning()), saved.resetTuning(GlassSurfaceGroup.HEADER))
     }
     @Test fun `every shader parameter is finite and bounded after normalization`() {
         GlassParameter.entries.forEach { key ->

@@ -47,7 +47,16 @@ data class GlassTuning(
 @Serializable
 data class DeveloperSettings(
     val animationSpeed: Float = AppAnimationSpeed.DEFAULT,
-    val containers: GlassTuning = GlassTuning(), val header: GlassTuning = GlassTuning(),
+    val containers: GlassTuning = GlassTuning(
+        frost = 8f,
+        bend = .7f,
+        dispersion = .3f,
+        shine = .15f,
+        saturation = 1.4f,
+        tint = .2f,
+        reach = 1f
+    ),
+    val header: GlassTuning = GlassTuning(),
     val navigation: GlassTuning = GlassTuning(), val controls: GlassTuning = GlassTuning()
 ) {
     fun tuning(group: GlassSurfaceGroup): GlassTuning = when (group) {
@@ -60,6 +69,8 @@ data class DeveloperSettings(
         GlassSurfaceGroup.NAVIGATION -> copy(navigation = value.normalized())
         GlassSurfaceGroup.CONTROLS -> copy(controls = value.normalized())
     }
+    fun resetTuning(group: GlassSurfaceGroup): DeveloperSettings = withTuning(group, DeveloperSettings().tuning(group))
+
     fun normalized(): DeveloperSettings = copy(animationSpeed = AppAnimationSpeed.normalize(animationSpeed),
         containers = containers.normalized(), header = header.normalized(), navigation = navigation.normalized(), controls = controls.normalized())
 }

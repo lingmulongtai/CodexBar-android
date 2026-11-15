@@ -48,6 +48,7 @@ import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
@@ -83,6 +84,7 @@ import com.codexbar.android.ui.components.glassTabDragPosition
 import com.codexbar.android.ui.components.glassBackdropSource
 import com.codexbar.android.ui.components.rememberGlassBackdrop
 import com.codexbar.android.ui.theme.LocalCodexBarThemeProfile
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 internal data class NavigationEntry(
@@ -159,7 +161,8 @@ internal fun GlassNavigationBar(
     backdrop: GlassBackdrop,
     onRefresh: (() -> Unit)?,
     modifier: Modifier = Modifier,
-    pagePosition: (() -> Float)? = null
+    pagePosition: (() -> Float)? = null,
+    requestedTab: (() -> Int?)? = null
 ) {
     val profile = LocalCodexBarThemeProfile.current
     val colors = MaterialTheme.colorScheme
@@ -176,7 +179,7 @@ internal fun GlassNavigationBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         GlassTabRow(entries, backdrop, glassTint, glassFallback, rim,
-            Modifier.weight(1f).height(GlassBarHeight), pagePosition)
+            Modifier.weight(1f).height(GlassBarHeight), pagePosition, requestedTab)
         if (onRefresh != null) {
             val refreshLabel = stringResource(R.string.action_refresh)
             val interaction = remember { MutableInteractionSource() }
@@ -214,7 +217,8 @@ internal fun GlassNavigationBar(
 private fun GlassTabRow(
     entries: List<NavigationEntry>, backdrop: GlassBackdrop, glassTint: Color,
     glassFallback: Color, rim: Color, modifier: Modifier = Modifier,
-    pagePosition: (() -> Float)? = null
+    pagePosition: (() -> Float)?,
+    requestedTab: (() -> Int?)?
 ) {
     if (entries.isEmpty()) return
     val profile = LocalCodexBarThemeProfile.current
@@ -223,16 +227,27 @@ private fun GlassTabRow(
     val latestEntries by rememberUpdatedState(entries)
     val lensBackdrop = rememberGlassBackdrop()
     var dragPosition by remember { mutableStateOf<Float?>(null) }
+    var releasedTab by remember { mutableStateOf<Int?>(null) }
     var selectedTabPressed by remember { mutableStateOf(false) }
     val lifted = selectedTabPressed || dragPosition != null
     GlassLiftHaptics(lifted)
     var anchor by remember { mutableStateOf(0f) }
     var downX by remember { mutableStateOf(0f) }
     val selectedIndex = entries.indexOfFirst { it.selected }.coerceAtLeast(0)
-    val target = dragPosition ?: selectedIndex.toFloat()
+    val pagerPosition = pagePosition?.invoke()?.coerceIn(0f, entries.lastIndex.toFloat())
+    val landing = releasedTab?.let { index ->
+        if (pagerPosition == null || requestedTab?.invoke() == index) index.toFloat() else pagerPosition
+    }
+    val target = dragPosition ?: landing ?: selectedIndex.toFloat()
     val settledPosition by animateFloatAsState(target,
         spring(dampingRatio = if (dragPosition != null) 0.94f else 0.92f,
             stiffness = if (dragPosition != null) 2500f else 1024f), label = "glass_tab_position")
+    // Keep the released lens at its destination while the pager catches up underneath it.
+    val canFollowPager = landing != null && settledPosition == landing &&
+        (pagerPosition == null || abs(pagerPosition - landing) < 0.001f)
+    LaunchedEffect(releasedTab, canFollowPager) {
+        if (canFollowPager) releasedTab = null
+    }
     val lift by animateFloatAsState(if (lifted) 1f else 0f,
         spring(dampingRatio = 0.92f, stiffness = 676f), label = "glass_tab_lift")
     val selectedColor = if (profile.isDark) Color(0xFF0091FF) else Color(0xFF0088FF)
@@ -252,7 +267,10 @@ private fun GlassTabRow(
             }
             .pointerInput(entries.size, rtl) {
                 detectHorizontalDragGestures(
-                    onDragStart = { dragPosition = anchor },
+                    onDragStart = {
+                        dragPosition = anchor
+                        releasedTab = null
+                    },
                     onHorizontalDrag = { change, _ ->
                         change.consume()
                         val movement = change.position.x - downX
@@ -261,6 +279,7 @@ private fun GlassTabRow(
                     },
                     onDragEnd = {
                         val index = dragPosition?.roundToInt()
+                        releasedTab = index
                         dragPosition = null
                         latestEntries.getOrNull(index ?: -1)?.onClick?.invoke()
                     },
@@ -269,8 +288,8 @@ private fun GlassTabRow(
             }
     ) {
         val cell = (maxWidth - 8.dp) / entries.size
-        val logical = if (dragPosition != null || pagePosition == null) settledPosition
-            else pagePosition().coerceIn(0f, entries.lastIndex.toFloat())
+        val logical = if (dragPosition != null || releasedTab != null) settledPosition
+            else pagerPosition ?: settledPosition
         val visual = if (rtl) entries.lastIndex - logical else logical
         val liftHeight = 16.dp * lift
         // Keep the source independent from the lens to avoid recording it recursively.
@@ -281,7 +300,7 @@ private fun GlassTabRow(
                 elevation = if (profile.isDark) 0.dp else 1.dp) {}
             Row(Modifier.fillMaxSize().padding(4.dp)) {
                 entries.forEachIndexed { index, entry ->
-                    val highlighted = index == (dragPosition?.roundToInt() ?: selectedIndex)
+                    val highlighted = index == (dragPosition?.roundToInt() ?: landing?.roundToInt() ?: selectedIndex)
                     val tint = if (highlighted) selectedColor else colors.onSurface
                     val interaction = remember { MutableInteractionSource() }
                     val focused by interaction.collectIsFocusedAsState()

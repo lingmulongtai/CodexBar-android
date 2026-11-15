@@ -93,7 +93,7 @@ internal fun DeveloperSettingsScreen(onBack: () -> Unit, viewModel: SettingsView
                                 onValueChangeFinished = { save(viewModel.developerSettings) })
                         }
                     }
-                    CodexBarOutlinedButton(onClick = { save(settings.withTuning(group, GlassTuning())) }) {
+                    CodexBarOutlinedButton(onClick = { save(settings.resetTuning(group)) }) {
                         Text(stringResource(R.string.developer_glass_reset_group))
                     }
                 }
