@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CodexBar for Android — バイブコーディングを、もっと快適に。</title>
+    <title>CodexBar for Android — バイブコーディングを、もっと快適に</title>
     <meta
       name="description"
       content="バイブコーディングを、もっと快適に。Codex・Claudeの残量やリセット、GitHubの活動をひとつに。無料・オープンソースのAndroidアプリ。"
     />
-    <meta name="theme-color" content="#f4f7fb" />
+    <meta name="theme-color" content="#f5f7fa" />
     <meta name="color-scheme" content="light" />
     <meta name="robots" content="index,follow" />
     <link
@@ -21,7 +21,7 @@
     <meta property="og:site_name" content="CodexBar for Android" />
     <meta
       property="og:title"
-      content="バイブコーディングを、もっと快適に。｜CodexBar for Android"
+      content="バイブコーディングを、もっと快適に｜CodexBar for Android"
     />
     <meta
       property="og:description"
@@ -42,10 +42,16 @@
       content="CodexBarのLiquid GlassダッシュボードとGitHub画面（サンプルデータ）"
     />
     <meta name="twitter:card" content="summary_large_image" />
-    <link rel="stylesheet" href="./assets/site.css?v=20261104q" />
-    <script src="./assets/setup.js?v=20261104q" defer></script>
-    <script src="./assets/dialogs.js?v=20261104q" defer></script>
-    <script src="./assets/site.js?v=20261104q" defer></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./assets/site.css?v=20261122u" />
+    <script src="./assets/setup.js?v=20261122u" defer></script>
+    <script src="./assets/dialogs.js?v=20261122u" defer></script>
+    <script src="./assets/site.js?v=20261122u" defer></script>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -75,7 +81,7 @@
               width="192"
               height="192"
               fetchpriority="high" /></span
-          ><span>CodexBar<small>for Android</small></span></a
+          ><span class="brand-text">CodexBar<small>for Android</small></span></a
         >
         <nav
           class="desktop-nav"
@@ -132,7 +138,6 @@
     </header>
     <main id="main">
       <section class="hero" id="top" aria-labelledby="hero-title">
-        <div class="hero-wash" aria-hidden="true"></div>
         <div class="shell hero-grid">
           <div class="hero-copy">
             <a
@@ -141,16 +146,16 @@
               data-release-notes
               ><span class="status-dot" aria-hidden="true"></span
               ><span data-version>v0.16.6</span
-              ><span class="label-divider"></span><span>Android 8.0+</span
-              ><span aria-hidden="true">↗</span></a
+              ><span class="label-divider" aria-hidden="true"></span
+              ><span>Android 8.0+</span></a
             >
             <p class="hero-audience" data-i18n="hero.audience">
-              バイブコーダーによる、バイブコーダーのためのアプリ。
+              バイブコーダーによる、バイブコーダーのためのアプリ
             </p>
             <h1 id="hero-title">
               <span data-i18n="hero.line1">バイブコーディングを、</span
               ><span class="gradient-text" data-i18n="hero.line2"
-                >もっと快適に。</span
+                >もっと快適に</span
               >
             </h1>
             <p class="hero-lede" data-i18n="hero.description">
@@ -158,64 +163,59 @@
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="#download"
-                ><span data-i18n="hero.download">Android版を入手</span
-                ><span aria-hidden="true">↓</span></a
+                ><span data-i18n="hero.download">Android版を入手</span></a
               ><a class="button button-quiet" href="#tour"
-                ><span class="play-icon" aria-hidden="true">▷</span
                 ><span data-i18n="hero.explore">アプリを見てみる</span></a
               >
             </div>
             <p class="hero-fine" data-i18n="hero.fine">
-              無料・オープンソース。広告も、トラッカーもなし。
+              無料・オープンソース。広告もトラッカーもなし
             </p>
           </div>
           <figure class="hero-visual">
-            <div class="scene-orbit" aria-hidden="true"></div>
-            <div class="phone hero-phone-back">
-              <img
-                src="./assets/media/github.webp"
-                srcset="
-                  ./assets/media/github-270.webp 270w,
-                  ./assets/media/github-405.webp 405w,
-                  ./assets/media/github.webp     540w
-                "
-                sizes="(max-width: 640px) 230px, (max-width: 1024px) 270px, 300px"
-                alt="GitHubのプロフィールとコントリビューション（サンプルデータ）"
-                data-i18n-alt="image.github"
-                width="540"
-                height="1200"
-                loading="lazy"
-              />
+            <div class="hero-phones">
+              <div class="phone hero-phone-main">
+                <img
+                  src="./assets/media/usage-dark.webp"
+                  srcset="
+                    ./assets/media/usage-dark-270.webp 270w,
+                    ./assets/media/usage-dark-405.webp 405w,
+                    ./assets/media/usage-dark.webp     540w
+                  "
+                  sizes="(max-width: 640px) 260px, (max-width: 1024px) 285px, 320px"
+                  alt="Liquid GlassのAI使用量ダッシュボード（サンプルデータ）"
+                  data-i18n-alt="image.usage"
+                  width="540"
+                  height="1200"
+                  fetchpriority="high"
+                />
+              </div>
+              <div class="phone hero-phone-back">
+                <img
+                  src="./assets/media/github.webp"
+                  srcset="
+                    ./assets/media/github-270.webp 270w,
+                    ./assets/media/github-405.webp 405w,
+                    ./assets/media/github.webp     540w
+                  "
+                  sizes="(max-width: 640px) 230px, (max-width: 1024px) 270px, 300px"
+                  alt="GitHubのプロフィールとコントリビューション（サンプルデータ）"
+                  data-i18n-alt="image.github"
+                  width="540"
+                  height="1200"
+                  loading="lazy"
+                />
+              </div>
             </div>
-            <div class="phone hero-phone-main">
-              <img
-                src="./assets/media/usage-dark.webp"
-                srcset="
-                  ./assets/media/usage-dark-270.webp 270w,
-                  ./assets/media/usage-dark-405.webp 405w,
-                  ./assets/media/usage-dark.webp     540w
-                "
-                sizes="(max-width: 640px) 260px, (max-width: 1024px) 285px, 320px"
-                alt="Liquid GlassのAI使用量ダッシュボード（サンプルデータ）"
-                data-i18n-alt="image.usage"
-                width="540"
-                height="1200"
-                fetchpriority="high"
-              />
-            </div>
-            <span class="scene-label"
-              ><span class="status-dot" aria-hidden="true"></span>Less checking.
-              More creating.</span
-            >
             <figcaption data-i18n="image.note">
-              実際のアプリ画面。表示内容はサンプルデータです。
+              実際のアプリ画面・表示内容はサンプルデータ
             </figcaption>
           </figure>
         </div>
       </section>
       <section class="providers shell" aria-label="AI services">
         <p class="eyebrow" data-i18n="providers.title">
-          いつものAIを、いつもの場所に。
+          いつものAIを、いつもの場所に
         </p>
         <div class="provider-list">
           <span
@@ -269,7 +269,7 @@
           >
         </div>
         <p class="fine-print" data-i18n="providers.note">
-          21サービスに対応。取得できる情報や接続方法は、サービスごとに異なります。
+          21サービスに対応。取得できる情報や接続方法はサービスごとに異なります。
         </p>
       </section>
       <section
@@ -278,14 +278,12 @@
         aria-labelledby="tour-title"
       >
         <div class="section-heading">
-          <span class="eyebrow" data-i18n="tour.kicker"
-            >A LITTLE MORE CLARITY</span
-          >
+          <span class="eyebrow" data-i18n="tour.kicker">アプリツアー</span>
           <h2 id="tour-title" data-i18n="tour.heading">
-            気になることに、ひと目で答える。
+            気になることに、ひと目で答える
           </h2>
           <p data-i18n="tour.description">
-            残量を確かめる。使い方を振り返る。作ったものを眺める。タブを選んで、アプリの中を見てみましょう。
+            残量を確かめる。使い方を振り返る。作ったものを眺める。タブを選んでアプリの中を見てみましょう。
           </p>
         </div>
         <div class="tour-stage">
@@ -335,8 +333,8 @@
                 aria-controls="app-preview"
                 data-tour="usage"
               >
-                <span aria-hidden="true">◔</span
-                ><span data-i18n="tab.usage">使用状況</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6 3"/></svg>
+                <span data-i18n="tab.usage">使用状況</span>
               </button>
               <button
                 type="button"
@@ -347,8 +345,8 @@
                 tabindex="-1"
                 data-tour="trends"
               >
-                <span aria-hidden="true">↗</span
-                ><span data-i18n="tab.trends">推移</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 16 9 11 13 15 20 8"/><polyline points="15 8 20 8 20 13"/></svg>
+                <span data-i18n="tab.trends">推移</span>
               </button>
               <button
                 type="button"
@@ -359,8 +357,8 @@
                 tabindex="-1"
                 data-tour="connections"
               >
-                <span aria-hidden="true">⌁</span
-                ><span data-i18n="tab.connections">接続</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11 4.93"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L13 19.07"/></svg>
+                <span data-i18n="tab.connections">接続</span>
               </button>
               <button
                 type="button"
@@ -371,15 +369,16 @@
                 tabindex="-1"
                 data-tour="github"
               >
-                <span aria-hidden="true">⌘</span><span>GitHub</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="9" x2="9" y2="20"/></svg>
+                <span>GitHub</span>
               </button>
             </div>
             <div class="preview-description" aria-live="polite">
               <span class="eyebrow blue" data-preview-kicker
-                >01 — YOUR DAILY OVERVIEW</span
+                >01 · Daily overview</span
               >
               <h3 data-preview-title data-i18n="tour.usage.title">
-                あとどれくらい？<br />もう、探し回らない。
+                あとどれくらい？ もう、探し回らない
               </h3>
               <p data-preview-description data-i18n="tour.usage.description">
                 複数のAIサービスの残量とリセット時刻をまとめて表示。最初に使い切りそうな枠も、使うペースも、すぐに見つかります。
@@ -444,25 +443,24 @@
         </div>
       </section>
       <section class="section shell" id="design" aria-labelledby="design-title">
-        <div class="section-heading centered">
-          <span class="eyebrow">DESIGNED TO FEEL DIFFERENT</span>
+        <div class="section-heading">
+          <span class="eyebrow">Interface</span>
           <h2 id="design-title">
             <span data-i18n="design.line1">眺めたくなる。</span
             ><span class="muted-heading" data-i18n="design.line2"
-              >触れたくなる。</span
+              >触れたくなる</span
             >
           </h2>
           <p data-i18n="design.description">
-            Androidに、Liquid
-            Glassの透明感を。毎日使うから、細部の心地よさまで。
+            Androidに、Liquid Glassの透明感を。毎日使うから、細部の心地よさまで。
           </p>
         </div>
         <div class="design-grid">
           <article class="glass-card design-card">
             <div class="card-copy">
-              <span class="eyebrow">LIQUID GLASS</span>
+              <span class="eyebrow">Liquid Glass</span>
               <h3 data-i18n="design.glass.title">
-                光も、景色も、<br />あなたらしく。
+                光も、景色も、あなたらしく
               </h3>
               <p data-i18n="design.glass.description">
                 ライトでも、ダークでも。日替わりのUnsplash写真に、透き通るカードと光の縁が重なります。
@@ -505,20 +503,22 @@
           </article>
           <div class="design-side">
             <article class="glass-card motion-card">
-              <div class="motion-track" aria-hidden="true">
-                <i></i><i></i><i></i><span>↔</span>
-              </div>
+              <span class="icon-badge" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 8 3 12 7 16"/><polyline points="17 8 21 12 17 16"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+              </span>
               <h3 data-i18n="design.motion.title">
-                指に、ページがついてくる。
+                指に、ページがついてくる
               </h3>
               <p data-i18n="design.motion.description">
                 隣のページとつながるスワイプ。長押しして滑らせるタブ。軽い振動も、好みに合わせて。
               </p>
             </article>
             <article class="glass-card detail-card">
-              <span class="detail-symbol" aria-hidden="true">⌘</span>
+              <span class="icon-badge" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="8" x2="20" y2="8"/><circle cx="9" cy="8" r="2"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="15" cy="16" r="2"/></svg>
+              </span>
               <h3 data-i18n="design.yours.title">
-                いつもの配置を、あなたの手で。
+                いつもの配置を、あなたの手で
               </h3>
               <p data-i18n="design.yours.description">
                 サービスの並び順も、GitHubのウィジェットも。見たい情報が、見たい場所に。
@@ -534,31 +534,31 @@
       >
         <div class="shell github-grid">
           <div class="github-copy">
-            <span class="eyebrow blue">BUILT FOR BUILDERS</span>
+            <span class="eyebrow blue">GitHub integration</span>
             <h2 id="github-title">
               <span data-i18n="github.line1">使ったAIも。</span
-              ><span data-i18n="github.line2">生まれたコードも。</span>
+              ><span data-i18n="github.line2">生まれたコードも</span>
             </h2>
             <p data-i18n="github.description">
               GitHubのプロフィール、日々のコミット、コントリビューションをひとつのダッシュボードに。お気に入りのリポジトリへも、すぐに。
             </p>
             <ul class="feature-list">
               <li>
-                <span aria-hidden="true">▦</span
-                ><span data-i18n="github.calendar"
-                  >一年の活動を、カレンダーで。</span
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+                <span data-i18n="github.calendar"
+                  >一年の活動を、カレンダーで</span
                 >
               </li>
               <li>
-                <span aria-hidden="true">✧</span
-                ><span data-i18n="github.achievements"
-                  >実績と活動の統計を、ウィジェットで。</span
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+                <span data-i18n="github.achievements"
+                  >実績と活動の統計を、ウィジェットで</span
                 >
               </li>
               <li>
-                <span aria-hidden="true">⌑</span
-                ><span data-i18n="github.pinned"
-                  >Pinnedに、いつものリポジトリを。</span
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M5 9h14l-1.5-5h-11Z"/><path d="M7 9l-2 4h14l-2-4"/></svg>
+                <span data-i18n="github.pinned"
+                  >Pinnedに、いつものリポジトリを</span
                 >
               </li>
             </ul>
@@ -567,37 +567,39 @@
             </p>
           </div>
           <div class="github-visual">
-            <div class="phone github-phone">
-              <img
-                src="./assets/media/github-pinned.webp"
-                srcset="
-                  ./assets/media/github-pinned-270.webp 270w,
-                  ./assets/media/github-pinned-405.webp 405w,
-                  ./assets/media/github-pinned.webp     540w
-                "
-                sizes="(max-width: 640px) 250px, 285px"
-                alt="GitHubのPinnedリポジトリと技術スタック（サンプルデータ）"
-                data-i18n-alt="image.pinned"
-                width="540"
-                height="1200"
-                loading="lazy"
-              />
-            </div>
-            <div class="github-inset">
-              <img
-                src="./assets/media/github-achievements.webp"
-                srcset="
-                  ./assets/media/github-achievements-270.webp 270w,
-                  ./assets/media/github-achievements-405.webp 405w,
-                  ./assets/media/github-achievements.webp     540w
-                "
-                sizes="(max-width: 640px) 200px, 260px"
-                alt="GitHubの実績ウィジェット（サンプルデータ）"
-                data-i18n-alt="image.achievements"
-                width="540"
-                height="1200"
-                loading="lazy"
-              />
+            <div class="github-phones">
+              <div class="phone github-phone">
+                <img
+                  src="./assets/media/github-pinned.webp"
+                  srcset="
+                    ./assets/media/github-pinned-270.webp 270w,
+                    ./assets/media/github-pinned-405.webp 405w,
+                    ./assets/media/github-pinned.webp     540w
+                  "
+                  sizes="(max-width: 640px) 250px, 285px"
+                  alt="GitHubのPinnedリポジトリと技術スタック（サンプルデータ）"
+                  data-i18n-alt="image.pinned"
+                  width="540"
+                  height="1200"
+                  loading="lazy"
+                />
+              </div>
+              <div class="phone github-inset">
+                <img
+                  src="./assets/media/github-achievements.webp"
+                  srcset="
+                    ./assets/media/github-achievements-270.webp 270w,
+                    ./assets/media/github-achievements-405.webp 405w,
+                    ./assets/media/github-achievements.webp     540w
+                  "
+                  sizes="(max-width: 640px) 200px, 260px"
+                  alt="GitHubの実績ウィジェット（サンプルデータ）"
+                  data-i18n-alt="image.achievements"
+                  width="540"
+                  height="1200"
+                  loading="lazy"
+                />
+              </div>
             </div>
             <span class="visual-footnote" data-i18n="tour.caption"
               >エミュレーター画面・サンプルデータ</span
@@ -612,10 +614,10 @@
       >
         <div class="connection-panel">
           <div class="connection-copy">
-            <span class="eyebrow blue">BETTER TOGETHER</span>
+            <span class="eyebrow blue">Phone or PC companion</span>
             <h2 id="connect-title">
               <span data-i18n="connect.line1">スマホだけでも。</span
-              ><span data-i18n="connect.line2">PCと一緒でも。</span>
+              ><span data-i18n="connect.line2">PCと一緒でも</span>
             </h2>
             <p data-i18n="connect.description">
               サービスに合わせて、スマホでの取得とPC連携を選べます。Windowsとつなげば、PCの使用枠・トークン履歴・推定費用も手元へ。
@@ -692,26 +694,32 @@
         </div>
       </section>
       <section class="privacy-strip shell" aria-label="Privacy and source">
-        <div>
-          <span class="privacy-icon" aria-hidden="true">◇</span>
+        <div class="privacy-item">
+          <span class="privacy-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          </span>
           <h3 data-i18n="privacy.local.title">
-            接続情報は、あなたの端末で管理。
+            接続情報は、あなたの端末で管理
           </h3>
           <p data-i18n="privacy.local.description">
             スマホの接続情報はKeystoreで暗号化。CLI
             companionは認証情報をPCに残し、使用量など必要な情報だけを共有します。
           </p>
         </div>
-        <div>
-          <span class="privacy-icon" aria-hidden="true">⌕</span>
-          <h3 data-i18n="privacy.open.title">仕組みまで、オープンに。</h3>
+        <div class="privacy-item">
+          <span class="privacy-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          </span>
+          <h3 data-i18n="privacy.open.title">仕組みまで、オープンに</h3>
           <p data-i18n="privacy.open.description">
             MITライセンス。アプリもcompanionも、ソースをGitHubで確認できます。
           </p>
         </div>
-        <div>
-          <span class="privacy-icon" aria-hidden="true">↻</span>
-          <h3 data-i18n="privacy.update.title">次の更新は、アプリの中で。</h3>
+        <div class="privacy-item">
+          <span class="privacy-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+          </span>
+          <h3 data-i18n="privacy.update.title">次の更新は、アプリの中で</h3>
           <p data-i18n="privacy.update.description">
             APKをダウンロードして署名などを検証。最後のインストールはAndroidで確認します。
           </p>
@@ -724,10 +732,10 @@
       >
         <div class="download-panel">
           <div>
-            <span class="eyebrow">YOUR NEXT SMALL UPGRADE</span>
+            <span class="eyebrow">Android APK</span>
             <h2 id="download-title">
               <span data-i18n="download.line1">次の開発を、</span
-              ><span data-i18n="download.line2">気持ちよく始めよう。</span>
+              ><span data-i18n="download.line2">気持ちよく始めよう</span>
             </h2>
             <p data-i18n="download.description">
               Android 8.0以降に対応。無料、オープンソース。
@@ -815,8 +823,8 @@
       </section>
       <section class="section faq-section shell" aria-labelledby="faq-title">
         <div class="faq-heading">
-          <span class="eyebrow">GOOD TO KNOW</span>
-          <h2 id="faq-title" data-i18n="faq.title">はじめる前に。</h2>
+          <span class="eyebrow">Questions</span>
+          <h2 id="faq-title" data-i18n="faq.title">はじめる前に</h2>
           <a
             class="text-link"
             href="https://github.com/lingmulongtai/CodexBar-android#readme"
@@ -964,7 +972,7 @@
               width="192"
               height="192"
               loading="lazy" /></span
-          ><span>CodexBar<small>for Android</small></span></a
+          ><span class="brand-text">CodexBar<small>for Android</small></span></a
         >
         <div class="footer-links">
           <a href="https://github.com/lingmulongtai/CodexBar-android"
